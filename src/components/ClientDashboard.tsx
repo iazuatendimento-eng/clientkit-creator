@@ -1,0 +1,230 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Palette, Trello, Plus, Users, Sparkles, Calendar } from "lucide-react";
+import { BrandKitEditor } from "@/components/BrandKitEditor";
+import { CanvasEditor } from "@/components/CanvasEditor";
+import ProjectBoard from "@/components/ProjectBoard";
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  company?: string;
+  brandKit?: {
+    id: string;
+    name: string;
+    logo: string;
+    colors: string[];
+    createdAt: string;
+  };
+  projectCount: number;
+  createdAt: string;
+}
+
+interface ClientDashboardProps {
+  client: Client;
+  onBack: () => void;
+  onUpdateClient: (client: Client) => void;
+}
+
+export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashboardProps) => {
+  const [currentView, setCurrentView] = useState<"dashboard" | "brand-editor" | "canvas">("dashboard");
+  const [selectedBrandKit, setSelectedBrandKit] = useState<any>(null);
+
+  const handleSaveBrandKit = (brandKit: any) => {
+    const updatedClient = {
+      ...client,
+      brandKit: { ...brandKit, id: brandKit.id || "1" }
+    };
+    onUpdateClient(updatedClient);
+    setCurrentView("dashboard");
+  };
+
+  const handleCreateProject = (brief: any, brandKitId: string) => {
+    if (client.brandKit) {
+      setSelectedBrandKit(client.brandKit);
+      setCurrentView("canvas");
+    }
+  };
+
+  if (currentView === "brand-editor") {
+    return (
+      <div className="min-h-screen p-6">
+        <BrandKitEditor
+          brandKit={client.brandKit}
+          onSave={handleSaveBrandKit}
+          onCancel={() => setCurrentView("dashboard")}
+        />
+      </div>
+    );
+  }
+
+  if (currentView === "canvas" && selectedBrandKit) {
+    return (
+      <CanvasEditor
+        brandKit={selectedBrandKit}
+        onBack={() => setCurrentView("dashboard")}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80">
+      {/* Header */}
+      <div className="border-b bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="outline" onClick={onBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold gradient-text">{client.name}</h1>
+                <p className="text-muted-foreground">{client.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {client.company && (
+                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                  {client.company}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="container mx-auto px-6 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-gradient-card border-primary/20">
+            <CardContent className="p-6 text-center">
+              <Palette className="h-8 w-8 mx-auto mb-3 text-primary" />
+              <div className="text-2xl font-bold gradient-text">
+                {client.brandKit ? "1" : "0"}
+              </div>
+              <div className="text-sm text-muted-foreground">Kit de Marca</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-card border-primary/20">
+            <CardContent className="p-6 text-center">
+              <Sparkles className="h-8 w-8 mx-auto mb-3 text-secondary" />
+              <div className="text-2xl font-bold gradient-text">
+                {client.brandKit?.colors?.length || 0}
+              </div>
+              <div className="text-sm text-muted-foreground">Cores Definidas</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-card border-primary/20">
+            <CardContent className="p-6 text-center">
+              <Calendar className="h-8 w-8 mx-auto mb-3 text-accent" />
+              <div className="text-2xl font-bold gradient-text">{client.projectCount}</div>
+              <div className="text-sm text-muted-foreground">Projetos</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="brand" className="w-full">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+            <TabsTrigger value="brand" className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Kit de Marca
+            </TabsTrigger>
+            <TabsTrigger value="projects" className="flex items-center gap-2">
+              <Trello className="h-4 w-4" />
+              Projetos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="brand">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold gradient-text">Kit de Marca</h2>
+                  <p className="text-muted-foreground">
+                    Gerencie a identidade visual do cliente
+                  </p>
+                </div>
+                <Button
+                  variant="gradient"
+                  onClick={() => setCurrentView("brand-editor")}
+                  className="glow-effect"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {client.brandKit ? "Editar Kit" : "Criar Kit"}
+                </Button>
+              </div>
+
+              {client.brandKit ? (
+                <Card className="bg-gradient-card border-primary/20">
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-semibold">{client.brandKit.name}</h3>
+                          <p className="text-muted-foreground">
+                            Criado em {new Date(client.brandKit.createdAt).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => setCurrentView("brand-editor")}
+                        >
+                          Editar
+                        </Button>
+                      </div>
+                      
+                      {client.brandKit.colors && client.brandKit.colors.length > 0 && (
+                        <div>
+                          <h4 className="font-medium mb-2">Paleta de Cores</h4>
+                          <div className="flex gap-2">
+                            {client.brandKit.colors.map((color, index) => (
+                              <div
+                                key={index}
+                                className="w-12 h-12 rounded-lg border border-white/20 shadow-md"
+                                style={{ backgroundColor: color }}
+                                title={color}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-gradient-card border-primary/20 p-12 text-center">
+                  <Palette className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-2">Nenhum kit de marca criado</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Crie um kit de marca para este cliente com logo e cores personalizadas.
+                  </p>
+                  <Button
+                    variant="gradient"
+                    onClick={() => setCurrentView("brand-editor")}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar Kit de Marca
+                  </Button>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="projects">
+            <ProjectBoard 
+              brandKits={client.brandKit ? [client.brandKit] : []}
+              onCreateProject={handleCreateProject}
+              clientName={client.name}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};

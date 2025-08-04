@@ -1,113 +1,121 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Palette, Sparkles, Users, Trello } from "lucide-react";
-import { BrandKitCard } from "@/components/BrandKitCard";
-import { BrandKitEditor } from "@/components/BrandKitEditor";
-import { CanvasEditor } from "@/components/CanvasEditor";
-import ProjectBoard from "@/components/ProjectBoard";
+import { Plus, Users, Building2, Sparkles } from "lucide-react";
+import { ClientCard } from "@/components/ClientCard";
+import { ClientEditor } from "@/components/ClientEditor";
+import { ClientDashboard } from "@/components/ClientDashboard";
 import heroImage from "@/assets/hero-image.jpg";
 
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
+  notes?: string;
+  brandKit?: {
+    id: string;
+    name: string;
+    logo: string;
+    colors: string[];
+    createdAt: string;
+  };
+  projectCount: number;
+  createdAt: string;
+}
+
 const Index = () => {
-  const [currentView, setCurrentView] = useState<"dashboard" | "editor" | "canvas" | "projects">("dashboard");
-  const [selectedBrandKit, setSelectedBrandKit] = useState<any>(null);
-  const [editingBrandKit, setEditingBrandKit] = useState<any>(null);
+  const [currentView, setCurrentView] = useState<"dashboard" | "client-editor" | "client-dashboard">("dashboard");
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   
-  // Mock data
-  const [brandKits, setBrandKits] = useState([
+  // Mock data for clients
+  const [clients, setClients] = useState<Client[]>([
     {
       id: "1",
-      name: "Tech Solutions",
-      logo: "",
-      colors: ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981"],
-      createdAt: "2024-01-15",
-      projectCount: 5
+      name: "João Silva",
+      email: "joao@techsolutions.com",
+      company: "Tech Solutions",
+      phone: "(11) 99999-9999",
+      brandKit: {
+        id: "1",
+        name: "Tech Solutions",
+        logo: "",
+        colors: ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981"],
+        createdAt: "2024-01-15"
+      },
+      projectCount: 5,
+      createdAt: "2024-01-15"
     },
     {
-      id: "2", 
-      name: "Café Central",
-      logo: "",
-      colors: ["#92400E", "#FCD34D", "#F59E0B"],
-      createdAt: "2024-01-10",
-      projectCount: 3
+      id: "2",
+      name: "Maria Santos",
+      email: "maria@cafecentral.com",
+      company: "Café Central",
+      phone: "(11) 88888-8888",
+      brandKit: {
+        id: "2",
+        name: "Café Central",
+        logo: "",
+        colors: ["#92400E", "#FCD34D", "#F59E0B"],
+        createdAt: "2024-01-10"
+      },
+      projectCount: 3,
+      createdAt: "2024-01-10"
     }
   ]);
 
-  const handleSaveBrandKit = (brandKit: any) => {
-    if (brandKit.id && brandKits.find(bk => bk.id === brandKit.id)) {
-      setBrandKits(brandKits.map(bk => bk.id === brandKit.id ? brandKit : bk));
+  const handleSaveClient = (client: Client) => {
+    if (client.id && clients.find(c => c.id === client.id)) {
+      setClients(clients.map(c => c.id === client.id ? client : c));
     } else {
-      setBrandKits([...brandKits, { ...brandKit, id: Date.now().toString() }]);
+      setClients([...clients, { ...client, id: Date.now().toString() }]);
     }
     setCurrentView("dashboard");
-    setEditingBrandKit(null);
+    setEditingClient(null);
   };
 
-  const handleDeleteBrandKit = (id: string) => {
-    setBrandKits(brandKits.filter(bk => bk.id !== id));
+  const handleDeleteClient = (id: string) => {
+    setClients(clients.filter(c => c.id !== id));
   };
 
-  const handleSelectBrandKit = (id: string) => {
-    const brandKit = brandKits.find(bk => bk.id === id);
-    if (brandKit) {
-      setSelectedBrandKit(brandKit);
-      setCurrentView("canvas");
+  const handleSelectClient = (id: string) => {
+    const client = clients.find(c => c.id === id);
+    if (client) {
+      setSelectedClient(client);
+      setCurrentView("client-dashboard");
     }
   };
 
-  const handleCreateProject = (brief: any, brandKitId: string) => {
-    const brandKit = brandKits.find(bk => bk.id === brandKitId);
-    if (brandKit) {
-      setSelectedBrandKit(brandKit);
-      setCurrentView("canvas");
-    }
+  const handleUpdateClient = (updatedClient: Client) => {
+    setClients(clients.map(c => c.id === updatedClient.id ? updatedClient : c));
+    setSelectedClient(updatedClient);
   };
 
-  if (currentView === "editor") {
+  if (currentView === "client-editor") {
     return (
-      <div className="min-h-screen p-6">
-        <BrandKitEditor
-          brandKit={editingBrandKit}
-          onSave={handleSaveBrandKit}
-          onCancel={() => {
-            setCurrentView("dashboard");
-            setEditingBrandKit(null);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (currentView === "canvas" && selectedBrandKit) {
-    return (
-      <CanvasEditor
-        brandKit={selectedBrandKit}
-        onBack={() => {
+      <ClientEditor
+        client={editingClient}
+        onSave={handleSaveClient}
+        onCancel={() => {
           setCurrentView("dashboard");
-          setSelectedBrandKit(null);
+          setEditingClient(null);
         }}
       />
     );
   }
 
-  if (currentView === "projects") {
+  if (currentView === "client-dashboard" && selectedClient) {
     return (
-      <div className="min-h-screen">
-        <div className="container mx-auto px-6 py-6">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView("dashboard")}
-            className="mb-4"
-          >
-            ← Voltar ao Dashboard
-          </Button>
-        </div>
-        <ProjectBoard 
-          brandKits={brandKits}
-          onCreateProject={handleCreateProject}
-        />
-      </div>
+      <ClientDashboard
+        client={selectedClient}
+        onBack={() => {
+          setCurrentView("dashboard");
+          setSelectedClient(null);
+        }}
+        onUpdateClient={handleUpdateClient}
+      />
     );
   }
 
@@ -124,63 +132,49 @@ const Index = () => {
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="animate-fade-in">
               <h1 className="text-6xl font-bold mb-6 gradient-text">
-                Sistema de Kits de Marca
+                Sistema de Gestão de Clientes
               </h1>
               <p className="text-xl text-foreground/80 mb-8 max-w-2xl mx-auto">
-                Crie designs incríveis com as cores e logos personalizadas de cada cliente. 
-                Gerencie kits de marca e produza materiais profissionais.
+                Gerencie clientes, kits de marca e projetos em um só lugar. 
+                Cada cliente tem seu próprio dashboard personalizado.
               </p>
               <Button
                 variant="hero"
                 size="lg"
                 onClick={() => {
-                  setEditingBrandKit(null);
-                  setCurrentView("editor");
+                  setEditingClient(null);
+                  setCurrentView("client-editor");
                 }}
                 className="text-lg px-8 py-4 glow-effect"
               >
                 <Plus className="mr-2 h-5 w-5" />
-                Criar Primeiro Kit
+                Adicionar Cliente
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Navigation Tabs */}
-      <section className="container mx-auto px-6 py-8">
-        <Tabs defaultValue="kits" className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-            <TabsTrigger value="kits" className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Kits de Marca
-            </TabsTrigger>
-            <TabsTrigger value="projects" className="flex items-center gap-2">
-              <Trello className="h-4 w-4" />
-              Board de Projetos
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="kits">
-            {/* Dashboard Section */}
-            <div className="mb-12">
+      {/* Dashboard Section */}
+      <section className="container mx-auto px-6 py-16">
+        <div className="mb-12">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-3xl font-bold gradient-text mb-2">Seus Kits de Marca</h2>
+              <h2 className="text-3xl font-bold gradient-text mb-2">Seus Clientes</h2>
               <p className="text-muted-foreground">
-                Gerencie as identidades visuais dos seus clientes
+                Gerencie todos os seus clientes e projetos
               </p>
             </div>
             <Button
               variant="gradient"
               onClick={() => {
-                setEditingBrandKit(null);
-                setCurrentView("editor");
+                setEditingClient(null);
+                setCurrentView("client-editor");
               }}
               className="glow-effect"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Novo Kit
+              Novo Cliente
             </Button>
           </div>
 
@@ -189,75 +183,66 @@ const Index = () => {
             <Card className="bg-gradient-card border-primary/20">
               <CardContent className="p-6 text-center">
                 <Users className="h-8 w-8 mx-auto mb-3 text-primary" />
-                <div className="text-2xl font-bold gradient-text">{brandKits.length}</div>
-                <div className="text-sm text-muted-foreground">Kits de Marca</div>
+                <div className="text-2xl font-bold gradient-text">{clients.length}</div>
+                <div className="text-sm text-muted-foreground">Clientes</div>
               </CardContent>
             </Card>
             <Card className="bg-gradient-card border-primary/20">
               <CardContent className="p-6 text-center">
-                <Palette className="h-8 w-8 mx-auto mb-3 text-secondary" />
+                <Building2 className="h-8 w-8 mx-auto mb-3 text-secondary" />
                 <div className="text-2xl font-bold gradient-text">
-                  {brandKits.reduce((acc, kit) => acc + kit.colors.length, 0)}
+                  {clients.filter(c => c.brandKit).length}
                 </div>
-                <div className="text-sm text-muted-foreground">Cores Definidas</div>
+                <div className="text-sm text-muted-foreground">Kits de Marca</div>
               </CardContent>
             </Card>
             <Card className="bg-gradient-card border-primary/20">
               <CardContent className="p-6 text-center">
                 <Sparkles className="h-8 w-8 mx-auto mb-3 text-accent" />
                 <div className="text-2xl font-bold gradient-text">
-                  {brandKits.reduce((acc, kit) => acc + kit.projectCount, 0)}
+                  {clients.reduce((acc, client) => acc + client.projectCount, 0)}
                 </div>
-                <div className="text-sm text-muted-foreground">Projetos Criados</div>
+                <div className="text-sm text-muted-foreground">Projetos Totais</div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Brand Kits Grid */}
-          {brandKits.length > 0 ? (
+          {/* Clients Grid */}
+          {clients.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {brandKits.map((brandKit) => (
-                <BrandKitCard
-                  key={brandKit.id}
-                  brandKit={brandKit}
+              {clients.map((client) => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
                   onEdit={(id) => {
-                    setEditingBrandKit(brandKits.find(bk => bk.id === id));
-                    setCurrentView("editor");
+                    setEditingClient(clients.find(c => c.id === id) || null);
+                    setCurrentView("client-editor");
                   }}
-                  onDelete={handleDeleteBrandKit}
-                  onSelect={handleSelectBrandKit}
+                  onDelete={handleDeleteClient}
+                  onSelect={handleSelectClient}
                 />
               ))}
             </div>
           ) : (
             <Card className="bg-gradient-card border-primary/20 p-12 text-center">
-              <Palette className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-semibold mb-2">Nenhum kit de marca criado</h3>
+              <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">Nenhum cliente cadastrado</h3>
               <p className="text-muted-foreground mb-6">
-                Comece criando seu primeiro kit de marca para gerenciar a identidade visual dos seus clientes.
+                Comece adicionando seu primeiro cliente para gerenciar kits de marca e projetos.
               </p>
               <Button
                 variant="gradient"
                 onClick={() => {
-                  setEditingBrandKit(null);
-                  setCurrentView("editor");
+                  setEditingClient(null);
+                  setCurrentView("client-editor");
                 }}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Criar Primeiro Kit
+                Adicionar Primeiro Cliente
               </Button>
             </Card>
           )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="projects">
-            <ProjectBoard 
-              brandKits={brandKits}
-              onCreateProject={handleCreateProject}
-            />
-          </TabsContent>
-        </Tabs>
+        </div>
       </section>
     </div>
   );

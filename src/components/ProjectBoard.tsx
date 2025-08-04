@@ -21,31 +21,32 @@ interface ProjectBrief {
 interface ProjectBoardProps {
   brandKits: any[];
   onCreateProject: (brief: ProjectBrief, brandKitId: string) => void;
+  clientName?: string;
 }
 
-const ProjectBoard = ({ brandKits, onCreateProject }: ProjectBoardProps) => {
+const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardProps) => {
   const [briefs, setBriefs] = useState<ProjectBrief[]>([
     {
       id: "1",
-      clientName: "Tech Solutions",
+      clientName: clientName || "Cliente Exemplo",
       title: "Banner para Black Friday",
       description: "Criar banner promocional para campanha de Black Friday com 50% de desconto em todos os produtos.",
       deadline: "2024-11-25",
-      status: "todo",
-      brandKitId: "1",
+      status: "todo" as ProjectBrief["status"],
+      brandKitId: brandKits[0]?.id,
       createdAt: "2024-11-01"
     },
     {
       id: "2",
-      clientName: "Café Central",
+      clientName: clientName || "Cliente Exemplo",
       title: "Cardápio Digital",
       description: "Desenvolver cardápio digital para aplicativo com fotos dos produtos e preços atualizados.",
       deadline: "2024-11-30",
-      status: "in-progress",
-      brandKitId: "2",
+      status: "in-progress" as ProjectBrief["status"],
+      brandKitId: brandKits[0]?.id,
       createdAt: "2024-11-05"
     }
-  ]);
+  ].filter(brief => brandKits.length > 0));
 
   const [newBrief, setNewBrief] = useState<Partial<ProjectBrief>>({});
   const [editingBrief, setEditingBrief] = useState<ProjectBrief | null>(null);
@@ -61,7 +62,7 @@ const ProjectBoard = ({ brandKits, onCreateProject }: ProjectBoardProps) => {
   const handleSaveBrief = () => {
     const brief: ProjectBrief = {
       id: editingBrief?.id || Date.now().toString(),
-      clientName: newBrief.clientName || "",
+      clientName: clientName || newBrief.clientName || "",
       title: newBrief.title || "",
       description: newBrief.description || "",
       deadline: newBrief.deadline || "",
@@ -112,9 +113,14 @@ const ProjectBoard = ({ brandKits, onCreateProject }: ProjectBoardProps) => {
       <div className="container mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold gradient-text mb-2">Board de Projetos</h1>
+            <h1 className="text-4xl font-bold gradient-text mb-2">
+              {clientName ? `Projetos - ${clientName}` : "Board de Projetos"}
+            </h1>
             <p className="text-muted-foreground">
-              Organize os briefings e projetos dos seus clientes
+              {clientName 
+                ? `Organize os projetos de ${clientName}` 
+                : "Organize os briefings e projetos dos seus clientes"
+              }
             </p>
           </div>
           
@@ -132,14 +138,16 @@ const ProjectBoard = ({ brandKits, onCreateProject }: ProjectBoardProps) => {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Cliente</label>
-                  <Input
-                    placeholder="Nome do cliente"
-                    value={newBrief.clientName || ""}
-                    onChange={(e) => setNewBrief({...newBrief, clientName: e.target.value})}
-                  />
-                </div>
+                {!clientName && (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Cliente</label>
+                    <Input
+                      placeholder="Nome do cliente"
+                      value={newBrief.clientName || ""}
+                      onChange={(e) => setNewBrief({...newBrief, clientName: e.target.value})}
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
                   <Input
