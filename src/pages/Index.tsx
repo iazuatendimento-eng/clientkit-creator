@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Palette, Sparkles, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Palette, Sparkles, Users, Trello } from "lucide-react";
 import { BrandKitCard } from "@/components/BrandKitCard";
 import { BrandKitEditor } from "@/components/BrandKitEditor";
 import { CanvasEditor } from "@/components/CanvasEditor";
+import ProjectBoard from "@/components/ProjectBoard";
 import heroImage from "@/assets/hero-image.jpg";
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<"dashboard" | "editor" | "canvas">("dashboard");
+  const [currentView, setCurrentView] = useState<"dashboard" | "editor" | "canvas" | "projects">("dashboard");
   const [selectedBrandKit, setSelectedBrandKit] = useState<any>(null);
   const [editingBrandKit, setEditingBrandKit] = useState<any>(null);
   
@@ -54,6 +56,14 @@ const Index = () => {
     }
   };
 
+  const handleCreateProject = (brief: any, brandKitId: string) => {
+    const brandKit = brandKits.find(bk => bk.id === brandKitId);
+    if (brandKit) {
+      setSelectedBrandKit(brandKit);
+      setCurrentView("canvas");
+    }
+  };
+
   if (currentView === "editor") {
     return (
       <div className="min-h-screen p-6">
@@ -78,6 +88,26 @@ const Index = () => {
           setSelectedBrandKit(null);
         }}
       />
+    );
+  }
+
+  if (currentView === "projects") {
+    return (
+      <div className="min-h-screen">
+        <div className="container mx-auto px-6 py-6">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentView("dashboard")}
+            className="mb-4"
+          >
+            ← Voltar ao Dashboard
+          </Button>
+        </div>
+        <ProjectBoard 
+          brandKits={brandKits}
+          onCreateProject={handleCreateProject}
+        />
+      </div>
     );
   }
 
@@ -117,9 +147,23 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Dashboard Section */}
-      <section className="container mx-auto px-6 py-16">
-        <div className="mb-12">
+      {/* Navigation Tabs */}
+      <section className="container mx-auto px-6 py-8">
+        <Tabs defaultValue="kits" className="w-full">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+            <TabsTrigger value="kits" className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Kits de Marca
+            </TabsTrigger>
+            <TabsTrigger value="projects" className="flex items-center gap-2">
+              <Trello className="h-4 w-4" />
+              Board de Projetos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="kits">
+            {/* Dashboard Section */}
+            <div className="mb-12">
           <div className="flex justify-between items-center mb-8">
             <div>
               <h2 className="text-3xl font-bold gradient-text mb-2">Seus Kits de Marca</h2>
@@ -204,7 +248,16 @@ const Index = () => {
               </Button>
             </Card>
           )}
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="projects">
+            <ProjectBoard 
+              brandKits={brandKits}
+              onCreateProject={handleCreateProject}
+            />
+          </TabsContent>
+        </Tabs>
       </section>
     </div>
   );
