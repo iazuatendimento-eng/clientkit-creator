@@ -11,6 +11,8 @@ interface BrandKitEditorProps {
     id: string;
     name: string;
     logo?: string;
+    contactInfo?: string;
+    mascot?: string;
     colors: string[];
     createdAt?: string;
     projectCount?: number;
@@ -22,15 +24,20 @@ interface BrandKitEditorProps {
 export function BrandKitEditor({ brandKit, onSave, onCancel }: BrandKitEditorProps) {
   const [name, setName] = useState(brandKit?.name || "");
   const [logo, setLogo] = useState(brandKit?.logo || "");
+  const [contactInfo, setContactInfo] = useState(brandKit?.contactInfo || "");
+  const [mascot, setMascot] = useState(brandKit?.mascot || "");
   const [colors, setColors] = useState(brandKit?.colors || ["#8B5CF6", "#EC4899", "#F59E0B"]);
   const [newColor, setNewColor] = useState("#8B5CF6");
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'contact' | 'mascot') => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setLogo(e.target?.result as string);
+        const result = e.target?.result as string;
+        if (type === 'logo') setLogo(result);
+        else if (type === 'contact') setContactInfo(result);
+        else if (type === 'mascot') setMascot(result);
       };
       reader.readAsDataURL(file);
     }
@@ -51,6 +58,8 @@ export function BrandKitEditor({ brandKit, onSave, onCancel }: BrandKitEditorPro
       id: brandKit?.id || Date.now().toString(),
       name,
       logo,
+      contactInfo,
+      mascot,
       colors,
       createdAt: brandKit?.id ? brandKit.createdAt : new Date().toISOString(),
       projectCount: brandKit?.projectCount || 0,
@@ -75,9 +84,9 @@ export function BrandKitEditor({ brandKit, onSave, onCancel }: BrandKitEditorPro
       </div>
 
       <Tabs defaultValue="basic" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic">Básico</TabsTrigger>
-          <TabsTrigger value="logo">Logo</TabsTrigger>
+          <TabsTrigger value="images">Imagens</TabsTrigger>
           <TabsTrigger value="colors">Cores</TabsTrigger>
         </TabsList>
 
@@ -102,50 +111,132 @@ export function BrandKitEditor({ brandKit, onSave, onCancel }: BrandKitEditorPro
           </Card>
         </TabsContent>
 
-        {/* Logo Upload */}
-        <TabsContent value="logo">
-          <Card className="bg-gradient-card border-primary/20">
-            <CardHeader>
-              <CardTitle>Logo da Marca</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Logo Preview */}
-              <div className="flex items-center justify-center h-40 bg-background/50 rounded-lg border-2 border-dashed border-primary/30">
-                {logo ? (
-                  <div className="relative">
-                    <img src={logo} alt="Logo preview" className="h-32 w-auto object-contain" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setLogo("")}
-                      className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full bg-destructive text-destructive-foreground"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center space-y-2">
-                    <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Clique para fazer upload da logo</p>
-                  </div>
-                )}
-              </div>
+        {/* Images Upload */}
+        <TabsContent value="images">
+          <div className="grid gap-4">
+            {/* Logo */}
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader>
+                <CardTitle>Logomarca</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-center h-32 bg-background/50 rounded-lg border-2 border-dashed border-primary/30">
+                  {logo ? (
+                    <div className="relative">
+                      <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setLogo("")}
+                        className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full bg-destructive text-destructive-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-2">
+                      <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Upload da Logomarca</p>
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, 'logo')}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Button variant="outline" className="w-full">
+                    <Upload className="h-4 w-4 mr-2" />
+                    {logo ? "Alterar" : "Upload"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Upload Button */}
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <Button variant="outline" className="w-full">
-                  <Upload className="h-4 w-4 mr-2" />
-                  {logo ? "Alterar Logo" : "Upload da Logo"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Contact Info */}
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader>
+                <CardTitle>Dados de Contato</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-center h-32 bg-background/50 rounded-lg border-2 border-dashed border-primary/30">
+                  {contactInfo ? (
+                    <div className="relative">
+                      <img src={contactInfo} alt="Contato" className="h-24 w-auto object-contain" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setContactInfo("")}
+                        className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full bg-destructive text-destructive-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-2">
+                      <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Upload dos Dados de Contato</p>
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, 'contact')}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Button variant="outline" className="w-full">
+                    <Upload className="h-4 w-4 mr-2" />
+                    {contactInfo ? "Alterar" : "Upload"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Mascot */}
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader>
+                <CardTitle>Mascote</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-center h-32 bg-background/50 rounded-lg border-2 border-dashed border-primary/30">
+                  {mascot ? (
+                    <div className="relative">
+                      <img src={mascot} alt="Mascote" className="h-24 w-auto object-contain" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setMascot("")}
+                        className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full bg-destructive text-destructive-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-2">
+                      <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Upload do Mascote</p>
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, 'mascot')}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Button variant="outline" className="w-full">
+                    <Upload className="h-4 w-4 mr-2" />
+                    {mascot ? "Alterar" : "Upload"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Color Palette */}

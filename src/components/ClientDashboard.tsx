@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Palette, Trello, Plus, Users, Sparkles, Calendar } from "lucide-react";
+import { ArrowLeft, Palette, Trello, Plus, Sparkles, Calendar, Wand2 } from "lucide-react";
 import { BrandKitEditor } from "@/components/BrandKitEditor";
 import { CanvasEditor } from "@/components/CanvasEditor";
+import { AIArtGenerator } from "@/components/AIArtGenerator";
 import ProjectBoard from "@/components/ProjectBoard";
 
 interface Client {
@@ -15,7 +16,9 @@ interface Client {
   brandKit?: {
     id: string;
     name: string;
-    logo: string;
+    logo?: string;
+    contactInfo?: string;
+    mascot?: string;
     colors: string[];
     createdAt: string;
   };
@@ -30,7 +33,7 @@ interface ClientDashboardProps {
 }
 
 export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashboardProps) => {
-  const [currentView, setCurrentView] = useState<"dashboard" | "brand-editor" | "canvas">("dashboard");
+  const [currentView, setCurrentView] = useState<"dashboard" | "brand-editor" | "canvas" | "ai-generator">("dashboard");
   const [selectedBrandKit, setSelectedBrandKit] = useState<any>(null);
 
   const handleSaveBrandKit = (brandKit: any) => {
@@ -65,6 +68,15 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
     return (
       <CanvasEditor
         brandKit={selectedBrandKit}
+        onBack={() => setCurrentView("dashboard")}
+      />
+    );
+  }
+
+  if (currentView === "ai-generator" && client.brandKit) {
+    return (
+      <AIArtGenerator
+        brandKit={client.brandKit}
         onBack={() => setCurrentView("dashboard")}
       />
     );
@@ -150,14 +162,26 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
                     Gerencie a identidade visual do cliente
                   </p>
                 </div>
-                <Button
-                  variant="gradient"
-                  onClick={() => setCurrentView("brand-editor")}
-                  className="glow-effect"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  {client.brandKit ? "Editar Kit" : "Criar Kit"}
-                </Button>
+                <div className="flex gap-2">
+                  {client.brandKit && (
+                    <Button
+                      variant="hero"
+                      onClick={() => setCurrentView("ai-generator")}
+                      className="glow-effect"
+                    >
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      Gerador de Artes
+                    </Button>
+                  )}
+                  <Button
+                    variant="gradient"
+                    onClick={() => setCurrentView("brand-editor")}
+                    className="glow-effect"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {client.brandKit ? "Editar Kit" : "Criar Kit"}
+                  </Button>
+                </div>
               </div>
 
               {client.brandKit ? (
