@@ -4,8 +4,35 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, User, FileText, Trash2, Edit } from "lucide-react";
+import { toast } from "sonner";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ProjectBrief {
   id: string;
@@ -23,6 +50,137 @@ interface ProjectBoardProps {
   onCreateProject: (brief: ProjectBrief, brandKitId: string) => void;
   clientName?: string;
 }
+
+interface SortableCardProps {
+  brief: ProjectBrief;
+  brandKit: any;
+  columns: any[];
+  onEdit: (brief: ProjectBrief) => void;
+  onDelete: (id: string) => void;
+  onStatusChange: (briefId: string, newStatus: string) => void;
+  onCreateProject: (brief: ProjectBrief) => void;
+}
+
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject }: SortableCardProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: brief.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className="bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 cursor-move"
+      {...attributes}
+      {...listeners}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <User className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">{brief.clientName}</span>
+            </div>
+            <h4 className="font-semibold text-sm">{brief.title}</h4>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(brief);
+              }}
+              className="h-6 w-6 p-0"
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(brief.id);
+              }}
+              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+          {brief.description}
+        </p>
+        
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs">
+            <Calendar className="h-3 w-3" />
+            <span>{new Date(brief.deadline).toLocaleDateString('pt-BR')}</span>
+          </div>
+          
+          {brandKit && (
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {brandKit.colors.slice(0, 3).map((color: string, index: number) => (
+                  <div
+                    key={index}
+                    className="w-3 h-3 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">{brandKit.name}</span>
+            </div>
+          )}
+          
+          <div className="flex gap-2 pt-2">
+            <select
+              className="text-xs p-1 border rounded bg-background flex-1"
+              value={brief.status}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                onStatusChange(brief.id, e.target.value);
+              }}
+            >
+              {columns.map(col => (
+                <option key={col.id} value={col.id}>{col.title}</option>
+              ))}
+            </select>
+            
+            {brief.brandKitId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreateProject(brief);
+                }}
+                className="text-xs px-2 py-1 h-auto"
+              >
+                <FileText className="h-3 w-3 mr-1" />
+                Criar Arte
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardProps) => {
   const [briefs, setBriefs] = useState<ProjectBrief[]>([
@@ -51,6 +209,17 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
   const [newBrief, setNewBrief] = useState<Partial<ProjectBrief>>({});
   const [editingBrief, setEditingBrief] = useState<ProjectBrief | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [multiTextInput, setMultiTextInput] = useState("");
+  const [showSplitDialog, setShowSplitDialog] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   const columns = [
     { id: "todo", title: "Para Fazer", color: "bg-yellow-500/20 border-yellow-500/30" },
@@ -58,6 +227,29 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
     { id: "review", title: "Em Revisão", color: "bg-purple-500/20 border-purple-500/30" },
     { id: "completed", title: "Concluído", color: "bg-green-500/20 border-green-500/30" }
   ];
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeBrief = briefs.find(b => b.id === activeId);
+    if (!activeBrief) return;
+
+    // Check if dropped on a column header
+    const targetColumn = columns.find(col => col.id === overId);
+    if (targetColumn) {
+      handleStatusChange(activeId, targetColumn.id);
+    }
+  };
 
   const handleSaveBrief = () => {
     const brief: ProjectBrief = {
@@ -73,8 +265,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
 
     if (editingBrief) {
       setBriefs(briefs.map(b => b.id === editingBrief.id ? brief : b));
+      toast.success("Briefing atualizado!");
     } else {
       setBriefs([...briefs, brief]);
+      toast.success("Briefing criado!");
     }
 
     setNewBrief({});
@@ -82,14 +276,86 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
     setIsDialogOpen(false);
   };
 
+  const handleBulkAdd = () => {
+    const paragraphs = multiTextInput
+      .split("\n\n")
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+
+    if (paragraphs.length === 0) {
+      toast.error("Por favor, insira algum texto");
+      return;
+    }
+
+    if (paragraphs.length > 1) {
+      setShowSplitDialog(true);
+    } else {
+      createSingleBrief(paragraphs[0]);
+    }
+  };
+
+  const createSingleBrief = (text: string) => {
+    if (!newBrief.brandKitId && brandKits.length > 0) {
+      newBrief.brandKitId = brandKits[0].id;
+    }
+
+    const brief: ProjectBrief = {
+      id: Date.now().toString(),
+      clientName: clientName || newBrief.clientName || "Cliente",
+      title: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
+      description: text,
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "todo",
+      brandKitId: newBrief.brandKitId,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    setBriefs([...briefs, brief]);
+    setMultiTextInput("");
+    setNewBrief({});
+    setShowSplitDialog(false);
+    setIsDialogOpen(false);
+    toast.success("Card criado com sucesso!");
+  };
+
+  const createMultipleBriefs = () => {
+    const paragraphs = multiTextInput
+      .split("\n\n")
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+
+    if (!newBrief.brandKitId && brandKits.length > 0) {
+      newBrief.brandKitId = brandKits[0].id;
+    }
+
+    const newBriefs = paragraphs.map((text, index) => ({
+      id: `${Date.now()}-${index}`,
+      clientName: clientName || newBrief.clientName || "Cliente",
+      title: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
+      description: text,
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "todo" as const,
+      brandKitId: newBrief.brandKitId,
+      createdAt: new Date().toISOString().split('T')[0]
+    }));
+
+    setBriefs([...briefs, ...newBriefs]);
+    setMultiTextInput("");
+    setNewBrief({});
+    setShowSplitDialog(false);
+    setIsDialogOpen(false);
+    toast.success(`${newBriefs.length} cards criados com sucesso!`);
+  };
+
   const handleDeleteBrief = (id: string) => {
     setBriefs(briefs.filter(b => b.id !== id));
+    toast.success("Briefing removido!");
   };
 
   const handleStatusChange = (briefId: string, newStatus: string) => {
     setBriefs(briefs.map(b => 
       b.id === briefId ? { ...b, status: newStatus as ProjectBrief["status"] } : b
     ));
+    toast.success("Status atualizado!");
   };
 
   const handleEditBrief = (brief: ProjectBrief) => {
@@ -98,7 +364,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
     setIsDialogOpen(true);
   };
 
-  const handleCreateProject = (brief: ProjectBrief) => {
+  const handleCreateProjectFromBrief = (brief: ProjectBrief) => {
     if (brief.brandKitId) {
       onCreateProject(brief, brief.brandKitId);
     }
@@ -148,156 +414,145 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
                     />
                   </div>
                 )}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
-                  <Input
-                    placeholder="Título do projeto"
-                    value={newBrief.title || ""}
-                    onChange={(e) => setNewBrief({...newBrief, title: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Descrição</label>
+                
+                <div className="border-t pt-4">
+                  <label className="text-sm font-medium mb-2 block">Adicionar Múltiplos Cards</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Cole vários textos separados por linha dupla (Enter duas vezes)
+                  </p>
                   <Textarea
-                    placeholder="Descreva o que precisa ser feito..."
-                    rows={3}
-                    value={newBrief.description || ""}
-                    onChange={(e) => setNewBrief({...newBrief, description: e.target.value})}
+                    placeholder="Texto 1&#10;&#10;Texto 2&#10;&#10;Texto 3..."
+                    rows={4}
+                    value={multiTextInput}
+                    onChange={(e) => setMultiTextInput(e.target.value)}
                   />
+                  <Button onClick={handleBulkAdd} variant="outline" className="w-full mt-2">
+                    Adicionar Cards
+                  </Button>
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Prazo</label>
-                  <Input
-                    type="date"
-                    value={newBrief.deadline || ""}
-                    onChange={(e) => setNewBrief({...newBrief, deadline: e.target.value})}
-                  />
+
+                <div className="border-t pt-4">
+                  <label className="text-sm font-medium mb-2 block">Ou criar um único briefing</label>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
+                      <Input
+                        placeholder="Título do projeto"
+                        value={newBrief.title || ""}
+                        onChange={(e) => setNewBrief({...newBrief, title: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Descrição</label>
+                      <Textarea
+                        placeholder="Descreva o que precisa ser feito..."
+                        rows={3}
+                        value={newBrief.description || ""}
+                        onChange={(e) => setNewBrief({...newBrief, description: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Prazo</label>
+                      <Input
+                        type="date"
+                        value={newBrief.deadline || ""}
+                        onChange={(e) => setNewBrief({...newBrief, deadline: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Kit de Marca</label>
+                      <select
+                        className="w-full p-2 border rounded-md bg-background"
+                        value={newBrief.brandKitId || ""}
+                        onChange={(e) => setNewBrief({...newBrief, brandKitId: e.target.value})}
+                      >
+                        <option value="">Selecione um kit de marca</option>
+                        {brandKits.map(kit => (
+                          <option key={kit.id} value={kit.id}>{kit.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button onClick={handleSaveBrief} className="w-full">
+                      {editingBrief ? "Salvar Alterações" : "Criar Briefing"}
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Kit de Marca</label>
-                  <select
-                    className="w-full p-2 border rounded-md bg-background"
-                    value={newBrief.brandKitId || ""}
-                    onChange={(e) => setNewBrief({...newBrief, brandKitId: e.target.value})}
-                  >
-                    <option value="">Selecione um kit de marca</option>
-                    {brandKits.map(kit => (
-                      <option key={kit.id} value={kit.id}>{kit.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <Button onClick={handleSaveBrief} className="w-full">
-                  {editingBrief ? "Salvar Alterações" : "Criar Briefing"}
-                </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {columns.map(column => (
-            <div key={column.id} className="space-y-4">
-              <div className={`p-4 rounded-lg border ${column.color}`}>
-                <h3 className="font-semibold text-center">{column.title}</h3>
-                <div className="text-center text-sm text-muted-foreground mt-1">
-                  {briefs.filter(b => b.status === column.id).length} itens
+        <AlertDialog open={showSplitDialog} onOpenChange={setShowSplitDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Múltiplos textos detectados</AlertDialogTitle>
+              <AlertDialogDescription>
+                Foram detectados {multiTextInput.split("\n\n").filter(p => p.trim().length > 0).length} textos separados. 
+                Deseja criar um card único com todo o texto ou dividir em {multiTextInput.split("\n\n").filter(p => p.trim().length > 0).length} cards separados?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => createSingleBrief(multiTextInput)}>
+                Card Único
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={createMultipleBriefs}>
+                Dividir em {multiTextInput.split("\n\n").filter(p => p.trim().length > 0).length} Cards
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {columns.map(column => {
+              const columnBriefs = briefs.filter(b => b.status === column.id);
+              return (
+                <div key={column.id} className="space-y-4">
+                  <div className={`p-4 rounded-lg border ${column.color} cursor-pointer`} id={column.id}>
+                    <h3 className="font-semibold text-center">{column.title}</h3>
+                    <div className="text-center text-sm text-muted-foreground mt-1">
+                      {columnBriefs.length} itens
+                    </div>
+                  </div>
+                  
+                  <SortableContext items={columnBriefs.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                      {columnBriefs.map(brief => (
+                        <SortableCard
+                          key={brief.id}
+                          brief={brief}
+                          brandKit={getBrandKit(brief.brandKitId)}
+                          columns={columns}
+                          onEdit={handleEditBrief}
+                          onDelete={handleDeleteBrief}
+                          onStatusChange={handleStatusChange}
+                          onCreateProject={handleCreateProjectFromBrief}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
                 </div>
-              </div>
-              
-              <div className="space-y-3">
-                {briefs
-                  .filter(brief => brief.status === column.id)
-                  .map(brief => {
-                    const brandKit = getBrandKit(brief.brandKitId);
-                    return (
-                      <Card key={brief.id} className="bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300">
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <User className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">{brief.clientName}</span>
-                              </div>
-                              <h4 className="font-semibold text-sm">{brief.title}</h4>
-                            </div>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditBrief(brief)}
-                                className="h-6 w-6 p-0"
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteBrief(brief.id)}
-                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-                            {brief.description}
-                          </p>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs">
-                              <Calendar className="h-3 w-3" />
-                              <span>{new Date(brief.deadline).toLocaleDateString('pt-BR')}</span>
-                            </div>
-                            
-                            {brandKit && (
-                              <div className="flex items-center gap-2">
-                                <div className="flex gap-1">
-                                  {brandKit.colors.slice(0, 3).map((color: string, index: number) => (
-                                    <div
-                                      key={index}
-                                      className="w-3 h-3 rounded-full border border-white/20"
-                                      style={{ backgroundColor: color }}
-                                    />
-                                  ))}
-                                </div>
-                                <span className="text-xs text-muted-foreground">{brandKit.name}</span>
-                              </div>
-                            )}
-                            
-                            <div className="flex gap-2 pt-2">
-                              <select
-                                className="text-xs p-1 border rounded bg-background flex-1"
-                                value={brief.status}
-                                onChange={(e) => handleStatusChange(brief.id, e.target.value)}
-                              >
-                                {columns.map(col => (
-                                  <option key={col.id} value={col.id}>{col.title}</option>
-                                ))}
-                              </select>
-                              
-                              {brief.brandKitId && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleCreateProject(brief)}
-                                  className="text-xs px-2 py-1 h-auto"
-                                >
-                                  <FileText className="h-3 w-3 mr-1" />
-                                  Criar Arte
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+
+          <DragOverlay>
+            {activeDragId ? (
+              <Card className="bg-gradient-card border-primary/20 opacity-80 rotate-3">
+                <CardHeader className="pb-2">
+                  <h4 className="font-semibold text-sm">
+                    {briefs.find(b => b.id === activeDragId)?.title}
+                  </h4>
+                </CardHeader>
+              </Card>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
     </div>
   );

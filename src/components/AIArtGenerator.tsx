@@ -86,12 +86,53 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
 
     setIsGenerating(true);
     try {
-      // Simulate AI generation - in production, call your AI API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const backgroundColor = brandKit.colors[0] || "#8B5CF6";
+      const textColor = brandKit.colors[1] || "#FFFFFF";
+      
+      const aiPrompt = `Create a social media post background image with the following specifications:
+- Aspect ratio: 1080x1350 pixels (Instagram portrait)
+- Background color: ${backgroundColor}
+- Design style: Modern, clean, professional
+- The image should be suitable as a background for text overlay
+- Include subtle design elements or patterns that complement the color scheme
+- Leave center area relatively clean for text placement
+- User request: ${prompt}`;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-art-image`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ prompt: aiPrompt }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao gerar imagem");
+      }
+
+      const data = await response.json();
+      
+      // Add generated background as first element
+      const bgElement: DraggableElement = {
+        id: 'background',
+        src: data.imageUrl,
+        x: 0,
+        y: 0,
+        width: 1080,
+        height: 1350,
+      };
+
+      // Preserve existing elements (logo, contact, mascot) and add background
+      setElements(prev => [bgElement, ...prev.filter(el => el.id !== 'background')]);
       setGeneratedText(prompt);
       toast.success("Arte gerada com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao gerar arte");
+    } catch (error: any) {
+      console.error("Error generating art:", error);
+      toast.error(error.message || "Erro ao gerar arte");
     } finally {
       setIsGenerating(false);
     }
@@ -260,13 +301,18 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
                           top: element.y,
                           width: element.width,
                           height: element.height,
+                          zIndex: element.id === 'background' ? 0 : 10,
                         }}
                         onMouseDown={(e) => handleMouseDown(element.id, e)}
                       >
                         <img
                           src={element.src}
                           alt={element.id}
-                          className="w-full h-full object-contain pointer-events-none"
+                          className="w-full h-full pointer-events-none"
+                          style={{
+                            objectFit: element.id === 'background' ? 'cover' : 'contain',
+                            filter: element.id === 'logo' ? `brightness(0) saturate(100%) invert(${textColor === '#FFFFFF' ? '100%' : '0%'})` : 'none',
+                          }}
                           draggable={false}
                         />
                       </div>
