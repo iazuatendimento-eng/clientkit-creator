@@ -35,6 +35,7 @@ interface ClientDashboardProps {
 export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashboardProps) => {
   const [currentView, setCurrentView] = useState<"dashboard" | "brand-editor" | "canvas" | "ai-generator">("dashboard");
   const [selectedBrandKit, setSelectedBrandKit] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("projects");
 
   const handleSaveBrandKit = (brandKit: any) => {
     const updatedClient = {
@@ -111,47 +112,26 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
 
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gradient-card border-primary/20">
-            <CardContent className="p-6 text-center">
-              <Palette className="h-8 w-8 mx-auto mb-3 text-primary" />
-              <div className="text-2xl font-bold gradient-text">
-                {client.brandKit ? "1" : "0"}
-              </div>
-              <div className="text-sm text-muted-foreground">Kit de Marca</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-card border-primary/20">
-            <CardContent className="p-6 text-center">
-              <Sparkles className="h-8 w-8 mx-auto mb-3 text-secondary" />
-              <div className="text-2xl font-bold gradient-text">
-                {client.brandKit?.colors?.length || 0}
-              </div>
-              <div className="text-sm text-muted-foreground">Cores Definidas</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-card border-primary/20">
-            <CardContent className="p-6 text-center">
-              <Calendar className="h-8 w-8 mx-auto mb-3 text-accent" />
-              <div className="text-2xl font-bold gradient-text">{client.projectCount}</div>
-              <div className="text-sm text-muted-foreground">Projetos</div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Tabs */}
-        <Tabs defaultValue="brand" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-            <TabsTrigger value="brand" className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Kit de Marca
-            </TabsTrigger>
             <TabsTrigger value="projects" className="flex items-center gap-2">
               <Trello className="h-4 w-4" />
               Projetos
             </TabsTrigger>
+            <TabsTrigger value="brand" className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Kit de Marca
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="projects">
+            <ProjectBoard 
+              brandKits={client.brandKit ? [client.brandKit] : []}
+              onCreateProject={handleCreateProject}
+              clientName={client.name}
+            />
+          </TabsContent>
 
           <TabsContent value="brand">
             <div className="space-y-6">
@@ -238,14 +218,6 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
                 </Card>
               )}
             </div>
-          </TabsContent>
-
-          <TabsContent value="projects">
-            <ProjectBoard 
-              brandKits={client.brandKit ? [client.brandKit] : []}
-              onCreateProject={handleCreateProject}
-              clientName={client.name}
-            />
           </TabsContent>
         </Tabs>
       </div>

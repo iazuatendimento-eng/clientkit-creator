@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Users, Building2, Sparkles } from "lucide-react";
+import { Plus, Users, Building2, Sparkles, Copy, Check } from "lucide-react";
 import { ClientCard } from "@/components/ClientCard";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import heroImage from "@/assets/hero-image.jpg";
+import { useToast } from "@/hooks/use-toast";
 
 interface Client {
   id: string;
@@ -29,6 +30,8 @@ const Index = () => {
   const [currentView, setCurrentView] = useState<"dashboard" | "client-editor" | "client-dashboard">("dashboard");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { toast } = useToast();
   
   // Mock data for clients
   const [clients, setClients] = useState<Client[]>([
@@ -66,6 +69,11 @@ const Index = () => {
     }
   ]);
 
+  // Persist clients to localStorage
+  useEffect(() => {
+    localStorage.setItem('clients', JSON.stringify(clients));
+  }, [clients]);
+
   const handleSaveClient = (client: Client) => {
     if (client.id && clients.find(c => c.id === client.id)) {
       setClients(clients.map(c => c.id === client.id ? client : c));
@@ -91,6 +99,17 @@ const Index = () => {
   const handleUpdateClient = (updatedClient: Client) => {
     setClients(clients.map(c => c.id === updatedClient.id ? updatedClient : c));
     setSelectedClient(updatedClient);
+  };
+
+  const handleCopyUrl = (clientId: string) => {
+    const url = `${window.location.origin}/client/${clientId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(clientId);
+    toast({
+      title: "Link copiado!",
+      description: "O link do cliente foi copiado para a área de transferência.",
+    });
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   if (currentView === "client-editor") {
@@ -157,7 +176,27 @@ const Index = () => {
                       : 'bg-card hover:bg-card/80 border border-border'
                   }`}
                 >
-                  <div className="font-semibold mb-1">{client.name}</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="font-semibold">{client.name}</div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyUrl(client.id);
+                      }}
+                      className={`p-1 rounded transition-colors ${
+                        selectedClient?.id === client.id
+                          ? 'hover:bg-primary-foreground/20'
+                          : 'hover:bg-muted'
+                      }`}
+                      title="Copiar link do cliente"
+                    >
+                      {copiedId === client.id ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                   <div className={`text-sm ${
                     selectedClient?.id === client.id
                       ? 'text-primary-foreground/80'
