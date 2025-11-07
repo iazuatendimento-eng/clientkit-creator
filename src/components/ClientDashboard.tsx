@@ -48,7 +48,7 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
   const handleCreateProject = (brief: any, brandKitId: string) => {
     if (client.brandKit) {
       setSelectedBrandKit(client.brandKit);
-      setCurrentView("canvas");
+      setCurrentView("ai-generator");
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -213,6 +214,26 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false);
 
+  // Persist briefs locally per client to avoid data loss between refreshes
+  useEffect(() => {
+    const storageKey = `project-briefs-${clientName || 'default'}`;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setBriefs(parsed);
+        }
+      } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const storageKey = `project-briefs-${clientName || 'default'}`;
+    localStorage.setItem(storageKey, JSON.stringify(briefs));
+  }, [briefs, clientName]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -227,6 +248,15 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
     { id: "review", title: "Em Revisão", color: "bg-purple-500/20 border-purple-500/30" },
     { id: "completed", title: "Concluído", color: "bg-green-500/20 border-green-500/30" }
   ];
+
+  const ColumnDroppable = ({ id, children }: { id: string; children: React.ReactNode }) => {
+    const { setNodeRef } = useDroppable({ id });
+    return (
+      <div ref={setNodeRef} data-droppable-id={id}>
+        {children}
+      </div>
+    );
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragId(event.active.id as string);
@@ -244,7 +274,14 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
     const activeBrief = briefs.find(b => b.id === activeId);
     if (!activeBrief) return;
 
-    // Check if dropped on a column header
+    // If dropped over another card, move to that card's column
+    const overBrief = briefs.find(b => b.id === overId);
+    if (overBrief) {
+      handleStatusChange(activeId, overBrief.status);
+      return;
+    }
+
+    // If dropped over a column, move to that column
     const targetColumn = columns.find(col => col.id === overId);
     if (targetColumn) {
       handleStatusChange(activeId, targetColumn.id);
@@ -512,31 +549,33 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
             {columns.map(column => {
               const columnBriefs = briefs.filter(b => b.status === column.id);
               return (
-                <div key={column.id} className="space-y-4">
-                  <div className={`p-4 rounded-lg border ${column.color} cursor-pointer`} id={column.id}>
-                    <h3 className="font-semibold text-center">{column.title}</h3>
-                    <div className="text-center text-sm text-muted-foreground mt-1">
-                      {columnBriefs.length} itens
+                <ColumnDroppable key={column.id} id={column.id}>
+                  <div className="space-y-4">
+                    <div className={`p-4 rounded-lg border ${column.color} cursor-pointer`}>
+                      <h3 className="font-semibold text-center">{column.title}</h3>
+                      <div className="text-center text-sm text-muted-foreground mt-1">
+                        {columnBriefs.length} itens
+                      </div>
                     </div>
+                    
+                    <SortableContext items={columnBriefs.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-3">
+                        {columnBriefs.map(brief => (
+                          <SortableCard
+                            key={brief.id}
+                            brief={brief}
+                            brandKit={getBrandKit(brief.brandKitId)}
+                            columns={columns}
+                            onEdit={handleEditBrief}
+                            onDelete={handleDeleteBrief}
+                            onStatusChange={handleStatusChange}
+                            onCreateProject={handleCreateProjectFromBrief}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
                   </div>
-                  
-                  <SortableContext items={columnBriefs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-3">
-                      {columnBriefs.map(brief => (
-                        <SortableCard
-                          key={brief.id}
-                          brief={brief}
-                          brandKit={getBrandKit(brief.brandKitId)}
-                          columns={columns}
-                          onEdit={handleEditBrief}
-                          onDelete={handleDeleteBrief}
-                          onStatusChange={handleStatusChange}
-                          onCreateProject={handleCreateProjectFromBrief}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </div>
+                </ColumnDroppable>
               );
             })}
           </div>
