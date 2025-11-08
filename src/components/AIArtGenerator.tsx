@@ -2,9 +2,22 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Wand2, Download, Move } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { ArrowLeft, Wand2, Download, Move, Type, RotateCw, ZoomIn, Save } from "lucide-react";
 import { toast } from "sonner";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
+
+interface TextElement {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  rotation: number;
+}
 
 interface BrandKit {
   id: string;
@@ -39,6 +52,11 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [textElements, setTextElements] = useState<TextElement[]>([]);
+  const [selectedText, setSelectedText] = useState<string | null>(null);
+  const [newText, setNewText] = useState("");
+  const [newTextColor, setNewTextColor] = useState("#FFFFFF");
+  const [newTextSize, setNewTextSize] = useState(48);
   const projectId = `brandkit-${brandKit.id}`;
 
   // Initialize elements with brand kit images and load saved uploads
@@ -151,7 +169,9 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
 
   const handleMouseDown = (elementId: string, e: React.MouseEvent) => {
     const element = elements.find(el => el.id === elementId);
-    if (!element) return;
+    const textElement = textElements.find(el => el.id === elementId);
+    
+    if (!element && !textElement) return;
 
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     setDragOffset({
@@ -159,15 +179,21 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
       y: e.clientY - rect.top,
     });
     setDraggedElement(elementId);
+    
+    if (textElement) {
+      setSelectedText(elementId);
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!draggedElement || !canvasRef.current) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const newX = e.clientX - canvasRect.left - dragOffset.x;
-    const newY = e.clientY - canvasRect.top - dragOffset.y;
+    const scale = 0.5; // Canvas is scaled to 50%
+    const newX = (e.clientX - canvasRect.left) / scale - dragOffset.x;
+    const newY = (e.clientY - canvasRect.top) / scale - dragOffset.y;
 
+    // Update image elements
     setElements(prev =>
       prev.map(el =>
         el.id === draggedElement
@@ -175,10 +201,61 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
           : el
       )
     );
+
+    // Update text elements
+    setTextElements(prev =>
+      prev.map(el =>
+        el.id === draggedElement
+          ? { ...el, x: Math.max(0, Math.min(newX, 1080)), y: Math.max(0, Math.min(newY, 1350)) }
+          : el
+      )
+    );
   };
 
   const handleMouseUp = () => {
     setDraggedElement(null);
+  };
+
+  const handleAddText = () => {
+    if (!newText.trim()) {
+      toast.error("Digite um texto");
+      return;
+    }
+
+    const textEl: TextElement = {
+      id: `text-${Date.now()}`,
+      text: newText,
+      x: 540,
+      y: 675,
+      fontSize: newTextSize,
+      color: newTextColor,
+      rotation: 0,
+    };
+
+    setTextElements([...textElements, textEl]);
+    setNewText("");
+    toast.success("Texto adicionado!");
+  };
+
+  const handleUpdateTextSize = (size: number) => {
+    if (!selectedText) return;
+    setTextElements(prev =>
+      prev.map(el => (el.id === selectedText ? { ...el, fontSize: size } : el))
+    );
+  };
+
+  const handleUpdateTextRotation = (rotation: number) => {
+    if (!selectedText) return;
+    setTextElements(prev =>
+      prev.map(el => (el.id === selectedText ? { ...el, rotation } : el))
+    );
+  };
+
+  const handleUpdateTextColor = (color: string) => {
+    if (!selectedText) return;
+    setTextElements(prev =>
+      prev.map(el => (el.id === selectedText ? { ...el, color } : el))
+    );
   };
 
   const handleExport = () => {
@@ -267,6 +344,97 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
               </CardContent>
             </Card>
 
+            {/* Text Controls */}
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Type className="h-5 w-5" />
+                  Adicionar Texto
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="newText">Texto</Label>
+                  <Input
+                    id="newText"
+                    value={newText}
+                    onChange={(e) => setNewText(e.target.value)}
+                    placeholder="Digite o texto..."
+                    className="bg-background/50 border-primary/20"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="textSize">Tamanho</Label>
+                    <Input
+                      id="textSize"
+                      type="number"
+                      value={newTextSize}
+                      onChange={(e) => setNewTextSize(Number(e.target.value))}
+                      className="bg-background/50 border-primary/20"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="textColor">Cor</Label>
+                    <Input
+                      id="textColor"
+                      type="color"
+                      value={newTextColor}
+                      onChange={(e) => setNewTextColor(e.target.value)}
+                      className="bg-background/50 border-primary/20 h-10"
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={handleAddText} className="w-full" variant="outline">
+                  <Type className="mr-2 h-4 w-4" />
+                  Adicionar Texto
+                </Button>
+
+                {selectedText && (
+                  <div className="pt-4 border-t border-primary/20 space-y-3">
+                    <h4 className="font-medium text-sm">Editar Texto Selecionado</h4>
+                    
+                    <div>
+                      <Label>Tamanho: {textElements.find(t => t.id === selectedText)?.fontSize}px</Label>
+                      <Slider
+                        value={[textElements.find(t => t.id === selectedText)?.fontSize || 48]}
+                        onValueChange={([size]) => handleUpdateTextSize(size)}
+                        min={20}
+                        max={120}
+                        step={2}
+                        className="mt-2"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Rotação: {textElements.find(t => t.id === selectedText)?.rotation}°</Label>
+                      <Slider
+                        value={[textElements.find(t => t.id === selectedText)?.rotation || 0]}
+                        onValueChange={([rotation]) => handleUpdateTextRotation(rotation)}
+                        min={-180}
+                        max={180}
+                        step={5}
+                        className="mt-2"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="editTextColor">Cor do Texto</Label>
+                      <Input
+                        id="editTextColor"
+                        type="color"
+                        value={textElements.find(t => t.id === selectedText)?.color || "#FFFFFF"}
+                        onChange={(e) => handleUpdateTextColor(e.target.value)}
+                        className="bg-background/50 border-primary/20 h-10 mt-2"
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <FileUpload
               projectId={projectId}
               onUploadComplete={setUploadedFiles}
@@ -331,6 +499,30 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
                           }}
                           draggable={false}
                         />
+                      </div>
+                    ))}
+
+                    {/* Text Elements */}
+                    {textElements.map((textEl) => (
+                      <div
+                        key={textEl.id}
+                        className={`absolute cursor-move transition-all ${
+                          selectedText === textEl.id ? 'ring-2 ring-primary' : 'hover:ring-2 hover:ring-primary/50'
+                        }`}
+                        style={{
+                          left: textEl.x,
+                          top: textEl.y,
+                          fontSize: textEl.fontSize,
+                          color: textEl.color,
+                          transform: `translate(-50%, -50%) rotate(${textEl.rotation}deg)`,
+                          zIndex: 20,
+                          fontWeight: 'bold',
+                          textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                          whiteSpace: 'nowrap',
+                        }}
+                        onMouseDown={(e) => handleMouseDown(textEl.id, e)}
+                      >
+                        {textEl.text}
                       </div>
                     ))}
                   </div>

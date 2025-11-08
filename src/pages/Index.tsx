@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Users, Building2, Sparkles, Copy, Check } from "lucide-react";
+import { Plus, Users, Building2, Sparkles, Copy, Check, LogOut, Loader2 } from "lucide-react";
 import { ClientCard } from "@/components/ClientCard";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import heroImage from "@/assets/hero-image.jpg";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Client {
   id: string;
@@ -32,6 +34,27 @@ const Index = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth");
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
   
   // Mock data for clients
   const [clients, setClients] = useState<Client[]>([
@@ -140,17 +163,29 @@ const Index = () => {
       <div className="border-b bg-background/80 backdrop-blur-sm px-6 py-4">
         <div className="container mx-auto flex justify-between items-center">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
-          <Button
-            variant="gradient"
-            onClick={() => {
-              setEditingClient(null);
-              setCurrentView("client-editor");
-            }}
-            className="glow-effect"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Cliente
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await signOut();
+                navigate("/auth");
+              }}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+            <Button
+              variant="gradient"
+              onClick={() => {
+                setEditingClient(null);
+                setCurrentView("client-editor");
+              }}
+              className="glow-effect"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Cliente
+            </Button>
+          </div>
         </div>
       </div>
 
