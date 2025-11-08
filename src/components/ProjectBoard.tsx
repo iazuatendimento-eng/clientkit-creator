@@ -78,14 +78,53 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Get cover image from uploads
+  const getCoverImage = () => {
+    const projectId = `brandkit-${brief.brandKitId}`;
+    const savedUploads = localStorage.getItem(`uploads-${projectId}`);
+    if (!savedUploads) return null;
+    
+    try {
+      const uploads = JSON.parse(savedUploads);
+      const finalArt = uploads.find((u: any) => u.type === "final");
+      return finalArt || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const coverImage = getCoverImage();
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
-      className="bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 cursor-move"
+      className="bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 cursor-move overflow-hidden"
       {...attributes}
       {...listeners}
     >
+      {/* Cover Image */}
+      {coverImage && (
+        <div className="w-full h-32 relative bg-muted">
+          {coverImage.fileType === "image" ? (
+            <img 
+              src={coverImage.url} 
+              alt="Cover" 
+              className="w-full h-full object-cover"
+            />
+          ) : coverImage.fileType === "video" ? (
+            <div className="w-full h-full flex items-center justify-center bg-primary/10">
+              <div className="text-center">
+                <svg className="mx-auto h-12 w-12 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <p className="text-xs text-muted-foreground mt-2">Seu vídeo está aqui</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="space-y-1">

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Wand2, Download, Move } from "lucide-react";
 import { toast } from "sonner";
+import { FileUpload, UploadedFile } from "@/components/FileUpload";
 
 interface BrandKit {
   id: string;
@@ -37,8 +38,10 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
   const [elements, setElements] = useState<DraggableElement[]>([]);
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const projectId = `brandkit-${brandKit.id}`;
 
-  // Initialize elements with brand kit images
+  // Initialize elements with brand kit images and load saved uploads
   useEffect(() => {
     const initialElements: DraggableElement[] = [];
     
@@ -76,7 +79,15 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
     }
     
     setElements(initialElements);
-  }, [brandKit]);
+
+    // Load saved uploads
+    const savedUploads = localStorage.getItem(`uploads-${projectId}`);
+    if (savedUploads) {
+      try {
+        setUploadedFiles(JSON.parse(savedUploads));
+      } catch {}
+    }
+  }, [brandKit, projectId]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -205,8 +216,8 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Panel - Prompt */}
-          <div className="lg:col-span-1">
+          {/* Left Panel - Prompt and Upload */}
+          <div className="lg:col-span-1 space-y-6">
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -219,7 +230,7 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="Descreva como você quer o post para rede social..."
-                  className="min-h-[200px] bg-background/50 border-primary/20"
+                  className="min-h-[150px] bg-background/50 border-primary/20"
                 />
                 <Button
                   onClick={handleGenerate}
@@ -255,6 +266,12 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
                 </div>
               </CardContent>
             </Card>
+
+            <FileUpload
+              projectId={projectId}
+              onUploadComplete={setUploadedFiles}
+              existingFiles={uploadedFiles}
+            />
           </div>
 
           {/* Right Panel - Canvas */}
@@ -263,17 +280,16 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
               <CardHeader>
                 <CardTitle>Preview (1080x1350)</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex justify-center">
+              <CardContent className="flex justify-center">
+                <div className="relative" style={{ width: "540px", height: "675px" }}>
                   <div
                     ref={canvasRef}
-                    className="relative overflow-hidden shadow-2xl"
+                    className="absolute inset-0 overflow-hidden shadow-2xl origin-top-left"
                     style={{
-                      width: "540px",
-                      height: "675px",
+                      width: "1080px",
+                      height: "1350px",
                       backgroundColor,
                       transform: "scale(0.5)",
-                      transformOrigin: "top left",
                     }}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
