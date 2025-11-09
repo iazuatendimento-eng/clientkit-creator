@@ -89,6 +89,9 @@ export default function Auth() {
         password,
         options: {
           emailRedirectTo: redirectUrl,
+          data: {
+            email: email
+          }
         },
       });
 

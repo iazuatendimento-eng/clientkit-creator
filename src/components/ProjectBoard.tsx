@@ -41,9 +41,11 @@ interface ProjectBrief {
   title: string;
   description: string;
   deadline: string;
-  status: "todo" | "in-progress" | "review" | "completed";
+  status: "todo" | "in-progress" | "request_changes" | "completed";
   brandKitId?: string;
   createdAt: string;
+  type?: "art" | "video";
+  coverImage?: string;
 }
 
 interface ProjectBoardProps {
@@ -103,24 +105,30 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       {...attributes}
       {...listeners}
     >
-      {/* Cover Image */}
-      {coverImage && (
+      {/* Cover Image or Video Indicator */}
+      {(brief.coverImage || brief.type === "video") && (
         <div className="w-full h-32 relative bg-muted">
-          {coverImage.fileType === "image" ? (
+          {brief.type === "video" ? (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">
+              <div className="text-center">
+                <svg className="mx-auto h-16 w-16 text-primary drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <p className="text-sm font-semibold text-foreground mt-2">Vídeo</p>
+              </div>
+            </div>
+          ) : brief.coverImage ? (
+            <img 
+              src={brief.coverImage} 
+              alt="Cover" 
+              className="w-full h-full object-cover"
+            />
+          ) : coverImage?.fileType === "image" ? (
             <img 
               src={coverImage.url} 
               alt="Cover" 
               className="w-full h-full object-cover"
             />
-          ) : coverImage.fileType === "video" ? (
-            <div className="w-full h-full flex items-center justify-center bg-primary/10">
-              <div className="text-center">
-                <svg className="mx-auto h-12 w-12 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-                <p className="text-xs text-muted-foreground mt-2">Seu vídeo está aqui</p>
-              </div>
-            </div>
           ) : null}
         </div>
       )}
@@ -284,7 +292,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
   const columns = [
     { id: "todo", title: "Para Fazer", color: "bg-yellow-500/20 border-yellow-500/30" },
     { id: "in-progress", title: "Em Progresso", color: "bg-blue-500/20 border-blue-500/30" },
-    { id: "review", title: "Em Revisão", color: "bg-purple-500/20 border-purple-500/30" },
+    { id: "request_changes", title: "Solicitar Alteração", color: "bg-purple-500/20 border-purple-500/30" },
     { id: "completed", title: "Concluído", color: "bg-green-500/20 border-green-500/30" }
   ];
 
@@ -336,7 +344,9 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
       deadline: newBrief.deadline || "",
       status: newBrief.status || "todo",
       brandKitId: newBrief.brandKitId,
-      createdAt: editingBrief?.createdAt || new Date().toISOString().split('T')[0]
+      createdAt: editingBrief?.createdAt || new Date().toISOString().split('T')[0],
+      type: newBrief.type || "art",
+      coverImage: newBrief.coverImage
     };
 
     if (editingBrief) {
@@ -511,6 +521,17 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
                   <label className="text-sm font-medium mb-2 block">Ou criar um único briefing</label>
                   <div className="space-y-3">
                     <div>
+                      <label className="text-sm font-medium mb-1 block">Tipo</label>
+                      <select
+                        className="w-full p-2 border rounded-md bg-background"
+                        value={newBrief.type || "art"}
+                        onChange={(e) => setNewBrief({...newBrief, type: e.target.value as "art" | "video"})}
+                      >
+                        <option value="art">Arte</option>
+                        <option value="video">Vídeo</option>
+                      </select>
+                    </div>
+                    <div>
                       <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
                       <Input
                         placeholder="Título do projeto"
@@ -548,6 +569,25 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
                         ))}
                       </select>
                     </div>
+                    {newBrief.type === "art" && (
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Imagem de Capa</label>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setNewBrief({...newBrief, coverImage: reader.result as string});
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
                     <Button onClick={handleSaveBrief} className="w-full">
                       {editingBrief ? "Salvar Alterações" : "Criar Briefing"}
                     </Button>
