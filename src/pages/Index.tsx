@@ -73,10 +73,14 @@ const Index = () => {
 
   // Redirect to auth if not logged in
   useEffect(() => {
+    // Redirect to auth if not logged in
     if (!loading && !user) {
       navigate("/auth");
     }
-  }, [user, loading, navigate]);
+
+    // Persist clients to localStorage on any change
+    localStorage.setItem('clients', JSON.stringify(clients));
+  }, [user, loading, navigate, clients]);
 
   if (loading) {
     return (
@@ -90,10 +94,6 @@ const Index = () => {
     return null;
   }
 
-  // Persist clients to localStorage
-  useEffect(() => {
-    localStorage.setItem('clients', JSON.stringify(clients));
-  }, [clients]);
 
   const handleSaveClient = (client: Client) => {
     if (client.id && clients.find(c => c.id === client.id)) {
