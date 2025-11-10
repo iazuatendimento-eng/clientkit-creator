@@ -20,7 +20,7 @@ interface Client {
 }
 
 const ClientPublicView = () => {
-  const { clientId } = useParams<{ clientId: string }>();
+  const { clientId, clientSlug } = useParams<{ clientId?: string; clientSlug?: string }>();
   const [client, setClient] = useState<Client | null>(null);
 
   useEffect(() => {
@@ -28,10 +28,23 @@ const ClientPublicView = () => {
     const storedClients = localStorage.getItem('clients');
     if (storedClients) {
       const clients = JSON.parse(storedClients);
-      const foundClient = clients.find((c: Client) => c.id === clientId);
+      
+      let foundClient = null;
+      if (clientId) {
+        foundClient = clients.find((c: Client) => c.id === clientId);
+      } else if (clientSlug) {
+        // Try to find by slug (normalized name or company)
+        const slug = clientSlug.toLowerCase();
+        foundClient = clients.find((c: Client) => {
+          const nameSlug = c.name.toLowerCase().replace(/\s+/g, '-');
+          const companySlug = c.company?.toLowerCase().replace(/\s+/g, '-');
+          return nameSlug === slug || companySlug === slug;
+        });
+      }
+      
       setClient(foundClient || null);
     }
-  }, [clientId]);
+  }, [clientId, clientSlug]);
 
   if (!client) {
     return (

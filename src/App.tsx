@@ -21,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/client/:clientId" element={<ClientPublicView />} />
+          <Route path="/:clientSlug" element={<ClientPublicView />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

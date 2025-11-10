@@ -15,7 +15,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload } from "lucide-react";
+import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -65,6 +66,9 @@ interface SortableCardProps {
 }
 
 const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject }: SortableCardProps) => {
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [localCoverImage, setLocalCoverImage] = useState(brief.coverImage);
+  
   const {
     attributes,
     listeners,
@@ -80,22 +84,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     opacity: isDragging ? 0.5 : 1,
   };
 
-  // Get cover image from uploads
-  const getCoverImage = () => {
-    const projectId = `brandkit-${brief.brandKitId}`;
-    const savedUploads = localStorage.getItem(`uploads-${projectId}`);
-    if (!savedUploads) return null;
-    
-    try {
-      const uploads = JSON.parse(savedUploads);
-      const finalArt = uploads.find((u: any) => u.type === "final");
-      return finalArt || null;
-    } catch {
-      return null;
-    }
+  const handleCoverUpdate = (coverUrl: string) => {
+    setLocalCoverImage(coverUrl);
+    // Update the brief with the new cover
+    brief.coverImage = coverUrl;
   };
-
-  const coverImage = getCoverImage();
 
   return (
     <Card
@@ -105,31 +98,14 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       {...attributes}
       {...listeners}
     >
-      {/* Cover Image or Video Indicator */}
-      {(brief.coverImage || brief.type === "video") && (
+      {/* Cover Image */}
+      {localCoverImage && (
         <div className="w-full h-32 relative bg-muted">
-          {brief.type === "video" ? (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-              <div className="text-center">
-                <svg className="mx-auto h-16 w-16 text-primary drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-                <p className="text-sm font-semibold text-foreground mt-2">Vídeo</p>
-              </div>
-            </div>
-          ) : brief.coverImage ? (
-            <img 
-              src={brief.coverImage} 
-              alt="Cover" 
-              className="w-full h-full object-cover"
-            />
-          ) : coverImage?.fileType === "image" ? (
-            <img 
-              src={coverImage.url} 
-              alt="Cover" 
-              className="w-full h-full object-cover"
-            />
-          ) : null}
+          <img 
+            src={localCoverImage} 
+            alt="Cover" 
+            className="w-full h-full object-cover"
+          />
         </div>
       )}
 
@@ -194,21 +170,19 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             </div>
           )}
           
-          <div className="flex gap-2 pt-2">
-            <select
-              className="text-xs p-1 border rounded bg-background flex-1"
-              value={brief.status}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
+          <div className="flex gap-2 mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
                 e.stopPropagation();
-                onStatusChange(brief.id, e.target.value);
+                setIsDetailModalOpen(true);
               }}
+              className="text-xs px-2 py-1 h-auto flex-1"
             >
-              {columns.map(col => (
-                <option key={col.id} value={col.id}>{col.title}</option>
-              ))}
-            </select>
-            
+              <Upload className="h-3 w-3 mr-1" />
+              Uploads
+            </Button>
             {brief.brandKitId && (
               <Button
                 variant="outline"
@@ -217,7 +191,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   e.stopPropagation();
                   onCreateProject(brief);
                 }}
-                className="text-xs px-2 py-1 h-auto"
+                className="text-xs px-2 py-1 h-auto flex-1"
               >
                 <FileText className="h-3 w-3 mr-1" />
                 Criar Arte
@@ -226,6 +200,14 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           </div>
         </div>
       </CardContent>
+      
+      <CardDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        cardId={brief.id}
+        cardTitle={brief.title}
+        onCoverUpdate={handleCoverUpdate}
+      />
     </Card>
   );
 };

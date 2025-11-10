@@ -123,7 +123,13 @@ const Index = () => {
   };
 
   const handleCopyUrl = (clientId: string) => {
-    const url = `${window.location.origin}/client/${clientId}`;
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+    
+    // Create slug from company name or client name
+    const slug = (client.company || client.name).toLowerCase().replace(/\s+/g, '-');
+    const url = `${window.location.origin}/${slug}`;
+    
     navigator.clipboard.writeText(url);
     setCopiedId(clientId);
     toast({

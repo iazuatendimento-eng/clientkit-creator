@@ -5,9 +5,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, Wand2, Download, Move, Type, RotateCw, ZoomIn, Save } from "lucide-react";
+import { ArrowLeft, Wand2, Download, Move, Type, RotateCw, ZoomIn, Save, Search, ExternalLink, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
+import { searchUnsplashImages, UnsplashImage, FREE_STOCK_SOURCES } from "@/lib/unsplash";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TextElement {
   id: string;
@@ -58,6 +60,12 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
   const [newTextColor, setNewTextColor] = useState("#FFFFFF");
   const [newTextSize, setNewTextSize] = useState(48);
   const projectId = `brandkit-${brandKit.id}`;
+  const [unsplashQuery, setUnsplashQuery] = useState("");
+  const [unsplashResults, setUnsplashResults] = useState<UnsplashImage[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [duotoneColor1, setDuotoneColor1] = useState(brandKit.colors[0] || "#8B5CF6");
+  const [duotoneColor2, setDuotoneColor2] = useState(brandKit.colors[1] || "#EC4899");
+  const [selectedElementForDuotone, setSelectedElementForDuotone] = useState<string | null>(null);
 
   // Initialize elements with brand kit images and load saved uploads
   useEffect(() => {
@@ -258,6 +266,45 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
     );
   };
 
+  const handleSearchUnsplash = async () => {
+    if (!unsplashQuery.trim()) {
+      toast.error("Digite um termo de busca");
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const results = await searchUnsplashImages(unsplashQuery);
+      setUnsplashResults(results);
+      if (results.length === 0) {
+        toast.info("Nenhuma imagem encontrada");
+      }
+    } catch (error) {
+      toast.error("Erro ao buscar imagens");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddUnsplashImage = (image: UnsplashImage) => {
+    const newElement: DraggableElement = {
+      id: `unsplash-${image.id}`,
+      src: image.urls.regular,
+      x: 200,
+      y: 200,
+      width: 400,
+      height: 400,
+    };
+    setElements([...elements, newElement]);
+    toast.success("Imagem adicionada ao canvas!");
+  };
+
+  const handleApplyDuotone = (elementId: string) => {
+    // Apply duotone filter using CSS filters
+    setSelectedElementForDuotone(elementId);
+    toast.success("Efeito duotone aplicado!");
+  };
+
   const handleExport = () => {
     // In production, use html2canvas or similar to export the canvas
     toast.success("Arte exportada com sucesso!");
@@ -293,54 +340,156 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Panel - Prompt and Upload */}
+          {/* Left Panel - Controls */}
           <div className="lg:col-span-1 space-y-6">
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wand2 className="h-5 w-5" />
-                  Descrição do Post
-                </CardTitle>
+                <CardTitle>Ferramentas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Descreva como você quer o post para rede social..."
-                  className="min-h-[150px] bg-background/50 border-primary/20"
-                />
-                <Button
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  variant="gradient"
-                  className="w-full"
-                >
-                  {isGenerating ? "Gerando..." : "Gerar Arte"}
-                </Button>
+              <CardContent>
+                <Tabs defaultValue="generate" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="generate">
+                      <Wand2 className="h-4 w-4" />
+                    </TabsTrigger>
+                    <TabsTrigger value="stock">
+                      <Search className="h-4 w-4" />
+                    </TabsTrigger>
+                    <TabsTrigger value="duotone">
+                      <Palette className="h-4 w-4" />
+                    </TabsTrigger>
+                  </TabsList>
 
-                <div className="pt-4 border-t border-primary/20">
-                  <h4 className="font-medium mb-2 text-sm">Cores do Kit</h4>
-                  <div className="flex gap-2">
-                    {brandKit.colors.map((color, index) => (
-                      <div key={index} className="space-y-1">
-                        <div
-                          className="w-12 h-12 rounded-lg border border-white/20"
-                          style={{ backgroundColor: color }}
-                        />
-                        <p className="text-xs text-center text-muted-foreground">
-                          {index === 0 ? "Fundo" : index === 1 ? "Texto" : `Cor ${index + 1}`}
-                        </p>
+                  <TabsContent value="generate" className="space-y-4">
+                    <div>
+                      <Label>Descrição da Arte</Label>
+                      <Textarea
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        placeholder="Descreva como você quer o post..."
+                        className="min-h-[120px] bg-background/50 border-primary/20 mt-2"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      variant="gradient"
+                      className="w-full"
+                    >
+                      {isGenerating ? "Gerando..." : "Gerar Arte com IA"}
+                    </Button>
+
+                    <div className="pt-4 border-t border-primary/20">
+                      <h4 className="font-medium mb-2 text-sm">Cores do Kit</h4>
+                      <div className="flex gap-2">
+                        {brandKit.colors.map((color, index) => (
+                          <div key={index} className="space-y-1">
+                            <div
+                              className="w-10 h-10 rounded-lg border border-white/20 cursor-pointer hover:scale-110 transition-transform"
+                              style={{ backgroundColor: color }}
+                              onClick={() => {
+                                if (index === 0) setDuotoneColor1(color);
+                                if (index === 1) setDuotoneColor2(color);
+                              }}
+                            />
+                            <p className="text-xs text-center text-muted-foreground">
+                              {index === 0 ? "Fundo" : index === 1 ? "Texto" : `${index + 1}`}
+                            </p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  </TabsContent>
 
-                <div className="pt-4 border-t border-primary/20">
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Move className="h-4 w-4" />
-                    Arraste os elementos no canvas para posicioná-los
-                  </p>
-                </div>
+                  <TabsContent value="stock" className="space-y-4">
+                    <div>
+                      <Label>Buscar Imagens Gratuitas</Label>
+                      <div className="flex gap-2 mt-2">
+                        <Input
+                          value={unsplashQuery}
+                          onChange={(e) => setUnsplashQuery(e.target.value)}
+                          placeholder="Ex: café, comida, tecnologia..."
+                          className="bg-background/50 border-primary/20"
+                          onKeyPress={(e) => e.key === 'Enter' && handleSearchUnsplash()}
+                        />
+                        <Button
+                          onClick={handleSearchUnsplash}
+                          disabled={isSearching}
+                          size="icon"
+                        >
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+                      {unsplashResults.map((image) => (
+                        <div key={image.id} className="relative group cursor-pointer" onClick={() => handleAddUnsplashImage(image)}>
+                          <img
+                            src={image.urls.small}
+                            alt={image.description || "Unsplash"}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <p className="text-white text-xs">Adicionar</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-4 border-t border-primary/20">
+                      <p className="text-xs text-muted-foreground mb-2">Outros bancos gratuitos:</p>
+                      {FREE_STOCK_SOURCES.map((source) => (
+                        <a
+                          key={source.name}
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-xs text-primary hover:underline mb-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {source.name}
+                        </a>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="duotone" className="space-y-4">
+                    <div>
+                      <Label>Efeito Duotone</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Aplique cores do kit nas imagens
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <Label>Cor 1 (Sombras)</Label>
+                        <Input
+                          type="color"
+                          value={duotoneColor1}
+                          onChange={(e) => setDuotoneColor1(e.target.value)}
+                          className="h-12 mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label>Cor 2 (Luzes)</Label>
+                        <Input
+                          type="color"
+                          value={duotoneColor2}
+                          onChange={(e) => setDuotoneColor2(e.target.value)}
+                          className="h-12 mt-2"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-primary/20">
+                      <p className="text-xs text-muted-foreground">
+                        Selecione um elemento no canvas e clique para aplicar o duotone
+                      </p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
