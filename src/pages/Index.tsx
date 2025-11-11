@@ -129,6 +129,19 @@ const Index = () => {
     // Create slug from company name or client name
     const slug = (client.company || client.name).toLowerCase().replace(/\s+/g, '-');
     const url = `${window.location.origin}/${slug}`;
+
+    // Persist a public-safe snapshot for the public page fallback
+    try {
+      const publicSnapshot = {
+        id: client.id,
+        name: client.name,
+        company: client.company,
+        brandKit: client.brandKit,
+        createdAt: client.createdAt,
+        projectCount: client.projectCount,
+      };
+      localStorage.setItem(`public-client-${slug}`, JSON.stringify(publicSnapshot));
+    } catch {}
     
     navigator.clipboard.writeText(url);
     setCopiedId(clientId);
