@@ -66,6 +66,25 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
   const [duotoneColor1, setDuotoneColor1] = useState(brandKit.colors[0] || "#8B5CF6");
   const [duotoneColor2, setDuotoneColor2] = useState(brandKit.colors[1] || "#EC4899");
   const [selectedElementForDuotone, setSelectedElementForDuotone] = useState<string | null>(null);
+  const [pages, setPages] = useState<Array<{ elements: DraggableElement[], textElements: TextElement[] }>>([
+    { elements: [], textElements: [] }
+  ]);
+  const [currentPage, setCurrentPage] = useState(0);
+
+  // Sync current page state with pages array
+  useEffect(() => {
+    const updatedPages = [...pages];
+    updatedPages[currentPage] = { elements, textElements };
+    setPages(updatedPages);
+  }, [elements, textElements]);
+
+  // Load current page state when page changes
+  useEffect(() => {
+    if (pages[currentPage]) {
+      setElements(pages[currentPage].elements);
+      setTextElements(pages[currentPage].textElements);
+    }
+  }, [currentPage]);
 
   // Initialize elements with brand kit images and load saved uploads
   useEffect(() => {
@@ -305,9 +324,36 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
     toast.success("Efeito duotone aplicado!");
   };
 
-  const handleExport = () => {
-    // In production, use html2canvas or similar to export the canvas
-    toast.success("Arte exportada com sucesso!");
+  const handleExport = async () => {
+    if (!canvasRef.current) return;
+    
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(canvasRef.current, {
+        backgroundColor: backgroundColor,
+        scale: 2,
+        width: 1080,
+        height: 1350,
+      });
+      
+      // Convert to blob and download
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `arte-${brandKit.name}-${Date.now()}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast.success("Arte exportada com sucesso!");
+        }
+      });
+    } catch (error) {
+      console.error("Error exporting:", error);
+      toast.error("Erro ao exportar arte");
+    }
   };
 
   const backgroundColor = brandKit.colors[0] || "#8B5CF6";
@@ -329,10 +375,44 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
                 <p className="text-muted-foreground">{brandKit.name}</p>
               </div>
             </div>
-            <Button variant="gradient" onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" />
-              Exportar
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mr-4">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                  disabled={currentPage === 0}
+                >
+                  ←
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage + 1} de {pages.length}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(pages.length - 1, currentPage + 1))}
+                  disabled={currentPage === pages.length - 1}
+                >
+                  →
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setPages([...pages, { elements: [], textElements: [] }]);
+                    setCurrentPage(pages.length);
+                    toast.success("Nova página adicionada!");
+                  }}
+                >
+                  + Página
+                </Button>
+              </div>
+              <Button variant="gradient" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar
+              </Button>
+            </div>
           </div>
         </div>
       </div>

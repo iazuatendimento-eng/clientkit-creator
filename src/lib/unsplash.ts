@@ -19,12 +19,13 @@ export interface UnsplashImage {
 
 export const searchUnsplashImages = async (query: string, perPage: number = 12): Promise<UnsplashImage[]> => {
   try {
-    // Using Unsplash's public source API
+    // Using Unsplash API with access key
     const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${perPage}&client_id=demo`
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${perPage}&client_id=jU7iR1J7GU5k_4FwNRyhOmVw5D_jWlN3kQxmD_Sn5jI`
     );
 
     if (!response.ok) {
+      console.error('Unsplash API error:', response.status, response.statusText);
       throw new Error('Erro ao buscar imagens');
     }
 

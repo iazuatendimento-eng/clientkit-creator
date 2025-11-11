@@ -170,7 +170,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             </div>
           )}
           
-          <div className="flex gap-2 mt-2">
+          <div className="flex flex-col gap-2 mt-2">
             <Button
               variant="outline"
               size="sm"
@@ -178,7 +178,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 e.stopPropagation();
                 setIsDetailModalOpen(true);
               }}
-              className="text-xs px-2 py-1 h-auto flex-1"
+              className="text-xs px-2 py-1 h-auto w-full"
             >
               <Upload className="h-3 w-3 mr-1" />
               Uploads
@@ -191,7 +191,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   e.stopPropagation();
                   onCreateProject(brief);
                 }}
-                className="text-xs px-2 py-1 h-auto flex-1"
+                className="text-xs px-2 py-1 h-auto w-full"
               >
                 <FileText className="h-3 w-3 mr-1" />
                 Criar Arte
