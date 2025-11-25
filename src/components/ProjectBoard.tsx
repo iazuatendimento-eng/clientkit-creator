@@ -131,7 +131,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               <User className="h-3 w-3 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
             </div>
-            <h4 className="font-semibold text-sm">{brief.title}</h4>
+            <h4 className="font-semibold text-sm text-left">{brief.title}</h4>
           </div>
           {!isPublicView && (
             <div className="flex gap-1">
@@ -162,10 +162,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <p className="text-xs text-muted-foreground mb-3 line-clamp-2 text-left">
-          {brief.description}
-        </p>
-        
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs">
             <Calendar className="h-3 w-3" />
