@@ -98,6 +98,7 @@ export type Database = {
       }
       client_data: {
         Row: {
+          active: boolean
           brand_kit: Json | null
           company: string | null
           created_at: string | null
@@ -111,6 +112,7 @@ export type Database = {
           team: string | null
         }
         Insert: {
+          active?: boolean
           brand_kit?: Json | null
           company?: string | null
           created_at?: string | null
@@ -124,6 +126,7 @@ export type Database = {
           team?: string | null
         }
         Update: {
+          active?: boolean
           brand_kit?: Json | null
           company?: string | null
           created_at?: string | null

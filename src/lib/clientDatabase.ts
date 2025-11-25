@@ -11,6 +11,7 @@ export interface ClientData {
   slug: string;
   brand_kit?: any;
   created_at?: string;
+  active?: boolean;
 }
 
 export interface ProjectBrief {

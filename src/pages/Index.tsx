@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, ListTodo, Calendar } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, ListTodo, Calendar, Power, PowerOff } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +46,7 @@ interface Client {
   brand_kit?: any;
   projectCount: number;
   created_at: string;
+  active?: boolean;
 }
 
 const Index = () => {
@@ -82,7 +83,17 @@ const Index = () => {
         brand_kit: c.brand_kit,
         projectCount: 0,
         created_at: c.created_at || new Date().toISOString(),
+        active: c.active !== false, // Default to true if not set
       }));
+      
+      // Sort: active clients first, then by creation date
+      mappedClients.sort((a, b) => {
+        if (a.active === b.active) {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+        return a.active ? -1 : 1;
+      });
+      
       setClients(mappedClients);
     } catch (error) {
       console.error("Error loading clients:", error);
@@ -171,6 +182,26 @@ const Index = () => {
     }
   };
 
+  const handleToggleClientActive = async (clientId: string, currentActive: boolean) => {
+    try {
+      await updateClient(clientId, { active: !currentActive });
+      await loadClients();
+      toast({
+        title: !currentActive ? "Cliente ativado!" : "Cliente inativado!",
+        description: !currentActive 
+          ? "O cliente foi ativado e pode ter ações executadas." 
+          : "O cliente foi inativado e não pode ter novas ações.",
+      });
+    } catch (error) {
+      console.error("Error toggling client active status:", error);
+      toast({
+        title: "Erro ao alterar status",
+        description: "Não foi possível alterar o status do cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCopyUrl = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
     if (!client) return;
@@ -188,16 +219,26 @@ const Index = () => {
 
   const handleBulkMoveToCompleted = async (team?: string) => {
     try {
-      const filteredClients = team 
-        ? clients.filter(c => c.team === team)
-        : clients;
+      const filteredClients = (team 
+        ? clients.filter(c => c.team === team && c.active)
+        : clients.filter(c => c.active));
       
       const clientIds = filteredClients.map(c => c.id);
+      
+      if (clientIds.length === 0) {
+        toast({
+          title: "Nenhum cliente ativo",
+          description: "Não há clientes ativos para mover.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       await bulkUpdateBriefStatus(clientIds, "completed");
       
       toast({
         title: "Cards movidos!",
-        description: `Primeiro card de cada cliente movido para Concluídos.`,
+        description: `Primeiro card de ${clientIds.length} ${clientIds.length === 1 ? 'cliente ativo' : 'clientes ativos'} movido para Concluídos.`,
       });
     } catch (error) {
       console.error("Error moving cards:", error);
@@ -211,16 +252,26 @@ const Index = () => {
 
   const handleBulkMoveToTodo = async (team?: string) => {
     try {
-      const filteredClients = team 
-        ? clients.filter(c => c.team === team)
-        : clients;
+      const filteredClients = (team 
+        ? clients.filter(c => c.team === team && c.active)
+        : clients.filter(c => c.active));
       
       const clientIds = filteredClients.map(c => c.id);
+      
+      if (clientIds.length === 0) {
+        toast({
+          title: "Nenhum cliente ativo",
+          description: "Não há clientes ativos para mover.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       await bulkUpdateBriefStatus(clientIds, "todo");
       
       toast({
         title: "Cards movidos!",
-        description: `Primeiro card de cada cliente movido para A Fazer.`,
+        description: `Primeiro card de ${clientIds.length} ${clientIds.length === 1 ? 'cliente ativo' : 'clientes ativos'} movido para A Fazer.`,
       });
     } catch (error) {
       console.error("Error moving cards:", error);
@@ -243,11 +294,21 @@ const Index = () => {
     }
 
     try {
-      const filteredClients = selectedTeamForDeadline 
-        ? clients.filter(c => c.team === selectedTeamForDeadline)
-        : clients;
+      const filteredClients = (selectedTeamForDeadline 
+        ? clients.filter(c => c.team === selectedTeamForDeadline && c.active)
+        : clients.filter(c => c.active));
       
       const clientIds = filteredClients.map(c => c.id);
+      
+      if (clientIds.length === 0) {
+        toast({
+          title: "Nenhum cliente ativo",
+          description: "Não há clientes ativos para definir prazo.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       await bulkUpdateBriefDeadline(clientIds, bulkDeadline);
       
       setIsDeadlineDialogOpen(false);
@@ -256,7 +317,7 @@ const Index = () => {
       
       toast({
         title: "Prazos atualizados!",
-        description: `Prazo definido para ${filteredClients.length} primeiros cards.`,
+        description: `Prazo definido para ${clientIds.length} primeiros cards de clientes ativos.`,
       });
     } catch (error) {
       console.error("Error updating deadlines:", error);
@@ -272,9 +333,9 @@ const Index = () => {
     try {
       const excelData: any[] = [];
 
-      const filteredClients = selectedTeam 
-        ? clients.filter(c => c.team === selectedTeam)
-        : clients;
+      const filteredClients = (selectedTeam 
+        ? clients.filter(c => c.team === selectedTeam && c.active)
+        : clients.filter(c => c.active));
 
       for (const client of filteredClients) {
         try {
@@ -388,9 +449,16 @@ const Index = () => {
       {/* Top Banner */}
       <div className="bg-gradient-primary py-6 px-6">
         <div className="container mx-auto">
-          <h1 className="text-2xl font-bold text-white text-center">
-            Você tem {clients.length} {clients.length === 1 ? 'empresa ativa' : 'empresas ativas'}
-          </h1>
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold text-white">
+              Total: {clients.filter(c => c.active).length} {clients.filter(c => c.active).length === 1 ? 'empresa ativa' : 'empresas ativas'}
+            </h1>
+            <div className="flex justify-center gap-6 text-sm text-white/90">
+              <span>SEG, QUA E SEX: {clients.filter(c => c.active && c.team === "1").length}</span>
+              <span>TER, QUI E SÁB: {clients.filter(c => c.active && c.team === "2").length}</span>
+              <span>SEG A SEX: {clients.filter(c => c.active && c.team === "3").length}</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -554,31 +622,60 @@ const Index = () => {
                     setCurrentView("client-dashboard");
                   }}
                   className={`w-full text-left p-4 rounded-lg transition-all ${
+                    !client.active ? 'opacity-60' : ''
+                  } ${
                     selectedClient?.id === client.id
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-card hover:bg-card/80 border border-border'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <div className="font-semibold">{client.name}</div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopyUrl(client.id);
-                      }}
-                      className={`p-1 rounded transition-colors ${
-                        selectedClient?.id === client.id
-                          ? 'hover:bg-primary-foreground/20'
-                          : 'hover:bg-muted'
-                      }`}
-                      title="Copiar link do cliente"
-                    >
-                      {copiedId === client.id ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold">{client.name}</div>
+                      {!client.active && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-500">
+                          Inativa
+                        </span>
                       )}
-                    </button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleClientActive(client.id, client.active !== false);
+                        }}
+                        className={`p-1 rounded transition-colors ${
+                          selectedClient?.id === client.id
+                            ? 'hover:bg-primary-foreground/20'
+                            : 'hover:bg-muted'
+                        }`}
+                        title={client.active ? "Inativar empresa" : "Ativar empresa"}
+                      >
+                        {client.active ? (
+                          <Power className="h-4 w-4" />
+                        ) : (
+                          <PowerOff className="h-4 w-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyUrl(client.id);
+                        }}
+                        className={`p-1 rounded transition-colors ${
+                          selectedClient?.id === client.id
+                            ? 'hover:bg-primary-foreground/20'
+                            : 'hover:bg-muted'
+                        }`}
+                        title="Copiar link do cliente"
+                      >
+                        {copiedId === client.id ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div className={`text-sm ${
                     selectedClient?.id === client.id
