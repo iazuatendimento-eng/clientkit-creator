@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Image as ImageIcon, FileVideo, X } from "lucide-react";
 import { toast } from "sonner";
+import { createCardUpload, getCardUploads, deleteCardUpload } from "@/lib/clientDatabase";
 
 interface UploadedFile {
   id: string;
@@ -24,21 +25,31 @@ interface CardDetailModalProps {
 
 export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpdate }: CardDetailModalProps) => {
   const [uploads, setUploads] = useState<UploadedFile[]>([]);
-  const storageKey = `card-uploads-${cardId}`;
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
+    const loadUploads = async () => {
       try {
-        setUploads(JSON.parse(saved));
-      } catch {}
-    }
-  }, [storageKey]);
+        const data = await getCardUploads(cardId);
+        const mappedUploads: UploadedFile[] = data.map((upload: any) => ({
+          id: upload.id,
+          name: upload.file_name,
+          url: upload.file_url,
+          type: upload.upload_type as "material" | "final",
+          fileType: upload.file_type.startsWith("video") ? "video" : "image",
+          uploadedAt: upload.uploaded_at || new Date().toISOString(),
+        }));
+        setUploads(mappedUploads);
+      } catch (error) {
+        console.error("Error loading uploads:", error);
+      }
+    };
 
-  const saveUploads = (newUploads: UploadedFile[]) => {
-    setUploads(newUploads);
-    localStorage.setItem(storageKey, JSON.stringify(newUploads));
-    
+    if (isOpen) {
+      loadUploads();
+    }
+  }, [cardId, isOpen]);
+
+  const updateCover = (newUploads: UploadedFile[]) => {
     // Update cover with first final art (prioritize images, then videos)
     const firstFinalImage = newUploads.find(u => u.type === "final" && u.fileType === "image");
     const firstFinalVideo = newUploads.find(u => u.type === "final" && u.fileType === "video");
@@ -63,29 +74,52 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
       return;
     }
 
-    // Convert to base64 for storage
-    const reader = new FileReader();
-    reader.onload = () => {
-      const newFile: UploadedFile = {
-        id: Date.now().toString(),
-        name: file.name,
-        url: reader.result as string,
-        type,
-        fileType: isVideo ? "video" : "image",
-        uploadedAt: new Date().toISOString(),
-      };
+    try {
+      // Convert to base64 for storage
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const uploadData = {
+          card_id: cardId,
+          file_url: reader.result as string,
+          file_name: file.name,
+          file_type: file.type,
+          upload_type: type,
+        };
 
-      const newUploads = [...uploads, newFile];
-      saveUploads(newUploads);
-      toast.success(`${type === "material" ? "Material" : "Arte"} adicionado!`);
-    };
-    reader.readAsDataURL(file);
+        const savedUpload = await createCardUpload(uploadData);
+        
+        const newFile: UploadedFile = {
+          id: savedUpload.id,
+          name: savedUpload.file_name,
+          url: savedUpload.file_url,
+          type: savedUpload.upload_type as "material" | "final",
+          fileType: isVideo ? "video" : "image",
+          uploadedAt: savedUpload.uploaded_at || new Date().toISOString(),
+        };
+
+        const newUploads = [...uploads, newFile];
+        setUploads(newUploads);
+        updateCover(newUploads);
+        toast.success(`${type === "material" ? "Material" : "Arte"} adicionado!`);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Erro ao fazer upload");
+    }
   };
 
-  const handleRemoveFile = (id: string) => {
-    const newUploads = uploads.filter(u => u.id !== id);
-    saveUploads(newUploads);
-    toast.success("Arquivo removido!");
+  const handleRemoveFile = async (id: string) => {
+    try {
+      await deleteCardUpload(id);
+      const newUploads = uploads.filter(u => u.id !== id);
+      setUploads(newUploads);
+      updateCover(newUploads);
+      toast.success("Arquivo removido!");
+    } catch (error) {
+      console.error("Error removing file:", error);
+      toast.error("Erro ao remover arquivo");
+    }
   };
 
   const materialUploads = uploads.filter(u => u.type === "material");
