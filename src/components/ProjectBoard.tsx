@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, CheckSquare, Square } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief } from "@/lib/clientDatabase";
@@ -71,12 +71,11 @@ interface SortableCardProps {
   onStatusChange: (briefId: string, newStatus: string) => void;
   onCreateProject: (brief: ProjectBrief) => void;
   onCoverUpdate: (briefId: string, coverUrl: string, isVideo?: boolean) => void;
-  onPublishedToggle: (briefId: string, published: boolean) => void;
   isPublicView?: boolean;
   isInactive?: boolean;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, onPublishedToggle, isPublicView, isInactive }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   const {
@@ -253,35 +252,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             </div>
           )}
           
-          {isPublicView && brief.status === "completed" && (
-            <div 
-              className={`flex items-center gap-3 mt-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                brief.published 
-                  ? 'bg-green-500/10 border-green-500 hover:bg-green-500/20' 
-                  : 'bg-background border-border hover:border-primary/50'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onPublishedToggle(brief.id, !brief.published);
-              }}
-            >
-              {brief.published ? (
-                <CheckSquare className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-              ) : (
-                <Square className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-              )}
-              <div className="flex flex-col gap-0.5">
-                <span className={`text-sm font-semibold ${
-                  brief.published ? 'text-green-600 dark:text-green-400' : 'text-foreground'
-                }`}>
-                  {brief.published ? 'PUBLICADO' : 'Marcar como publicado'}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {brief.published ? 'Publicado nas redes sociais' : 'Clique quando publicar nas redes sociais'}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
       
@@ -307,7 +277,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false);
   const [captionCopied, setCaptionCopied] = useState(false);
-  const [publishedFilter, setPublishedFilter] = useState<"all" | "published" | "unpublished">("all");
 
   // Load briefs from Supabase
   useEffect(() => {
@@ -786,37 +755,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     }
   };
 
-  const handlePublishedToggle = async (briefId: string, published: boolean) => {
-    if (!clientId) return;
-    
-    try {
-      await updateProjectBrief(briefId, { published });
-      
-      // Reload briefs from Supabase to ensure sync
-      const data = await getProjectBriefsByClient(clientId);
-      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
-        id: brief.id,
-        clientName: clientName || "",
-        title: brief.title,
-        description: brief.description || "",
-        deadline: brief.deadline || "",
-        status: brief.status || "todo",
-        brandKitId: brief.brand_kit_id,
-        createdAt: brief.created_at || new Date().toISOString(),
-        type: brief.brief_type as "art" | "video",
-        coverImage: brief.cover_image,
-        coverVideo: brief.cover_video,
-        generatedCaption: brief.generated_caption || "",
-        published: brief.published || false,
-      }));
-      setBriefs(mappedBriefs);
-      
-      toast.success(published ? "Marcado como publicado!" : "Marcado como não publicado!");
-    } catch (error) {
-      console.error("Error updating published status:", error);
-      toast.error("Erro ao atualizar status de publicação");
-    }
-  };
 
   const handleEditBrief = (brief: ProjectBrief) => {
     setEditingBrief(brief);
@@ -1049,49 +987,9 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            {isPublicView && (
-              <div className="mb-4 flex items-center gap-2 p-3 bg-card rounded-lg border">
-                <span className="text-sm font-medium mr-2">Filtrar:</span>
-                <Button
-                  variant={publishedFilter === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPublishedFilter("all")}
-                  className="text-xs"
-                >
-                  Todos
-                </Button>
-                <Button
-                  variant={publishedFilter === "published" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPublishedFilter("published")}
-                  className="text-xs"
-                >
-                  <CheckSquare className="h-3 w-3 mr-1" />
-                  Publicados
-                </Button>
-                <Button
-                  variant={publishedFilter === "unpublished" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPublishedFilter("unpublished")}
-                  className="text-xs"
-                >
-                  <Square className="h-3 w-3 mr-1" />
-                  Não Publicados
-                </Button>
-              </div>
-            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
-              
-              // Apply published filter only on completed column and in public view
-              if (isPublicView && column.id === "completed") {
-                if (publishedFilter === "published") {
-                  columnBriefs = columnBriefs.filter(b => b.published);
-                } else if (publishedFilter === "unpublished") {
-                  columnBriefs = columnBriefs.filter(b => !b.published);
-                }
-              }
               
               return (
                 <ColumnDroppable key={column.id} id={column.id}>
@@ -1116,7 +1014,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             onStatusChange={handleStatusChange}
                             onCreateProject={handleCreateProjectFromBrief}
                             onCoverUpdate={handleBriefCoverUpdate}
-                            onPublishedToggle={handlePublishedToggle}
                             isPublicView={isPublicView}
                             isInactive={isInactive}
                           />
