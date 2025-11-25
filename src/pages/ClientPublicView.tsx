@@ -24,26 +24,37 @@ const ClientPublicView = () => {
   const [client, setClient] = useState<Client | null>(null);
 
   useEffect(() => {
-    // Load client data from localStorage
-    const storedClients = localStorage.getItem('clients');
-    if (storedClients) {
-      const clients = JSON.parse(storedClients);
-      
-      let foundClient = null;
-      if (clientId) {
-        foundClient = clients.find((c: Client) => c.id === clientId);
-      } else if (clientSlug) {
-        // Try to find by slug (normalized name or company)
-        const slug = clientSlug.toLowerCase();
-        foundClient = clients.find((c: Client) => {
-          const nameSlug = c.name.toLowerCase().replace(/\s+/g, '-');
-          const companySlug = c.company?.toLowerCase().replace(/\s+/g, '-');
-          return nameSlug === slug || companySlug === slug;
-        });
+    let foundClient = null;
+    
+    // First, try to find in public snapshots if we have a slug
+    if (clientSlug) {
+      const publicSnapshot = localStorage.getItem(`public-client-${clientSlug}`);
+      if (publicSnapshot) {
+        foundClient = JSON.parse(publicSnapshot);
       }
-      
-      setClient(foundClient || null);
     }
+    
+    // Fallback: search in general clients list
+    if (!foundClient) {
+      const storedClients = localStorage.getItem('clients');
+      if (storedClients) {
+        const clients = JSON.parse(storedClients);
+        
+        if (clientId) {
+          foundClient = clients.find((c: Client) => c.id === clientId);
+        } else if (clientSlug) {
+          // Try to find by slug (normalized name or company)
+          const slug = clientSlug.toLowerCase();
+          foundClient = clients.find((c: Client) => {
+            const nameSlug = c.name.toLowerCase().replace(/\s+/g, '-');
+            const companySlug = c.company?.toLowerCase().replace(/\s+/g, '-');
+            return nameSlug === slug || companySlug === slug;
+          });
+        }
+      }
+    }
+    
+    setClient(foundClient || null);
   }, [clientId, clientSlug]);
 
   if (!client) {
