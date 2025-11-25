@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, ListTodo, Calendar, Power, PowerOff } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
@@ -253,42 +253,6 @@ const Index = () => {
     }
   };
 
-  const handleBulkMoveToTodo = async (team?: string) => {
-    try {
-      const filteredClients = (team 
-        ? clients.filter(c => c.team === team && c.active)
-        : clients.filter(c => c.active));
-      
-      const clientIds = filteredClients.map(c => c.id);
-      
-      if (clientIds.length === 0) {
-        toast({
-          title: "Nenhum cliente ativo",
-          description: "Não há clientes ativos para mover.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      await bulkUpdateBriefStatus(clientIds, "todo");
-      
-      // Dispatch event to notify all ProjectBoard instances to reload
-      window.dispatchEvent(new Event("bulkBriefsUpdated"));
-      
-      toast({
-        title: "Cards movidos!",
-        description: `Primeiro card de ${clientIds.length} ${clientIds.length === 1 ? 'cliente ativo' : 'clientes ativos'} movido para A Fazer.`,
-      });
-    } catch (error) {
-      console.error("Error moving cards:", error);
-      toast({
-        title: "Erro ao mover cards",
-        description: "Não foi possível mover os cards.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleBulkUpdateDeadline = async () => {
     if (!bulkDeadline) {
       toast({
@@ -496,31 +460,6 @@ const Index = () => {
                   TER, QUI E SÁB
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleBulkMoveToCompleted("3")}>
-                  SEG A SEX
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <ListTodo className="mr-2 h-4 w-4" />
-                  Mover para A Fazer
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Por Equipe</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleBulkMoveToTodo()}>
-                  Todas as Equipes
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkMoveToTodo("1")}>
-                  SEG, QUA E SEX
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkMoveToTodo("2")}>
-                  TER, QUI E SÁB
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkMoveToTodo("3")}>
                   SEG A SEX
                 </DropdownMenuItem>
               </DropdownMenuContent>
