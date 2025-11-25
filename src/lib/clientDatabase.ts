@@ -134,7 +134,7 @@ export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "tod
     .from("project_briefs")
     .select("*")
     .in("client_id", clientIds)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false });
 
   if (fetchError) throw fetchError;
   if (!briefs || briefs.length === 0) return [];
