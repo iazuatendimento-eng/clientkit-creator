@@ -121,6 +121,7 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
           brandKits={client.brand_kit ? [client.brand_kit] : []}
           onCreateProject={handleCreateProject}
           clientName={client.name}
+          clientId={client.id}
         />
       </div>
     </div>

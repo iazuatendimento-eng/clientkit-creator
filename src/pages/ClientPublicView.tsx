@@ -114,6 +114,7 @@ const ClientPublicView = () => {
           brandKits={client.brand_kit ? [client.brand_kit as any] : []}
           onCreateProject={handleCreateProject}
           clientName={client.name}
+          clientId={client.id}
           isPublicView={true}
         />
       </div>
