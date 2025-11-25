@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Users, Building2, Sparkles, Copy, Check, LogOut, Loader2 } from "lucide-react";
+import { Plus, Users, Building2, Sparkles, Copy, Check, LogOut, Loader2, FileDown } from "lucide-react";
 import { ClientCard } from "@/components/ClientCard";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import heroImage from "@/assets/hero-image.jpg";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import * as XLSX from 'xlsx';
 
 interface Client {
   id: string;
@@ -17,6 +18,7 @@ interface Client {
   company?: string;
   phone?: string;
   notes?: string;
+  team?: "1" | "2" | "3";
   brandKit?: {
     id: string;
     name: string;
@@ -40,6 +42,7 @@ const Index = () => {
       email: "joao@techsolutions.com",
       company: "Tech Solutions",
       phone: "(11) 99999-9999",
+      team: "1",
       brandKit: {
         id: "1",
         name: "Tech Solutions",
@@ -56,6 +59,7 @@ const Index = () => {
       email: "maria@cafecentral.com",
       company: "Café Central",
       phone: "(11) 88888-8888",
+      team: "2",
       brandKit: {
         id: "2",
         name: "Café Central",
@@ -152,6 +156,71 @@ const Index = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleExportToExcel = () => {
+    const excelData: any[] = [];
+
+    clients.forEach((client) => {
+      const storageKey = `project-briefs-${client.name}`;
+      const saved = localStorage.getItem(storageKey);
+      
+      if (saved) {
+        try {
+          const briefs = JSON.parse(saved);
+          // Get the first "todo" card
+          const firstTodoCard = briefs.find((b: any) => b.status === "todo");
+          
+          if (firstTodoCard) {
+            const slug = (client.company || client.name).toLowerCase().replace(/\s+/g, '-');
+            const cardUrl = `${window.location.origin}/${slug}#card-${firstTodoCard.id}`;
+            
+            excelData.push({
+              "Cliente": client.name,
+              "Empresa": client.company || "",
+              "Equipe": client.team ? `Equipe ${client.team}` : "Equipe 1",
+              "Texto do Card": firstTodoCard.description || firstTodoCard.title,
+              "Link do Card": cardUrl,
+              "Prazo": new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR')
+            });
+          }
+        } catch {}
+      }
+    });
+
+    if (excelData.length === 0) {
+      toast({
+        title: "Nenhum card encontrado",
+        description: "Não há cards 'A Fazer' para exportar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create worksheet and workbook
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Primeiros Cards A Fazer");
+
+    // Auto-size columns
+    const colWidths = [
+      { wch: 20 }, // Cliente
+      { wch: 20 }, // Empresa
+      { wch: 12 }, // Equipe
+      { wch: 50 }, // Texto do Card
+      { wch: 40 }, // Link do Card
+      { wch: 12 }  // Prazo
+    ];
+    ws['!cols'] = colWidths;
+
+    // Generate and download file
+    const fileName = `Primeiros_Cards_A_Fazer_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    toast({
+      title: "Exportado com sucesso!",
+      description: `${excelData.length} cards foram exportados para Excel.`,
+    });
+  };
+
   if (currentView === "client-editor") {
     return (
       <ClientEditor
@@ -181,6 +250,13 @@ const Index = () => {
         <div className="container mx-auto flex justify-between items-center">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleExportToExcel}
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Exportar Cards
+            </Button>
             <Button
               variant="outline"
               onClick={async () => {
@@ -256,6 +332,15 @@ const Index = () => {
                   }`}>
                     {client.company}
                   </div>
+                  {client.team && (
+                    <div className={`text-xs mt-1 ${
+                      selectedClient?.id === client.id
+                        ? 'text-primary-foreground/60'
+                        : 'text-muted-foreground'
+                    }`}>
+                      Equipe {client.team}
+                    </div>
+                  )}
                 </button>
               ))
             ) : (
