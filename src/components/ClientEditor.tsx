@@ -143,20 +143,20 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="team">Equipe *</Label>
-                <select
-                  id="team"
-                  className="w-full h-10 px-3 border rounded-md bg-background"
-                  value={formData.team || "1"}
-                  onChange={(e) => handleChange("team", e.target.value)}
-                  required
-                >
-                  <option value="1">Equipe 1</option>
-                  <option value="2">Equipe 2</option>
-                  <option value="3">Equipe 3</option>
-                </select>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="team">Equipe *</Label>
+                  <select
+                    id="team"
+                    className="w-full h-10 px-3 border rounded-md bg-background"
+                    value={formData.team || "1"}
+                    onChange={(e) => handleChange("team", e.target.value)}
+                    required
+                  >
+                    <option value="1">SEG, QUA E SEX</option>
+                    <option value="2">TER, QUI E SÁB</option>
+                    <option value="3">DE SEG A SEX</option>
+                  </select>
+                </div>
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Observações</Label>

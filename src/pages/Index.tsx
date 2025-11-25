@@ -184,10 +184,14 @@ const Index = () => {
             const slug = (client.company || client.name).toLowerCase().replace(/\s+/g, '-');
             const cardUrl = `${window.location.origin}/${slug}#card-${firstTodoCard.id}`;
             
+            const teamName = client.team === "1" ? "SEG, QUA E SEX" : 
+                           client.team === "2" ? "TER, QUI E SÁB" : 
+                           client.team === "3" ? "DE SEG A SEX" : "SEG, QUA E SEX";
+            
             excelData.push({
               "Cliente": client.name,
               "Empresa": client.company || "",
-              "Equipe": client.team ? `Equipe ${client.team}` : "Equipe 1",
+              "Equipe": teamName,
               "Texto do Card": firstTodoCard.description || firstTodoCard.title,
               "Link do Card": cardUrl,
               "Prazo": new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR')
@@ -215,7 +219,7 @@ const Index = () => {
     const colWidths = [
       { wch: 20 }, // Cliente
       { wch: 20 }, // Empresa
-      { wch: 12 }, // Equipe
+      { wch: 18 }, // Equipe
       { wch: 50 }, // Texto do Card
       { wch: 40 }, // Link do Card
       { wch: 12 }  // Prazo
@@ -223,7 +227,8 @@ const Index = () => {
     ws['!cols'] = colWidths;
 
     // Generate and download file
-    const teamSuffix = selectedTeam ? `_Equipe_${selectedTeam}` : '';
+    const teamNames = { "1": "SEG_QUA_SEX", "2": "TER_QUI_SAB", "3": "SEG_A_SEX" };
+    const teamSuffix = selectedTeam ? `_${teamNames[selectedTeam as keyof typeof teamNames]}` : '';
     const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
@@ -274,13 +279,13 @@ const Index = () => {
                   Todas as Equipes
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportToExcel("1")}>
-                  Equipe 1
+                  SEG, QUA E SEX
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportToExcel("2")}>
-                  Equipe 2
+                  TER, QUI E SÁB
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportToExcel("3")}>
-                  Equipe 3
+                  DE SEG A SEX
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -365,7 +370,7 @@ const Index = () => {
                         ? 'text-primary-foreground/60'
                         : 'text-muted-foreground'
                     }`}>
-                      Equipe {client.team}
+                      {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "DE SEG A SEX"}
                     </div>
                   )}
                 </button>
