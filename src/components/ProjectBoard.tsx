@@ -25,7 +25,6 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  closestCenter,
   PointerSensor,
   useSensor,
   useSensors,
@@ -165,7 +164,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs">
             <Calendar className="h-3 w-3" />
-            <span>{new Date(brief.deadline).toLocaleDateString('pt-BR')}</span>
+            <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
           </div>
           
           {brandKit && (
@@ -269,7 +268,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 3,
       },
     })
   );
@@ -304,17 +303,31 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     const activeBrief = briefs.find(b => b.id === activeId);
     if (!activeBrief) return;
 
-    // If dropped over another card, move to that card's column
+    // Check if dropped over a column directly
+    const targetColumn = columns.find(col => col.id === overId);
+    if (targetColumn && activeBrief.status !== targetColumn.id) {
+      await handleStatusChange(activeId, targetColumn.id);
+      return;
+    }
+
+    // Check if dropped over another card
     const overBrief = briefs.find(b => b.id === overId);
-    if (overBrief) {
+    if (overBrief && activeBrief.status !== overBrief.status) {
       await handleStatusChange(activeId, overBrief.status);
       return;
     }
 
-    // If dropped over a column, move to that column
-    const targetColumn = columns.find(col => col.id === overId);
-    if (targetColumn) {
-      await handleStatusChange(activeId, targetColumn.id);
+    // If same column, allow reordering (DnD Kit handles it automatically)
+    if (activeId !== overId) {
+      const oldIndex = briefs.findIndex(b => b.id === activeId);
+      const newIndex = briefs.findIndex(b => b.id === overId);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newBriefs = [...briefs];
+        const [movedBrief] = newBriefs.splice(oldIndex, 1);
+        newBriefs.splice(newIndex, 0, movedBrief);
+        setBriefs(newBriefs);
+      }
     }
   };
 
@@ -741,12 +754,11 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           </AlertDialogContent>
         </AlertDialog>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {columns.map(column => {
               const columnBriefs = briefs.filter(b => b.status === column.id);
