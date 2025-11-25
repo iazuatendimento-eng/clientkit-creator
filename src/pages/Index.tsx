@@ -10,6 +10,12 @@ import heroImage from "@/assets/hero-image.jpg";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import * as XLSX from 'xlsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Client {
   id: string;
@@ -156,10 +162,15 @@ const Index = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = (selectedTeam?: string) => {
     const excelData: any[] = [];
 
-    clients.forEach((client) => {
+    // Filter clients by team if specified
+    const filteredClients = selectedTeam 
+      ? clients.filter(c => c.team === selectedTeam)
+      : clients;
+
+    filteredClients.forEach((client) => {
       const storageKey = `project-briefs-${client.name}`;
       const saved = localStorage.getItem(storageKey);
       
@@ -212,7 +223,8 @@ const Index = () => {
     ws['!cols'] = colWidths;
 
     // Generate and download file
-    const fileName = `Primeiros_Cards_A_Fazer_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
+    const teamSuffix = selectedTeam ? `_Equipe_${selectedTeam}` : '';
+    const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
     toast({
@@ -250,13 +262,28 @@ const Index = () => {
         <div className="container mx-auto flex justify-between items-center">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleExportToExcel}
-            >
-              <FileDown className="mr-2 h-4 w-4" />
-              Exportar Cards
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Exportar Cards
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleExportToExcel()}>
+                  Todas as Equipes
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportToExcel("1")}>
+                  Equipe 1
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportToExcel("2")}>
+                  Equipe 2
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportToExcel("3")}>
+                  Equipe 3
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               onClick={async () => {
