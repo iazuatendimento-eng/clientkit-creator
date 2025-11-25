@@ -132,18 +132,19 @@ export async function getProjectBriefsByClient(clientId: string) {
 }
 
 export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "todo" | "completed") {
-  // Get all todo briefs for these clients (ordered by creation date ascending to get the first/oldest)
+  // Get all todo briefs for these clients that have cover_image or cover_video
   const { data: briefs, error: fetchError } = await supabase
     .from("project_briefs")
     .select("*")
     .in("client_id", clientIds)
     .eq("status", "todo")
+    .or("cover_image.not.is.null,cover_video.not.is.null")
     .order("created_at", { ascending: true });
 
   if (fetchError) throw fetchError;
   if (!briefs || briefs.length === 0) return [];
 
-  // Group by client and get first (oldest) brief per client
+  // Group by client and get first (oldest) brief per client that has media
   const firstBriefPerClient = new Map();
   briefs.forEach(brief => {
     if (!firstBriefPerClient.has(brief.client_id)) {
