@@ -255,10 +255,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && brief.status === "completed" && (
             <div 
-              className={`flex items-center gap-2 mt-2 p-2 rounded cursor-pointer transition-colors ${
+              className={`flex items-center gap-3 mt-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
                 brief.published 
-                  ? 'bg-green-500/10 border border-green-500/30 hover:bg-green-500/20' 
-                  : 'bg-muted/50 hover:bg-muted'
+                  ? 'bg-green-500/10 border-green-500 hover:bg-green-500/20' 
+                  : 'bg-background border-border hover:border-primary/50'
               }`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -266,15 +266,20 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               }}
             >
               {brief.published ? (
-                <CheckSquare className="h-4 w-4 text-green-500" />
+                <CheckSquare className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
               ) : (
-                <Square className="h-4 w-4" />
+                <Square className="h-5 w-5 text-muted-foreground flex-shrink-0" />
               )}
-              <span className={`text-xs font-medium ${
-                brief.published ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
-              }`}>
-                {brief.published ? 'PUBLICADO' : 'Não publicado'}
-              </span>
+              <div className="flex flex-col gap-0.5">
+                <span className={`text-sm font-semibold ${
+                  brief.published ? 'text-green-600 dark:text-green-400' : 'text-foreground'
+                }`}>
+                  {brief.published ? 'PUBLICADO' : 'Marcar como publicado'}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {brief.published ? 'Publicado nas redes sociais' : 'Clique quando publicar nas redes sociais'}
+                </span>
+              </div>
             </div>
           )}
         </div>
