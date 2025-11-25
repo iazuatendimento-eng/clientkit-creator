@@ -26,6 +26,7 @@ export interface ProjectBrief {
   cover_video?: string;
   brief_type?: string;
   created_at?: string;
+  generated_caption?: string;
 }
 
 // Client functions
