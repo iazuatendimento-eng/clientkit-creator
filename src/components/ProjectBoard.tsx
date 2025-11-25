@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, CheckSquare, Square } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief } from "@/lib/clientDatabase";
@@ -50,6 +50,7 @@ interface ProjectBrief {
   coverImage?: string;
   coverVideo?: string;
   generatedCaption?: string;
+  published?: boolean;
 }
 
 interface ProjectBoardProps {
@@ -69,10 +70,11 @@ interface SortableCardProps {
   onStatusChange: (briefId: string, newStatus: string) => void;
   onCreateProject: (brief: ProjectBrief) => void;
   onCoverUpdate: (briefId: string, coverUrl: string, isVideo?: boolean) => void;
+  onPublishedToggle: (briefId: string, published: boolean) => void;
   isPublicView?: boolean;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, onPublishedToggle, isPublicView }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   const {
@@ -92,6 +94,20 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   const handleCoverUpdate = (coverUrl: string, isVideo?: boolean) => {
     onCoverUpdate(brief.id, coverUrl, isVideo);
+  };
+
+  const handleCopyCaption = () => {
+    if (brief.generatedCaption) {
+      navigator.clipboard.writeText(brief.generatedCaption);
+      toast.success("Legenda copiada!");
+    }
+  };
+
+  const handleDownload = (url: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
   };
 
   return (
@@ -199,6 +215,64 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               </Button>
             </div>
           )}
+          
+          {isPublicView && (
+            <div className="flex flex-col gap-2 mt-2">
+              {brief.generatedCaption && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyCaption();
+                  }}
+                  className="text-xs px-2 py-1 h-auto w-full"
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copiar Legenda
+                </Button>
+              )}
+              {(brief.coverImage || brief.coverVideo) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const url = brief.coverImage || brief.coverVideo || "";
+                    const filename = brief.coverImage ? `arte-${brief.id}.jpg` : `video-${brief.id}.mp4`;
+                    handleDownload(url, filename);
+                  }}
+                  className="text-xs px-2 py-1 h-auto w-full"
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Baixar {brief.coverVideo ? 'Vídeo' : 'Arte'}
+                </Button>
+              )}
+            </div>
+          )}
+          
+          {!isPublicView && brief.status === "completed" && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPublishedToggle(brief.id, !brief.published);
+                }}
+                className="h-auto p-0 hover:bg-transparent"
+              >
+                {brief.published ? (
+                  <CheckSquare className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {brief.published ? 'Publicado' : 'Não publicado'}
+              </span>
+            </div>
+          )}
         </div>
       </CardContent>
       
@@ -224,6 +298,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false);
   const [captionCopied, setCaptionCopied] = useState(false);
+  const [showOnlyUnpublished, setShowOnlyUnpublished] = useState(false);
 
   // Debug: Log authentication status
   useEffect(() => {
@@ -257,6 +332,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           coverImage: brief.cover_image,
           coverVideo: brief.cover_video,
           generatedCaption: brief.generated_caption || "",
+          published: brief.published || false,
         }));
         setBriefs(mappedBriefs);
       } catch (error) {
@@ -414,6 +490,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverImage: brief.cover_image,
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
       }));
       setBriefs(mappedBriefs);
 
@@ -521,6 +598,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverImage: brief.cover_image,
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
       }));
       setBriefs(mappedBriefs);
       
@@ -623,6 +701,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverImage: brief.cover_image,
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
       }));
       setBriefs(mappedBriefs);
       
@@ -667,6 +746,19 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const handlePublishedToggle = async (briefId: string, published: boolean) => {
+    try {
+      await updateProjectBrief(briefId, { published });
+      setBriefs(briefs.map(b => 
+        b.id === briefId ? { ...b, published } : b
+      ));
+      toast.success(published ? "Marcado como publicado!" : "Marcado como não publicado!");
+    } catch (error) {
+      console.error("Error updating published status:", error);
+      toast.error("Erro ao atualizar status de publicação");
     }
   };
 
@@ -721,6 +813,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         type: brief.brief_type as "art" | "video",
         coverImage: brief.cover_image,
         coverVideo: brief.cover_video,
+        generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
       }));
       setBriefs(mappedBriefs);
       
@@ -899,9 +993,32 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isPublicView && (
+              <div className="mb-4 flex items-center gap-2 p-3 bg-card rounded-lg border">
+                <Button
+                  variant={showOnlyUnpublished ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowOnlyUnpublished(!showOnlyUnpublished)}
+                  className="text-xs"
+                >
+                  {showOnlyUnpublished ? (
+                    <CheckSquare className="h-3 w-3 mr-1" />
+                  ) : (
+                    <Square className="h-3 w-3 mr-1" />
+                  )}
+                  Mostrar apenas não publicados
+                </Button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {columns.map(column => {
-              const columnBriefs = briefs.filter(b => b.status === column.id);
+              let columnBriefs = briefs.filter(b => b.status === column.id);
+              
+              // Apply unpublished filter only on completed column and in public view
+              if (isPublicView && showOnlyUnpublished && column.id === "completed") {
+                columnBriefs = columnBriefs.filter(b => !b.published);
+              }
+              
               return (
                 <ColumnDroppable key={column.id} id={column.id}>
                   <div className="space-y-4">
@@ -925,6 +1042,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             onStatusChange={handleStatusChange}
                             onCreateProject={handleCreateProjectFromBrief}
                             onCoverUpdate={handleBriefCoverUpdate}
+                            onPublishedToggle={handlePublishedToggle}
                             isPublicView={isPublicView}
                           />
                         ))}

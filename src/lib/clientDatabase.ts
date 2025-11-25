@@ -27,6 +27,7 @@ export interface ProjectBrief {
   brief_type?: string;
   created_at?: string;
   generated_caption?: string;
+  published?: boolean;
 }
 
 // Client functions
@@ -131,17 +132,18 @@ export async function getProjectBriefsByClient(clientId: string) {
 }
 
 export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "todo" | "completed") {
-  // Get all briefs for these clients
+  // Get all todo briefs for these clients (ordered by creation date ascending to get the first/oldest)
   const { data: briefs, error: fetchError } = await supabase
     .from("project_briefs")
     .select("*")
     .in("client_id", clientIds)
-    .order("created_at", { ascending: false });
+    .eq("status", "todo")
+    .order("created_at", { ascending: true });
 
   if (fetchError) throw fetchError;
   if (!briefs || briefs.length === 0) return [];
 
-  // Group by client and get first brief per client
+  // Group by client and get first (oldest) brief per client
   const firstBriefPerClient = new Map();
   briefs.forEach(brief => {
     if (!firstBriefPerClient.has(brief.client_id)) {
@@ -163,17 +165,18 @@ export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "tod
 }
 
 export async function bulkUpdateBriefDeadline(clientIds: string[], deadline: string) {
-  // Get all briefs for these clients
+  // Get all todo briefs for these clients (ordered by creation date ascending to get the first/oldest)
   const { data: briefs, error: fetchError } = await supabase
     .from("project_briefs")
     .select("*")
     .in("client_id", clientIds)
-    .order("created_at", { ascending: false });
+    .eq("status", "todo")
+    .order("created_at", { ascending: true });
 
   if (fetchError) throw fetchError;
   if (!briefs || briefs.length === 0) return [];
 
-  // Group by client and get first brief per client
+  // Group by client and get first (oldest) brief per client
   const firstBriefPerClient = new Map();
   briefs.forEach(brief => {
     if (!firstBriefPerClient.has(brief.client_id)) {
