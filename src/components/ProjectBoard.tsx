@@ -183,20 +183,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               <Upload className="h-3 w-3 mr-1" />
               Uploads
             </Button>
-            {brief.brandKitId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCreateProject(brief);
-                }}
-                className="text-xs px-2 py-1 h-auto w-full"
-              >
-                <FileText className="h-3 w-3 mr-1" />
-                Criar Arte
-              </Button>
-            )}
           </div>
         </div>
       </CardContent>
