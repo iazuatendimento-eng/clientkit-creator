@@ -160,6 +160,48 @@ export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "tod
   return data || [];
 }
 
+// Card Uploads functions
+export interface CardUpload {
+  id: string;
+  card_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  upload_type: "material" | "final";
+  uploaded_at?: string;
+}
+
+export async function createCardUpload(upload: Omit<CardUpload, "id" | "uploaded_at">) {
+  const { data, error } = await supabase
+    .from("card_uploads")
+    .insert([upload])
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getCardUploads(cardId: string) {
+  const { data, error } = await supabase
+    .from("card_uploads")
+    .select("*")
+    .eq("card_id", cardId)
+    .order("uploaded_at", { ascending: true });
+  
+  if (error) throw error;
+  return data || [];
+}
+
+export async function deleteCardUpload(id: string) {
+  const { error } = await supabase
+    .from("card_uploads")
+    .delete()
+    .eq("id", id);
+  
+  if (error) throw error;
+}
+
 // Generate slug from name
 export function generateSlug(name: string): string {
   return name

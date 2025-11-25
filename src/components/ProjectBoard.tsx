@@ -161,7 +161,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+        <p className="text-xs text-muted-foreground mb-3 line-clamp-2 text-left">
           {brief.description}
         </p>
         
@@ -513,6 +513,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   const handleBriefCoverUpdate = async (briefId: string, coverUrl: string, isVideo?: boolean) => {
+    if (!clientId) return;
+    
     try {
       const updateData = isVideo 
         ? { cover_video: coverUrl, cover_image: null }
@@ -520,16 +522,24 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       
       await updateProjectBrief(briefId, updateData);
       
-      setBriefs(briefs.map(b => {
-        if (b.id === briefId) {
-          if (isVideo) {
-            return { ...b, coverVideo: coverUrl, coverImage: undefined };
-          } else {
-            return { ...b, coverImage: coverUrl, coverVideo: undefined };
-          }
-        }
-        return b;
+      // Reload briefs from Supabase to ensure cover is updated
+      const data = await getProjectBriefsByClient(clientId);
+      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+        id: brief.id,
+        clientName: clientName || "",
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
       }));
+      setBriefs(mappedBriefs);
+      
+      toast.success("Capa atualizada!");
     } catch (error) {
       console.error("Error updating cover:", error);
       toast.error("Erro ao atualizar capa");
@@ -706,7 +716,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {columns.map(column => {
               const columnBriefs = briefs.filter(b => b.status === column.id);
               return (
