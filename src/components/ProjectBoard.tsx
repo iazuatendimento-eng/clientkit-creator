@@ -251,7 +251,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             </div>
           )}
           
-          {brief.status === "completed" && (
+          {isPublicView && brief.status === "completed" && (
             <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded">
               <Button
                 variant="ghost"
