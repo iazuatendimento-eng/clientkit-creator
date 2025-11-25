@@ -324,31 +324,28 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
       if (editingBrief) {
         await updateProjectBrief(editingBrief.id, briefData);
-        const updatedBriefs = briefs.map(b => 
-          b.id === editingBrief.id 
-            ? { ...b, ...newBrief, clientName: clientName || "" } 
-            : b
-        );
-        setBriefs(updatedBriefs);
         toast.success("Briefing atualizado!");
       } else {
-        const created = await createProjectBrief(briefData);
-        const newBriefObj: ProjectBrief = {
-          id: created.id,
-          clientName: clientName || "",
-          title: created.title,
-          description: created.description || "",
-          deadline: created.deadline || "",
-          status: created.status as "todo" | "completed",
-          brandKitId: created.brand_kit_id || undefined,
-          createdAt: created.created_at || new Date().toISOString(),
-          type: created.brief_type as "art" | "video",
-          coverImage: created.cover_image || undefined,
-          coverVideo: created.cover_video || undefined,
-        };
-        setBriefs([...briefs, newBriefObj]);
+        await createProjectBrief(briefData);
         toast.success("Briefing criado!");
       }
+
+      // Reload briefs from Supabase to ensure sync
+      const data = await getProjectBriefsByClient(clientId);
+      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+        id: brief.id,
+        clientName: clientName || "",
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
+      }));
+      setBriefs(mappedBriefs);
 
       setNewBrief({});
       setEditingBrief(null);
@@ -394,19 +391,25 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         brand_kit_id: newBrief.brandKitId || null,
       };
 
-      const created = await createProjectBrief(briefData);
-      const newBriefObj: ProjectBrief = {
-        id: created.id,
-        clientName: clientName || "",
-        title: created.title,
-        description: created.description || "",
-        deadline: created.deadline || "",
-        status: created.status as "todo" | "completed",
-        brandKitId: created.brand_kit_id || undefined,
-        createdAt: created.created_at || new Date().toISOString(),
-      };
+      await createProjectBrief(briefData);
       
-      setBriefs([...briefs, newBriefObj]);
+      // Reload briefs from Supabase to ensure sync
+      const data = await getProjectBriefsByClient(clientId);
+      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+        id: brief.id,
+        clientName: clientName || "",
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
+      }));
+      setBriefs(mappedBriefs);
+      
       setMultiTextInput("");
       setNewBrief({});
       setShowSplitDialog(false);
@@ -443,24 +446,30 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         return await createProjectBrief(briefData);
       });
 
-      const createdBriefs = await Promise.all(createPromises);
-      const newBriefsObjs: ProjectBrief[] = createdBriefs.map((created) => ({
-        id: created.id,
+      await Promise.all(createPromises);
+      
+      // Reload briefs from Supabase to ensure sync
+      const data = await getProjectBriefsByClient(clientId);
+      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+        id: brief.id,
         clientName: clientName || "",
-        title: created.title,
-        description: created.description || "",
-        deadline: created.deadline || "",
-        status: created.status as "todo" | "completed",
-        brandKitId: created.brand_kit_id || undefined,
-        createdAt: created.created_at || new Date().toISOString(),
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
       }));
-
-      setBriefs([...briefs, ...newBriefsObjs]);
+      setBriefs(mappedBriefs);
+      
       setMultiTextInput("");
       setNewBrief({});
       setShowSplitDialog(false);
       setIsDialogOpen(false);
-      toast.success(`${newBriefsObjs.length} cards criados com sucesso!`);
+      toast.success(`${paragraphs.length} cards criados com sucesso!`);
     } catch (error) {
       console.error("Error creating briefs:", error);
       toast.error("Erro ao criar cards");
