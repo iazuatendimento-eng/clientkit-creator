@@ -42,11 +42,12 @@ interface ProjectBrief {
   title: string;
   description: string;
   deadline: string;
-  status: "todo" | "in-progress" | "request_changes" | "completed";
+  status: "todo" | "in-progress" | "completed";
   brandKitId?: string;
   createdAt: string;
   type?: "art" | "video";
   coverImage?: string;
+  coverVideo?: string;
 }
 
 interface ProjectBoardProps {
@@ -68,6 +69,7 @@ interface SortableCardProps {
 const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [localCoverImage, setLocalCoverImage] = useState(brief.coverImage);
+  const [localCoverVideo, setLocalCoverVideo] = useState(brief.coverVideo);
   
   const {
     attributes,
@@ -84,10 +86,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleCoverUpdate = (coverUrl: string) => {
-    setLocalCoverImage(coverUrl);
-    // Update the brief with the new cover
-    brief.coverImage = coverUrl;
+  const handleCoverUpdate = (coverUrl: string, isVideo?: boolean) => {
+    if (isVideo) {
+      setLocalCoverVideo(coverUrl);
+      setLocalCoverImage(undefined);
+      brief.coverVideo = coverUrl;
+      brief.coverImage = undefined;
+    } else {
+      setLocalCoverImage(coverUrl);
+      setLocalCoverVideo(undefined);
+      brief.coverImage = coverUrl;
+      brief.coverVideo = undefined;
+    }
   };
 
   return (
@@ -98,8 +108,19 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       {...attributes}
       {...listeners}
     >
-      {/* Cover Image */}
-      {localCoverImage && (
+      {/* Cover Media */}
+      {localCoverVideo ? (
+        <div className="w-full h-32 relative bg-muted">
+          <video 
+            src={localCoverVideo} 
+            className="w-full h-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+        </div>
+      ) : localCoverImage ? (
         <div className="w-full h-32 relative bg-muted">
           <img 
             src={localCoverImage} 
@@ -107,7 +128,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             className="w-full h-full object-cover"
           />
         </div>
-      )}
+      ) : null}
 
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
@@ -283,7 +304,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
   const columns = [
     { id: "todo", title: "Para Fazer", color: "bg-yellow-500/20 border-yellow-500/30" },
     { id: "in-progress", title: "Em Progresso", color: "bg-blue-500/20 border-blue-500/30" },
-    { id: "request_changes", title: "Solicitar Alteração", color: "bg-purple-500/20 border-purple-500/30" },
     { id: "completed", title: "Concluído", color: "bg-green-500/20 border-green-500/30" }
   ];
 
