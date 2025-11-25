@@ -106,7 +106,7 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
               )}
               {client.team && (
                 <span className="px-3 py-1 bg-secondary/10 text-secondary-foreground rounded-full text-sm">
-                  {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "DE SEG A SEX"}
+                  {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "SEG A SEX"}
                 </span>
               )}
             </div>

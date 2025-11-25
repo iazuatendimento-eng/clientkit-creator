@@ -64,12 +64,11 @@ interface SortableCardProps {
   onDelete: (id: string) => void;
   onStatusChange: (briefId: string, newStatus: string) => void;
   onCreateProject: (brief: ProjectBrief) => void;
+  onCoverUpdate: (briefId: string, coverUrl: string, isVideo?: boolean) => void;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [localCoverImage, setLocalCoverImage] = useState(brief.coverImage);
-  const [localCoverVideo, setLocalCoverVideo] = useState(brief.coverVideo);
   
   const {
     attributes,
@@ -87,17 +86,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   };
 
   const handleCoverUpdate = (coverUrl: string, isVideo?: boolean) => {
-    if (isVideo) {
-      setLocalCoverVideo(coverUrl);
-      setLocalCoverImage(undefined);
-      brief.coverVideo = coverUrl;
-      brief.coverImage = undefined;
-    } else {
-      setLocalCoverImage(coverUrl);
-      setLocalCoverVideo(undefined);
-      brief.coverImage = coverUrl;
-      brief.coverVideo = undefined;
-    }
+    onCoverUpdate(brief.id, coverUrl, isVideo);
   };
 
   return (
@@ -109,10 +98,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       {...listeners}
     >
       {/* Cover Media */}
-      {localCoverVideo ? (
+      {brief.coverVideo ? (
         <div className="w-full h-48 relative bg-muted flex items-center justify-center">
           <video 
-            src={localCoverVideo} 
+            src={brief.coverVideo} 
             className="max-w-full max-h-full object-contain"
             autoPlay
             muted
@@ -120,10 +109,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             playsInline
           />
         </div>
-      ) : localCoverImage ? (
+      ) : brief.coverImage ? (
         <div className="w-full h-48 relative bg-muted flex items-center justify-center">
           <img 
-            src={localCoverImage} 
+            src={brief.coverImage} 
             alt="Cover" 
             className="max-w-full max-h-full object-contain"
           />
@@ -466,6 +455,19 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
     }
   };
 
+  const handleBriefCoverUpdate = (briefId: string, coverUrl: string, isVideo?: boolean) => {
+    setBriefs(briefs.map(b => {
+      if (b.id === briefId) {
+        if (isVideo) {
+          return { ...b, coverVideo: coverUrl, coverImage: undefined };
+        } else {
+          return { ...b, coverImage: coverUrl, coverVideo: undefined };
+        }
+      }
+      return b;
+    }));
+  };
+
   const getBrandKit = (brandKitId?: string) => {
     return brandKits.find(bk => bk.id === brandKitId);
   };
@@ -659,6 +661,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
                             onDelete={handleDeleteBrief}
                             onStatusChange={handleStatusChange}
                             onCreateProject={handleCreateProjectFromBrief}
+                            onCoverUpdate={handleBriefCoverUpdate}
                           />
                         ))}
                       </div>
