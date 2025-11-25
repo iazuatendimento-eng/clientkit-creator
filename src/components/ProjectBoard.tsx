@@ -54,6 +54,7 @@ interface ProjectBoardProps {
   brandKits: any[];
   onCreateProject: (brief: ProjectBrief, brandKitId: string) => void;
   clientName?: string;
+  isPublicView?: boolean;
 }
 
 interface SortableCardProps {
@@ -65,9 +66,10 @@ interface SortableCardProps {
   onStatusChange: (briefId: string, newStatus: string) => void;
   onCreateProject: (brief: ProjectBrief) => void;
   onCoverUpdate: (briefId: string, coverUrl: string, isVideo?: boolean) => void;
+  isPublicView?: boolean;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   const {
@@ -77,7 +79,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: brief.id });
+  } = useSortable({ id: brief.id, disabled: isPublicView });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -93,9 +95,9 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     <Card
       ref={setNodeRef}
       style={style}
-      className="bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 cursor-move overflow-hidden"
-      {...attributes}
-      {...listeners}
+      className={`bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView ? 'cursor-move' : ''}`}
+      {...(!isPublicView ? attributes : {})}
+      {...(!isPublicView ? listeners : {})}
     >
       {/* Cover Media */}
       {brief.coverVideo ? (
@@ -128,30 +130,32 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             </div>
             <h4 className="font-semibold text-sm">{brief.title}</h4>
           </div>
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(brief);
-              }}
-              className="h-6 w-6 p-0"
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(brief.id);
-              }}
-              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
+          {!isPublicView && (
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(brief);
+                }}
+                className="h-6 w-6 p-0"
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(brief.id);
+                }}
+                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -180,20 +184,22 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             </div>
           )}
           
-          <div className="flex flex-col gap-2 mt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsDetailModalOpen(true);
-              }}
-              className="text-xs px-2 py-1 h-auto w-full"
-            >
-              <Upload className="h-3 w-3 mr-1" />
-              Uploads
-            </Button>
-          </div>
+          {!isPublicView && (
+            <div className="flex flex-col gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDetailModalOpen(true);
+                }}
+                className="text-xs px-2 py-1 h-auto w-full"
+              >
+                <Upload className="h-3 w-3 mr-1" />
+                Uploads
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
       
@@ -208,7 +214,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   );
 };
 
-const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardProps) => {
+const ProjectBoard = ({ brandKits, onCreateProject, clientName, isPublicView = false }: ProjectBoardProps) => {
   const [briefs, setBriefs] = useState<ProjectBrief[]>([
     {
       id: "1",
@@ -488,126 +494,128 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
             </p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="gradient" className="glow-effect">
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Briefing
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingBrief ? "Editar Briefing" : "Novo Briefing"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                {!clientName && (
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Cliente</label>
-                    <Input
-                      placeholder="Nome do cliente"
-                      value={newBrief.clientName || ""}
-                      onChange={(e) => setNewBrief({...newBrief, clientName: e.target.value})}
+          {!isPublicView && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="gradient" className="glow-effect">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Briefing
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingBrief ? "Editar Briefing" : "Novo Briefing"}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {!clientName && (
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Cliente</label>
+                      <Input
+                        placeholder="Nome do cliente"
+                        value={newBrief.clientName || ""}
+                        onChange={(e) => setNewBrief({...newBrief, clientName: e.target.value})}
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="border-t pt-4">
+                    <label className="text-sm font-medium mb-2 block">Adicionar Múltiplos Cards</label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Cole vários textos separados por linha dupla (Enter duas vezes)
+                    </p>
+                    <Textarea
+                      placeholder="Texto 1&#10;&#10;Texto 2&#10;&#10;Texto 3..."
+                      rows={4}
+                      value={multiTextInput}
+                      onChange={(e) => setMultiTextInput(e.target.value)}
                     />
-                  </div>
-                )}
-                
-                <div className="border-t pt-4">
-                  <label className="text-sm font-medium mb-2 block">Adicionar Múltiplos Cards</label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Cole vários textos separados por linha dupla (Enter duas vezes)
-                  </p>
-                  <Textarea
-                    placeholder="Texto 1&#10;&#10;Texto 2&#10;&#10;Texto 3..."
-                    rows={4}
-                    value={multiTextInput}
-                    onChange={(e) => setMultiTextInput(e.target.value)}
-                  />
-                  <Button onClick={handleBulkAdd} variant="outline" className="w-full mt-2">
-                    Adicionar Cards
-                  </Button>
-                </div>
-
-                <div className="border-t pt-4">
-                  <label className="text-sm font-medium mb-2 block">Ou criar um único briefing</label>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Tipo</label>
-                      <select
-                        className="w-full p-2 border rounded-md bg-background"
-                        value={newBrief.type || "art"}
-                        onChange={(e) => setNewBrief({...newBrief, type: e.target.value as "art" | "video"})}
-                      >
-                        <option value="art">Arte</option>
-                        <option value="video">Vídeo</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
-                      <Input
-                        placeholder="Título do projeto"
-                        value={newBrief.title || ""}
-                        onChange={(e) => setNewBrief({...newBrief, title: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Descrição</label>
-                      <Textarea
-                        placeholder="Descreva o que precisa ser feito..."
-                        rows={3}
-                        value={newBrief.description || ""}
-                        onChange={(e) => setNewBrief({...newBrief, description: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Prazo</label>
-                      <Input
-                        type="date"
-                        value={newBrief.deadline || ""}
-                        onChange={(e) => setNewBrief({...newBrief, deadline: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Kit de Marca</label>
-                      <select
-                        className="w-full p-2 border rounded-md bg-background"
-                        value={newBrief.brandKitId || ""}
-                        onChange={(e) => setNewBrief({...newBrief, brandKitId: e.target.value})}
-                      >
-                        <option value="">Selecione um kit de marca</option>
-                        {brandKits.map(kit => (
-                          <option key={kit.id} value={kit.id}>{kit.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {newBrief.type === "art" && (
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Imagem de Capa</label>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setNewBrief({...newBrief, coverImage: reader.result as string});
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </div>
-                    )}
-                    <Button onClick={handleSaveBrief} className="w-full">
-                      {editingBrief ? "Salvar Alterações" : "Criar Briefing"}
+                    <Button onClick={handleBulkAdd} variant="outline" className="w-full mt-2">
+                      Adicionar Cards
                     </Button>
                   </div>
+
+                  <div className="border-t pt-4">
+                    <label className="text-sm font-medium mb-2 block">Ou criar um único briefing</label>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Tipo</label>
+                        <select
+                          className="w-full p-2 border rounded-md bg-background"
+                          value={newBrief.type || "art"}
+                          onChange={(e) => setNewBrief({...newBrief, type: e.target.value as "art" | "video"})}
+                        >
+                          <option value="art">Arte</option>
+                          <option value="video">Vídeo</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
+                        <Input
+                          placeholder="Título do projeto"
+                          value={newBrief.title || ""}
+                          onChange={(e) => setNewBrief({...newBrief, title: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Descrição</label>
+                        <Textarea
+                          placeholder="Descreva o que precisa ser feito..."
+                          rows={3}
+                          value={newBrief.description || ""}
+                          onChange={(e) => setNewBrief({...newBrief, description: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Prazo</label>
+                        <Input
+                          type="date"
+                          value={newBrief.deadline || ""}
+                          onChange={(e) => setNewBrief({...newBrief, deadline: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Kit de Marca</label>
+                        <select
+                          className="w-full p-2 border rounded-md bg-background"
+                          value={newBrief.brandKitId || ""}
+                          onChange={(e) => setNewBrief({...newBrief, brandKitId: e.target.value})}
+                        >
+                          <option value="">Selecione um kit de marca</option>
+                          {brandKits.map(kit => (
+                            <option key={kit.id} value={kit.id}>{kit.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {newBrief.type === "art" && (
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Imagem de Capa</label>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setNewBrief({...newBrief, coverImage: reader.result as string});
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+                      <Button onClick={handleSaveBrief} className="w-full">
+                        {editingBrief ? "Salvar Alterações" : "Criar Briefing"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <AlertDialog open={showSplitDialog} onOpenChange={setShowSplitDialog}>
@@ -662,6 +670,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
                             onStatusChange={handleStatusChange}
                             onCreateProject={handleCreateProjectFromBrief}
                             onCoverUpdate={handleBriefCoverUpdate}
+                            isPublicView={isPublicView}
                           />
                         ))}
                       </div>
