@@ -160,6 +160,38 @@ export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "tod
   return data || [];
 }
 
+export async function bulkUpdateBriefDeadline(clientIds: string[], deadline: string) {
+  // Get all briefs for these clients
+  const { data: briefs, error: fetchError } = await supabase
+    .from("project_briefs")
+    .select("*")
+    .in("client_id", clientIds)
+    .order("created_at", { ascending: false });
+
+  if (fetchError) throw fetchError;
+  if (!briefs || briefs.length === 0) return [];
+
+  // Group by client and get first brief per client
+  const firstBriefPerClient = new Map();
+  briefs.forEach(brief => {
+    if (!firstBriefPerClient.has(brief.client_id)) {
+      firstBriefPerClient.set(brief.client_id, brief.id);
+    }
+  });
+
+  const briefIdsToUpdate = Array.from(firstBriefPerClient.values());
+
+  // Update deadline for first brief of each client
+  const { data, error } = await supabase
+    .from("project_briefs")
+    .update({ deadline })
+    .in("id", briefIdsToUpdate)
+    .select();
+
+  if (error) throw error;
+  return data || [];
+}
+
 // Card Uploads functions
 export interface CardUpload {
   id: string;

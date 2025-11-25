@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, ListTodo } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, ListTodo, Calendar } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import * as XLSX from 'xlsx';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +30,7 @@ import {
   deleteClient, 
   generateSlug,
   bulkUpdateBriefStatus,
+  bulkUpdateBriefDeadline,
   getProjectBriefsByClient
 } from "@/lib/clientDatabase";
 
@@ -46,6 +55,9 @@ const Index = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [isDeadlineDialogOpen, setIsDeadlineDialogOpen] = useState(false);
+  const [bulkDeadline, setBulkDeadline] = useState("");
+  const [selectedTeamForDeadline, setSelectedTeamForDeadline] = useState<string | undefined>();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -215,6 +227,42 @@ const Index = () => {
       toast({
         title: "Erro ao mover cards",
         description: "Não foi possível mover os cards.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkUpdateDeadline = async () => {
+    if (!bulkDeadline) {
+      toast({
+        title: "Data obrigatória",
+        description: "Por favor, selecione uma data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const filteredClients = selectedTeamForDeadline 
+        ? clients.filter(c => c.team === selectedTeamForDeadline)
+        : clients;
+      
+      const clientIds = filteredClients.map(c => c.id);
+      await bulkUpdateBriefDeadline(clientIds, bulkDeadline);
+      
+      setIsDeadlineDialogOpen(false);
+      setBulkDeadline("");
+      setSelectedTeamForDeadline(undefined);
+      
+      toast({
+        title: "Prazos atualizados!",
+        description: `Prazo definido para ${filteredClients.length} primeiros cards.`,
+      });
+    } catch (error) {
+      console.error("Error updating deadlines:", error);
+      toast({
+        title: "Erro ao atualizar prazos",
+        description: "Não foi possível atualizar os prazos.",
         variant: "destructive",
       });
     }
@@ -423,6 +471,46 @@ const Index = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            
+            <Dialog open={isDeadlineDialogOpen} onOpenChange={setIsDeadlineDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Definir Prazo
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Definir Prazo em Massa</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Data do Prazo</label>
+                    <Input
+                      type="date"
+                      value={bulkDeadline}
+                      onChange={(e) => setBulkDeadline(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Equipe</label>
+                    <select
+                      className="w-full p-2 border rounded-md bg-background"
+                      value={selectedTeamForDeadline || ""}
+                      onChange={(e) => setSelectedTeamForDeadline(e.target.value || undefined)}
+                    >
+                      <option value="">Todas as Equipes</option>
+                      <option value="1">SEG, QUA E SEX</option>
+                      <option value="2">TER, QUI E SÁB</option>
+                      <option value="3">SEG A SEX</option>
+                    </select>
+                  </div>
+                  <Button onClick={handleBulkUpdateDeadline} className="w-full">
+                    Aplicar Prazo
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             
             <Button
               variant="outline"
