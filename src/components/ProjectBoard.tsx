@@ -59,6 +59,7 @@ interface ProjectBoardProps {
   clientName?: string;
   clientId?: string;
   isPublicView?: boolean;
+  isInactive?: boolean;
 }
 
 interface SortableCardProps {
@@ -72,9 +73,10 @@ interface SortableCardProps {
   onCoverUpdate: (briefId: string, coverUrl: string, isVideo?: boolean) => void;
   onPublishedToggle: (briefId: string, published: boolean) => void;
   isPublicView?: boolean;
+  isInactive?: boolean;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, onPublishedToggle, isPublicView }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, onPublishedToggle, isPublicView, isInactive }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   const {
@@ -84,7 +86,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: brief.id, disabled: isPublicView });
+  } = useSortable({ id: brief.id, disabled: isPublicView || isInactive });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -114,9 +116,9 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     <Card
       ref={setNodeRef}
       style={style}
-      className={`bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView ? 'cursor-move' : ''}`}
-      {...(!isPublicView ? attributes : {})}
-      {...(!isPublicView ? listeners : {})}
+      className={`bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView && !isInactive ? 'cursor-move' : ''}`}
+      {...(!isPublicView && !isInactive ? attributes : {})}
+      {...(!isPublicView && !isInactive ? listeners : {})}
     >
       {/* Cover Media */}
       {brief.coverVideo ? (
@@ -283,7 +285,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   );
 };
 
-const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPublicView = false }: ProjectBoardProps) => {
+const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPublicView = false, isInactive = false }: ProjectBoardProps) => {
   const [briefs, setBriefs] = useState<ProjectBrief[]>([]);
   const { user } = useAuth();
 
@@ -1117,6 +1119,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             onCoverUpdate={handleBriefCoverUpdate}
                             onPublishedToggle={handlePublishedToggle}
                             isPublicView={isPublicView}
+                            isInactive={isInactive}
                           />
                         ))}
                       </div>
