@@ -19,7 +19,7 @@ interface CardDetailModalProps {
   onClose: () => void;
   cardId: string;
   cardTitle: string;
-  onCoverUpdate: (coverUrl: string) => void;
+  onCoverUpdate: (coverUrl: string, isVideo?: boolean) => void;
 }
 
 export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpdate }: CardDetailModalProps) => {
@@ -39,10 +39,14 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
     setUploads(newUploads);
     localStorage.setItem(storageKey, JSON.stringify(newUploads));
     
-    // Update cover with first final art
-    const firstFinal = newUploads.find(u => u.type === "final" && u.fileType === "image");
-    if (firstFinal) {
-      onCoverUpdate(firstFinal.url);
+    // Update cover with first final art (prioritize images, then videos)
+    const firstFinalImage = newUploads.find(u => u.type === "final" && u.fileType === "image");
+    const firstFinalVideo = newUploads.find(u => u.type === "final" && u.fileType === "video");
+    
+    if (firstFinalImage) {
+      onCoverUpdate(firstFinalImage.url, false);
+    } else if (firstFinalVideo) {
+      onCoverUpdate(firstFinalVideo.url, true);
     }
   };
 
