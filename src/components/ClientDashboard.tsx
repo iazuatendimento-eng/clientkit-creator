@@ -57,7 +57,7 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
     return (
       <div className="min-h-screen p-6">
         <BrandKitEditor
-          brandKit={client.brandKit}
+          brandKit={client.brand_kit}
           onSave={handleSaveBrandKit}
           onCancel={() => setCurrentView("dashboard")}
         />
@@ -74,10 +74,10 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
     );
   }
 
-  if (currentView === "ai-generator" && client.brandKit) {
+  if (currentView === "ai-generator" && client.brand_kit) {
     return (
       <AIArtGenerator
-        brandKit={client.brandKit}
+        brandKit={client.brand_kit}
         onBack={() => setCurrentView("dashboard")}
       />
     );
@@ -121,7 +121,6 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
           brandKits={client.brand_kit ? [client.brand_kit] : []}
           onCreateProject={handleCreateProject}
           clientName={client.name}
-          clientId={client.id}
         />
       </div>
     </div>
