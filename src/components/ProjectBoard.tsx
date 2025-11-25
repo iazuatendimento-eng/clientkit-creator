@@ -88,6 +88,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     isDragging,
   } = useSortable({ id: brief.id, disabled: isPublicView || isInactive });
 
+  console.log(`Card ${brief.id} - isPublicView: ${isPublicView}, isInactive: ${isInactive}, drag disabled: ${isPublicView || isInactive}`);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -372,26 +374,44 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     const { active, over } = event;
     setActiveDragId(null);
 
-    if (!over) return;
+    console.log("Drag ended:", { activeId: active.id, overId: over?.id });
+
+    if (!over) {
+      console.log("No drop target");
+      return;
+    }
 
     const activeId = active.id as string;
     const overId = over.id as string;
 
     const activeBrief = briefs.find(b => b.id === activeId);
-    if (!activeBrief) return;
+    if (!activeBrief) {
+      console.log("Active brief not found");
+      return;
+    }
+
+    console.log("Active brief status:", activeBrief.status);
 
     // Check if dropped over a column directly
     const targetColumn = columns.find(col => col.id === overId);
-    if (targetColumn && activeBrief.status !== targetColumn.id) {
-      await handleStatusChange(activeId, targetColumn.id);
-      return;
+    if (targetColumn) {
+      console.log("Dropped over column:", targetColumn.id);
+      if (activeBrief.status !== targetColumn.id) {
+        console.log("Moving to different column:", targetColumn.id);
+        await handleStatusChange(activeId, targetColumn.id);
+        return;
+      }
     }
 
     // Check if dropped over another card
     const overBrief = briefs.find(b => b.id === overId);
-    if (overBrief && activeBrief.status !== overBrief.status) {
-      await handleStatusChange(activeId, overBrief.status);
-      return;
+    if (overBrief) {
+      console.log("Dropped over card in column:", overBrief.status);
+      if (activeBrief.status !== overBrief.status) {
+        console.log("Moving to different column via card:", overBrief.status);
+        await handleStatusChange(activeId, overBrief.status);
+        return;
+      }
     }
 
     // If same column, allow reordering (DnD Kit handles it automatically)
