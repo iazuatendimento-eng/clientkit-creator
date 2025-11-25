@@ -726,9 +726,30 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   const handleDeleteBrief = async (id: string) => {
+    if (!clientId) return;
+    
     try {
       await deleteProjectBrief(id);
-      setBriefs(briefs.filter(b => b.id !== id));
+      
+      // Reload briefs from Supabase to ensure sync
+      const data = await getProjectBriefsByClient(clientId);
+      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+        id: brief.id,
+        clientName: clientName || "",
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
+        generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
+      }));
+      setBriefs(mappedBriefs);
+      
       toast.success("Briefing removido!");
     } catch (error) {
       console.error("Error deleting brief:", error);
@@ -737,11 +758,30 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   const handleStatusChange = async (briefId: string, newStatus: string) => {
+    if (!clientId) return;
+    
     try {
       await updateProjectBrief(briefId, { status: newStatus as "todo" | "completed" });
-      setBriefs(briefs.map(b => 
-        b.id === briefId ? { ...b, status: newStatus as ProjectBrief["status"] } : b
-      ));
+      
+      // Reload briefs from Supabase to ensure sync
+      const data = await getProjectBriefsByClient(clientId);
+      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+        id: brief.id,
+        clientName: clientName || "",
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
+        generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
+      }));
+      setBriefs(mappedBriefs);
+      
       toast.success("Status atualizado!");
     } catch (error) {
       console.error("Error updating status:", error);
@@ -750,11 +790,30 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   const handlePublishedToggle = async (briefId: string, published: boolean) => {
+    if (!clientId) return;
+    
     try {
       await updateProjectBrief(briefId, { published });
-      setBriefs(briefs.map(b => 
-        b.id === briefId ? { ...b, published } : b
-      ));
+      
+      // Reload briefs from Supabase to ensure sync
+      const data = await getProjectBriefsByClient(clientId);
+      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+        id: brief.id,
+        clientName: clientName || "",
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
+        generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
+      }));
+      setBriefs(mappedBriefs);
+      
       toast.success(published ? "Marcado como publicado!" : "Marcado como não publicado!");
     } catch (error) {
       console.error("Error updating published status:", error);
