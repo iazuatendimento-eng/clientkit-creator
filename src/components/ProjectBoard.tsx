@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
-import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief } from "@/lib/clientDatabase";
+import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads } from "@/lib/clientDatabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
   DndContext,
@@ -77,6 +77,7 @@ interface SortableCardProps {
 
 const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
   
   const {
     attributes,
@@ -86,6 +87,29 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     transition,
     isDragging,
   } = useSortable({ id: brief.id, disabled: isPublicView || isInactive });
+
+  // Load final artworks for public view
+  useEffect(() => {
+    if (isPublicView) {
+      const loadFinalArtworks = async () => {
+        try {
+          const uploads = await getCardUploads(brief.id);
+          const finals = uploads
+            .filter((u: any) => u.upload_type === "final")
+            .map((u: any) => ({
+              id: u.id,
+              name: u.file_name,
+              url: u.file_url,
+              fileType: u.file_type,
+            }));
+          setFinalArtworks(finals);
+        } catch (error) {
+          console.error("Error loading final artworks:", error);
+        }
+      };
+      loadFinalArtworks();
+    }
+  }, [brief.id, isPublicView]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -233,21 +257,44 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   Copiar Legenda
                 </Button>
               )}
-              {(brief.coverImage || brief.coverVideo) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const url = brief.coverImage || brief.coverVideo || "";
-                    const filename = brief.coverImage ? `arte-${brief.id}.jpg` : `video-${brief.id}.mp4`;
-                    handleDownload(url, filename);
-                  }}
-                  className="text-xs px-2 py-1 h-auto w-full"
-                >
-                  <Download className="h-3 w-3 mr-1" />
-                  Baixar {brief.coverVideo ? 'Vídeo' : 'Arte'}
-                </Button>
+              {finalArtworks.length > 0 && (
+                <>
+                  {finalArtworks.length === 1 ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const artwork = finalArtworks[0];
+                        const isVideo = artwork.fileType.startsWith("video");
+                        handleDownload(artwork.url, artwork.name);
+                      }}
+                      className="text-xs px-2 py-1 h-auto w-full"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Baixar {finalArtworks[0].fileType.startsWith("video") ? 'Vídeo' : 'Arte'}
+                    </Button>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium">Baixar Artes:</p>
+                      {finalArtworks.map((artwork, index) => (
+                        <Button
+                          key={artwork.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(artwork.url, artwork.name);
+                          }}
+                          className="text-xs px-2 py-1 h-auto w-full"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          {artwork.fileType.startsWith("video") ? 'Vídeo' : 'Arte'} {index + 1}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
