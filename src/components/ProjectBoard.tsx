@@ -298,7 +298,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false);
   const [captionCopied, setCaptionCopied] = useState(false);
-  const [showOnlyUnpublished, setShowOnlyUnpublished] = useState(false);
+  const [publishedFilter, setPublishedFilter] = useState<"all" | "published" | "unpublished">("all");
 
   // Debug: Log authentication status
   useEffect(() => {
@@ -1054,18 +1054,32 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           >
             {isPublicView && (
               <div className="mb-4 flex items-center gap-2 p-3 bg-card rounded-lg border">
+                <span className="text-sm font-medium mr-2">Filtrar:</span>
                 <Button
-                  variant={showOnlyUnpublished ? "default" : "outline"}
+                  variant={publishedFilter === "all" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setShowOnlyUnpublished(!showOnlyUnpublished)}
+                  onClick={() => setPublishedFilter("all")}
                   className="text-xs"
                 >
-                  {showOnlyUnpublished ? (
-                    <CheckSquare className="h-3 w-3 mr-1" />
-                  ) : (
-                    <Square className="h-3 w-3 mr-1" />
-                  )}
-                  Mostrar apenas não publicados
+                  Todos
+                </Button>
+                <Button
+                  variant={publishedFilter === "published" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPublishedFilter("published")}
+                  className="text-xs"
+                >
+                  <CheckSquare className="h-3 w-3 mr-1" />
+                  Publicados
+                </Button>
+                <Button
+                  variant={publishedFilter === "unpublished" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPublishedFilter("unpublished")}
+                  className="text-xs"
+                >
+                  <Square className="h-3 w-3 mr-1" />
+                  Não Publicados
                 </Button>
               </div>
             )}
@@ -1073,9 +1087,13 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
-              // Apply unpublished filter only on completed column and in public view
-              if (isPublicView && showOnlyUnpublished && column.id === "completed") {
-                columnBriefs = columnBriefs.filter(b => !b.published);
+              // Apply published filter only on completed column and in public view
+              if (isPublicView && column.id === "completed") {
+                if (publishedFilter === "published") {
+                  columnBriefs = columnBriefs.filter(b => b.published);
+                } else if (publishedFilter === "unpublished") {
+                  columnBriefs = columnBriefs.filter(b => !b.published);
+                }
               }
               
               return (
