@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2 } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads } from "@/lib/clientDatabase";
@@ -78,6 +78,7 @@ interface SortableCardProps {
 const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
+  const [copiedLink, setCopiedLink] = useState(false);
   
   const {
     attributes,
@@ -135,10 +136,19 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     link.click();
   };
 
+  const handleCopyCardLink = () => {
+    const cardUrl = `${window.location.origin}${window.location.pathname}#card-${brief.id}`;
+    navigator.clipboard.writeText(cardUrl);
+    setCopiedLink(true);
+    toast.success("Link do card copiado!");
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
+      id={`card-${brief.id}`}
       className={`bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView && !isInactive ? 'cursor-move' : ''}`}
       {...(!isPublicView && !isInactive ? attributes : {})}
       {...(!isPublicView && !isInactive ? listeners : {})}
@@ -243,6 +253,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyCardLink();
+                }}
+                className="text-xs px-2 py-1 h-auto w-full"
+              >
+                {copiedLink ? <Check className="h-3 w-3 mr-1" /> : <Link2 className="h-3 w-3 mr-1" />}
+                {copiedLink ? "Link Copiado!" : "Copiar Link do Card"}
+              </Button>
               {brief.generatedCaption && (
                 <Button
                   variant="outline"
