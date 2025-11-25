@@ -281,7 +281,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     setActiveDragId(event.active.id as string);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragId(null);
 
@@ -296,14 +296,14 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     // If dropped over another card, move to that card's column
     const overBrief = briefs.find(b => b.id === overId);
     if (overBrief) {
-      handleStatusChange(activeId, overBrief.status);
+      await handleStatusChange(activeId, overBrief.status);
       return;
     }
 
     // If dropped over a column, move to that column
     const targetColumn = columns.find(col => col.id === overId);
     if (targetColumn) {
-      handleStatusChange(activeId, targetColumn.id);
+      await handleStatusChange(activeId, targetColumn.id);
     }
   };
 

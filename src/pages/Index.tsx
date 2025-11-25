@@ -241,14 +241,31 @@ const Index = () => {
                            client.team === "2" ? "TER, QUI E SÁB" : 
                            client.team === "3" ? "SEG A SEX" : "SEG, QUA E SEX";
             
-            excelData.push({
-              "Cliente": client.name,
-              "Empresa": client.company || "",
-              "Equipe": teamName,
-              "Texto do Card": firstTodoCard.description || firstTodoCard.title,
-              "Link do Card": cardUrl,
-              "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
-            });
+            const cardText = firstTodoCard.description || firstTodoCard.title;
+            
+            // Se o texto contém ";", dividir em múltiplas linhas
+            if (cardText.includes(";")) {
+              const textParts = cardText.split(";").map(part => part.trim()).filter(part => part.length > 0);
+              textParts.forEach((part, index) => {
+                excelData.push({
+                  "Cliente": client.name,
+                  "Empresa": client.company || "",
+                  "Equipe": teamName,
+                  "Texto do Card": part,
+                  "Link do Card": index === 0 ? cardUrl : "",
+                  "Prazo": index === 0 ? (firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : "") : ""
+                });
+              });
+            } else {
+              excelData.push({
+                "Cliente": client.name,
+                "Empresa": client.company || "",
+                "Equipe": teamName,
+                "Texto do Card": cardText,
+                "Link do Card": cardUrl,
+                "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
+              });
+            }
           }
         } catch (error) {
           console.error(`Error processing client ${client.name}:`, error);
@@ -285,7 +302,7 @@ const Index = () => {
 
       toast({
         title: "Exportado com sucesso!",
-        description: `${excelData.length} cards foram exportados para Excel.`,
+        description: `${excelData.length} linhas foram exportadas para Excel.`,
       });
     } catch (error) {
       console.error("Error exporting to Excel:", error);
