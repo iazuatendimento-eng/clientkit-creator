@@ -110,6 +110,12 @@ const ClientPublicView = () => {
 
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
+          <h3 className="font-semibold text-blue-600 dark:text-blue-400 mb-1">Visualização do Cliente</h3>
+          <p className="text-sm text-blue-600/80 dark:text-blue-400/80">
+            Esta é uma visualização apenas para consulta. Você pode visualizar e baixar as artes, mas não pode fazer alterações ou mover cards.
+          </p>
+        </div>
         <ProjectBoard 
           brandKits={client.brand_kit ? [client.brand_kit as any] : []}
           onCreateProject={handleCreateProject}

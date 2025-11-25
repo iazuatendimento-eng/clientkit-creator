@@ -25,6 +25,7 @@ interface Client {
   };
   projectCount: number;
   created_at: string;
+  active?: boolean;
 }
 
 interface ClientDashboardProps {
@@ -117,11 +118,20 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
 
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
+        {!client.active && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
+            <h3 className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1">Empresa Inativa</h3>
+            <p className="text-sm text-yellow-600/80 dark:text-yellow-400/80">
+              Esta empresa está inativa. Você pode visualizar os cards existentes, mas não pode mover cards ou adicionar novas ações.
+            </p>
+          </div>
+        )}
         <ProjectBoard 
           brandKits={client.brand_kit ? [client.brand_kit] : []}
           onCreateProject={handleCreateProject}
           clientName={client.name}
           clientId={client.id}
+          isPublicView={!client.active}
         />
       </div>
     </div>
