@@ -58,6 +58,86 @@ export type Database = {
           },
         ]
       }
+      card_uploads: {
+        Row: {
+          card_id: string | null
+          file_name: string
+          file_type: string
+          file_url: string
+          id: string
+          upload_type: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          card_id?: string | null
+          file_name: string
+          file_type: string
+          file_url: string
+          id?: string
+          upload_type: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          card_id?: string | null
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          upload_type?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_uploads_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "project_briefs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_data: {
+        Row: {
+          brand_kit: Json | null
+          company: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          slug: string
+          team: string | null
+        }
+        Insert: {
+          brand_kit?: Json | null
+          company?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          slug: string
+          team?: string | null
+        }
+        Update: {
+          brand_kit?: Json | null
+          company?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          slug?: string
+          team?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           brand_kit: Json | null
@@ -120,6 +200,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      project_briefs: {
+        Row: {
+          brand_kit_id: string | null
+          brief_type: string | null
+          client_id: string | null
+          cover_image: string | null
+          cover_video: string | null
+          created_at: string | null
+          deadline: string | null
+          description: string | null
+          id: string
+          status: string | null
+          title: string
+        }
+        Insert: {
+          brand_kit_id?: string | null
+          brief_type?: string | null
+          client_id?: string | null
+          cover_image?: string | null
+          cover_video?: string | null
+          created_at?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          status?: string | null
+          title: string
+        }
+        Update: {
+          brand_kit_id?: string | null
+          brief_type?: string | null
+          client_id?: string | null
+          cover_image?: string | null
+          cover_video?: string | null
+          created_at?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          status?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_briefs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_data"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

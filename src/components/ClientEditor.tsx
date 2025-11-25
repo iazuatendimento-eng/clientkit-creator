@@ -14,9 +14,10 @@ interface Client {
   phone?: string;
   notes?: string;
   team?: "1" | "2" | "3";
-  brandKit?: any;
+  slug?: string;
+  brand_kit?: any;
   projectCount: number;
-  createdAt: string;
+  created_at: string;
 }
 
 interface ClientEditorProps {
@@ -34,7 +35,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     notes: "",
     team: "1",
     projectCount: 0,
-    createdAt: new Date().toISOString().split('T')[0]
+    created_at: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {

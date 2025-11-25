@@ -13,7 +13,8 @@ interface Client {
   email: string;
   company?: string;
   team?: "1" | "2" | "3";
-  brandKit?: {
+  slug: string;
+  brand_kit?: {
     id: string;
     name: string;
     logo?: string;
@@ -23,7 +24,7 @@ interface Client {
     createdAt: string;
   };
   projectCount: number;
-  createdAt: string;
+  created_at: string;
 }
 
 interface ClientDashboardProps {
@@ -39,15 +40,15 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
   const handleSaveBrandKit = (brandKit: any) => {
     const updatedClient = {
       ...client,
-      brandKit: { ...brandKit, id: brandKit.id || "1" }
+      brand_kit: { ...brandKit, id: brandKit.id || "1" }
     };
     onUpdateClient(updatedClient);
     setCurrentView("dashboard");
   };
 
   const handleCreateProject = (brief: any, brandKitId: string) => {
-    if (client.brandKit) {
-      setSelectedBrandKit(client.brandKit);
+    if (client.brand_kit) {
+      setSelectedBrandKit(client.brand_kit);
       setCurrentView("ai-generator");
     }
   };
@@ -117,9 +118,10 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
         <ProjectBoard 
-          brandKits={client.brandKit ? [client.brandKit] : []}
+          brandKits={client.brand_kit ? [client.brand_kit] : []}
           onCreateProject={handleCreateProject}
           clientName={client.name}
+          clientId={client.id}
         />
       </div>
     </div>
