@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Sparkles, Copy, Check } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief } from "@/lib/clientDatabase";
@@ -222,6 +222,9 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false);
+  const [generatedCaption, setGeneratedCaption] = useState("");
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
+  const [captionCopied, setCaptionCopied] = useState(false);
 
   // Debug: Log authentication status
   useEffect(() => {
@@ -580,7 +583,63 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const handleEditBrief = (brief: ProjectBrief) => {
     setEditingBrief(brief);
     setNewBrief(brief);
+    setGeneratedCaption("");
+    setCaptionCopied(false);
     setIsDialogOpen(true);
+  };
+
+  const handleGenerateCaption = async () => {
+    const textToUse = editingBrief?.title || newBrief.title;
+    
+    if (!textToUse) {
+      toast.error("Por favor, insira um texto primeiro");
+      return;
+    }
+
+    setIsGeneratingCaption(true);
+    setGeneratedCaption("");
+    setCaptionCopied(false);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text: textToUse }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao gerar legenda');
+      }
+
+      const data = await response.json();
+      setGeneratedCaption(data.caption);
+      toast.success("Legenda gerada com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao gerar legenda:", error);
+      toast.error(error.message || "Erro ao gerar legenda");
+    } finally {
+      setIsGeneratingCaption(false);
+    }
+  };
+
+  const handleCopyCaption = async () => {
+    if (!generatedCaption) return;
+    
+    try {
+      await navigator.clipboard.writeText(generatedCaption);
+      setCaptionCopied(true);
+      toast.success("Legenda copiada!");
+      setTimeout(() => setCaptionCopied(false), 2000);
+    } catch (error) {
+      toast.error("Erro ao copiar legenda");
+    }
   };
 
   const handleCreateProjectFromBrief = (brief: ProjectBrief) => {
@@ -723,6 +782,63 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                           />
                         </div>
                       )}
+                      
+                      {editingBrief && (
+                        <div className="border-t pt-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-medium">Legenda para Redes Sociais</label>
+                            <Button
+                              onClick={handleGenerateCaption}
+                              disabled={isGeneratingCaption || !editingBrief.title}
+                              variant="outline"
+                              size="sm"
+                              className="text-xs"
+                            >
+                              {isGeneratingCaption ? (
+                                <>Gerando...</>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-3 w-3 mr-1" />
+                                  Gerar com IA
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          {generatedCaption && (
+                            <div className="space-y-2">
+                              <div className="relative">
+                                <Textarea
+                                  value={generatedCaption}
+                                  readOnly
+                                  rows={6}
+                                  className="pr-10 text-sm"
+                                />
+                                <Button
+                                  onClick={handleCopyCaption}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute top-2 right-2 h-7 w-7 p-0"
+                                >
+                                  {captionCopied ? (
+                                    <Check className="h-3 w-3 text-green-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Clique no ícone para copiar a legenda
+                              </p>
+                            </div>
+                          )}
+                          {!generatedCaption && !isGeneratingCaption && (
+                            <p className="text-xs text-muted-foreground">
+                              Clique em "Gerar com IA" para criar uma legenda com emojis e hashtags
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
                       <Button onClick={handleSaveBrief} className="w-full">
                         {editingBrief ? "Salvar Alterações" : "Criar Briefing"}
                       </Button>
