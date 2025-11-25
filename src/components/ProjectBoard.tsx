@@ -676,31 +676,11 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                     <label className="text-sm font-medium mb-2 block">Ou criar um único briefing</label>
                     <div className="space-y-3">
                       <div>
-                        <label className="text-sm font-medium mb-1 block">Tipo</label>
-                        <select
-                          className="w-full p-2 border rounded-md bg-background"
-                          value={newBrief.type || "art"}
-                          onChange={(e) => setNewBrief({...newBrief, type: e.target.value as "art" | "video"})}
-                        >
-                          <option value="art">Arte</option>
-                          <option value="video">Vídeo</option>
-                        </select>
-                      </div>
-                      <div>
                         <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
                         <Input
                           placeholder="Título do projeto"
                           value={newBrief.title || ""}
                           onChange={(e) => setNewBrief({...newBrief, title: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Descrição</label>
-                        <Textarea
-                          placeholder="Descreva o que precisa ser feito..."
-                          rows={3}
-                          value={newBrief.description || ""}
-                          onChange={(e) => setNewBrief({...newBrief, description: e.target.value})}
                         />
                       </div>
                       <div>
@@ -710,19 +690,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                           value={newBrief.deadline || ""}
                           onChange={(e) => setNewBrief({...newBrief, deadline: e.target.value})}
                         />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Kit de Marca</label>
-                        <select
-                          className="w-full p-2 border rounded-md bg-background"
-                          value={newBrief.brandKitId || ""}
-                          onChange={(e) => setNewBrief({...newBrief, brandKitId: e.target.value})}
-                        >
-                          <option value="">Selecione um kit de marca</option>
-                          {brandKits.map(kit => (
-                            <option key={kit.id} value={kit.id}>{kit.name}</option>
-                          ))}
-                        </select>
                       </div>
                       {newBrief.type === "art" && (
                         <div>
