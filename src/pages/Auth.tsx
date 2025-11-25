@@ -156,32 +156,21 @@ export default function Auth() {
                 className="bg-background/50 border-primary/20"
               />
             </div>
-            <div className="space-y-2">
-              <Button
-                type="submit"
-                className="w-full"
-                variant="gradient"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Entrando...
-                  </>
-                ) : (
-                  "Entrar"
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleSignUp}
-                disabled={loading}
-              >
-                Criar Conta
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              variant="gradient"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </Button>
           </form>
         </CardContent>
       </Card>
