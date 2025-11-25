@@ -252,22 +252,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           )}
           
           {isPublicView && brief.status === "completed" && (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPublishedToggle(brief.id, !brief.published);
-                }}
-                className="h-auto p-0 hover:bg-transparent"
-              >
-                {brief.published ? (
-                  <CheckSquare className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Square className="h-4 w-4" />
-                )}
-              </Button>
+            <div 
+              className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPublishedToggle(brief.id, !brief.published);
+              }}
+            >
+              {brief.published ? (
+                <CheckSquare className="h-4 w-4 text-green-500" />
+              ) : (
+                <Square className="h-4 w-4" />
+              )}
               <span className="text-xs text-muted-foreground">
                 {brief.published ? 'Publicado' : 'Não publicado'}
               </span>
