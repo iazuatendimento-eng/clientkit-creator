@@ -88,8 +88,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     isDragging,
   } = useSortable({ id: brief.id, disabled: isPublicView || isInactive });
 
-  console.log(`Card ${brief.id} - isPublicView: ${isPublicView}, isInactive: ${isInactive}, drag disabled: ${isPublicView || isInactive}`);
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -300,24 +298,13 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [captionCopied, setCaptionCopied] = useState(false);
   const [publishedFilter, setPublishedFilter] = useState<"all" | "published" | "unpublished">("all");
 
-  // Debug: Log authentication status
-  useEffect(() => {
-    console.log("ProjectBoard - Auth Status:", { 
-      user: user?.email, 
-      isPublicView, 
-      clientId 
-    });
-  }, [user, isPublicView, clientId]);
-
   // Load briefs from Supabase
   useEffect(() => {
     const loadBriefs = async () => {
       if (!clientId) return;
       
       try {
-        console.log("Carregando briefs para cliente:", clientId);
         const data = await getProjectBriefsByClient(clientId);
-        console.log("Briefs carregados:", data.length);
         
         const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
           id: brief.id,
@@ -342,6 +329,17 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     };
 
     loadBriefs();
+    
+    // Listen for bulk update events to reload briefs
+    const handleBulkUpdate = () => {
+      loadBriefs();
+    };
+    
+    window.addEventListener("bulkBriefsUpdated", handleBulkUpdate);
+    
+    return () => {
+      window.removeEventListener("bulkBriefsUpdated", handleBulkUpdate);
+    };
   }, [clientId, clientName]);
 
   const sensors = useSensors(
@@ -374,44 +372,26 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     const { active, over } = event;
     setActiveDragId(null);
 
-    console.log("Drag ended:", { activeId: active.id, overId: over?.id });
-
-    if (!over) {
-      console.log("No drop target");
-      return;
-    }
+    if (!over) return;
 
     const activeId = active.id as string;
     const overId = over.id as string;
 
     const activeBrief = briefs.find(b => b.id === activeId);
-    if (!activeBrief) {
-      console.log("Active brief not found");
-      return;
-    }
-
-    console.log("Active brief status:", activeBrief.status);
+    if (!activeBrief) return;
 
     // Check if dropped over a column directly
     const targetColumn = columns.find(col => col.id === overId);
-    if (targetColumn) {
-      console.log("Dropped over column:", targetColumn.id);
-      if (activeBrief.status !== targetColumn.id) {
-        console.log("Moving to different column:", targetColumn.id);
-        await handleStatusChange(activeId, targetColumn.id);
-        return;
-      }
+    if (targetColumn && activeBrief.status !== targetColumn.id) {
+      await handleStatusChange(activeId, targetColumn.id);
+      return;
     }
 
     // Check if dropped over another card
     const overBrief = briefs.find(b => b.id === overId);
-    if (overBrief) {
-      console.log("Dropped over card in column:", overBrief.status);
-      if (activeBrief.status !== overBrief.status) {
-        console.log("Moving to different column via card:", overBrief.status);
-        await handleStatusChange(activeId, overBrief.status);
-        return;
-      }
+    if (overBrief && activeBrief.status !== overBrief.status) {
+      await handleStatusChange(activeId, overBrief.status);
+      return;
     }
 
     // If same column, allow reordering (DnD Kit handles it automatically)
@@ -435,8 +415,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     }
 
     try {
-      console.log("Salvando briefing...", { clientId, newBrief });
-      
       let generatedCaption = "";
       
       // Gerar legenda automaticamente ao criar novo card
@@ -478,12 +456,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       };
 
       if (editingBrief) {
-        const result = await updateProjectBrief(editingBrief.id, briefData);
-        console.log("Brief atualizado:", result);
+        await updateProjectBrief(editingBrief.id, briefData);
         toast.success("Briefing atualizado!");
       } else {
-        const result = await createProjectBrief(briefData);
-        console.log("Brief criado:", result);
+        await createProjectBrief(briefData);
         if (generatedCaption) {
           toast.success("Briefing criado com legenda!");
         } else {
@@ -493,7 +469,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
-      console.log("Briefs recarregados:", data.length);
       
       const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
         id: brief.id,
@@ -556,8 +531,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     }
 
     try {
-      console.log("Criando card único...", { clientId, text });
-      
       if (!newBrief.brandKitId && brandKits.length > 0) {
         newBrief.brandKitId = brandKits[0].id;
       }
@@ -596,12 +569,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generated_caption: generatedCaption,
       };
 
-      const result = await createProjectBrief(briefData);
-      console.log("Card criado:", result);
+      await createProjectBrief(briefData);
       
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
-      console.log("Briefs recarregados após criação:", data.length);
       
       const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
         id: brief.id,
@@ -656,7 +627,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
 
-      console.log(`Criando ${paragraphs.length} cards múltiplos...`);
       toast.info("Criando cards e gerando legendas...");
 
       if (!newBrief.brandKitId && brandKits.length > 0) {
@@ -699,12 +669,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         return await createProjectBrief(briefData);
       });
 
-      const results = await Promise.all(createPromises);
-      console.log(`Cards criados: ${results.length}`);
+      await Promise.all(createPromises);
       
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
-      console.log("Briefs recarregados após criação múltipla:", data.length);
       
       const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
         id: brief.id,

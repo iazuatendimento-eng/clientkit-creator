@@ -236,6 +236,9 @@ const Index = () => {
       
       await bulkUpdateBriefStatus(clientIds, "completed");
       
+      // Dispatch event to notify all ProjectBoard instances to reload
+      window.dispatchEvent(new Event("bulkBriefsUpdated"));
+      
       toast({
         title: "Cards movidos!",
         description: `Primeiro card de ${clientIds.length} ${clientIds.length === 1 ? 'cliente ativo' : 'clientes ativos'} movido para Concluídos.`,
@@ -268,6 +271,9 @@ const Index = () => {
       }
       
       await bulkUpdateBriefStatus(clientIds, "todo");
+      
+      // Dispatch event to notify all ProjectBoard instances to reload
+      window.dispatchEvent(new Event("bulkBriefsUpdated"));
       
       toast({
         title: "Cards movidos!",
@@ -310,6 +316,9 @@ const Index = () => {
       }
       
       await bulkUpdateBriefDeadline(clientIds, bulkDeadline);
+      
+      // Dispatch event to notify all ProjectBoard instances to reload
+      window.dispatchEvent(new Event("bulkBriefsUpdated"));
       
       setIsDeadlineDialogOpen(false);
       setBulkDeadline("");
