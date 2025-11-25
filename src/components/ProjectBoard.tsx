@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, User, FileText, Trash2, Edit, Upload } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
+import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief } from "@/lib/clientDatabase";
 import {
   DndContext,
   DragEndEvent,
@@ -54,6 +55,7 @@ interface ProjectBoardProps {
   brandKits: any[];
   onCreateProject: (brief: ProjectBrief, brandKitId: string) => void;
   clientName?: string;
+  clientId?: string;
   isPublicView?: boolean;
 }
 
@@ -214,29 +216,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   );
 };
 
-const ProjectBoard = ({ brandKits, onCreateProject, clientName, isPublicView = false }: ProjectBoardProps) => {
-  const [briefs, setBriefs] = useState<ProjectBrief[]>([
-    {
-      id: "1",
-      clientName: clientName || "Cliente Exemplo",
-      title: "Banner para Black Friday",
-      description: "Criar banner promocional para campanha de Black Friday com 50% de desconto em todos os produtos.",
-      deadline: "2024-11-25",
-      status: "todo" as ProjectBrief["status"],
-      brandKitId: brandKits[0]?.id,
-      createdAt: "2024-11-01"
-    },
-    {
-      id: "2",
-      clientName: clientName || "Cliente Exemplo",
-      title: "Cardápio Digital",
-      description: "Desenvolver cardápio digital para aplicativo com fotos dos produtos e preços atualizados.",
-      deadline: "2024-11-30",
-      status: "completed" as ProjectBrief["status"],
-      brandKitId: brandKits[0]?.id,
-      createdAt: "2024-11-05"
-    }
-  ].filter(brief => brandKits.length > 0));
+const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPublicView = false }: ProjectBoardProps) => {
+  const [briefs, setBriefs] = useState<ProjectBrief[]>([]);
 
   const [newBrief, setNewBrief] = useState<Partial<ProjectBrief>>({});
   const [editingBrief, setEditingBrief] = useState<ProjectBrief | null>(null);
@@ -245,48 +226,34 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, isPublicView = f
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false);
 
-  // Persist briefs locally per client to avoid data loss between refreshes
+  // Load briefs from Supabase
   useEffect(() => {
-    const storageKey = `project-briefs-${clientName || 'default'}`;
-    let saved = localStorage.getItem(storageKey);
-    
-    // If no data found, try to restore from global backup
-    if (!saved) {
+    const loadBriefs = async () => {
+      if (!clientId) return;
+      
       try {
-        const globalBackup = localStorage.getItem('all-project-briefs');
-        if (globalBackup) {
-          const allBriefs = JSON.parse(globalBackup);
-          if (allBriefs[clientName || 'default']) {
-            saved = JSON.stringify(allBriefs[clientName || 'default']);
-            // Restore to individual storage
-            localStorage.setItem(storageKey, saved);
-          }
-        }
-      } catch {}
-    }
-    
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setBriefs(parsed);
-        }
-      } catch {}
-    }
-  }, [clientName]);
+        const data = await getProjectBriefsByClient(clientId);
+        const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+          id: brief.id,
+          clientName: clientName || "",
+          title: brief.title,
+          description: brief.description || "",
+          deadline: brief.deadline || "",
+          status: brief.status || "todo",
+          brandKitId: brief.brand_kit_id,
+          createdAt: brief.created_at || new Date().toISOString(),
+          type: brief.brief_type as "art" | "video",
+          coverImage: brief.cover_image,
+          coverVideo: brief.cover_video,
+        }));
+        setBriefs(mappedBriefs);
+      } catch (error) {
+        console.error("Error loading briefs:", error);
+      }
+    };
 
-  useEffect(() => {
-    const storageKey = `project-briefs-${clientName || 'default'}`;
-    localStorage.setItem(storageKey, JSON.stringify(briefs));
-    
-    // Also save to a global backup to prevent data loss on logout
-    try {
-      const globalBackup = localStorage.getItem('all-project-briefs') || '{}';
-      const allBriefs = JSON.parse(globalBackup);
-      allBriefs[clientName || 'default'] = briefs;
-      localStorage.setItem('all-project-briefs', JSON.stringify(allBriefs));
-    } catch {}
-  }, [briefs, clientName]);
+    loadBriefs();
+  }, [clientId, clientName]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -340,31 +307,56 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, isPublicView = f
     }
   };
 
-  const handleSaveBrief = () => {
-    const brief: ProjectBrief = {
-      id: editingBrief?.id || Date.now().toString(),
-      clientName: clientName || newBrief.clientName || "",
-      title: newBrief.title || "",
-      description: newBrief.description || "",
-      deadline: newBrief.deadline || "",
-      status: newBrief.status || "todo",
-      brandKitId: newBrief.brandKitId,
-      createdAt: editingBrief?.createdAt || new Date().toISOString().split('T')[0],
-      type: newBrief.type || "art",
-      coverImage: newBrief.coverImage
-    };
+  const handleSaveBrief = async () => {
+    if (!clientId) return;
 
-    if (editingBrief) {
-      setBriefs(briefs.map(b => b.id === editingBrief.id ? brief : b));
-      toast.success("Briefing atualizado!");
-    } else {
-      setBriefs([...briefs, brief]);
-      toast.success("Briefing criado!");
+    try {
+      const briefData = {
+        client_id: clientId,
+        title: newBrief.title || "",
+        description: newBrief.description || "",
+        deadline: newBrief.deadline || null,
+        status: newBrief.status || "todo",
+        brand_kit_id: newBrief.brandKitId || null,
+        brief_type: newBrief.type || "art",
+        cover_image: newBrief.coverImage || null,
+      };
+
+      if (editingBrief) {
+        await updateProjectBrief(editingBrief.id, briefData);
+        const updatedBriefs = briefs.map(b => 
+          b.id === editingBrief.id 
+            ? { ...b, ...newBrief, clientName: clientName || "" } 
+            : b
+        );
+        setBriefs(updatedBriefs);
+        toast.success("Briefing atualizado!");
+      } else {
+        const created = await createProjectBrief(briefData);
+        const newBriefObj: ProjectBrief = {
+          id: created.id,
+          clientName: clientName || "",
+          title: created.title,
+          description: created.description || "",
+          deadline: created.deadline || "",
+          status: created.status as "todo" | "completed",
+          brandKitId: created.brand_kit_id || undefined,
+          createdAt: created.created_at || new Date().toISOString(),
+          type: created.brief_type as "art" | "video",
+          coverImage: created.cover_image || undefined,
+          coverVideo: created.cover_video || undefined,
+        };
+        setBriefs([...briefs, newBriefObj]);
+        toast.success("Briefing criado!");
+      }
+
+      setNewBrief({});
+      setEditingBrief(null);
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving brief:", error);
+      toast.error("Erro ao salvar briefing");
     }
-
-    setNewBrief({});
-    setEditingBrief(null);
-    setIsDialogOpen(false);
   };
 
   const handleBulkAdd = () => {
@@ -385,68 +377,118 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, isPublicView = f
     }
   };
 
-  const createSingleBrief = (text: string) => {
-    if (!newBrief.brandKitId && brandKits.length > 0) {
-      newBrief.brandKitId = brandKits[0].id;
+  const createSingleBrief = async (text: string) => {
+    if (!clientId) return;
+
+    try {
+      if (!newBrief.brandKitId && brandKits.length > 0) {
+        newBrief.brandKitId = brandKits[0].id;
+      }
+
+      const briefData = {
+        client_id: clientId,
+        title: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
+        description: text,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: "todo" as const,
+        brand_kit_id: newBrief.brandKitId || null,
+      };
+
+      const created = await createProjectBrief(briefData);
+      const newBriefObj: ProjectBrief = {
+        id: created.id,
+        clientName: clientName || "",
+        title: created.title,
+        description: created.description || "",
+        deadline: created.deadline || "",
+        status: created.status as "todo" | "completed",
+        brandKitId: created.brand_kit_id || undefined,
+        createdAt: created.created_at || new Date().toISOString(),
+      };
+      
+      setBriefs([...briefs, newBriefObj]);
+      setMultiTextInput("");
+      setNewBrief({});
+      setShowSplitDialog(false);
+      setIsDialogOpen(false);
+      toast.success("Card criado com sucesso!");
+    } catch (error) {
+      console.error("Error creating brief:", error);
+      toast.error("Erro ao criar card");
     }
-
-    const brief: ProjectBrief = {
-      id: Date.now().toString(),
-      clientName: clientName || newBrief.clientName || "Cliente",
-      title: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
-      description: text,
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "todo",
-      brandKitId: newBrief.brandKitId,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    setBriefs([...briefs, brief]);
-    setMultiTextInput("");
-    setNewBrief({});
-    setShowSplitDialog(false);
-    setIsDialogOpen(false);
-    toast.success("Card criado com sucesso!");
   };
 
-  const createMultipleBriefs = () => {
-    const paragraphs = multiTextInput
-      .split("\n\n")
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0);
+  const createMultipleBriefs = async () => {
+    if (!clientId) return;
 
-    if (!newBrief.brandKitId && brandKits.length > 0) {
-      newBrief.brandKitId = brandKits[0].id;
+    try {
+      const paragraphs = multiTextInput
+        .split("\n\n")
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+
+      if (!newBrief.brandKitId && brandKits.length > 0) {
+        newBrief.brandKitId = brandKits[0].id;
+      }
+
+      const createPromises = paragraphs.map(async (text) => {
+        const briefData = {
+          client_id: clientId,
+          title: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
+          description: text,
+          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: "todo" as const,
+          brand_kit_id: newBrief.brandKitId || null,
+        };
+        return await createProjectBrief(briefData);
+      });
+
+      const createdBriefs = await Promise.all(createPromises);
+      const newBriefsObjs: ProjectBrief[] = createdBriefs.map((created) => ({
+        id: created.id,
+        clientName: clientName || "",
+        title: created.title,
+        description: created.description || "",
+        deadline: created.deadline || "",
+        status: created.status as "todo" | "completed",
+        brandKitId: created.brand_kit_id || undefined,
+        createdAt: created.created_at || new Date().toISOString(),
+      }));
+
+      setBriefs([...briefs, ...newBriefsObjs]);
+      setMultiTextInput("");
+      setNewBrief({});
+      setShowSplitDialog(false);
+      setIsDialogOpen(false);
+      toast.success(`${newBriefsObjs.length} cards criados com sucesso!`);
+    } catch (error) {
+      console.error("Error creating briefs:", error);
+      toast.error("Erro ao criar cards");
     }
-
-    const newBriefs = paragraphs.map((text, index) => ({
-      id: `${Date.now()}-${index}`,
-      clientName: clientName || newBrief.clientName || "Cliente",
-      title: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
-      description: text,
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "todo" as const,
-      brandKitId: newBrief.brandKitId,
-      createdAt: new Date().toISOString().split('T')[0]
-    }));
-
-    setBriefs([...briefs, ...newBriefs]);
-    setMultiTextInput("");
-    setNewBrief({});
-    setShowSplitDialog(false);
-    setIsDialogOpen(false);
-    toast.success(`${newBriefs.length} cards criados com sucesso!`);
   };
 
-  const handleDeleteBrief = (id: string) => {
-    setBriefs(briefs.filter(b => b.id !== id));
-    toast.success("Briefing removido!");
+  const handleDeleteBrief = async (id: string) => {
+    try {
+      await deleteProjectBrief(id);
+      setBriefs(briefs.filter(b => b.id !== id));
+      toast.success("Briefing removido!");
+    } catch (error) {
+      console.error("Error deleting brief:", error);
+      toast.error("Erro ao remover briefing");
+    }
   };
 
-  const handleStatusChange = (briefId: string, newStatus: string) => {
-    setBriefs(briefs.map(b => 
-      b.id === briefId ? { ...b, status: newStatus as ProjectBrief["status"] } : b
-    ));
-    toast.success("Status atualizado!");
+  const handleStatusChange = async (briefId: string, newStatus: string) => {
+    try {
+      await updateProjectBrief(briefId, { status: newStatus as "todo" | "completed" });
+      setBriefs(briefs.map(b => 
+        b.id === briefId ? { ...b, status: newStatus as ProjectBrief["status"] } : b
+      ));
+      toast.success("Status atualizado!");
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Erro ao atualizar status");
+    }
   };
 
   const handleEditBrief = (brief: ProjectBrief) => {
@@ -461,17 +503,28 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, isPublicView = f
     }
   };
 
-  const handleBriefCoverUpdate = (briefId: string, coverUrl: string, isVideo?: boolean) => {
-    setBriefs(briefs.map(b => {
-      if (b.id === briefId) {
-        if (isVideo) {
-          return { ...b, coverVideo: coverUrl, coverImage: undefined };
-        } else {
-          return { ...b, coverImage: coverUrl, coverVideo: undefined };
+  const handleBriefCoverUpdate = async (briefId: string, coverUrl: string, isVideo?: boolean) => {
+    try {
+      const updateData = isVideo 
+        ? { cover_video: coverUrl, cover_image: null }
+        : { cover_image: coverUrl, cover_video: null };
+      
+      await updateProjectBrief(briefId, updateData);
+      
+      setBriefs(briefs.map(b => {
+        if (b.id === briefId) {
+          if (isVideo) {
+            return { ...b, coverVideo: coverUrl, coverImage: undefined };
+          } else {
+            return { ...b, coverImage: coverUrl, coverVideo: undefined };
+          }
         }
-      }
-      return b;
-    }));
+        return b;
+      }));
+    } catch (error) {
+      console.error("Error updating cover:", error);
+      toast.error("Erro ao atualizar capa");
+    }
   };
 
   const getBrandKit = (brandKitId?: string) => {

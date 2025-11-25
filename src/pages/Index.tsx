@@ -221,68 +221,80 @@ const Index = () => {
   };
 
   const handleExportToExcel = async (selectedTeam?: string) => {
-    const excelData: any[] = [];
+    try {
+      const excelData: any[] = [];
 
-    const filteredClients = selectedTeam 
-      ? clients.filter(c => c.team === selectedTeam)
-      : clients;
+      const filteredClients = selectedTeam 
+        ? clients.filter(c => c.team === selectedTeam)
+        : clients;
 
-    for (const client of filteredClients) {
-      try {
-        const briefs = await getProjectBriefsByClient(client.id);
-        const firstTodoCard = briefs.find((b: any) => b.status === "todo");
-        
-        if (firstTodoCard) {
-          const cardUrl = `${window.location.origin}/${client.slug}#card-${firstTodoCard.id}`;
+      for (const client of filteredClients) {
+        try {
+          const briefs = await getProjectBriefsByClient(client.id);
+          const firstTodoCard = briefs.find((b: any) => b.status === "todo");
           
-          const teamName = client.team === "1" ? "SEG, QUA E SEX" : 
-                         client.team === "2" ? "TER, QUI E SÁB" : 
-                         client.team === "3" ? "SEG A SEX" : "SEG, QUA E SEX";
-          
-          excelData.push({
-            "Cliente": client.name,
-            "Empresa": client.company || "",
-            "Equipe": teamName,
-            "Texto do Card": firstTodoCard.description || firstTodoCard.title,
-            "Link do Card": cardUrl,
-            "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
-          });
+          if (firstTodoCard) {
+            const slug = client.slug || generateSlug(client.company || client.name);
+            const cardUrl = `${window.location.origin}/${slug}#card-${firstTodoCard.id}`;
+            
+            const teamName = client.team === "1" ? "SEG, QUA E SEX" : 
+                           client.team === "2" ? "TER, QUI E SÁB" : 
+                           client.team === "3" ? "SEG A SEX" : "SEG, QUA E SEX";
+            
+            excelData.push({
+              "Cliente": client.name,
+              "Empresa": client.company || "",
+              "Equipe": teamName,
+              "Texto do Card": firstTodoCard.description || firstTodoCard.title,
+              "Link do Card": cardUrl,
+              "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
+            });
+          }
+        } catch (error) {
+          console.error(`Error processing client ${client.name}:`, error);
         }
-      } catch {}
-    }
+      }
 
-    if (excelData.length === 0) {
+      if (excelData.length === 0) {
+        toast({
+          title: "Nenhum card encontrado",
+          description: "Não há cards 'A Fazer' para exportar.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Primeiros Cards A Fazer");
+
+      const colWidths = [
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 18 },
+        { wch: 50 },
+        { wch: 40 },
+        { wch: 12 }
+      ];
+      ws['!cols'] = colWidths;
+
+      const teamNames = { "1": "SEG_QUA_SEX", "2": "TER_QUI_SAB", "3": "SEG_A_SEX" };
+      const teamSuffix = selectedTeam ? `_${teamNames[selectedTeam as keyof typeof teamNames]}` : '';
+      const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
       toast({
-        title: "Nenhum card encontrado",
-        description: "Não há cards 'A Fazer' para exportar.",
+        title: "Exportado com sucesso!",
+        description: `${excelData.length} cards foram exportados para Excel.`,
+      });
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível exportar os dados para Excel.",
         variant: "destructive"
       });
-      return;
     }
-
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Primeiros Cards A Fazer");
-
-    const colWidths = [
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 18 },
-      { wch: 50 },
-      { wch: 40 },
-      { wch: 12 }
-    ];
-    ws['!cols'] = colWidths;
-
-    const teamNames = { "1": "SEG_QUA_SEX", "2": "TER_QUI_SAB", "3": "SEG_A_SEX" };
-    const teamSuffix = selectedTeam ? `_${teamNames[selectedTeam as keyof typeof teamNames]}` : '';
-    const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-
-    toast({
-      title: "Exportado com sucesso!",
-      description: `${excelData.length} cards foram exportados para Excel.`,
-    });
   };
 
   if (isLoadingClients) {
