@@ -42,7 +42,7 @@ interface ProjectBrief {
   title: string;
   description: string;
   deadline: string;
-  status: "todo" | "in-progress" | "completed";
+  status: "todo" | "completed";
   brandKitId?: string;
   createdAt: string;
   type?: "art" | "video";
@@ -110,10 +110,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     >
       {/* Cover Media */}
       {localCoverVideo ? (
-        <div className="w-full h-32 relative bg-muted">
+        <div className="w-full h-48 relative bg-muted flex items-center justify-center">
           <video 
             src={localCoverVideo} 
-            className="w-full h-full object-cover"
+            className="max-w-full max-h-full object-contain"
             autoPlay
             muted
             loop
@@ -121,11 +121,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           />
         </div>
       ) : localCoverImage ? (
-        <div className="w-full h-32 relative bg-muted">
+        <div className="w-full h-48 relative bg-muted flex items-center justify-center">
           <img 
             src={localCoverImage} 
             alt="Cover" 
-            className="w-full h-full object-cover"
+            className="max-w-full max-h-full object-contain"
           />
         </div>
       ) : null}
@@ -237,7 +237,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
       title: "Cardápio Digital",
       description: "Desenvolver cardápio digital para aplicativo com fotos dos produtos e preços atualizados.",
       deadline: "2024-11-30",
-      status: "in-progress" as ProjectBrief["status"],
+      status: "completed" as ProjectBrief["status"],
       brandKitId: brandKits[0]?.id,
       createdAt: "2024-11-05"
     }
@@ -303,7 +303,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
 
   const columns = [
     { id: "todo", title: "Para Fazer", color: "bg-yellow-500/20 border-yellow-500/30" },
-    { id: "in-progress", title: "Em Progresso", color: "bg-blue-500/20 border-blue-500/30" },
     { id: "completed", title: "Concluído", color: "bg-green-500/20 border-green-500/30" }
   ];
 
