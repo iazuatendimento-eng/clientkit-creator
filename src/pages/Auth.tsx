@@ -123,12 +123,9 @@ export default function Auth() {
           <div className="flex items-center justify-center mb-4">
             <LogIn className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl text-center gradient-text">
+          <CardTitle className="text-2xl text-left gradient-text">
             Acesso Master
           </CardTitle>
-          <CardDescription className="text-center">
-            Entre com suas credenciais para acessar o dashboard
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
