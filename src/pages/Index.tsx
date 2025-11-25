@@ -78,27 +78,13 @@ const Index = () => {
     }
   ]);
   const { toast } = useToast();
-  const { user, loading, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to auth if not logged in
+  // Persist clients to localStorage on any change
   useEffect(() => {
-    // Redirect to auth if not logged in
-    if (!loading && !user) {
-      navigate("/auth");
-    }
-
-    // Persist clients to localStorage on any change
     localStorage.setItem('clients', JSON.stringify(clients));
-  }, [user, loading, navigate, clients]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  }, [clients]);
 
   if (!user) {
     return null;
