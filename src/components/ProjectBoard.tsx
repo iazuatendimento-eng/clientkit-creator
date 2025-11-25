@@ -255,7 +255,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && brief.status === "completed" && (
             <div 
-              className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+              className={`flex items-center gap-2 mt-2 p-2 rounded cursor-pointer transition-colors ${
+                brief.published 
+                  ? 'bg-green-500/10 border border-green-500/30 hover:bg-green-500/20' 
+                  : 'bg-muted/50 hover:bg-muted'
+              }`}
               onClick={(e) => {
                 e.stopPropagation();
                 onPublishedToggle(brief.id, !brief.published);
@@ -266,8 +270,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               ) : (
                 <Square className="h-4 w-4" />
               )}
-              <span className="text-xs text-muted-foreground">
-                {brief.published ? 'Publicado' : 'Não publicado'}
+              <span className={`text-xs font-medium ${
+                brief.published ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+              }`}>
+                {brief.published ? 'PUBLICADO' : 'Não publicado'}
               </span>
             </div>
           )}
