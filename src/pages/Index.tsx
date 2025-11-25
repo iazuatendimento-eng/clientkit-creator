@@ -294,14 +294,14 @@ const Index = () => {
             // Se o texto contém ";", dividir em múltiplas linhas
             if (cardText.includes(";")) {
               const textParts = cardText.split(";").map(part => part.trim()).filter(part => part.length > 0);
-              textParts.forEach((part, index) => {
+              textParts.forEach((part) => {
                 excelData.push({
                   "Cliente": client.name,
                   "Empresa": client.company || "",
                   "Equipe": teamName,
                   "Texto do Card": part,
-                  "Link do Card": index === 0 ? cardUrl : "",
-                  "Prazo": index === 0 ? (firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : "") : ""
+                  "Link do Card": cardUrl,
+                  "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
                 });
               });
             } else {
