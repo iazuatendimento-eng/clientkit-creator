@@ -232,7 +232,23 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
   // Persist briefs locally per client to avoid data loss between refreshes
   useEffect(() => {
     const storageKey = `project-briefs-${clientName || 'default'}`;
-    const saved = localStorage.getItem(storageKey);
+    let saved = localStorage.getItem(storageKey);
+    
+    // If no data found, try to restore from global backup
+    if (!saved) {
+      try {
+        const globalBackup = localStorage.getItem('all-project-briefs');
+        if (globalBackup) {
+          const allBriefs = JSON.parse(globalBackup);
+          if (allBriefs[clientName || 'default']) {
+            saved = JSON.stringify(allBriefs[clientName || 'default']);
+            // Restore to individual storage
+            localStorage.setItem(storageKey, saved);
+          }
+        }
+      } catch {}
+    }
+    
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -241,12 +257,19 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName }: ProjectBoardPr
         }
       } catch {}
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clientName]);
 
   useEffect(() => {
     const storageKey = `project-briefs-${clientName || 'default'}`;
     localStorage.setItem(storageKey, JSON.stringify(briefs));
+    
+    // Also save to a global backup to prevent data loss on logout
+    try {
+      const globalBackup = localStorage.getItem('all-project-briefs') || '{}';
+      const allBriefs = JSON.parse(globalBackup);
+      allBriefs[clientName || 'default'] = briefs;
+      localStorage.setItem('all-project-briefs', JSON.stringify(allBriefs));
+    } catch {}
   }, [briefs, clientName]);
 
   const sensors = useSensors(
