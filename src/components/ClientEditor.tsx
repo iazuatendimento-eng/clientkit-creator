@@ -13,6 +13,7 @@ interface Client {
   company?: string;
   phone?: string;
   notes?: string;
+  team?: "1" | "2" | "3";
   brandKit?: any;
   projectCount: number;
   createdAt: string;
@@ -31,6 +32,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     company: "",
     phone: "",
     notes: "",
+    team: "1",
     projectCount: 0,
     createdAt: new Date().toISOString().split('T')[0]
   });
@@ -51,6 +53,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       company: formData.company,
       phone: formData.phone,
       notes: formData.notes,
+      team: formData.team || "1",
       brandKit: client?.brandKit,
       projectCount: client?.projectCount || 0,
       createdAt: client?.createdAt || new Date().toISOString().split('T')[0]
@@ -138,6 +141,21 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                     placeholder="Telefone de contato (opcional)"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="team">Equipe *</Label>
+                <select
+                  id="team"
+                  className="w-full h-10 px-3 border rounded-md bg-background"
+                  value={formData.team || "1"}
+                  onChange={(e) => handleChange("team", e.target.value)}
+                  required
+                >
+                  <option value="1">Equipe 1</option>
+                  <option value="2">Equipe 2</option>
+                  <option value="3">Equipe 3</option>
+                </select>
               </div>
 
               <div className="space-y-2">

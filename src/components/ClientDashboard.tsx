@@ -12,6 +12,7 @@ interface Client {
   name: string;
   email: string;
   company?: string;
+  team?: "1" | "2" | "3";
   brandKit?: {
     id: string;
     name: string;
@@ -101,6 +102,11 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
               {client.company && (
                 <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                   {client.company}
+                </span>
+              )}
+              {client.team && (
+                <span className="px-3 py-1 bg-secondary/10 text-secondary-foreground rounded-full text-sm">
+                  Equipe {client.team}
                 </span>
               )}
             </div>
