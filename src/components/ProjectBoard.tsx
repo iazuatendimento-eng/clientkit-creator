@@ -131,7 +131,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               <User className="h-3 w-3 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
             </div>
-            <h4 className="font-semibold text-sm text-left">{brief.title}</h4>
+            <h4 className="font-semibold text-sm text-left break-words whitespace-normal leading-relaxed">{brief.title}</h4>
           </div>
           {!isPublicView && (
             <div className="flex gap-1">
