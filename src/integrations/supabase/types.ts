@@ -216,6 +216,7 @@ export type Database = {
           description: string | null
           generated_caption: string | null
           id: string
+          published: boolean
           status: string | null
           title: string
         }
@@ -230,6 +231,7 @@ export type Database = {
           description?: string | null
           generated_caption?: string | null
           id?: string
+          published?: boolean
           status?: string | null
           title: string
         }
@@ -244,6 +246,7 @@ export type Database = {
           description?: string | null
           generated_caption?: string | null
           id?: string
+          published?: boolean
           status?: string | null
           title?: string
         }
