@@ -55,9 +55,9 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       phone: formData.phone,
       notes: formData.notes,
       team: formData.team || "1",
-      brandKit: client?.brandKit,
+      brand_kit: client?.brand_kit,
       projectCount: client?.projectCount || 0,
-      createdAt: client?.createdAt || new Date().toISOString().split('T')[0]
+      created_at: client?.created_at || new Date().toISOString().split('T')[0]
     };
 
     onSave(clientData);
