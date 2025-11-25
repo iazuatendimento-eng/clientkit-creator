@@ -154,7 +154,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   >
                     <option value="1">SEG, QUA E SEX</option>
                     <option value="2">TER, QUI E SÁB</option>
-                    <option value="3">DE SEG A SEX</option>
+                    <option value="3">SEG A SEX</option>
                   </select>
                 </div>
 

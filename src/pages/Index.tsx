@@ -186,7 +186,7 @@ const Index = () => {
             
             const teamName = client.team === "1" ? "SEG, QUA E SEX" : 
                            client.team === "2" ? "TER, QUI E SÁB" : 
-                           client.team === "3" ? "DE SEG A SEX" : "SEG, QUA E SEX";
+                           client.team === "3" ? "SEG A SEX" : "SEG, QUA E SEX";
             
             excelData.push({
               "Cliente": client.name,
@@ -285,7 +285,7 @@ const Index = () => {
                   TER, QUI E SÁB
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportToExcel("3")}>
-                  DE SEG A SEX
+                  SEG A SEX
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -370,7 +370,7 @@ const Index = () => {
                         ? 'text-primary-foreground/60'
                         : 'text-muted-foreground'
                     }`}>
-                      {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "DE SEG A SEX"}
+                      {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "SEG A SEX"}
                     </div>
                   )}
                 </button>
