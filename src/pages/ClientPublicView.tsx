@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import ProjectBoard from "@/components/ProjectBoard";
+import { getClientBySlug, getProjectBriefsByClient } from "@/lib/clientDatabase";
+import { Json } from "@/integrations/supabase/types";
 
 interface Client {
   id: string;
@@ -10,56 +12,56 @@ interface Client {
   email: string;
   company?: string;
   team?: "1" | "2" | "3";
-  brandKit?: {
-    id: string;
-    name: string;
-    logo?: string;
-    contactInfo?: string;
-    mascot?: string;
-    colors: string[];
-    createdAt: string;
-  };
+  brand_kit?: Json;
   projectCount: number;
-  createdAt: string;
+  created_at: string;
 }
 
 const ClientPublicView = () => {
-  const { clientId, clientSlug } = useParams<{ clientId?: string; clientSlug?: string }>();
+  const { clientSlug } = useParams<{ clientSlug?: string }>();
   const [client, setClient] = useState<Client | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let foundClient = null;
-    
-    // First, try to find in public snapshots if we have a slug
-    if (clientSlug) {
-      const publicSnapshot = localStorage.getItem(`public-client-${clientSlug}`);
-      if (publicSnapshot) {
-        foundClient = JSON.parse(publicSnapshot);
+    const loadClient = async () => {
+      if (!clientSlug) {
+        setLoading(false);
+        return;
       }
-    }
-    
-    // Fallback: search in general clients list
-    if (!foundClient) {
-      const storedClients = localStorage.getItem('clients');
-      if (storedClients) {
-        const clients = JSON.parse(storedClients);
+
+      try {
+        const clientData = await getClientBySlug(clientSlug);
         
-        if (clientId) {
-          foundClient = clients.find((c: Client) => c.id === clientId);
-        } else if (clientSlug) {
-          // Try to find by slug (normalized name or company)
-          const slug = clientSlug.toLowerCase();
-          foundClient = clients.find((c: Client) => {
-            const nameSlug = c.name.toLowerCase().replace(/\s+/g, '-');
-            const companySlug = c.company?.toLowerCase().replace(/\s+/g, '-');
-            return nameSlug === slug || companySlug === slug;
+        if (clientData) {
+          // Fetch project briefs count
+          const briefs = await getProjectBriefsByClient(clientData.id);
+          
+          setClient({
+            ...clientData,
+            team: clientData.team as "1" | "2" | "3",
+            projectCount: briefs.length
           });
+        } else {
+          setClient(null);
         }
+      } catch (error) {
+        console.error("Error loading client:", error);
+        setClient(null);
+      } finally {
+        setLoading(false);
       }
-    }
-    
-    setClient(foundClient || null);
-  }, [clientId, clientSlug]);
+    };
+
+    loadClient();
+  }, [clientSlug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!client) {
     return (
@@ -109,7 +111,7 @@ const ClientPublicView = () => {
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
         <ProjectBoard 
-          brandKits={client.brandKit ? [client.brandKit] : []}
+          brandKits={client.brand_kit ? [client.brand_kit as any] : []}
           onCreateProject={handleCreateProject}
           clientName={client.name}
         />
