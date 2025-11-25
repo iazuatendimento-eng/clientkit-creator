@@ -132,6 +132,7 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
           clientName={client.name}
           clientId={client.id}
           isPublicView={false}
+          isInactive={!client.active}
         />
       </div>
     </div>
