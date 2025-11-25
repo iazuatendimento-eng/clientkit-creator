@@ -19,6 +19,7 @@ import { Plus, Calendar, User, FileText, Trash2, Edit, Upload } from "lucide-rea
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief } from "@/lib/clientDatabase";
+import { useAuth } from "@/hooks/useAuth";
 import {
   DndContext,
   DragEndEvent,
@@ -218,6 +219,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
 const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPublicView = false }: ProjectBoardProps) => {
   const [briefs, setBriefs] = useState<ProjectBrief[]>([]);
+  const { user } = useAuth();
 
   const [newBrief, setNewBrief] = useState<Partial<ProjectBrief>>({});
   const [editingBrief, setEditingBrief] = useState<ProjectBrief | null>(null);
@@ -226,13 +228,25 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false);
 
+  // Debug: Log authentication status
+  useEffect(() => {
+    console.log("ProjectBoard - Auth Status:", { 
+      user: user?.email, 
+      isPublicView, 
+      clientId 
+    });
+  }, [user, isPublicView, clientId]);
+
   // Load briefs from Supabase
   useEffect(() => {
     const loadBriefs = async () => {
       if (!clientId) return;
       
       try {
+        console.log("Carregando briefs para cliente:", clientId);
         const data = await getProjectBriefsByClient(clientId);
+        console.log("Briefs carregados:", data.length);
+        
         const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
           id: brief.id,
           clientName: clientName || "",
@@ -249,6 +263,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         setBriefs(mappedBriefs);
       } catch (error) {
         console.error("Error loading briefs:", error);
+        toast.error("Erro ao carregar cards. Verifique sua conexão.");
       }
     };
 
@@ -308,9 +323,14 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   const handleSaveBrief = async () => {
-    if (!clientId) return;
+    if (!clientId) {
+      toast.error("Cliente não identificado");
+      return;
+    }
 
     try {
+      console.log("Salvando briefing...", { clientId, newBrief });
+      
       const briefData = {
         client_id: clientId,
         title: newBrief.title || "",
@@ -323,15 +343,19 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       };
 
       if (editingBrief) {
-        await updateProjectBrief(editingBrief.id, briefData);
+        const result = await updateProjectBrief(editingBrief.id, briefData);
+        console.log("Brief atualizado:", result);
         toast.success("Briefing atualizado!");
       } else {
-        await createProjectBrief(briefData);
+        const result = await createProjectBrief(briefData);
+        console.log("Brief criado:", result);
         toast.success("Briefing criado!");
       }
 
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
+      console.log("Briefs recarregados:", data.length);
+      
       const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
         id: brief.id,
         clientName: clientName || "",
@@ -350,9 +374,19 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       setNewBrief({});
       setEditingBrief(null);
       setIsDialogOpen(false);
-    } catch (error) {
-      console.error("Error saving brief:", error);
-      toast.error("Erro ao salvar briefing");
+    } catch (error: any) {
+      console.error("Erro detalhado ao salvar brief:", error);
+      
+      // Mostrar erro mais específico
+      let errorMessage = "Erro ao salvar briefing";
+      if (error?.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      if (error?.code === "PGRST301") {
+        errorMessage = "Erro de autenticação. Por favor, faça login novamente.";
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -375,9 +409,14 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   const createSingleBrief = async (text: string) => {
-    if (!clientId) return;
+    if (!clientId) {
+      toast.error("Cliente não identificado");
+      return;
+    }
 
     try {
+      console.log("Criando card único...", { clientId, text });
+      
       if (!newBrief.brandKitId && brandKits.length > 0) {
         newBrief.brandKitId = brandKits[0].id;
       }
@@ -391,10 +430,13 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         brand_kit_id: newBrief.brandKitId || null,
       };
 
-      await createProjectBrief(briefData);
+      const result = await createProjectBrief(briefData);
+      console.log("Card criado:", result);
       
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
+      console.log("Briefs recarregados após criação:", data.length);
+      
       const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
         id: brief.id,
         clientName: clientName || "",
@@ -415,20 +457,34 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       setShowSplitDialog(false);
       setIsDialogOpen(false);
       toast.success("Card criado com sucesso!");
-    } catch (error) {
-      console.error("Error creating brief:", error);
-      toast.error("Erro ao criar card");
+    } catch (error: any) {
+      console.error("Erro detalhado ao criar card:", error);
+      
+      let errorMessage = "Erro ao criar card";
+      if (error?.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      if (error?.code === "PGRST301") {
+        errorMessage = "Erro de autenticação. Por favor, faça login novamente.";
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
   const createMultipleBriefs = async () => {
-    if (!clientId) return;
+    if (!clientId) {
+      toast.error("Cliente não identificado");
+      return;
+    }
 
     try {
       const paragraphs = multiTextInput
         .split("\n\n")
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
+
+      console.log(`Criando ${paragraphs.length} cards múltiplos...`);
 
       if (!newBrief.brandKitId && brandKits.length > 0) {
         newBrief.brandKitId = brandKits[0].id;
@@ -446,10 +502,13 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         return await createProjectBrief(briefData);
       });
 
-      await Promise.all(createPromises);
+      const results = await Promise.all(createPromises);
+      console.log(`Cards criados: ${results.length}`);
       
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
+      console.log("Briefs recarregados após criação múltipla:", data.length);
+      
       const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
         id: brief.id,
         clientName: clientName || "",
@@ -470,9 +529,18 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       setShowSplitDialog(false);
       setIsDialogOpen(false);
       toast.success(`${paragraphs.length} cards criados com sucesso!`);
-    } catch (error) {
-      console.error("Error creating briefs:", error);
-      toast.error("Erro ao criar cards");
+    } catch (error: any) {
+      console.error("Erro detalhado ao criar cards múltiplos:", error);
+      
+      let errorMessage = "Erro ao criar cards";
+      if (error?.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      if (error?.code === "PGRST301") {
+        errorMessage = "Erro de autenticação. Por favor, faça login novamente.";
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
