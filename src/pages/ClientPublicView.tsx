@@ -55,23 +55,6 @@ const ClientPublicView = () => {
     loadClient();
   }, [clientSlug]);
 
-  // Scroll to card if hash is present in URL
-  useEffect(() => {
-    if (!loading && window.location.hash) {
-      const cardId = window.location.hash.substring(1); // Remove the # character
-      setTimeout(() => {
-        const element = document.getElementById(cardId);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Add a highlight effect
-          element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
-          setTimeout(() => {
-            element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
-          }, 3000);
-        }
-      }, 500); // Wait for content to render
-    }
-  }, [loading]);
 
   if (loading) {
     return (
