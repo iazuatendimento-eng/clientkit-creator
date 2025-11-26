@@ -391,6 +391,23 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     };
   }, [clientId, clientName]);
 
+  // Scroll to card if hash is present in URL after briefs are loaded
+  useEffect(() => {
+    if (briefs.length > 0 && window.location.hash) {
+      const cardId = window.location.hash.substring(1);
+      setTimeout(() => {
+        const element = document.getElementById(cardId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+          }, 3000);
+        }
+      }, 300);
+    }
+  }, [briefs]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
