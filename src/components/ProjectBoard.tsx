@@ -112,6 +112,15 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     }
   }, [brief.id, isPublicView]);
 
+  // Auto-open modal if URL hash matches this card
+  useEffect(() => {
+    if (window.location.hash === `#card-${brief.id}`) {
+      setTimeout(() => {
+        setIsDetailModalOpen(true);
+      }, 500);
+    }
+  }, [brief.id]);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -404,7 +413,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
           }, 3000);
         }
-      }, 300);
+      }, 200);
     }
   }, [briefs]);
 
