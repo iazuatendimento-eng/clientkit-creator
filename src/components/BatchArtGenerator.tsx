@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags } from "@/lib/clientDatabase";
-import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
+import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -119,7 +119,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [photoOffsetX, setPhotoOffsetX] = useState(0);
   const [photoOffsetY, setPhotoOffsetY] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [unsplashImages, setUnsplashImages] = useState<UnsplashImage[]>([]);
+  const [searchImages_results, setSearchImagesResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -407,7 +407,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         if (hasImagePlaceholder && !art.photoImage) {
           try {
             const searchTerms = art.cardText.split(" ").slice(0, 3).join(" ");
-            const images = await searchUnsplashImages(searchTerms, 1);
+            const images = await searchImages(searchTerms, 1);
             if (images.length > 0) {
               updatedArts[i] = { ...art, photoImage: images[0].urls.regular };
             }
@@ -460,8 +460,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
-      const images = await searchUnsplashImages(searchQuery, 12);
-      setUnsplashImages(images);
+      const images = await searchImages(searchQuery, 15);
+      setSearchImagesResults(images);
+      
+      const apis = getConfiguredApis();
+      if (!apis.pexels && !apis.unsplash) {
+        toast({
+          title: "Busca limitada",
+          description: "Configure VITE_PEXELS_API_KEY para busca real de imagens.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Erro ao buscar imagens",
@@ -472,7 +480,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     }
   };
 
-  const handleSelectPhotoImage = (image: UnsplashImage) => {
+  const handleSelectPhotoImage = (image: SearchImage) => {
     if (!selectedArt) return;
     const index = clientArts.findIndex((a) => 
       a.clientId === selectedArt.clientId && 
@@ -883,20 +891,34 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
               <ScrollArea className="h-[350px]">
                 <div className="grid grid-cols-3 gap-2">
-                  {unsplashImages.map((image) => (
+                  {searchImages_results.map((image) => (
                     <div
                       key={image.id}
-                      className="aspect-[4/5] rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all"
+                      className="aspect-[4/5] rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all relative"
                       onClick={() => handleSelectPhotoImage(image)}
                     >
                       <img
                         src={image.urls.small}
-                        alt={image.description || "Unsplash image"}
+                        alt={image.description || "Image"}
                         className="w-full h-full object-cover"
                       />
+                      {/* Source badge */}
+                      <div className="absolute bottom-1 right-1 bg-background/80 text-[10px] px-1 rounded">
+                        {image.source}
+                      </div>
                     </div>
                   ))}
                 </div>
+                {searchImages_results.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Busque por imagens acima</p>
+                    <p className="text-xs mt-2">
+                      {!getConfiguredApis().pexels && !getConfiguredApis().unsplash 
+                        ? "⚠️ Configure VITE_PEXELS_API_KEY para busca real" 
+                        : "Digite um termo e clique em buscar"}
+                    </p>
+                  </div>
+                )}
               </ScrollArea>
             </TabsContent>
 
