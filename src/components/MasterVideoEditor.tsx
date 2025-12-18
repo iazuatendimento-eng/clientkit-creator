@@ -110,6 +110,14 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Drag and resize state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, elX: 0, elY: 0 });
+  const [cursorStyle, setCursorStyle] = useState("crosshair");
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
@@ -438,13 +446,29 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
         ctx.fillText("MASCOTE", el.x + el.width / 2, el.y + el.height / 2 + 12);
       }
 
-      // Draw selection
+      // Draw selection with handles
       if (el.id === selectedElement) {
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 3;
         ctx.setLineDash([8, 4]);
         ctx.strokeRect(el.x - 4, el.y - 4, el.width + 8, el.height + 8);
         ctx.setLineDash([]);
+
+        // Draw resize handles
+        const handleSize = 24;
+        ctx.fillStyle = "#3b82f6";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        const corners = [
+          { x: el.x - handleSize / 2, y: el.y - handleSize / 2 },
+          { x: el.x + el.width - handleSize / 2, y: el.y - handleSize / 2 },
+          { x: el.x - handleSize / 2, y: el.y + el.height - handleSize / 2 },
+          { x: el.x + el.width - handleSize / 2, y: el.y + el.height - handleSize / 2 },
+        ];
+        corners.forEach((c) => {
+          ctx.fillRect(c.x, c.y, handleSize, handleSize);
+          ctx.strokeRect(c.x, c.y, handleSize, handleSize);
+        });
       }
     });
   }, [elements, selectedElement, backgroundColor, currentPage, currentColor]);
@@ -465,6 +489,141 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
     } else {
       addElement(selectedTool, x, y);
     }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (selectedTool !== "select" || !selectedElement) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / SCALE;
+    const y = (e.clientY - rect.top) / SCALE;
+
+    const element = elements.find((el) => el.id === selectedElement);
+    if (!element) return;
+
+    const handleSize = 30;
+    const handles = [
+      { id: 'nw', x: element.x, y: element.y },
+      { id: 'ne', x: element.x + element.width, y: element.y },
+      { id: 'sw', x: element.x, y: element.y + element.height },
+      { id: 'se', x: element.x + element.width, y: element.y + element.height },
+    ];
+
+    // Check if clicking on a resize handle
+    for (const handle of handles) {
+      if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
+        setIsResizing(true);
+        setResizeHandle(handle.id);
+        setResizeStart({ 
+          x, 
+          y, 
+          width: element.width, 
+          height: element.height,
+          elX: element.x,
+          elY: element.y
+        });
+        return;
+      }
+    }
+
+    // Otherwise, start dragging
+    if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
+      setIsDragging(true);
+      setDragOffset({ x: x - element.x, y: y - element.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / SCALE;
+    const y = (e.clientY - rect.top) / SCALE;
+
+    // Update cursor
+    if (selectedTool === "select" && selectedElement) {
+      const element = elements.find((el) => el.id === selectedElement);
+      if (element) {
+        const handleSize = 30;
+        const handles = [
+          { id: 'nw', x: element.x, y: element.y, cursor: 'nwse-resize' },
+          { id: 'ne', x: element.x + element.width, y: element.y, cursor: 'nesw-resize' },
+          { id: 'sw', x: element.x, y: element.y + element.height, cursor: 'nesw-resize' },
+          { id: 'se', x: element.x + element.width, y: element.y + element.height, cursor: 'nwse-resize' },
+        ];
+        
+        let newCursor = "crosshair";
+        for (const handle of handles) {
+          if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
+            newCursor = handle.cursor;
+            break;
+          }
+        }
+        if (newCursor === "crosshair" && x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
+          newCursor = "move";
+        }
+        setCursorStyle(newCursor);
+      }
+    }
+
+    if (!selectedElement) return;
+
+    if (isResizing && resizeHandle) {
+      const deltaX = x - resizeStart.x;
+      const deltaY = y - resizeStart.y;
+      
+      let newWidth = resizeStart.width;
+      let newHeight = resizeStart.height;
+      let newX = resizeStart.elX;
+      let newY = resizeStart.elY;
+
+      if (resizeHandle === 'se') {
+        newWidth = Math.max(50, resizeStart.width + deltaX);
+        newHeight = Math.max(50, resizeStart.height + deltaY);
+      } else if (resizeHandle === 'sw') {
+        newWidth = Math.max(50, resizeStart.width - deltaX);
+        newHeight = Math.max(50, resizeStart.height + deltaY);
+        newX = resizeStart.elX + (resizeStart.width - newWidth);
+      } else if (resizeHandle === 'ne') {
+        newWidth = Math.max(50, resizeStart.width + deltaX);
+        newHeight = Math.max(50, resizeStart.height - deltaY);
+        newY = resizeStart.elY + (resizeStart.height - newHeight);
+      } else if (resizeHandle === 'nw') {
+        newWidth = Math.max(50, resizeStart.width - deltaX);
+        newHeight = Math.max(50, resizeStart.height - deltaY);
+        newX = resizeStart.elX + (resizeStart.width - newWidth);
+        newY = resizeStart.elY + (resizeStart.height - newHeight);
+      }
+
+      setElements(
+        elements.map((el) =>
+          el.id === selectedElement
+            ? { ...el, x: newX, y: newY, width: newWidth, height: newHeight }
+            : el
+        )
+      );
+      return;
+    }
+
+    if (isDragging) {
+      setElements(
+        elements.map((el) =>
+          el.id === selectedElement
+            ? { ...el, x: x - dragOffset.x, y: y - dragOffset.y }
+            : el
+        )
+      );
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setIsResizing(false);
+    setResizeHandle(null);
   };
 
   const addElement = (type: string, x: number, y: number) => {
@@ -872,9 +1031,13 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
             style={{
               width: CANVAS_WIDTH * SCALE,
               height: CANVAS_HEIGHT * SCALE,
+              cursor: cursorStyle,
             }}
-            className="cursor-crosshair"
             onClick={handleCanvasClick}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
           />
         </div>
       </div>
