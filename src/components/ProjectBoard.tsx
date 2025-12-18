@@ -51,6 +51,7 @@ interface ProjectBrief {
   coverVideo?: string;
   generatedCaption?: string;
   published?: boolean;
+  artGenerationSelected?: boolean;
 }
 
 interface ProjectBoardProps {
@@ -190,6 +191,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             <div className="flex items-center gap-2">
               <User className="h-3 w-3 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
+              {brief.artGenerationSelected && (
+                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-purple-500/20 text-purple-500 border-purple-500/50">
+                  Arte em Lote
+                </Badge>
+              )}
             </div>
             <h4 className="font-semibold text-sm text-left break-words whitespace-normal leading-relaxed">{brief.title}</h4>
           </div>
@@ -378,6 +384,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           coverVideo: brief.cover_video,
           generatedCaption: brief.generated_caption || "",
           published: brief.published || false,
+          artGenerationSelected: brief.art_generation_selected || false,
         }));
         setBriefs(mappedBriefs);
       } catch (error) {
@@ -559,6 +566,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
+        artGenerationSelected: brief.art_generation_selected || false,
       }));
       setBriefs(mappedBriefs);
 
@@ -663,6 +671,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
+        artGenerationSelected: brief.art_generation_selected || false,
       }));
       setBriefs(mappedBriefs);
       
@@ -763,6 +772,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
+        artGenerationSelected: brief.art_generation_selected || false,
       }));
       setBriefs(mappedBriefs);
       

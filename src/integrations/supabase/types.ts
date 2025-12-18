@@ -242,6 +242,7 @@ export type Database = {
       }
       project_briefs: {
         Row: {
+          art_generation_selected: boolean
           brand_kit_id: string | null
           brief_type: string | null
           client_id: string | null
@@ -257,6 +258,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          art_generation_selected?: boolean
           brand_kit_id?: string | null
           brief_type?: string | null
           client_id?: string | null
@@ -272,6 +274,7 @@ export type Database = {
           title: string
         }
         Update: {
+          art_generation_selected?: boolean
           brand_kit_id?: string | null
           brief_type?: string | null
           client_id?: string | null
