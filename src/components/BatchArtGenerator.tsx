@@ -767,6 +767,9 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       // Clear the art generation tags
       await clearArtGenerationTags();
 
+      // Dispatch event to notify all ProjectBoard instances to reload
+      window.dispatchEvent(new Event("bulkBriefsUpdated"));
+
       toast({
         title: "Artes salvas!",
         description: `${approvedArts.length} artes foram anexadas aos cards.`,
