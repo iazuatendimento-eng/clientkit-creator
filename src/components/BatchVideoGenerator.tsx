@@ -23,7 +23,7 @@ import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTag
 import { searchImages, SearchImage } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
-import { encodeVideoSimple } from "@/lib/videoEncoder";
+import { encodeVideoToMP4 } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
@@ -602,25 +602,26 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     try {
       for (const video of approvedVideos) {
         toast({
-          title: `Gerando vídeo...`,
-          description: `Processando ${video.clientName}`,
+          title: `Gerando vídeo MP4...`,
+          description: `Processando ${video.clientName} (pode demorar alguns segundos)`,
         });
 
-        // Encode video from pages
-        const videoBlob = await encodeVideoSimple(video.pages, {
+        // Encode video from pages to MP4
+        const videoBlob = await encodeVideoToMP4(video.pages, {
           width: template.width,
           height: template.height,
           pageDuration: template.pageDuration,
           fps: 24,
+          onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
 
-        const fileName = `video_${video.cardId}_${Date.now()}.webm`;
+        const fileName = `video_${video.cardId}_${Date.now()}.mp4`;
 
         // Upload video file
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("card-uploads")
           .upload(`videos/${fileName}`, videoBlob, {
-            contentType: "video/webm",
+            contentType: "video/mp4",
           });
 
         if (uploadError) {
@@ -642,7 +643,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           card_id: video.cardId,
           file_name: fileName,
           file_url: urlData.publicUrl,
-          file_type: "video/webm",
+          file_type: "video/mp4",
           upload_type: "final",
         });
 
