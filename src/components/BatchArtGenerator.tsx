@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -134,6 +134,9 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [contactX, setContactX] = useState(0);
   const [contactY, setContactY] = useState(0);
   const [contactScale, setContactScale] = useState(100);
+  const [livePreviewUrl, setLivePreviewUrl] = useState<string | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
 
@@ -542,6 +545,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
   const openAdjustDialog = (art: ClientArt) => {
     setSelectedArt(art);
+    setLivePreviewUrl(art.imageUrl); // Start with current image
     setPhotoOffsetX(art.photoOffset?.x || 0);
     setPhotoOffsetY(art.photoOffset?.y || 0);
     // Load element overrides
@@ -556,6 +560,83 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     setContactScale(art.elementOverrides?.contactScale || 100);
     setIsAdjustDialogOpen(true);
   };
+
+  // Debounced live preview regeneration
+  const regenerateLivePreview = useCallback(async (
+    art: ClientArt,
+    overrides: {
+      photoOffsetX: number;
+      photoOffsetY: number;
+      logoX: number;
+      logoY: number;
+      logoScale: number;
+      textX: number;
+      textY: number;
+      textFontSize: number;
+      contactX: number;
+      contactY: number;
+      contactScale: number;
+    }
+  ) => {
+    const tempArt: ClientArt = {
+      ...art,
+      photoOffset: { x: overrides.photoOffsetX, y: overrides.photoOffsetY },
+      elementOverrides: {
+        logoX: overrides.logoX,
+        logoY: overrides.logoY,
+        logoScale: overrides.logoScale,
+        textX: overrides.textX,
+        textY: overrides.textY,
+        textFontSize: overrides.textFontSize,
+        contactX: overrides.contactX,
+        contactY: overrides.contactY,
+        contactScale: overrides.contactScale,
+      }
+    };
+    
+    setIsRegenerating(true);
+    try {
+      const newImageUrl = await generateArtForClient(tempArt);
+      setLivePreviewUrl(newImageUrl);
+    } catch (error) {
+      console.error("Error regenerating preview:", error);
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [template]);
+
+  // Auto-trigger live preview when any slider value changes while dialog is open
+  useEffect(() => {
+    if (!isAdjustDialogOpen || !selectedArt) return;
+    
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set new debounced timer (400ms for smoother experience)
+    debounceTimerRef.current = setTimeout(() => {
+      regenerateLivePreview(selectedArt, {
+        photoOffsetX,
+        photoOffsetY,
+        logoX,
+        logoY,
+        logoScale,
+        textX,
+        textY,
+        textFontSize,
+        contactX,
+        contactY,
+        contactScale,
+      });
+    }, 400);
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, textX, textY, textFontSize, contactX, contactY, contactScale, regenerateLivePreview]);
 
   const handleApplyElementOverrides = async () => {
     if (!selectedArt) return;
@@ -984,25 +1065,45 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       </Dialog>
 
       {/* Element Adjustment Dialog */}
-      <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
+      <Dialog open={isAdjustDialogOpen} onOpenChange={(open) => {
+        setIsAdjustDialogOpen(open);
+        if (!open) {
+          setLivePreviewUrl(null);
+          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Ajustar Elementos da Arte</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Ajustar Elementos da Arte
+              {isRegenerating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            {/* Preview Column */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Preview</Label>
-              {selectedArt?.imageUrl && (
-                <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden border">
+            {/* Preview Column - Live Preview */}
+            <div className="sticky top-0">
+              <Label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                Preview em Tempo Real
+                {isRegenerating && <span className="text-xs text-muted-foreground">(atualizando...)</span>}
+              </Label>
+              <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden border relative">
+                {(livePreviewUrl || selectedArt?.imageUrl) && (
                   <img
-                    src={selectedArt.imageUrl}
-                    alt="Preview da arte gerada"
-                    className="w-full h-full object-contain"
+                    src={livePreviewUrl || selectedArt?.imageUrl || ""}
+                    alt="Preview da arte"
+                    className={`w-full h-full object-contain transition-opacity ${isRegenerating ? 'opacity-70' : 'opacity-100'}`}
                   />
-                </div>
-              )}
+                )}
+                {isRegenerating && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/30">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Arraste os sliders - a arte atualiza automaticamente
+              </p>
             </div>
 
             {/* Controls Column */}
@@ -1154,7 +1255,12 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
             <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleApplyElementOverrides} className="bg-gradient-primary">
+            <Button 
+              onClick={handleApplyElementOverrides} 
+              className="bg-gradient-primary"
+              disabled={isRegenerating}
+            >
+              {isRegenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Aplicar Ajustes
             </Button>
           </div>
