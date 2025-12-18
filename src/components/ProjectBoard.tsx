@@ -996,13 +996,13 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                   Novo Briefing
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
+              <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+                <DialogHeader className="sticky top-0 bg-background z-10 pb-4">
                   <DialogTitle>
                     {editingBrief ? "Editar Briefing" : "Novo Briefing"}
                   </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 pb-4">
                   {!clientName && (
                     <div>
                       <label className="text-sm font-medium mb-1 block">Cliente</label>
