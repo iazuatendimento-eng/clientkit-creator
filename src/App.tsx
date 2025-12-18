@@ -11,6 +11,7 @@ import ClientPublicView from "./pages/ClientPublicView";
 import MasterArt from "./pages/MasterArt";
 import MasterVideo from "./pages/MasterVideo";
 import Receivables from "./pages/Receivables";
+import BatchHistoryPage from "./pages/BatchHistoryPage";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/master-art" element={<ProtectedRoute><MasterArt /></ProtectedRoute>} />
           <Route path="/master-video" element={<ProtectedRoute><MasterVideo /></ProtectedRoute>} />
+          <Route path="/batch-history" element={<ProtectedRoute><BatchHistoryPage /></ProtectedRoute>} />
           <Route path="/receivables" element={<ProtectedRoute><Receivables /></ProtectedRoute>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/client/:clientId" element={<ClientPublicView />} />

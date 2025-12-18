@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
+import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
 import {
   Dialog,
   DialogContent,
@@ -481,7 +482,21 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       }
 
       await clearArtGenerationTags();
-      
+
+      // Save batch to history
+      const batchItems: BatchItem[] = approvedVideos.map((video) => ({
+        cardId: video.cardId,
+        clientId: video.clientId,
+        clientName: video.clientName,
+        company: video.company,
+        cardTitle: video.cardTitle,
+        cardText: video.cardText,
+        brandKit: video.brandKit,
+        files: video.pages,
+        backgroundImages: video.searchedImages,
+      }));
+      await saveBatchGeneration("video", template, batchItems);
+
       // Dispatch event to notify ProjectBoard to reload
       window.dispatchEvent(new Event("bulkBriefsUpdated"));
 
