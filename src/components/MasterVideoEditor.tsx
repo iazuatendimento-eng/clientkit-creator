@@ -32,6 +32,7 @@ import {
   Sparkles,
   FileVideo,
   Film,
+  FolderOpen,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { searchImages, SearchImage } from "@/lib/imageSearch";
@@ -62,6 +63,19 @@ interface VideoTemplate {
   pageDuration: number;
 }
 
+interface SavedVideoTemplate {
+  id: string;
+  name: string;
+  content_elements: CanvasElement[];
+  signature_elements: CanvasElement[];
+  width: number;
+  height: number;
+  background_color: string;
+  page_duration: number;
+  created_at: string;
+  updated_at: string;
+}
+
 interface MasterVideoEditorProps {
   onBack: () => void;
   onGenerateBatch: (template: VideoTemplate) => void;
@@ -82,6 +96,12 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   
+  // Template save/load state
+  const [savedTemplates, setSavedTemplates] = useState<SavedVideoTemplate[]>([]);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
@@ -100,6 +120,137 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
   ];
+
+  // Load saved templates on mount
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('master_video_templates')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      const templates = (data || []).map(t => ({
+        ...t,
+        content_elements: t.content_elements as unknown as CanvasElement[],
+        signature_elements: t.signature_elements as unknown as CanvasElement[],
+      }));
+      setSavedTemplates(templates as SavedVideoTemplate[]);
+    } catch (error) {
+      console.error('Error loading video templates:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveTemplate = async () => {
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para salvar templates.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const templateData = {
+        name: templateName,
+        content_elements: JSON.parse(JSON.stringify(contentElements)),
+        signature_elements: JSON.parse(JSON.stringify(signatureElements)),
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        background_color: backgroundColor,
+        page_duration: pageDuration,
+        created_by: user.id,
+      };
+
+      if (currentTemplateId) {
+        const { error } = await supabase
+          .from('master_video_templates')
+          .update(templateData)
+          .eq('id', currentTemplateId);
+
+        if (error) throw error;
+        toast({
+          title: "Template atualizado!",
+          description: "Suas alterações foram salvas.",
+        });
+      } else {
+        const { data, error } = await supabase
+          .from('master_video_templates')
+          .insert(templateData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        setCurrentTemplateId(data.id);
+        toast({
+          title: "Template salvo!",
+          description: "Seu template de vídeo foi criado com sucesso.",
+        });
+      }
+
+      loadTemplates();
+    } catch (error) {
+      console.error('Error saving video template:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar o template.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const loadTemplate = async (templateId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('master_video_templates')
+        .select('*')
+        .eq('id', templateId)
+        .single();
+
+      if (error) throw error;
+      
+      setCurrentTemplateId(data.id);
+      setTemplateName(data.name);
+      setContentElements(data.content_elements as unknown as CanvasElement[]);
+      setSignatureElements(data.signature_elements as unknown as CanvasElement[]);
+      setBackgroundColor(data.background_color);
+      setPageDuration(data.page_duration);
+      
+      toast({
+        title: "Template carregado!",
+        description: `"${data.name}" foi carregado com sucesso.`,
+      });
+    } catch (error) {
+      console.error('Error loading video template:', error);
+      toast({
+        title: "Erro ao carregar",
+        description: "Não foi possível carregar o template.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const newTemplate = () => {
+    setCurrentTemplateId(null);
+    setTemplateName("Novo Template de Vídeo");
+    setContentElements([]);
+    setSignatureElements([]);
+    setBackgroundColor("#1a1a2e");
+    setPageDuration(10);
+    setSelectedElement(null);
+  };
 
   const placeholders = [
     { id: "logo", icon: User, label: "Logo", type: "logo" as const },
@@ -338,14 +489,57 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
+            {/* Template Load/Save */}
+            <div className="space-y-2">
+              <Label>Carregar Template</Label>
+              <div className="flex gap-2">
+                <Select
+                  value={currentTemplateId || ""}
+                  onValueChange={(value) => value && loadTemplate(value)}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecionar template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {savedTemplates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={newTemplate}>
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
             {/* Template Name */}
             <div className="space-y-2">
               <Label>Nome do Template</Label>
-              <Input
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="Nome do template"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="Nome do template"
+                  className="flex-1"
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={saveTemplate}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {currentTemplateId ? "Atualizar template existente" : "Salvar novo template"}
+              </p>
             </div>
 
             {/* Page Selector */}

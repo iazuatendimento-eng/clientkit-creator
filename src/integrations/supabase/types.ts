@@ -266,6 +266,48 @@ export type Database = {
         }
         Relationships: []
       }
+      master_video_templates: {
+        Row: {
+          background_color: string
+          content_elements: Json
+          created_at: string
+          created_by: string | null
+          height: number
+          id: string
+          name: string
+          page_duration: number
+          signature_elements: Json
+          updated_at: string
+          width: number
+        }
+        Insert: {
+          background_color?: string
+          content_elements?: Json
+          created_at?: string
+          created_by?: string | null
+          height?: number
+          id?: string
+          name: string
+          page_duration?: number
+          signature_elements?: Json
+          updated_at?: string
+          width?: number
+        }
+        Update: {
+          background_color?: string
+          content_elements?: Json
+          created_at?: string
+          created_by?: string | null
+          height?: number
+          id?: string
+          name?: string
+          page_duration?: number
+          signature_elements?: Json
+          updated_at?: string
+          width?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
