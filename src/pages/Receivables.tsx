@@ -20,11 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, FileDown, DollarSign, CreditCard, QrCode, Filter, Check, X } from "lucide-react";
+import { ArrowLeft, FileDown, DollarSign, CreditCard, QrCode, Filter, Check, X, Plus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from 'xlsx';
-import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO, setDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Payment {
@@ -45,6 +45,7 @@ const Receivables = () => {
   const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [filterPaid, setFilterPaid] = useState<string>("all");
   const [filterMethod, setFilterMethod] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>(format(new Date(), "yyyy-MM"));
@@ -130,6 +131,87 @@ const Receivables = () => {
     }
   };
 
+  const generatePaymentsForMonth = async () => {
+    try {
+      setIsGenerating(true);
+      
+      // Get all active clients with payment info
+      const { data: clients, error: clientError } = await supabase
+        .from("client_data")
+        .select("id, name, company, payment_method, payment_due_day, monthly_amount")
+        .eq("active", true)
+        .not("monthly_amount", "is", null);
+
+      if (clientError) throw clientError;
+      if (!clients || clients.length === 0) {
+        toast({
+          title: "Nenhum cliente encontrado",
+          description: "Não há clientes ativos com valor mensal configurado.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const monthDate = parseISO(filterMonth + "-01");
+      
+      // Check which clients already have payments for this month
+      const { data: existingPayments } = await supabase
+        .from("client_payments")
+        .select("client_id")
+        .gte("due_date", format(startOfMonth(monthDate), "yyyy-MM-dd"))
+        .lte("due_date", format(endOfMonth(monthDate), "yyyy-MM-dd"));
+
+      const existingClientIds = new Set((existingPayments || []).map(p => p.client_id));
+
+      // Create payments for clients that don't have one yet
+      const newPayments = clients
+        .filter(c => !existingClientIds.has(c.id) && c.monthly_amount)
+        .map(client => {
+          const dueDay = client.payment_due_day || 10;
+          const maxDay = endOfMonth(monthDate).getDate();
+          const actualDueDay = Math.min(dueDay, maxDay);
+          const dueDate = setDate(monthDate, actualDueDay);
+
+          return {
+            client_id: client.id,
+            amount: client.monthly_amount,
+            due_date: format(dueDate, "yyyy-MM-dd"),
+            payment_method: client.payment_method,
+            paid: false,
+          };
+        });
+
+      if (newPayments.length === 0) {
+        toast({
+          title: "Pagamentos já gerados",
+          description: "Todos os clientes já possuem pagamentos para este mês.",
+        });
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from("client_payments")
+        .insert(newPayments);
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Pagamentos gerados!",
+        description: `${newPayments.length} pagamentos criados para ${format(monthDate, "MMMM yyyy", { locale: ptBR })}.`,
+      });
+
+      loadPayments();
+    } catch (error) {
+      console.error("Error generating payments:", error);
+      toast({
+        title: "Erro ao gerar pagamentos",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const filteredPayments = payments.filter(p => {
     if (filterPaid !== "all") {
       if (filterPaid === "paid" && !p.paid) return false;
@@ -198,10 +280,20 @@ const Receivables = () => {
               <p className="text-muted-foreground">Gerencie seus recebimentos</p>
             </div>
           </div>
-          <Button onClick={handleExport} variant="outline">
-            <FileDown className="mr-2 h-4 w-4" />
-            Exportar Excel
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={generatePaymentsForMonth} disabled={isGenerating} className="bg-gradient-primary">
+              {isGenerating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
+              Gerar Pagamentos
+            </Button>
+            <Button onClick={handleExport} variant="outline">
+              <FileDown className="mr-2 h-4 w-4" />
+              Exportar Excel
+            </Button>
+          </div>
         </div>
 
         {/* Summary Cards */}
