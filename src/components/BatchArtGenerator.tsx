@@ -64,12 +64,16 @@ interface ElementOverrides {
   logoX?: number;
   logoY?: number;
   logoScale?: number;
+  logoScaleX?: number;
+  logoScaleY?: number;
   textX?: number;
   textY?: number;
   textFontSize?: number;
   contactX?: number;
   contactY?: number;
   contactScale?: number;
+  contactScaleX?: number;
+  contactScaleY?: number;
   photoScale?: number;
   shapes?: Record<string, ShapeOverride>;
 }
@@ -143,6 +147,10 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [contactX, setContactX] = useState(0);
   const [contactY, setContactY] = useState(0);
   const [contactScale, setContactScale] = useState(100);
+  const [contactScaleX, setContactScaleX] = useState(100);
+  const [contactScaleY, setContactScaleY] = useState(100);
+  const [logoScaleX, setLogoScaleX] = useState(100);
+  const [logoScaleY, setLogoScaleY] = useState(100);
   const [shapeOverrides, setShapeOverrides] = useState<Record<string, ShapeOverride>>({});
   const [livePreviewUrl, setLivePreviewUrl] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -388,9 +396,11 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           if (img) {
             const logoOffsetX = art.elementOverrides?.logoX || 0;
             const logoOffsetY = art.elementOverrides?.logoY || 0;
-            const logoScaleMultiplier = (art.elementOverrides?.logoScale || 100) / 100;
-            const newWidth = el.width * logoScaleMultiplier;
-            const newHeight = el.height * logoScaleMultiplier;
+            // Use separate X/Y scaling if available
+            const logoScaleXMult = (art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100) / 100;
+            const logoScaleYMult = (art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100) / 100;
+            const newWidth = el.width * logoScaleXMult;
+            const newHeight = el.height * logoScaleYMult;
             ctx.drawImage(img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
           }
         }
@@ -403,9 +413,11 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           if (img) {
             const contactOffsetX = art.elementOverrides?.contactX || 0;
             const contactOffsetY = art.elementOverrides?.contactY || 0;
-            const contactScaleMultiplier = (art.elementOverrides?.contactScale || 100) / 100;
-            const newWidth = el.width * contactScaleMultiplier;
-            const newHeight = el.height * contactScaleMultiplier;
+            // Use separate X/Y scaling if available
+            const contactScaleXMult = (art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100) / 100;
+            const contactScaleYMult = (art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100) / 100;
+            const newWidth = el.width * contactScaleXMult;
+            const newHeight = el.height * contactScaleYMult;
             ctx.drawImage(img, el.x + contactOffsetX, el.y + contactOffsetY, newWidth, newHeight);
           }
         }
@@ -624,12 +636,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     setLogoX(art.elementOverrides?.logoX || 0);
     setLogoY(art.elementOverrides?.logoY || 0);
     setLogoScale(art.elementOverrides?.logoScale || 100);
+    setLogoScaleX(art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100);
+    setLogoScaleY(art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100);
     setTextX(art.elementOverrides?.textX || 0);
     setTextY(art.elementOverrides?.textY || 0);
     setTextFontSize(art.elementOverrides?.textFontSize || 100);
     setContactX(art.elementOverrides?.contactX || 0);
     setContactY(art.elementOverrides?.contactY || 0);
     setContactScale(art.elementOverrides?.contactScale || 100);
+    setContactScaleX(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
+    setContactScaleY(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
     setShapeOverrides(art.elementOverrides?.shapes || {});
     setIsAdjustDialogOpen(true);
   };
@@ -644,12 +660,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       logoX: number;
       logoY: number;
       logoScale: number;
+      logoScaleX: number;
+      logoScaleY: number;
       textX: number;
       textY: number;
       textFontSize: number;
       contactX: number;
       contactY: number;
       contactScale: number;
+      contactScaleX: number;
+      contactScaleY: number;
       shapeOverrides: Record<string, ShapeOverride>;
     }
   ) => {
@@ -660,12 +680,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         logoX: overrides.logoX,
         logoY: overrides.logoY,
         logoScale: overrides.logoScale,
+        logoScaleX: overrides.logoScaleX,
+        logoScaleY: overrides.logoScaleY,
         textX: overrides.textX,
         textY: overrides.textY,
         textFontSize: overrides.textFontSize,
         contactX: overrides.contactX,
         contactY: overrides.contactY,
         contactScale: overrides.contactScale,
+        contactScaleX: overrides.contactScaleX,
+        contactScaleY: overrides.contactScaleY,
         photoScale: overrides.photoScale,
         shapes: overrides.shapeOverrides,
       }
@@ -700,12 +724,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         logoX,
         logoY,
         logoScale,
+        logoScaleX,
+        logoScaleY,
         textX,
         textY,
         textFontSize,
         contactX,
         contactY,
         contactScale,
+        contactScaleX,
+        contactScaleY,
         shapeOverrides,
       });
     }, 400);
@@ -715,7 +743,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, photoScale, logoX, logoY, logoScale, textX, textY, textFontSize, contactX, contactY, contactScale, shapeOverrides, regenerateLivePreview]);
+  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, photoScale, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, shapeOverrides, regenerateLivePreview]);
 
   const handleApplyElementOverrides = async () => {
     if (!selectedArt) return;
@@ -734,12 +762,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         logoX,
         logoY,
         logoScale,
+        logoScaleX,
+        logoScaleY,
         textX,
         textY,
         textFontSize,
         contactX,
         contactY,
         contactScale,
+        contactScaleX,
+        contactScaleY,
         photoScale,
         shapes: shapeOverrides,
       }
@@ -1224,6 +1256,94 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               >
                 <ZoomIn className="h-4 w-4" />
               </Button>
+            </div>
+
+            {/* Contact Scale X/Y Controls */}
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium whitespace-nowrap">Contato Largura:</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setContactScaleX(Math.max(25, contactScaleX - 10))}
+                  disabled={contactScaleX <= 25}
+                >
+                  <ZoomOut className="h-3 w-3" />
+                </Button>
+                <span className="text-xs font-medium w-10 text-center">{contactScaleX}%</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setContactScaleX(Math.min(300, contactScaleX + 10))}
+                  disabled={contactScaleX >= 300}
+                >
+                  <ZoomIn className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium whitespace-nowrap">Contato Altura:</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setContactScaleY(Math.max(25, contactScaleY - 10))}
+                  disabled={contactScaleY <= 25}
+                >
+                  <ZoomOut className="h-3 w-3" />
+                </Button>
+                <span className="text-xs font-medium w-10 text-center">{contactScaleY}%</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setContactScaleY(Math.min(300, contactScaleY + 10))}
+                  disabled={contactScaleY >= 300}
+                >
+                  <ZoomIn className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Logo Scale X/Y Controls */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium whitespace-nowrap">Logo Largura:</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogoScaleX(Math.max(25, logoScaleX - 10))}
+                  disabled={logoScaleX <= 25}
+                >
+                  <ZoomOut className="h-3 w-3" />
+                </Button>
+                <span className="text-xs font-medium w-10 text-center">{logoScaleX}%</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogoScaleX(Math.min(300, logoScaleX + 10))}
+                  disabled={logoScaleX >= 300}
+                >
+                  <ZoomIn className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium whitespace-nowrap">Logo Altura:</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogoScaleY(Math.max(25, logoScaleY - 10))}
+                  disabled={logoScaleY <= 25}
+                >
+                  <ZoomOut className="h-3 w-3" />
+                </Button>
+                <span className="text-xs font-medium w-10 text-center">{logoScaleY}%</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogoScaleY(Math.min(300, logoScaleY + 10))}
+                  disabled={logoScaleY >= 300}
+                >
+                  <ZoomIn className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
 
             <p className="text-xs text-muted-foreground text-center">
