@@ -377,6 +377,21 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           ctx.fillStyle = "#e5e7eb";
           ctx.fillRect(el.x, el.y, el.width, el.height);
         }
+      } else if (el.type === "logo") {
+        // Logo uses PNG[0] from brand kit with optional overrides
+        const logoUrl = art.brandKit?.pngs?.[0] || art.brandKit?.logo;
+        console.log("Loading logo from:", logoUrl?.substring(0, 50));
+        if (logoUrl) {
+          const img = await loadImage(logoUrl);
+          if (img) {
+            const logoOffsetX = art.elementOverrides?.logoX || 0;
+            const logoOffsetY = art.elementOverrides?.logoY || 0;
+            const logoScaleMultiplier = (art.elementOverrides?.logoScale || 100) / 100;
+            const newWidth = el.width * logoScaleMultiplier;
+            const newHeight = el.height * logoScaleMultiplier;
+            ctx.drawImage(img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
+          }
+        }
       } else if (el.type === "contact") {
         // Contact uses PNG[1] from brand kit with optional overrides
         const contactUrl = art.brandKit?.pngs?.[1] || art.brandKit?.contactInfo;
