@@ -69,6 +69,8 @@ interface CanvasElement {
     type: "linear" | "radial";
     color1: string;
     color2: string;
+    opacity1?: number; // 0-100
+    opacity2?: number; // 0-100
     angle?: number;
   };
 }
@@ -332,8 +334,15 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
             el.x + el.width / 2, el.y + el.height / 2, Math.max(el.width, el.height) / 2
           );
         }
-        gradient.addColorStop(0, el.gradient.color1);
-        gradient.addColorStop(1, el.gradient.color2);
+        // Convert hex to rgba with opacity
+        const hexToRgba = (hex: string, opacity: number) => {
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
+        };
+        gradient.addColorStop(0, hexToRgba(el.gradient.color1, el.gradient.opacity1 ?? 100));
+        gradient.addColorStop(1, hexToRgba(el.gradient.color2, el.gradient.opacity2 ?? 100));
         return gradient;
       }
       return el.color || "#cccccc";
@@ -1295,7 +1304,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                       </Button>
                     </div>
                     {selectedEl.gradient && (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <Select
                           value={selectedEl.gradient.type}
                           onValueChange={(v) => updateSelectedElement({ 
@@ -1310,44 +1319,79 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                             <SelectItem value="radial">Radial</SelectItem>
                           </SelectContent>
                         </Select>
-                        <div className="flex gap-2">
-                          <div>
-                            <Label className="text-[10px] text-muted-foreground">Cor 1</Label>
+                        
+                        {/* Color 1 with opacity */}
+                        <div className="space-y-1 p-2 bg-muted/30 rounded">
+                          <div className="flex items-center gap-2">
                             <Input
                               type="color"
                               value={selectedEl.gradient.color1}
                               onChange={(e) => updateSelectedElement({ 
                                 gradient: { ...selectedEl.gradient!, color1: e.target.value }
                               })}
-                              className="w-12 h-8 p-1"
+                              className="w-10 h-8 p-1"
                             />
+                            <Label className="text-[10px] text-muted-foreground flex-1">Cor 1</Label>
                           </div>
                           <div>
-                            <Label className="text-[10px] text-muted-foreground">Cor 2</Label>
+                            <Label className="text-[10px] text-muted-foreground">
+                              Transparência: {100 - (selectedEl.gradient.opacity1 ?? 100)}%
+                            </Label>
+                            <Slider
+                              value={[selectedEl.gradient.opacity1 ?? 100]}
+                              onValueChange={([v]) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, opacity1: v }
+                              })}
+                              min={0}
+                              max={100}
+                              step={5}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Color 2 with opacity */}
+                        <div className="space-y-1 p-2 bg-muted/30 rounded">
+                          <div className="flex items-center gap-2">
                             <Input
                               type="color"
                               value={selectedEl.gradient.color2}
                               onChange={(e) => updateSelectedElement({ 
                                 gradient: { ...selectedEl.gradient!, color2: e.target.value }
                               })}
-                              className="w-12 h-8 p-1"
+                              className="w-10 h-8 p-1"
+                            />
+                            <Label className="text-[10px] text-muted-foreground flex-1">Cor 2</Label>
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">
+                              Transparência: {100 - (selectedEl.gradient.opacity2 ?? 100)}%
+                            </Label>
+                            <Slider
+                              value={[selectedEl.gradient.opacity2 ?? 100]}
+                              onValueChange={([v]) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, opacity2: v }
+                              })}
+                              min={0}
+                              max={100}
+                              step={5}
                             />
                           </div>
-                          {selectedEl.gradient.type === "linear" && (
-                            <div className="flex-1">
-                              <Label className="text-[10px] text-muted-foreground">Ângulo</Label>
-                              <Slider
-                                value={[selectedEl.gradient.angle || 0]}
-                                onValueChange={([v]) => updateSelectedElement({ 
-                                  gradient: { ...selectedEl.gradient!, angle: v }
-                                })}
-                                min={0}
-                                max={360}
-                                step={15}
-                              />
-                            </div>
-                          )}
                         </div>
+                        
+                        {selectedEl.gradient.type === "linear" && (
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Ângulo: {selectedEl.gradient.angle || 0}°</Label>
+                            <Slider
+                              value={[selectedEl.gradient.angle || 0]}
+                              onValueChange={([v]) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, angle: v }
+                              })}
+                              min={0}
+                              max={360}
+                              step={15}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
