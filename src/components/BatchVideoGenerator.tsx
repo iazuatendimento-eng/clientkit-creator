@@ -95,11 +95,12 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(0);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -107,10 +108,26 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
   }, []);
 
   useEffect(() => {
-    if (clientVideos.length > 0 && !isLoading && !isGenerating && !clientVideos.some(v => v.pages.length > 0)) {
+    if (
+      clientVideos.length > 0 &&
+      !isLoading &&
+      !isGenerating &&
+      !clientVideos.some((v) => v.pages.length > 0)
+    ) {
       generateAllVideos();
     }
   }, [clientVideos, isLoading]);
+
+  useEffect(() => {
+    if (!selectedVideo || !isPlayingPreview) return;
+    if (selectedVideo.pages.length <= 1) return;
+
+    const interval = window.setInterval(() => {
+      setCurrentPreviewPage((p) => (p + 1) % selectedVideo.pages.length);
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [selectedVideo, isPlayingPreview]);
 
   const loadTaggedCards = async () => {
     try {
@@ -122,11 +139,13 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       const videos: ClientVideo[] = taggedCards.map((card: any) => {
         const fullText = card.description || card.title;
         // Split by semicolons for carousel pages
-        const textParts = fullText.split(';').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
-        
+        const textParts = fullText
+          .split(";")
+          .map((t: string) => t.trim())
+          .filter((t: string) => t.length > 0);
+
         const brandKit = card.client?.brand_kit;
-        console.log("Client brand kit for video:", card.client?.name, brandKit);
-        
+
         return {
           clientId: card.client?.id || card.client_id,
           clientName: card.client?.name || "Cliente",
@@ -141,8 +160,6 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           pageTexts: textParts.length > 0 ? textParts : [fullText],
         };
       });
-      
-      console.log("Videos to generate:", videos.length, "with pageTexts:", videos.map(v => v.pageTexts.length));
 
       setClientVideos(videos);
 
@@ -175,18 +192,22 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     canvas.height = template.height || 1920;
     const ctx = canvas.getContext("2d")!;
 
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const ensureColor = (value: unknown, fallback: string) =>
+      typeof value === "string" && value.trim().length > 0 ? value : fallback;
+
     // Colors from brand kit - ensure proper extraction
     const colors = Array.isArray(brandKit?.colors) ? brandKit.colors : [];
-    const bgColor = colors[0] || template.backgroundColor || "#1a1a2e";
-    const textColor = colors[1] || "#ffffff";
-    const accessoryColor1 = colors[2] || "#cccccc";
-    const accessoryColor2 = colors[3] || "#aaaaaa";
-    
-    console.log("Video page generation - brandKit colors:", colors, "bgColor:", bgColor);
+    const bgColor = ensureColor(colors[0], template.backgroundColor || "#1a1a2e");
+    const textColor = ensureColor(colors[1], "#ffffff");
+    const accessoryColor1 = ensureColor(colors[2], "#cccccc");
+    const accessoryColor2 = ensureColor(colors[3], "#aaaaaa");
 
     // Draw background
     ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, template.width, template.height);
+    ctx.fillRect(0, 0, w, h);
 
     // Draw background image if provided
     if (backgroundImage) {
@@ -194,26 +215,26 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       if (bgImg) {
         // Cover the canvas with the image
         const imgAspect = bgImg.width / bgImg.height;
-        const canvasAspect = template.width / template.height;
+        const canvasAspect = w / h;
         let drawWidth, drawHeight, drawX, drawY;
-        
+
         if (imgAspect > canvasAspect) {
-          drawHeight = template.height;
+          drawHeight = h;
           drawWidth = drawHeight * imgAspect;
-          drawX = (template.width - drawWidth) / 2;
+          drawX = (w - drawWidth) / 2;
           drawY = 0;
         } else {
-          drawWidth = template.width;
+          drawWidth = w;
           drawHeight = drawWidth / imgAspect;
           drawX = 0;
-          drawY = (template.height - drawHeight) / 2;
+          drawY = (h - drawHeight) / 2;
         }
-        
+
         ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
-        
+
         // Add overlay for text readability
         ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        ctx.fillRect(0, 0, template.width, template.height);
+        ctx.fillRect(0, 0, w, h);
       }
     }
 
@@ -333,30 +354,20 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         for (const text of video.pageTexts) {
           try {
             let searchTerms = text.split(" ").slice(0, 5).join(" ");
-            
+
             // Translate to English for better image search results
             try {
-              const translateResponse = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-text`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-                  },
-                  body: JSON.stringify({ text }),
-                }
-              );
-              
-              if (translateResponse.ok) {
-                const { translatedText } = await translateResponse.json();
-                searchTerms = translatedText;
-                console.log("Video - Searching images with translated terms:", searchTerms);
+              const { data, error } = await supabase.functions.invoke("translate-text", {
+                body: { text },
+              });
+
+              if (!error && data?.translatedText) {
+                searchTerms = data.translatedText;
               }
             } catch (translateError) {
               console.error("Translation failed, using original text:", translateError);
             }
-            
+
             const images = await searchImages(searchTerms, 1);
             if (images.length > 0) {
               searchedImages.push(images[0].urls.regular);
@@ -566,6 +577,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                   onClick={() => {
                     setSelectedVideo(video);
                     setCurrentPreviewPage(0);
+                    setIsPlayingPreview(true);
                   }}
                 >
                   {video.pages[0] ? (
@@ -637,41 +649,90 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       </ScrollArea>
 
       {/* Preview Dialog */}
-      <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
+      <Dialog
+        open={!!selectedVideo}
+        onOpenChange={() => {
+          setSelectedVideo(null);
+          setIsPlayingPreview(false);
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{selectedVideo?.clientName} - Preview</DialogTitle>
           </DialogHeader>
-          
+
           {selectedVideo && (
             <div className="space-y-4">
               <div className="aspect-[9/16] bg-muted rounded-lg overflow-hidden">
                 {selectedVideo.pages[currentPreviewPage] && (
                   <img
                     src={selectedVideo.pages[currentPreviewPage]}
-                    alt={`Page ${currentPreviewPage + 1}`}
+                    alt={`Página ${currentPreviewPage + 1} do carrossel`}
                     className="w-full h-full object-contain"
                   />
                 )}
               </div>
-              
-              {/* Page navigation */}
+
               <div className="flex items-center justify-center gap-2">
+                <Button
+                  variant={isPlayingPreview ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsPlayingPreview((v) => !v)}
+                  disabled={selectedVideo.pages.length <= 1}
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  {isPlayingPreview ? "Pausar" : "Play"}
+                </Button>
+              </div>
+
+              {/* Thumbnails */}
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {selectedVideo.pages.map((page, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
+                      currentPreviewPage === idx
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-border"
+                    }`}
+                    onClick={() => {
+                      setIsPlayingPreview(false);
+                      setCurrentPreviewPage(idx);
+                    }}
+                    aria-label={`Abrir página ${idx + 1}`}
+                  >
+                    <img
+                      src={page}
+                      alt={`Miniatura da página ${idx + 1}`}
+                      className="h-20 w-12 object-cover"
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {/* Page navigation */}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
                 {selectedVideo.pages.map((_, idx) => (
                   <Button
                     key={idx}
                     variant={currentPreviewPage === idx ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setCurrentPreviewPage(idx)}
+                    onClick={() => {
+                      setIsPlayingPreview(false);
+                      setCurrentPreviewPage(idx);
+                    }}
                   >
                     {idx + 1}
                   </Button>
                 ))}
               </div>
-              
+
               <p className="text-center text-sm text-muted-foreground">
                 Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
                 {currentPreviewPage === selectedVideo.pages.length - 1 && " (Assinatura)"}
+                {selectedVideo.pages.length > 1 && " • preview rápido (1s/página)"}
               </p>
             </div>
           )}
