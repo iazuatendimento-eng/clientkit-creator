@@ -1317,10 +1317,12 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               setPhotoScale={setPhotoScale}
               logoX={logoX}
               logoY={logoY}
-              logoScale={logoScale}
+              logoScaleX={logoScaleX}
+              logoScaleY={logoScaleY}
               setLogoX={setLogoX}
               setLogoY={setLogoY}
-              setLogoScale={setLogoScale}
+              setLogoScaleX={setLogoScaleX}
+              setLogoScaleY={setLogoScaleY}
               textX={textX}
               textY={textY}
               textFontSize={textFontSize}
@@ -1329,125 +1331,17 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               setTextFontSize={setTextFontSize}
               contactX={contactX}
               contactY={contactY}
-              contactScale={contactScale}
+              contactScaleX={contactScaleX}
+              contactScaleY={contactScaleY}
               setContactX={setContactX}
               setContactY={setContactY}
-              setContactScale={setContactScale}
+              setContactScaleX={setContactScaleX}
+              setContactScaleY={setContactScaleY}
               shapeOverrides={shapeOverrides}
               setShapeOverrides={setShapeOverrides}
             />
 
-            {/* Photo Zoom Controls */}
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <Label className="text-sm font-medium">Zoom da Foto:</Label>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPhotoScale(Math.max(10, photoScale - 10))}
-                disabled={photoScale <= 10}
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-medium w-14 text-center">{photoScale}%</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPhotoScale(Math.min(300, photoScale + 10))}
-                disabled={photoScale >= 300}
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Contact Scale X/Y Controls */}
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium whitespace-nowrap">Contato Largura:</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setContactScaleX(Math.max(25, contactScaleX - 10))}
-                  disabled={contactScaleX <= 25}
-                >
-                  <ZoomOut className="h-3 w-3" />
-                </Button>
-                <span className="text-xs font-medium w-10 text-center">{contactScaleX}%</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setContactScaleX(Math.min(300, contactScaleX + 10))}
-                  disabled={contactScaleX >= 300}
-                >
-                  <ZoomIn className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium whitespace-nowrap">Contato Altura:</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setContactScaleY(Math.max(25, contactScaleY - 10))}
-                  disabled={contactScaleY <= 25}
-                >
-                  <ZoomOut className="h-3 w-3" />
-                </Button>
-                <span className="text-xs font-medium w-10 text-center">{contactScaleY}%</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setContactScaleY(Math.min(300, contactScaleY + 10))}
-                  disabled={contactScaleY >= 300}
-                >
-                  <ZoomIn className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Logo Scale X/Y Controls */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium whitespace-nowrap">Logo Largura:</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLogoScaleX(Math.max(25, logoScaleX - 10))}
-                  disabled={logoScaleX <= 25}
-                >
-                  <ZoomOut className="h-3 w-3" />
-                </Button>
-                <span className="text-xs font-medium w-10 text-center">{logoScaleX}%</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLogoScaleX(Math.min(300, logoScaleX + 10))}
-                  disabled={logoScaleX >= 300}
-                >
-                  <ZoomIn className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium whitespace-nowrap">Logo Altura:</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLogoScaleY(Math.max(25, logoScaleY - 10))}
-                  disabled={logoScaleY <= 25}
-                >
-                  <ZoomOut className="h-3 w-3" />
-                </Button>
-                <span className="text-xs font-medium w-10 text-center">{logoScaleY}%</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLogoScaleY(Math.min(300, logoScaleY + 10))}
-                  disabled={logoScaleY >= 300}
-                >
-                  <ZoomIn className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-xs text-muted-foreground text-center pt-2">
               Clique no elemento para selecionar, arraste os cantos azuis para redimensionar.
             </p>
           </div>

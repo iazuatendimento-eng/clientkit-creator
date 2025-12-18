@@ -55,10 +55,12 @@ export function ArtAdjustOverlay({
   setPhotoScale,
   logoX,
   logoY,
-  logoScale,
+  logoScaleX,
+  logoScaleY,
   setLogoX,
   setLogoY,
-  setLogoScale,
+  setLogoScaleX,
+  setLogoScaleY,
   textX,
   textY,
   textFontSize,
@@ -67,10 +69,12 @@ export function ArtAdjustOverlay({
   setTextFontSize,
   contactX,
   contactY,
-  contactScale,
+  contactScaleX,
+  contactScaleY,
   setContactX,
   setContactY,
-  setContactScale,
+  setContactScaleX,
+  setContactScaleY,
   shapeOverrides,
   setShapeOverrides,
 }: {
@@ -87,10 +91,12 @@ export function ArtAdjustOverlay({
 
   logoX: number;
   logoY: number;
-  logoScale: number;
+  logoScaleX: number;
+  logoScaleY: number;
   setLogoX: (v: number) => void;
   setLogoY: (v: number) => void;
-  setLogoScale: (v: number) => void;
+  setLogoScaleX: (v: number) => void;
+  setLogoScaleY: (v: number) => void;
 
   textX: number;
   textY: number;
@@ -101,10 +107,12 @@ export function ArtAdjustOverlay({
 
   contactX: number;
   contactY: number;
-  contactScale: number;
+  contactScaleX: number;
+  contactScaleY: number;
   setContactX: (v: number) => void;
   setContactY: (v: number) => void;
-  setContactScale: (v: number) => void;
+  setContactScaleX: (v: number) => void;
+  setContactScaleY: (v: number) => void;
 
   shapeOverrides?: Record<string, ShapeOverride>;
   setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
@@ -141,8 +149,8 @@ export function ArtAdjustOverlay({
       return {
         x: els.logoEl.x + logoX,
         y: els.logoEl.y + logoY,
-        w: els.logoEl.width * (logoScale / 100),
-        h: els.logoEl.height * (logoScale / 100),
+        w: els.logoEl.width * (logoScaleX / 100),
+        h: els.logoEl.height * (logoScaleY / 100),
       };
     }
 
@@ -151,8 +159,8 @@ export function ArtAdjustOverlay({
       return {
         x: els.contactEl.x + contactX,
         y: els.contactEl.y + contactY,
-        w: els.contactEl.width * (contactScale / 100),
-        h: els.contactEl.height * (contactScale / 100),
+        w: els.contactEl.width * (contactScaleX / 100),
+        h: els.contactEl.height * (contactScaleY / 100),
       };
     }
 
@@ -198,15 +206,19 @@ export function ArtAdjustOverlay({
           photoH: number;
           logoX: number;
           logoY: number;
-          logoScale: number;
+          logoScaleX: number;
+          logoScaleY: number;
           textX: number;
           textY: number;
           textFontSize: number;
           contactX: number;
           contactY: number;
-          contactScale: number;
+          contactScaleX: number;
+          contactScaleY: number;
           logoW: number;
+          logoH: number;
           contactW: number;
+          contactH: number;
           textW: number;
           shapeRect?: ShapeOverride;
         };
@@ -220,8 +232,10 @@ export function ArtAdjustOverlay({
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const logoW = els.logoEl ? els.logoEl.width * (logoScale / 100) : 0;
-    const contactW = els.contactEl ? els.contactEl.width * (contactScale / 100) : 0;
+    const logoW = els.logoEl ? els.logoEl.width * (logoScaleX / 100) : 0;
+    const logoH = els.logoEl ? els.logoEl.height * (logoScaleY / 100) : 0;
+    const contactW = els.contactEl ? els.contactEl.width * (contactScaleX / 100) : 0;
+    const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
     const textW = els.textEl ? els.textEl.width * (textFontSize / 100) : 0;
     const photoW = els.photoFrame ? els.photoFrame.width * (photoScale / 100) : 0;
     const photoH = els.photoFrame ? els.photoFrame.height * (photoScale / 100) : 0;
@@ -247,15 +261,19 @@ export function ArtAdjustOverlay({
         photoH,
         logoX,
         logoY,
-        logoScale,
+        logoScaleX,
+        logoScaleY,
         textX,
         textY,
         textFontSize,
         contactX,
         contactY,
-        contactScale,
+        contactScaleX,
+        contactScaleY,
         logoW,
+        logoH,
         contactW,
+        contactH,
         textW,
         shapeRect,
       },
@@ -330,18 +348,36 @@ export function ArtAdjustOverlay({
         }
 
         const baseW = els.logoEl?.width || 1;
+        const baseH = els.logoEl?.height || 1;
         const h = s.handle as Handle;
+        const isVerticalHandle = h === "n" || h === "s";
+        const isHorizontalHandle = h === "e" || h === "w";
 
-        const signedDx = handleHasW(h) || handleHasE(h) ? handleSignX(h) * dx : 0;
-        const signedDy = handleHasN(h) || handleHasS(h) ? handleSignY(h) * dy : 0;
-        const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
-
-        const newW = clamp(s.start.logoW + signedDelta, baseW * 0.25, baseW * 2);
-        const newScale = clamp((newW / baseW) * 100, 25, 200);
-        setLogoScale(newScale);
-
-        if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
-        if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
+        if (isHorizontalHandle) {
+          const signedDx = handleSignX(h) * dx;
+          const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          setLogoScaleX(newScaleX);
+          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
+        } else if (isVerticalHandle) {
+          const signedDy = handleSignY(h) * dy;
+          const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setLogoScaleY(newScaleY);
+          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
+        } else {
+          // Corner handles - update both X and Y
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
+          const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setLogoScaleX(newScaleX);
+          setLogoScaleY(newScaleY);
+          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
+          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
+        }
         return;
       }
 
@@ -353,18 +389,36 @@ export function ArtAdjustOverlay({
         }
 
         const baseW = els.contactEl?.width || 1;
+        const baseH = els.contactEl?.height || 1;
         const h = s.handle as Handle;
+        const isVerticalHandle = h === "n" || h === "s";
+        const isHorizontalHandle = h === "e" || h === "w";
 
-        const signedDx = handleHasW(h) || handleHasE(h) ? handleSignX(h) * dx : 0;
-        const signedDy = handleHasN(h) || handleHasS(h) ? handleSignY(h) * dy : 0;
-        const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
-
-        const newW = clamp(s.start.contactW + signedDelta, baseW * 0.25, baseW * 2);
-        const newScale = clamp((newW / baseW) * 100, 25, 200);
-        setContactScale(newScale);
-
-        if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -200, 200));
-        if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
+        if (isHorizontalHandle) {
+          const signedDx = handleSignX(h) * dx;
+          const newW = clamp(s.start.contactW + signedDx, baseW * 0.25, baseW * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          setContactScaleX(newScaleX);
+          if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -200, 200));
+        } else if (isVerticalHandle) {
+          const signedDy = handleSignY(h) * dy;
+          const newH = clamp(s.start.contactH + signedDy, baseH * 0.25, baseH * 3);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setContactScaleY(newScaleY);
+          if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
+        } else {
+          // Corner handles - update both X and Y
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          const newW = clamp(s.start.contactW + signedDx, baseW * 0.25, baseW * 3);
+          const newH = clamp(s.start.contactH + signedDy, baseH * 0.25, baseH * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setContactScaleX(newScaleX);
+          setContactScaleY(newScaleY);
+          if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -200, 200));
+          if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
+        }
         return;
       }
 
