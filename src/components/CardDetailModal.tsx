@@ -2,10 +2,28 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Image as ImageIcon, FileVideo, X } from "lucide-react";
+import { Upload, Image as ImageIcon, FileVideo, X, Download } from "lucide-react";
 import { toast } from "sonner";
 import { createCardUpload, getCardUploads, deleteCardUpload } from "@/lib/clientDatabase";
 
+const downloadFile = async (url: string, fileName: string) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+    toast.success("Download iniciado!");
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    toast.error("Erro ao baixar arquivo");
+  }
+};
 interface UploadedFile {
   id: string;
   name: string;
@@ -226,23 +244,36 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                       className="w-full h-32 object-cover rounded-lg"
                     />
                   ) : (
-                    <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center">
-                      <FileVideo className="h-8 w-8 text-muted-foreground" />
-                    </div>
+                    <video
+                      src={file.url}
+                      className="w-full h-32 object-cover rounded-lg"
+                      muted
+                    />
                   )}
                   {index === 0 && (
                     <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
                       Capa
                     </div>
                   )}
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleRemoveFile(file.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => downloadFile(file.url, file.name)}
+                      title="Baixar"
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleRemoveFile(file.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>
                 </div>
               ))}
