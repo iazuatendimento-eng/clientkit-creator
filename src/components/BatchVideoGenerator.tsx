@@ -71,6 +71,9 @@ interface ElementAdjustments {
   mascotScaleY: number;
   mascotX: number;
   mascotY: number;
+  textScale: number;
+  textX: number;
+  textY: number;
 }
 
 const defaultAdjustments: ElementAdjustments = {
@@ -86,6 +89,9 @@ const defaultAdjustments: ElementAdjustments = {
   mascotScaleY: 100,
   mascotX: 0,
   mascotY: 0,
+  textScale: 100,
+  textX: 0,
+  textY: 0,
 };
 
 interface ClientVideo {
@@ -303,32 +309,35 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         ctx.fill();
       } else if (el.type === "text") {
         ctx.fillStyle = textColor;
-        const fontSize = el.fontSize || 48;
+        const baseFontSize = el.fontSize || 48;
+        const fontSize = Math.round(baseFontSize * (adjustments.textScale / 100));
         const fontFamily = brandKit?.fontFamily || "Arial";
         ctx.font = `${fontSize}px ${fontFamily}`;
         
         // Use card text for content pages, placeholder for signature
         const displayText = isSignature ? (el.text || "") : text;
         
-        // Word wrap
-        const words = displayText.split(' ');
-        let line = '';
-        let y = el.y + fontSize;
+        // Word wrap with adjusted position
+        const adjustedX = el.x + adjustments.textX;
+        const adjustedY = el.y + adjustments.textY;
+        const words = displayText.split(" ");
+        let line = "";
+        let y = adjustedY + fontSize;
         const maxWidth = el.width || 800;
         const lineHeight = fontSize * 1.3;
         
         for (let i = 0; i < words.length; i++) {
-          const testLine = line + words[i] + ' ';
+          const testLine = line + words[i] + " ";
           const metrics = ctx.measureText(testLine);
           if (metrics.width > maxWidth && i > 0) {
-            ctx.fillText(line.trim(), el.x, y);
-            line = words[i] + ' ';
+            ctx.fillText(line.trim(), adjustedX, y);
+            line = words[i] + " ";
             y += lineHeight;
           } else {
             line = testLine;
           }
         }
-        ctx.fillText(line.trim(), el.x, y);
+        ctx.fillText(line.trim(), adjustedX, y);
       } else if (el.type === "logo") {
         const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
         if (logoUrl) {
@@ -874,6 +883,12 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                     setMascotY={(v) => updateAdjustmentLocal("mascotY", v)}
                     setMascotScaleX={(v) => updateAdjustmentLocal("mascotScaleX", v)}
                     setMascotScaleY={(v) => updateAdjustmentLocal("mascotScaleY", v)}
+                    textX={selectedVideo.adjustments.textX}
+                    textY={selectedVideo.adjustments.textY}
+                    textScale={selectedVideo.adjustments.textScale}
+                    setTextX={(v) => updateAdjustmentLocal("textX", v)}
+                    setTextY={(v) => updateAdjustmentLocal("textY", v)}
+                    setTextScale={(v) => updateAdjustmentLocal("textScale", v)}
                   />
 
                   <p className="text-center text-xs text-muted-foreground">

@@ -11,6 +11,7 @@ interface CanvasElement {
   y: number;
   width: number;
   height: number;
+  fontSize?: number;
   placeholder?: boolean;
 }
 
@@ -22,15 +23,13 @@ interface VideoTemplateLike {
 }
 
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
-type Part = "logo" | "contact" | "mascot";
-type Tone = "primary" | "secondary" | "accent";
+type Part = "logo" | "contact" | "mascot" | "text";
+type Tone = "primary" | "secondary" | "accent" | "muted";
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
 const handleHasW = (h: Handle) => h === "nw" || h === "sw" || h === "w";
-const handleHasE = (h: Handle) => h === "ne" || h === "se" || h === "e";
 const handleHasN = (h: Handle) => h === "nw" || h === "ne" || h === "n";
-const handleHasS = (h: Handle) => h === "sw" || h === "se" || h === "s";
 
 const handleSignX = (h: Handle) => (handleHasW(h) ? -1 : 1);
 const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
@@ -54,11 +53,20 @@ const toneClasses = (tone: Tone) => {
     } as const;
   }
 
+  if (tone === "accent") {
+    return {
+      border: "border-accent",
+      bg: "bg-accent/10",
+      handle: "bg-accent",
+      badge: "bg-accent text-accent-foreground",
+    } as const;
+  }
+
   return {
-    border: "border-accent",
-    bg: "bg-accent/10",
-    handle: "bg-accent",
-    badge: "bg-accent text-accent-foreground",
+    border: "border-muted-foreground",
+    bg: "bg-muted-foreground/10",
+    handle: "bg-muted-foreground",
+    badge: "bg-muted-foreground text-background",
   } as const;
 };
 
@@ -94,6 +102,13 @@ export function VideoAdjustOverlay({
   setMascotY,
   setMascotScaleX,
   setMascotScaleY,
+
+  textX,
+  textY,
+  textScale,
+  setTextX,
+  setTextY,
+  setTextScale,
 }: {
   template: VideoTemplateLike;
   previewUrl: string | null;
@@ -126,6 +141,13 @@ export function VideoAdjustOverlay({
   setMascotY: (v: number) => void;
   setMascotScaleX: (v: number) => void;
   setMascotScaleY: (v: number) => void;
+
+  textX: number;
+  textY: number;
+  textScale: number;
+  setTextX: (v: number) => void;
+  setTextY: (v: number) => void;
+  setTextScale: (v: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part>("logo");
@@ -135,7 +157,8 @@ export function VideoAdjustOverlay({
     const logoEl = allElements.find((e) => e.type === "logo");
     const contactEl = allElements.find((e) => e.type === "contact");
     const mascotEl = allElements.find((e) => e.type === "mascot");
-    return { logoEl, contactEl, mascotEl };
+    const textEl = allElements.find((e) => e.type === "text");
+    return { logoEl, contactEl, mascotEl, textEl };
   }, [template.contentElements, template.signatureElements]);
 
   const getRect = (part: Part) => {
@@ -169,6 +192,17 @@ export function VideoAdjustOverlay({
       };
     }
 
+    if (part === "text") {
+      if (!els.textEl) return null;
+      // Text scales uniformly (using textScale for both dimensions for visual representation)
+      return {
+        x: els.textEl.x + textX,
+        y: els.textEl.y + textY,
+        w: els.textEl.width * (textScale / 100),
+        h: els.textEl.height * (textScale / 100),
+      };
+    }
+
     return null;
   };
 
@@ -199,6 +233,11 @@ export function VideoAdjustOverlay({
           mascotScaleY: number;
           mascotW: number;
           mascotH: number;
+          textX: number;
+          textY: number;
+          textScale: number;
+          textW: number;
+          textH: number;
         };
       }
   >(null);
@@ -222,6 +261,8 @@ export function VideoAdjustOverlay({
     const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
     const mascotW = els.mascotEl ? els.mascotEl.width * (mascotScaleX / 100) : 0;
     const mascotH = els.mascotEl ? els.mascotEl.height * (mascotScaleY / 100) : 0;
+    const textW = els.textEl ? els.textEl.width * (textScale / 100) : 0;
+    const textH = els.textEl ? els.textEl.height * (textScale / 100) : 0;
 
     setActive(part);
     startRef.current = {
@@ -249,6 +290,11 @@ export function VideoAdjustOverlay({
         mascotScaleY,
         mascotW,
         mascotH,
+        textX,
+        textY,
+        textScale,
+        textW,
+        textH,
       },
     };
 
@@ -380,6 +426,31 @@ export function VideoAdjustOverlay({
           if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + dx, -500, 500));
           if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + dy, -500, 500));
         }
+        return;
+      }
+
+      if (s.part === "text") {
+        if (s.mode === "move") {
+          setTextX(clamp(s.start.textX + dx, -500, 500));
+          setTextY(clamp(s.start.textY + dy, -500, 500));
+          return;
+        }
+
+        // Text uses uniform scale (font size scaling)
+        const baseW = els.textEl?.width || 1;
+        const h = s.handle as Handle;
+
+        // Use the larger of dx or dy for uniform scaling
+        const signedDx = handleSignX(h) * dx;
+        const signedDy = handleSignY(h) * dy;
+        const delta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        
+        const newW = clamp(s.start.textW + delta, baseW * 0.25, baseW * 3);
+        const newScale = clamp((newW / baseW) * 100, 25, 300);
+        setTextScale(newScale);
+        
+        if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -500, 500));
+        if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -500, 500));
       }
     };
 
@@ -523,6 +594,7 @@ export function VideoAdjustOverlay({
       )}
 
       <div className="absolute inset-0">
+        {els.textEl && <Box part="text" label="Texto" tone="muted" />}
         {els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
         {els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
         {els.mascotEl && <Box part="mascot" label="Mascote" tone="secondary" />}
