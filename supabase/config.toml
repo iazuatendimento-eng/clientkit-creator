@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-caption]
 verify_jwt = false
+
+[functions.translate-text]
+verify_jwt = false
