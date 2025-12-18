@@ -55,6 +55,7 @@ interface CanvasElement {
   imageUrl?: string;
   placeholder?: boolean;
   rotation?: number;
+  colorRole?: "background" | "text" | "accessory1" | "accessory2"; // Which brand kit color to use
 }
 
 interface MasterTemplate {
@@ -948,9 +949,33 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
                 </>
               )}
 
-              {(selectedEl.type === "rect" || selectedEl.type === "circle" || selectedEl.type === "text") && (
+              {(selectedEl.type === "rect" || selectedEl.type === "circle" || selectedEl.type === "triangle" || selectedEl.type === "diamond" || selectedEl.type === "hexagon" || selectedEl.type === "pentagon" || selectedEl.type === "star") && (
                 <div>
-                  <Label className="text-xs">Cor</Label>
+                  <Label className="text-xs">Papel da Cor (Kit de Marca)</Label>
+                  <Select
+                    value={selectedEl.colorRole || "none"}
+                    onValueChange={(v) => updateSelectedElement({ colorRole: v === "none" ? undefined : v as any })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Cor fixa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Cor fixa (não muda)</SelectItem>
+                      <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                      <SelectItem value="text">Texto (Cor 2)</SelectItem>
+                      <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
+                      <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedEl.colorRole ? "Cor será do kit de marca do cliente" : "Cor não muda na geração"}
+                  </p>
+                </div>
+              )}
+
+              {(selectedEl.type === "rect" || selectedEl.type === "circle" || selectedEl.type === "text" || selectedEl.type === "triangle" || selectedEl.type === "diamond" || selectedEl.type === "hexagon" || selectedEl.type === "pentagon" || selectedEl.type === "star" || selectedEl.type === "line") && (
+                <div>
+                  <Label className="text-xs">Cor {selectedEl.colorRole ? "(preview)" : ""}</Label>
                   <div className="flex gap-2">
                     <Input
                       type="color"

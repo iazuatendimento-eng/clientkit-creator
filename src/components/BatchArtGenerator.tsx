@@ -48,6 +48,7 @@ interface CanvasElement {
   fontSize?: number;
   imageUrl?: string;
   placeholder?: boolean;
+  colorRole?: "background" | "text" | "accessory1" | "accessory2";
 }
 
 interface MasterTemplate {
@@ -257,7 +258,14 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     const accessoryColor1 = art.brandKit?.colors?.[2] || "#cccccc";
     const accessoryColor2 = art.brandKit?.colors?.[3] || "#aaaaaa";
     
-    console.log("Colors - BG:", bgColor, "Text:", textColor, "Acc1:", accessoryColor1, "Acc2:", accessoryColor2);
+    // Helper to get color based on colorRole
+    const getElementColor = (el: CanvasElement, defaultColor: string): string => {
+      if (el.colorRole === "background") return bgColor;
+      if (el.colorRole === "text") return textColor;
+      if (el.colorRole === "accessory1") return accessoryColor1;
+      if (el.colorRole === "accessory2") return accessoryColor2;
+      return el.color || defaultColor;
+    };
     
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
@@ -278,8 +286,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        // Accessories use colors 3 or 4
-        ctx.fillStyle = accessoryColor1;
+        ctx.fillStyle = getElementColor(el, accessoryColor1);
         ctx.fillRect(x, y, w, h);
       } else if (el.type === "circle") {
         const ov = art.elementOverrides?.shapes?.[el.id];
@@ -287,7 +294,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = accessoryColor2;
+        ctx.fillStyle = getElementColor(el, accessoryColor2);
         ctx.beginPath();
         ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -297,7 +304,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = accessoryColor1;
+        ctx.fillStyle = getElementColor(el, accessoryColor1);
         ctx.beginPath();
         ctx.moveTo(x + w / 2, y);
         ctx.lineTo(x + w, y + h);
@@ -310,7 +317,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = accessoryColor2;
+        ctx.fillStyle = getElementColor(el, accessoryColor2);
         ctx.beginPath();
         ctx.moveTo(x + w / 2, y);
         ctx.lineTo(x + w, y + h / 2);
@@ -324,7 +331,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = accessoryColor1;
+        ctx.fillStyle = getElementColor(el, accessoryColor1);
         const cx = x + w / 2;
         const cy = y + h / 2;
         const r = Math.min(w, h) / 2;
@@ -344,7 +351,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = accessoryColor2;
+        ctx.fillStyle = getElementColor(el, accessoryColor2);
         const cx = x + w / 2;
         const cy = y + h / 2;
         const r = Math.min(w, h) / 2;
@@ -364,7 +371,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = accessoryColor1;
+        ctx.fillStyle = getElementColor(el, accessoryColor1);
         const cx = x + w / 2;
         const cy = y + h / 2;
         const outerR = Math.min(w, h) / 2;
@@ -386,7 +393,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.strokeStyle = accessoryColor1;
+        ctx.strokeStyle = getElementColor(el, accessoryColor1);
         ctx.lineWidth = h || 4;
         ctx.lineCap = "round";
         ctx.beginPath();
