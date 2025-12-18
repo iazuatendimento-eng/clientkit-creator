@@ -30,6 +30,13 @@ import {
   Play,
   FolderOpen,
   Plus,
+  Triangle,
+  Minus,
+  Star,
+  Diamond,
+  Hexagon,
+  Pentagon,
+  Octagon,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
@@ -37,7 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon";
   x: number;
   y: number;
   width: number;
@@ -47,6 +54,7 @@ interface CanvasElement {
   fontSize?: number;
   imageUrl?: string;
   placeholder?: boolean;
+  rotation?: number;
 }
 
 interface MasterTemplate {
@@ -243,6 +251,12 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
     { id: "move", icon: Move, label: "Mover" },
     { id: "rect", icon: Square, label: "Retângulo" },
     { id: "circle", icon: Circle, label: "Círculo" },
+    { id: "triangle", icon: Triangle, label: "Triângulo" },
+    { id: "diamond", icon: Diamond, label: "Losango" },
+    { id: "hexagon", icon: Hexagon, label: "Hexágono" },
+    { id: "pentagon", icon: Pentagon, label: "Pentágono" },
+    { id: "star", icon: Star, label: "Estrela" },
+    { id: "line", icon: Minus, label: "Linha" },
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
   ];
@@ -288,6 +302,78 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
           Math.PI * 2
         );
         ctx.fill();
+      } else if (el.type === "triangle") {
+        ctx.fillStyle = el.color || "#cccccc";
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width / 2, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height);
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "diamond") {
+        ctx.fillStyle = el.color || "#cccccc";
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width / 2, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+        ctx.lineTo(el.x + el.width / 2, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height / 2);
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "hexagon") {
+        ctx.fillStyle = el.color || "#cccccc";
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const r = Math.min(el.width, el.height) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i - Math.PI / 2;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "pentagon") {
+        ctx.fillStyle = el.color || "#cccccc";
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const r = Math.min(el.width, el.height) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "star") {
+        ctx.fillStyle = el.color || "#cccccc";
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const outerR = Math.min(el.width, el.height) / 2;
+        const innerR = outerR * 0.4;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const angle = (Math.PI / 5) * i - Math.PI / 2;
+          const r = i % 2 === 0 ? outerR : innerR;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "line") {
+        ctx.strokeStyle = el.color || "#cccccc";
+        ctx.lineWidth = el.height || 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height / 2);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+        ctx.stroke();
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#000000";
         ctx.font = `${el.fontSize || 32}px Arial`;
@@ -389,6 +475,60 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         y: y - 50,
         width: 100,
         height: 100,
+        color: "#cccccc",
+      });
+    } else if (selectedTool === "triangle") {
+      addElement({
+        type: "triangle",
+        x: x - 50,
+        y: y - 50,
+        width: 100,
+        height: 100,
+        color: "#cccccc",
+      });
+    } else if (selectedTool === "diamond") {
+      addElement({
+        type: "diamond",
+        x: x - 50,
+        y: y - 50,
+        width: 100,
+        height: 100,
+        color: "#cccccc",
+      });
+    } else if (selectedTool === "hexagon") {
+      addElement({
+        type: "hexagon",
+        x: x - 50,
+        y: y - 50,
+        width: 100,
+        height: 100,
+        color: "#cccccc",
+      });
+    } else if (selectedTool === "pentagon") {
+      addElement({
+        type: "pentagon",
+        x: x - 50,
+        y: y - 50,
+        width: 100,
+        height: 100,
+        color: "#cccccc",
+      });
+    } else if (selectedTool === "star") {
+      addElement({
+        type: "star",
+        x: x - 50,
+        y: y - 50,
+        width: 100,
+        height: 100,
+        color: "#cccccc",
+      });
+    } else if (selectedTool === "line") {
+      addElement({
+        type: "line",
+        x: x - 100,
+        y: y - 4,
+        width: 200,
+        height: 8,
         color: "#cccccc",
       });
     } else if (selectedTool === "text") {

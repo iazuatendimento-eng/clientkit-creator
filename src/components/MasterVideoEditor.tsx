@@ -33,6 +33,13 @@ import {
   FileVideo,
   Film,
   FolderOpen,
+  Triangle,
+  Minus,
+  Star,
+  Diamond,
+  Hexagon,
+  Pentagon,
+  Move,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { searchImages, SearchImage } from "@/lib/imageSearch";
@@ -40,7 +47,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon";
   x: number;
   y: number;
   width: number;
@@ -50,6 +57,7 @@ interface CanvasElement {
   fontSize?: number;
   imageUrl?: string;
   placeholder?: boolean;
+  rotation?: number;
 }
 
 interface VideoTemplate {
@@ -114,9 +122,15 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
   const setElements = currentPage === "content" ? setContentElements : setSignatureElements;
 
   const tools = [
-    { id: "select", icon: Layers, label: "Selecionar" },
+    { id: "select", icon: Move, label: "Mover" },
     { id: "rect", icon: Square, label: "Retângulo" },
     { id: "circle", icon: Circle, label: "Círculo" },
+    { id: "triangle", icon: Triangle, label: "Triângulo" },
+    { id: "diamond", icon: Diamond, label: "Losango" },
+    { id: "hexagon", icon: Hexagon, label: "Hexágono" },
+    { id: "pentagon", icon: Pentagon, label: "Pentágono" },
+    { id: "star", icon: Star, label: "Estrela" },
+    { id: "line", icon: Minus, label: "Linha" },
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
   ];
@@ -302,6 +316,78 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
           Math.PI * 2
         );
         ctx.fill();
+      } else if (el.type === "triangle") {
+        ctx.fillStyle = el.color || currentColor;
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width / 2, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height);
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "diamond") {
+        ctx.fillStyle = el.color || currentColor;
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width / 2, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+        ctx.lineTo(el.x + el.width / 2, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height / 2);
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "hexagon") {
+        ctx.fillStyle = el.color || currentColor;
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const r = Math.min(el.width, el.height) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i - Math.PI / 2;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "pentagon") {
+        ctx.fillStyle = el.color || currentColor;
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const r = Math.min(el.width, el.height) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "star") {
+        ctx.fillStyle = el.color || currentColor;
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const outerR = Math.min(el.width, el.height) / 2;
+        const innerR = outerR * 0.4;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const angle = (Math.PI / 5) * i - Math.PI / 2;
+          const r = i % 2 === 0 ? outerR : innerR;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "line") {
+        ctx.strokeStyle = el.color || currentColor;
+        ctx.lineWidth = el.height || 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height / 2);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+        ctx.stroke();
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#ffffff";
         ctx.font = `${el.fontSize || 48}px Arial`;
@@ -382,13 +468,24 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
   };
 
   const addElement = (type: string, x: number, y: number) => {
+    let width = 200;
+    let height = 200;
+    
+    if (type === "text") {
+      width = 600;
+      height = 80;
+    } else if (type === "line") {
+      width = 300;
+      height = 8;
+    }
+    
     const newElement: CanvasElement = {
       id: `${type}-${Date.now()}`,
       type: type as CanvasElement["type"],
-      x: x - 100,
-      y: y - 100,
-      width: type === "text" ? 600 : 200,
-      height: type === "text" ? 80 : 200,
+      x: x - width / 2,
+      y: y - height / 2,
+      width,
+      height,
       color: type === "text" ? "#ffffff" : currentColor,
       text: type === "text" ? "Texto do Card" : undefined,
       fontSize: type === "text" ? 48 : undefined,
