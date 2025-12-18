@@ -24,6 +24,7 @@ import { searchImages, SearchImage } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
+import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
   Dialog,
   DialogContent,
@@ -783,105 +784,122 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedVideo?.clientName} - Ajustar Elementos</DialogTitle>
+            <DialogTitle>{selectedVideo?.clientName}</DialogTitle>
           </DialogHeader>
 
           {selectedVideo && (
-            <div className="space-y-4">
-              {/* Adjust Overlay - drag corners to resize */}
-              <VideoAdjustOverlay
-                template={{
-                  width: template.width,
-                  height: template.height,
-                  contentElements: template.contentElements,
-                  signatureElements: template.signatureElements,
-                }}
-                previewUrl={selectedVideo.pages[currentPreviewPage] || null}
-                isBusy={false}
-                logoX={selectedVideo.adjustments.logoX}
-                logoY={selectedVideo.adjustments.logoY}
-                logoScaleX={selectedVideo.adjustments.logoScaleX}
-                logoScaleY={selectedVideo.adjustments.logoScaleY}
-                setLogoX={(v) => handleUpdateAdjustment("logoX", v)}
-                setLogoY={(v) => handleUpdateAdjustment("logoY", v)}
-                setLogoScaleX={(v) => handleUpdateAdjustment("logoScaleX", v)}
-                setLogoScaleY={(v) => handleUpdateAdjustment("logoScaleY", v)}
-                contactX={selectedVideo.adjustments.contactX}
-                contactY={selectedVideo.adjustments.contactY}
-                contactScaleX={selectedVideo.adjustments.contactScaleX}
-                contactScaleY={selectedVideo.adjustments.contactScaleY}
-                setContactX={(v) => handleUpdateAdjustment("contactX", v)}
-                setContactY={(v) => handleUpdateAdjustment("contactY", v)}
-                setContactScaleX={(v) => handleUpdateAdjustment("contactScaleX", v)}
-                setContactScaleY={(v) => handleUpdateAdjustment("contactScaleY", v)}
-                mascotX={selectedVideo.adjustments.mascotX}
-                mascotY={selectedVideo.adjustments.mascotY}
-                mascotScaleX={selectedVideo.adjustments.mascotScaleX}
-                mascotScaleY={selectedVideo.adjustments.mascotScaleY}
-                setMascotX={(v) => handleUpdateAdjustment("mascotX", v)}
-                setMascotY={(v) => handleUpdateAdjustment("mascotY", v)}
-                setMascotScaleX={(v) => handleUpdateAdjustment("mascotScaleX", v)}
-                setMascotScaleY={(v) => handleUpdateAdjustment("mascotScaleY", v)}
-              />
-
-              <p className="text-center text-xs text-muted-foreground">
-                Arraste os elementos para mover. Arraste as alças nos cantos para redimensionar.
-              </p>
-
-              {/* Page navigation */}
-              <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
-                {selectedVideo.pages.map((page, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
-                      currentPreviewPage === idx
-                        ? "border-primary ring-2 ring-primary/30"
-                        : "border-border"
-                    }`}
-                    onClick={() => {
-                      setIsPlayingPreview(false);
-                      setCurrentPreviewPage(idx);
+            <Tabs defaultValue="preview" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="preview">Preview com Efeitos</TabsTrigger>
+                <TabsTrigger value="adjust">Ajustar Elementos</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="preview" className="mt-4">
+                <VideoPreviewPlayer
+                  pages={selectedVideo.pages}
+                  pageDuration={template.pageDuration || 3}
+                  onPageChange={setCurrentPreviewPage}
+                />
+              </TabsContent>
+              
+              <TabsContent value="adjust" className="mt-4">
+                <div className="space-y-4">
+                  {/* Adjust Overlay - drag corners to resize */}
+                  <VideoAdjustOverlay
+                    template={{
+                      width: template.width,
+                      height: template.height,
+                      contentElements: template.contentElements,
+                      signatureElements: template.signatureElements,
                     }}
-                    aria-label={`Abrir página ${idx + 1}`}
-                  >
-                    <img
-                      src={page}
-                      alt={`Miniatura da página ${idx + 1}`}
-                      className="h-12 w-8 object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
+                    previewUrl={selectedVideo.pages[currentPreviewPage] || null}
+                    isBusy={false}
+                    logoX={selectedVideo.adjustments.logoX}
+                    logoY={selectedVideo.adjustments.logoY}
+                    logoScaleX={selectedVideo.adjustments.logoScaleX}
+                    logoScaleY={selectedVideo.adjustments.logoScaleY}
+                    setLogoX={(v) => handleUpdateAdjustment("logoX", v)}
+                    setLogoY={(v) => handleUpdateAdjustment("logoY", v)}
+                    setLogoScaleX={(v) => handleUpdateAdjustment("logoScaleX", v)}
+                    setLogoScaleY={(v) => handleUpdateAdjustment("logoScaleY", v)}
+                    contactX={selectedVideo.adjustments.contactX}
+                    contactY={selectedVideo.adjustments.contactY}
+                    contactScaleX={selectedVideo.adjustments.contactScaleX}
+                    contactScaleY={selectedVideo.adjustments.contactScaleY}
+                    setContactX={(v) => handleUpdateAdjustment("contactX", v)}
+                    setContactY={(v) => handleUpdateAdjustment("contactY", v)}
+                    setContactScaleX={(v) => handleUpdateAdjustment("contactScaleX", v)}
+                    setContactScaleY={(v) => handleUpdateAdjustment("contactScaleY", v)}
+                    mascotX={selectedVideo.adjustments.mascotX}
+                    mascotY={selectedVideo.adjustments.mascotY}
+                    mascotScaleX={selectedVideo.adjustments.mascotScaleX}
+                    mascotScaleY={selectedVideo.adjustments.mascotScaleY}
+                    setMascotX={(v) => handleUpdateAdjustment("mascotX", v)}
+                    setMascotY={(v) => handleUpdateAdjustment("mascotY", v)}
+                    setMascotScaleX={(v) => handleUpdateAdjustment("mascotScaleX", v)}
+                    setMascotScaleY={(v) => handleUpdateAdjustment("mascotScaleY", v)}
+                  />
 
-              <p className="text-center text-sm text-muted-foreground">
-                Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
-                {currentPreviewPage === selectedVideo.pages.length - 1 && " (Assinatura)"}
-              </p>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Arraste os elementos para mover. Arraste as alças nos cantos para redimensionar.
+                  </p>
 
-              <div className="flex gap-2 justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    const videoIndex = clientVideos.findIndex(v => v.cardId === selectedVideo.cardId);
-                    if (videoIndex !== -1) {
-                      const updatedVideo = { ...selectedVideo, adjustments: { ...defaultAdjustments } };
-                      const newPages = await regenerateSingleVideo(updatedVideo);
-                      updatedVideo.pages = newPages;
-                      const updatedVideos = [...clientVideos];
-                      updatedVideos[videoIndex] = updatedVideo;
-                      setClientVideos(updatedVideos);
-                      setSelectedVideo(updatedVideo);
-                    }
-                  }}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Resetar
-                </Button>
-              </div>
-            </div>
+                  {/* Page navigation */}
+                  <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
+                    {selectedVideo.pages.map((page, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
+                          currentPreviewPage === idx
+                            ? "border-primary ring-2 ring-primary/30"
+                            : "border-border"
+                        }`}
+                        onClick={() => {
+                          setIsPlayingPreview(false);
+                          setCurrentPreviewPage(idx);
+                        }}
+                        aria-label={`Abrir página ${idx + 1}`}
+                      >
+                        <img
+                          src={page}
+                          alt={`Miniatura da página ${idx + 1}`}
+                          className="h-12 w-8 object-cover"
+                          loading="lazy"
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  <p className="text-center text-sm text-muted-foreground">
+                    Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
+                    {currentPreviewPage === selectedVideo.pages.length - 1 && " (Assinatura)"}
+                  </p>
+
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        const videoIndex = clientVideos.findIndex(v => v.cardId === selectedVideo.cardId);
+                        if (videoIndex !== -1) {
+                          const updatedVideo = { ...selectedVideo, adjustments: { ...defaultAdjustments } };
+                          const newPages = await regenerateSingleVideo(updatedVideo);
+                          updatedVideo.pages = newPages;
+                          const updatedVideos = [...clientVideos];
+                          updatedVideos[videoIndex] = updatedVideo;
+                          setClientVideos(updatedVideos);
+                          setSelectedVideo(updatedVideo);
+                        }
+                      }}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Resetar
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
