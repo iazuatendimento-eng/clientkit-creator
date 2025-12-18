@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot";
 
 interface CanvasElement {
+  id?: string;
   type: ElementType;
   x: number;
   y: number;
@@ -19,20 +20,28 @@ interface MasterTemplateLike {
   elements: CanvasElement[];
 }
 
-type Part = "photo" | "logo" | "text" | "contact";
-type Handle = "nw" | "ne" | "sw" | "se";
+type ShapeOverride = { x: number; y: number; width: number; height: number };
+
+type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
+
+type BasePart = "photo" | "logo" | "text" | "contact";
+
+type ShapePart = `shape:${string}`;
+
+type Part = BasePart | ShapePart;
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
-function handleHasW(h: Handle) {
-  return h === "nw" || h === "sw";
-}
-function handleHasN(h: Handle) {
-  return h === "nw" || h === "ne";
-}
-function handleSignX(h: Handle) {
-  return h === "nw" || h === "sw" ? -1 : 1;
-}
+const handleHasW = (h: Handle) => h === "nw" || h === "sw" || h === "w";
+const handleHasE = (h: Handle) => h === "ne" || h === "se" || h === "e";
+const handleHasN = (h: Handle) => h === "nw" || h === "ne" || h === "n";
+const handleHasS = (h: Handle) => h === "sw" || h === "se" || h === "s";
+
+const handleSignX = (h: Handle) => (handleHasW(h) ? -1 : 1);
+const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
+
+const isShapePart = (p: Part): p is ShapePart => typeof p === "string" && p.startsWith("shape:");
+const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
 
 export function ArtAdjustOverlay({
   template,
@@ -60,6 +69,8 @@ export function ArtAdjustOverlay({
   setContactX,
   setContactY,
   setContactScale,
+  shapeOverrides,
+  setShapeOverrides,
 }: {
   template: MasterTemplateLike;
   previewUrl: string | null;
@@ -90,6 +101,9 @@ export function ArtAdjustOverlay({
   setContactX: (v: number) => void;
   setContactY: (v: number) => void;
   setContactScale: (v: number) => void;
+
+  shapeOverrides?: Record<string, ShapeOverride>;
+  setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part>("photo");
@@ -99,7 +113,10 @@ export function ArtAdjustOverlay({
     const logoEl = template.elements.find((e) => e.type === "logo");
     const contactEl = template.elements.find((e) => e.type === "contact");
     const textEl = template.elements.find((e) => e.type === "text");
-    return { photoFrame, logoEl, contactEl, textEl };
+    const shapes = template.elements
+      .filter((e) => (e.type === "rect" || e.type === "circle") && !!e.id)
+      .map((e) => ({ ...e, id: e.id as string }));
+    return { photoFrame, logoEl, contactEl, textEl, shapes };
   }, [template.elements]);
 
   const getRect = (part: Part) => {
@@ -133,14 +150,30 @@ export function ArtAdjustOverlay({
       };
     }
 
-    // text
-    if (!els.textEl) return null;
-    return {
-      x: els.textEl.x + textX,
-      y: els.textEl.y + textY,
-      w: els.textEl.width,
-      h: Math.max(140, els.textEl.height * 3),
-    };
+    if (part === "text") {
+      if (!els.textEl) return null;
+      return {
+        x: els.textEl.x + textX,
+        y: els.textEl.y + textY,
+        w: els.textEl.width,
+        h: Math.max(140, els.textEl.height * 3),
+      };
+    }
+
+    if (isShapePart(part)) {
+      const id = shapeIdFromPart(part);
+      const base = els.shapes.find((s) => s.id === id);
+      if (!base) return null;
+      const ov = shapeOverrides?.[id];
+      return {
+        x: ov?.x ?? base.x,
+        y: ov?.y ?? base.y,
+        w: ov?.width ?? base.width,
+        h: ov?.height ?? base.height,
+      };
+    }
+
+    return null;
   };
 
   const startRef = useRef<
@@ -166,6 +199,7 @@ export function ArtAdjustOverlay({
           logoW: number;
           contactW: number;
           textW: number;
+          shapeRect?: ShapeOverride;
         };
       }
   >(null);
@@ -180,6 +214,12 @@ export function ArtAdjustOverlay({
     const logoW = els.logoEl ? els.logoEl.width * (logoScale / 100) : 0;
     const contactW = els.contactEl ? els.contactEl.width * (contactScale / 100) : 0;
     const textW = els.textEl ? els.textEl.width * (textFontSize / 100) : 0;
+
+    let shapeRect: ShapeOverride | undefined;
+    if (isShapePart(part)) {
+      const r = getRect(part);
+      if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    }
 
     setActive(part);
     startRef.current = {
@@ -203,6 +243,7 @@ export function ArtAdjustOverlay({
         logoW,
         contactW,
         textW,
+        shapeRect,
       },
     };
 
@@ -232,13 +273,17 @@ export function ArtAdjustOverlay({
 
         const baseW = els.logoEl?.width || 1;
         const handle = s.handle || "se";
-        const signedDx = handleSignX(handle) * dx;
-        const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 2);
+
+        const signedDx = handleHasW(handle) || handleHasE(handle) ? handleSignX(handle) * dx : 0;
+        const signedDy = handleHasN(handle) || handleHasS(handle) ? handleSignY(handle) * dy : 0;
+        const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+
+        const newW = clamp(s.start.logoW + signedDelta, baseW * 0.25, baseW * 2);
         const newScale = clamp((newW / baseW) * 100, 25, 200);
         setLogoScale(newScale);
 
-        if (handleHasW(handle)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
-        if (handleHasN(handle)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
+        if (handleHasW(handle) || handle === "w") setLogoX(clamp(s.start.logoX + dx, -200, 200));
+        if (handleHasN(handle) || handle === "n") setLogoY(clamp(s.start.logoY + dy, -200, 200));
         return;
       }
 
@@ -251,32 +296,91 @@ export function ArtAdjustOverlay({
 
         const baseW = els.contactEl?.width || 1;
         const handle = s.handle || "se";
-        const signedDx = handleSignX(handle) * dx;
-        const newW = clamp(s.start.contactW + signedDx, baseW * 0.25, baseW * 2);
+
+        const signedDx = handleHasW(handle) || handleHasE(handle) ? handleSignX(handle) * dx : 0;
+        const signedDy = handleHasN(handle) || handleHasS(handle) ? handleSignY(handle) * dy : 0;
+        const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+
+        const newW = clamp(s.start.contactW + signedDelta, baseW * 0.25, baseW * 2);
         const newScale = clamp((newW / baseW) * 100, 25, 200);
         setContactScale(newScale);
 
-        if (handleHasW(handle)) setContactX(clamp(s.start.contactX + dx, -200, 200));
-        if (handleHasN(handle)) setContactY(clamp(s.start.contactY + dy, -200, 200));
+        if (handleHasW(handle) || handle === "w") setContactX(clamp(s.start.contactX + dx, -200, 200));
+        if (handleHasN(handle) || handle === "n") setContactY(clamp(s.start.contactY + dy, -200, 200));
         return;
       }
 
-      // text
-      if (s.mode === "move") {
-        setTextX(clamp(s.start.textX + dx, -200, 200));
-        setTextY(clamp(s.start.textY + dy, -200, 200));
+      if (s.part === "text") {
+        if (s.mode === "move") {
+          setTextX(clamp(s.start.textX + dx, -200, 200));
+          setTextY(clamp(s.start.textY + dy, -200, 200));
+          return;
+        }
+
+        const baseW = els.textEl?.width || 1;
+        const handle = s.handle || "se";
+
+        const signedDx = handleHasW(handle) || handleHasE(handle) ? handleSignX(handle) * dx : 0;
+        const signedDy = handleHasN(handle) || handleHasS(handle) ? handleSignY(handle) * dy : 0;
+        const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+
+        const newW = clamp(s.start.textW + signedDelta, baseW * 0.5, baseW * 2);
+        const newScale = clamp((newW / baseW) * 100, 50, 200);
+        setTextFontSize(newScale);
+
+        if (handleHasW(handle) || handle === "w") setTextX(clamp(s.start.textX + dx, -200, 200));
+        if (handleHasN(handle) || handle === "n") setTextY(clamp(s.start.textY + dy, -200, 200));
         return;
       }
 
-      const baseW = els.textEl?.width || 1;
-      const handle = s.handle || "se";
-      const signedDx = handleSignX(handle) * dx;
-      const newW = clamp(s.start.textW + signedDx, baseW * 0.5, baseW * 2);
-      const newScale = clamp((newW / baseW) * 100, 50, 200);
-      setTextFontSize(newScale);
+      if (isShapePart(s.part)) {
+        const id = shapeIdFromPart(s.part);
+        const base = els.shapes.find((sh) => sh.id === id);
+        if (!base || !setShapeOverrides) return;
 
-      if (handleHasW(handle)) setTextX(clamp(s.start.textX + dx, -200, 200));
-      if (handleHasN(handle)) setTextY(clamp(s.start.textY + dy, -200, 200));
+        const startRect = s.start.shapeRect;
+        if (!startRect) return;
+
+        const minSize = 20;
+
+        if (s.mode === "move") {
+          const next: ShapeOverride = {
+            x: startRect.x + dx,
+            y: startRect.y + dy,
+            width: startRect.width,
+            height: startRect.height,
+          };
+          setShapeOverrides({ ...(shapeOverrides || {}), [id]: next });
+          return;
+        }
+
+        const h = s.handle || "se";
+
+        let newX = startRect.x;
+        let newY = startRect.y;
+        let newW = startRect.width;
+        let newH = startRect.height;
+
+        if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+        if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+        if (handleHasW(h)) {
+          newW = Math.max(minSize, startRect.width - dx);
+          newX = startRect.x + (startRect.width - newW);
+        }
+        if (handleHasN(h)) {
+          newH = Math.max(minSize, startRect.height - dy);
+          newY = startRect.y + (startRect.height - newH);
+        }
+
+        // Clamp to canvas bounds (soft)
+        newX = clamp(newX, 0, template.width - minSize);
+        newY = clamp(newY, 0, template.height - minSize);
+        newW = clamp(newW, minSize, template.width);
+        newH = clamp(newH, minSize, template.height);
+
+        setShapeOverrides({ ...(shapeOverrides || {}), [id]: { x: newX, y: newY, width: newW, height: newH } });
+        return;
+      }
     };
 
     const onUp = () => {
@@ -289,7 +393,15 @@ export function ArtAdjustOverlay({
     window.addEventListener("pointerup", onUp);
   };
 
-  const Box = ({ part, label, resizable }: { part: Part; label: string; resizable?: boolean }) => {
+  const Box = ({
+    part,
+    label,
+    resizable,
+  }: {
+    part: Part;
+    label: string;
+    resizable?: boolean;
+  }) => {
     const rect = getRect(part);
     if (!rect) return null;
 
@@ -308,7 +420,24 @@ export function ArtAdjustOverlay({
             ? "-right-1.5 -top-1.5"
             : h === "sw"
               ? "-left-1.5 -bottom-1.5"
-              : "-right-1.5 -bottom-1.5";
+              : h === "se"
+                ? "-right-1.5 -bottom-1.5"
+                : h === "n"
+                  ? "left-1/2 -top-1.5 -translate-x-1/2"
+                  : h === "s"
+                    ? "left-1/2 -bottom-1.5 -translate-x-1/2"
+                    : h === "w"
+                      ? "-left-1.5 top-1/2 -translate-y-1/2"
+                      : "-right-1.5 top-1/2 -translate-y-1/2";
+
+      const cursor =
+        h === "n" || h === "s"
+          ? "cursor-ns-resize"
+          : h === "e" || h === "w"
+            ? "cursor-ew-resize"
+            : h === "nw" || h === "se"
+              ? "cursor-nwse-resize"
+              : "cursor-nesw-resize";
 
       return (
         <button
@@ -316,7 +445,8 @@ export function ArtAdjustOverlay({
           aria-label={`Redimensionar ${label}`}
           className={cn(
             "absolute z-20 h-3.5 w-3.5 rounded-sm border-2 border-background bg-primary",
-            pos
+            pos,
+            cursor
           )}
           onPointerDown={(e) => begin(e, part, "resize", h)}
         />
@@ -342,6 +472,10 @@ export function ArtAdjustOverlay({
             <HandleDot h="ne" />
             <HandleDot h="sw" />
             <HandleDot h="se" />
+            <HandleDot h="n" />
+            <HandleDot h="s" />
+            <HandleDot h="w" />
+            <HandleDot h="e" />
           </>
         )}
       </div>
@@ -357,7 +491,10 @@ export function ArtAdjustOverlay({
         <img
           src={previewUrl}
           alt="Prévia da arte gerada"
-          className={cn("absolute inset-0 h-full w-full object-cover", isBusy ? "opacity-80" : "opacity-100")}
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover",
+            isBusy ? "opacity-80" : "opacity-100"
+          )}
           draggable={false}
         />
       ) : (
@@ -371,6 +508,14 @@ export function ArtAdjustOverlay({
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
         <Box part="contact" label="Contato" resizable />
+        {els.shapes.map((s, idx) => (
+          <Box
+            key={s.id}
+            part={`shape:${s.id}`}
+            label={s.type === "circle" ? `Círculo ${idx + 1}` : `Retângulo ${idx + 1}`}
+            resizable
+          />
+        ))}
       </div>
 
       {isBusy && (

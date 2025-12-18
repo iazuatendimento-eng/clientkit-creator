@@ -56,6 +56,9 @@ interface MasterTemplate {
   backgroundColor: string;
 }
 
+type ShapeOverride = { x: number; y: number; width: number; height: number };
+
+after
 interface ElementOverrides {
   logoX?: number;
   logoY?: number;
@@ -66,6 +69,7 @@ interface ElementOverrides {
   contactX?: number;
   contactY?: number;
   contactScale?: number;
+  shapes?: Record<string, ShapeOverride>;
 }
 
 interface ClientArt {
@@ -136,6 +140,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [contactX, setContactX] = useState(0);
   const [contactY, setContactY] = useState(0);
   const [contactScale, setContactScale] = useState(100);
+  const [shapeOverrides, setShapeOverrides] = useState<Record<string, ShapeOverride>>({});
   const [livePreviewUrl, setLivePreviewUrl] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -252,22 +257,24 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     // Draw elements
     for (const el of template.elements) {
       if (el.type === "rect") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
         // Accessories use colors 3 or 4
         ctx.fillStyle = accessoryColor1;
-        ctx.fillRect(el.x, el.y, el.width, el.height);
+        ctx.fillRect(x, y, w, h);
       } else if (el.type === "circle") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
         // Accessories use colors 3 or 4
         ctx.fillStyle = accessoryColor2;
         ctx.beginPath();
-        ctx.ellipse(
-          el.x + el.width / 2,
-          el.y + el.height / 2,
-          el.width / 2,
-          el.height / 2,
-          0,
-          0,
-          Math.PI * 2
-        );
+        ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
         ctx.fill();
       } else if (el.type === "text") {
         // Text uses color 2 and client's font
@@ -577,6 +584,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     setContactX(art.elementOverrides?.contactX || 0);
     setContactY(art.elementOverrides?.contactY || 0);
     setContactScale(art.elementOverrides?.contactScale || 100);
+    setShapeOverrides(art.elementOverrides?.shapes || {});
     setIsAdjustDialogOpen(true);
   };
 
@@ -595,6 +603,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       contactX: number;
       contactY: number;
       contactScale: number;
+      shapeOverrides: Record<string, ShapeOverride>;
     }
   ) => {
     const tempArt: ClientArt = {
@@ -610,6 +619,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         contactX: overrides.contactX,
         contactY: overrides.contactY,
         contactScale: overrides.contactScale,
+        shapes: overrides.shapeOverrides,
       }
     };
     
@@ -647,6 +657,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         contactX,
         contactY,
         contactScale,
+        shapeOverrides,
       });
     }, 400);
     
@@ -655,7 +666,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, textX, textY, textFontSize, contactX, contactY, contactScale, regenerateLivePreview]);
+  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, textX, textY, textFontSize, contactX, contactY, contactScale, shapeOverrides, regenerateLivePreview]);
 
   const handleApplyElementOverrides = async () => {
     if (!selectedArt) return;
@@ -680,6 +691,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         contactX,
         contactY,
         contactScale,
+        shapes: shapeOverrides,
       }
     };
     setClientArts(updatedArts);
@@ -1101,7 +1113,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
           <div className="py-4 space-y-3">
             <Label className="text-sm font-medium">
-              Arraste para mover • Puxe nos cantos para redimensionar
+              Arraste para mover • Puxe nos cantos e nas laterais para redimensionar
             </Label>
 
             <ArtAdjustOverlay
@@ -1130,6 +1142,8 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               setContactX={setContactX}
               setContactY={setContactY}
               setContactScale={setContactScale}
+              shapeOverrides={shapeOverrides}
+              setShapeOverrides={setShapeOverrides}
             />
 
             <p className="text-xs text-muted-foreground text-center">
