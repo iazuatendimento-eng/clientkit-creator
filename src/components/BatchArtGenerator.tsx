@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
+
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
@@ -30,6 +30,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
+
 
 interface CanvasElement {
   id: string;
@@ -622,7 +624,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     }
   }, [template]);
 
-  // Auto-trigger live preview when any slider value changes while dialog is open
+  // Auto-trigger live preview when any adjustment value changes while dialog is open
   useEffect(() => {
     if (!isAdjustDialogOpen || !selectedArt) return;
     
