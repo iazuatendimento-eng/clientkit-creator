@@ -2,12 +2,17 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
+export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
+export type TransitionEffect = "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "zoom-out";
+
 export interface VideoEncoderOptions {
   width: number;
   height: number;
   pageDuration: number; // seconds per page
   transitionDuration?: number; // seconds for transition
   fps?: number;
+  motionEffect?: MotionEffect;
+  transitionEffect?: TransitionEffect;
   onProgress?: (progress: number) => void;
 }
 
@@ -137,6 +142,143 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   return mp4Blob;
 }
 
+// Calculate motion transform based on effect and progress (0-1)
+function getMotionTransform(effect: MotionEffect, progress: number): { scale: number; translateX: number; translateY: number; rotate: number } {
+  const t = progress; // 0 to 1 within the page duration
+  const cycle = Math.sin(t * Math.PI * 2); // Full cycle
+  const halfCycle = Math.sin(t * Math.PI); // Half cycle (0 to 1 to 0)
+  
+  switch (effect) {
+    case "ken-burns": {
+      // Gradual zoom in and pan
+      const scale = 1 + t * 0.08;
+      const tx = Math.sin(t * Math.PI) * 1;
+      const ty = Math.sin(t * Math.PI * 0.5) * 1;
+      return { scale, translateX: tx, translateY: ty, rotate: 0 };
+    }
+    case "ken-burns-reverse": {
+      const scale = 1.08 - t * 0.08;
+      const tx = Math.sin(t * Math.PI) * -1;
+      const ty = Math.sin(t * Math.PI * 0.5) * -1;
+      return { scale, translateX: tx, translateY: ty, rotate: 0 };
+    }
+    case "pulse": {
+      const scale = 1 + halfCycle * 0.02;
+      return { scale, translateX: 0, translateY: 0, rotate: 0 };
+    }
+    case "pulse-strong": {
+      const scale = 1 + halfCycle * 0.08;
+      return { scale, translateX: 0, translateY: 0, rotate: 0 };
+    }
+    case "float": {
+      const ty = Math.sin(t * Math.PI * 2) * -0.5;
+      return { scale: 1, translateX: 0, translateY: ty, rotate: 0 };
+    }
+    case "float-diagonal": {
+      const tx = Math.sin(t * Math.PI * 2) * 0.3;
+      const ty = Math.cos(t * Math.PI * 2) * -0.5;
+      return { scale: 1, translateX: tx, translateY: ty, rotate: 0 };
+    }
+    case "shake": {
+      const tx = Math.sin(t * Math.PI * 8) * 0.2;
+      return { scale: 1, translateX: tx, translateY: 0, rotate: 0 };
+    }
+    case "shake-strong": {
+      const tx = Math.sin(t * Math.PI * 12) * 0.5;
+      return { scale: 1, translateX: tx, translateY: 0, rotate: 0 };
+    }
+    case "sway": {
+      const rotate = Math.sin(t * Math.PI * 2) * 2;
+      return { scale: 1, translateX: 0, translateY: 0, rotate };
+    }
+    case "breathe": {
+      const scale = 1 + halfCycle * 0.03;
+      return { scale, translateX: 0, translateY: 0, rotate: 0 };
+    }
+    case "drift": {
+      const tx = Math.sin(t * Math.PI * 2) * 0.3;
+      const ty = Math.sin(t * Math.PI) * -0.3;
+      const rotate = Math.sin(t * Math.PI * 2) * 0.5;
+      return { scale: 1, translateX: tx, translateY: ty, rotate };
+    }
+    case "wobble": {
+      const scale = 1 + Math.sin(t * Math.PI * 4) * 0.02;
+      const rotate = Math.sin(t * Math.PI * 3) * 2;
+      return { scale, translateX: 0, translateY: 0, rotate };
+    }
+    case "zoom-pulse": {
+      const scale = 1 + halfCycle * 0.05;
+      return { scale, translateX: 0, translateY: 0, rotate: 0 };
+    }
+    case "pan-left": {
+      const tx = (1 - t) * 3 - 1.5; // From right to left
+      return { scale: 1.05, translateX: tx, translateY: 0, rotate: 0 };
+    }
+    case "pan-right": {
+      const tx = t * 3 - 1.5; // From left to right
+      return { scale: 1.05, translateX: tx, translateY: 0, rotate: 0 };
+    }
+    default:
+      return { scale: 1, translateX: 0, translateY: 0, rotate: 0 };
+  }
+}
+
+// Apply transition effect
+function applyTransition(
+  ctx: CanvasRenderingContext2D,
+  currentImg: HTMLImageElement,
+  nextImg: HTMLImageElement,
+  progress: number,
+  effect: TransitionEffect,
+  width: number,
+  height: number
+): void {
+  switch (effect) {
+    case "slide-left":
+      ctx.drawImage(currentImg, -progress * width, 0, width, height);
+      ctx.drawImage(nextImg, (1 - progress) * width, 0, width, height);
+      break;
+    case "slide-right":
+      ctx.drawImage(currentImg, progress * width, 0, width, height);
+      ctx.drawImage(nextImg, -(1 - progress) * width, 0, width, height);
+      break;
+    case "slide-up":
+      ctx.drawImage(currentImg, 0, -progress * height, width, height);
+      ctx.drawImage(nextImg, 0, (1 - progress) * height, width, height);
+      break;
+    case "slide-down":
+      ctx.drawImage(currentImg, 0, progress * height, width, height);
+      ctx.drawImage(nextImg, 0, -(1 - progress) * height, width, height);
+      break;
+    case "zoom": {
+      const scale = 1 - progress * 0.5;
+      ctx.globalAlpha = 1 - progress;
+      ctx.drawImage(currentImg, (1 - scale) * width / 2, (1 - scale) * height / 2, width * scale, height * scale);
+      ctx.globalAlpha = progress;
+      ctx.drawImage(nextImg, 0, 0, width, height);
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case "zoom-out": {
+      const scale = 1 + progress * 0.5;
+      ctx.globalAlpha = 1 - progress;
+      ctx.drawImage(currentImg, (1 - scale) * width / 2, (1 - scale) * height / 2, width * scale, height * scale);
+      ctx.globalAlpha = progress;
+      ctx.drawImage(nextImg, 0, 0, width, height);
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case "fade":
+    default:
+      ctx.globalAlpha = 1 - progress;
+      ctx.drawImage(currentImg, 0, 0, width, height);
+      ctx.globalAlpha = progress;
+      ctx.drawImage(nextImg, 0, 0, width, height);
+      ctx.globalAlpha = 1;
+      break;
+  }
+}
+
 export async function encodeVideoSimple(pages: string[], options: VideoEncoderOptions): Promise<Blob>;
 export async function encodeVideoSimple(
   pages: string[],
@@ -150,7 +292,15 @@ export async function encodeVideoSimple(
   options: VideoEncoderOptions,
   extra?: { mimeType?: string; outputType?: string }
 ): Promise<Blob> {
-  const { width, height, pageDuration, fps = 24, onProgress } = options;
+  const { 
+    width, 
+    height, 
+    pageDuration, 
+    fps = 24, 
+    motionEffect = "ken-burns",
+    transitionEffect = "fade",
+    onProgress 
+  } = options;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -214,19 +364,28 @@ export async function encodeVideoSimple(
 
       const frameInPage = frameCount % framesPerPage;
       const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
+      const pageProgress = frameInPage / framesPerPage; // 0 to 1
 
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, width, height);
 
       if (isTransitionPhase && nextImg) {
-        const progress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
-        ctx.globalAlpha = 1 - progress;
-        ctx.drawImage(img, 0, 0, width, height);
-        ctx.globalAlpha = progress;
-        ctx.drawImage(nextImg, 0, 0, width, height);
-        ctx.globalAlpha = 1;
+        const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
+        applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
       } else {
+        // Apply motion effect
+        const motion = getMotionTransform(motionEffect, pageProgress);
+        
+        ctx.save();
+        ctx.translate(width / 2, height / 2);
+        ctx.rotate((motion.rotate * Math.PI) / 180);
+        ctx.scale(motion.scale, motion.scale);
+        ctx.translate(
+          -width / 2 + (motion.translateX * width) / 100,
+          -height / 2 + (motion.translateY * height) / 100
+        );
         ctx.drawImage(img, 0, 0, width, height);
+        ctx.restore();
       }
 
       frameCount++;

@@ -24,7 +24,7 @@ import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTag
 import { searchImages, SearchImage } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
-import { encodeVideoToMP4 } from "@/lib/videoEncoder";
+import { encodeVideoToMP4, MotionEffect, TransitionEffect } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
@@ -215,6 +215,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
   const [isSearching, setIsSearching] = useState(false);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
+  const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
+  const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -979,6 +981,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           height: template.height,
           pageDuration: template.pageDuration,
           fps: 24,
+          motionEffect,
+          transitionEffect,
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
 
@@ -1125,6 +1129,52 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
             Salvar Aprovados ({approvedCount})
           </Button>
         </div>
+      </div>
+
+      {/* Effect Controls */}
+      <div className="border-b bg-card/50 px-6 py-3 flex items-center gap-6 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm whitespace-nowrap">Movimento:</Label>
+          <select
+            value={motionEffect}
+            onChange={(e) => setMotionEffect(e.target.value as MotionEffect)}
+            className="h-8 px-2 text-sm border rounded-md bg-background"
+          >
+            <option value="none">Nenhum</option>
+            <option value="ken-burns">Ken Burns</option>
+            <option value="ken-burns-reverse">Ken Burns Reverso</option>
+            <option value="pulse">Pulsar Suave</option>
+            <option value="pulse-strong">Pulsar Forte</option>
+            <option value="float">Flutuar</option>
+            <option value="float-diagonal">Flutuar Diagonal</option>
+            <option value="sway">Balançar</option>
+            <option value="breathe">Respirar</option>
+            <option value="drift">Deriva</option>
+            <option value="wobble">Bambolear</option>
+            <option value="zoom-pulse">Zoom Pulsar</option>
+            <option value="pan-left">Pan Esquerda</option>
+            <option value="pan-right">Pan Direita</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-sm whitespace-nowrap">Transição:</Label>
+          <select
+            value={transitionEffect}
+            onChange={(e) => setTransitionEffect(e.target.value as TransitionEffect)}
+            className="h-8 px-2 text-sm border rounded-md bg-background"
+          >
+            <option value="fade">Fade</option>
+            <option value="slide-left">Deslizar Esquerda</option>
+            <option value="slide-right">Deslizar Direita</option>
+            <option value="slide-up">Deslizar Cima</option>
+            <option value="slide-down">Deslizar Baixo</option>
+            <option value="zoom">Zoom In</option>
+            <option value="zoom-out">Zoom Out</option>
+          </select>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          Estes efeitos serão aplicados no vídeo final MP4
+        </span>
       </div>
 
       {/* Content */}
