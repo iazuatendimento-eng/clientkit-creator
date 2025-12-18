@@ -239,6 +239,66 @@ export async function deleteCardUpload(id: string) {
   if (error) throw error;
 }
 
+// Art Generation Selection functions
+export async function tagFirstCardsForArtGeneration(clientIds: string[]) {
+  // First, clear all existing tags
+  await supabase
+    .from("project_briefs")
+    .update({ art_generation_selected: false })
+    .eq("art_generation_selected", true);
+
+  // Get all todo briefs for these clients (ordered by creation date ascending to get the first/oldest)
+  const { data: briefs, error: fetchError } = await supabase
+    .from("project_briefs")
+    .select("*")
+    .in("client_id", clientIds)
+    .eq("status", "todo")
+    .order("created_at", { ascending: true });
+
+  if (fetchError) throw fetchError;
+  if (!briefs || briefs.length === 0) return [];
+
+  // Group by client and get first (oldest/top) brief per client
+  const firstBriefPerClient = new Map();
+  briefs.forEach(brief => {
+    if (!firstBriefPerClient.has(brief.client_id)) {
+      firstBriefPerClient.set(brief.client_id, brief.id);
+    }
+  });
+
+  const briefIdsToTag = Array.from(firstBriefPerClient.values());
+
+  // Tag first brief of each client
+  const { data, error } = await supabase
+    .from("project_briefs")
+    .update({ art_generation_selected: true })
+    .in("id", briefIdsToTag)
+    .select();
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getTaggedCardsForArtGeneration() {
+  const { data, error } = await supabase
+    .from("project_briefs")
+    .select("*, client:client_data(*)")
+    .eq("art_generation_selected", true)
+    .eq("status", "todo");
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function clearArtGenerationTags() {
+  const { error } = await supabase
+    .from("project_briefs")
+    .update({ art_generation_selected: false })
+    .eq("art_generation_selected", true);
+
+  if (error) throw error;
+}
+
 // Generate slug from name
 export function generateSlug(name: string): string {
   return name

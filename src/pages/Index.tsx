@@ -31,7 +31,8 @@ import {
   generateSlug,
   bulkUpdateBriefStatus,
   bulkUpdateBriefDeadline,
-  getProjectBriefsByClient
+  getProjectBriefsByClient,
+  tagFirstCardsForArtGeneration
 } from "@/lib/clientDatabase";
 
 interface Client {
@@ -302,6 +303,51 @@ const Index = () => {
     }
   };
 
+  const handleTagAndCreateArts = async (selectedTeam?: string) => {
+    try {
+      const activeClients = clients.filter(c => c.active);
+      const filteredClients = selectedTeam 
+        ? activeClients.filter(c => c.team === selectedTeam)
+        : activeClients;
+      
+      const clientIds = filteredClients.map(c => c.id);
+      
+      if (clientIds.length === 0) {
+        toast({
+          title: "Nenhum cliente encontrado",
+          description: "Não há clientes ativos nesta equipe.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const taggedCards = await tagFirstCardsForArtGeneration(clientIds);
+      
+      if (taggedCards.length === 0) {
+        toast({
+          title: "Nenhum card encontrado",
+          description: "Não há cards 'A Fazer' para marcar.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      toast({
+        title: "Cards marcados!",
+        description: `${taggedCards.length} cards marcados para geração de arte.`,
+      });
+      
+      navigate("/master-art");
+    } catch (error) {
+      console.error("Error tagging cards:", error);
+      toast({
+        title: "Erro ao marcar cards",
+        description: "Não foi possível marcar os cards.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleExportToExcel = async (selectedTeam?: string) => {
     try {
       const excelData: any[] = [];
@@ -440,10 +486,30 @@ const Index = () => {
         <div className="container mx-auto flex justify-between items-center">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex gap-2">
-            <Button onClick={() => navigate("/master-art")} className="bg-gradient-primary">
-              <Palette className="mr-2 h-4 w-4" />
-              Criar Artes
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-gradient-primary">
+                  <Palette className="mr-2 h-4 w-4" />
+                  Criar Artes
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Marcar 1º Card e Criar</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleTagAndCreateArts()}>
+                  Todas as Equipes
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTagAndCreateArts("1")}>
+                  SEG, QUA E SEX
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTagAndCreateArts("2")}>
+                  TER, QUI E SÁB
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTagAndCreateArts("3")}>
+                  SEG A SEX
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">

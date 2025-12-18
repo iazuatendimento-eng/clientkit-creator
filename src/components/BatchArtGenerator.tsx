@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { getAllClients, getProjectBriefsByClient, createCardUpload } from "@/lib/clientDatabase";
+import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags } from "@/lib/clientDatabase";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -79,55 +79,38 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const { toast } = useToast();
 
   useEffect(() => {
-    loadClientsWithTodayCards();
+    loadTaggedCards();
   }, []);
 
-  const loadClientsWithTodayCards = async () => {
+  const loadTaggedCards = async () => {
     try {
       setIsLoading(true);
-      const allClients = await getAllClients();
-      const today = new Date().toISOString().split("T")[0];
+      const taggedCards = await getTaggedCardsForArtGeneration();
 
-      const arts: ClientArt[] = [];
-
-      for (const client of allClients) {
-        if (!client.active) continue;
-
-        const briefs = await getProjectBriefsByClient(client.id);
-        const todayCard = briefs.find(
-          (b: any) =>
-            b.status === "todo" &&
-            b.deadline &&
-            b.deadline.split("T")[0] === today
-        );
-
-        if (todayCard) {
-          arts.push({
-            clientId: client.id,
-            clientName: client.name,
-            company: client.company || client.name,
-            cardId: todayCard.id,
-            cardTitle: todayCard.title,
-            cardText: todayCard.description || todayCard.title,
-            brandKit: client.brand_kit,
-            imageUrl: null,
-            status: "pending",
-          });
-        }
-      }
+      const arts: ClientArt[] = taggedCards.map((card: any) => ({
+        clientId: card.client?.id || card.client_id,
+        clientName: card.client?.name || "Cliente",
+        company: card.client?.company || card.client?.name || "Cliente",
+        cardId: card.id,
+        cardTitle: card.title,
+        cardText: card.description || card.title,
+        brandKit: card.client?.brand_kit,
+        imageUrl: null,
+        status: "pending",
+      }));
 
       setClientArts(arts);
 
       if (arts.length === 0) {
         toast({
-          title: "Nenhum card encontrado",
-          description: "Não há cards com prazo para hoje.",
+          title: "Nenhum card marcado",
+          description: "Marque os cards pelo botão 'Criar Artes' no dashboard.",
         });
       }
     } catch (error) {
-      console.error("Error loading clients:", error);
+      console.error("Error loading tagged cards:", error);
       toast({
-        title: "Erro ao carregar clientes",
+        title: "Erro ao carregar cards",
         variant: "destructive",
       });
     } finally {
@@ -374,6 +357,9 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         });
       }
 
+      // Clear the art generation tags
+      await clearArtGenerationTags();
+
       toast({
         title: "Artes salvas!",
         description: `${approvedArts.length} artes foram anexadas aos cards.`,
@@ -411,7 +397,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           <div>
             <h1 className="font-semibold">Geração em Lote</h1>
             <p className="text-sm text-muted-foreground">
-              {clientArts.length} clientes com cards para hoje
+              {clientArts.length} cards marcados para geração
             </p>
           </div>
         </div>
