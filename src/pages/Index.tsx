@@ -448,26 +448,26 @@ const Index = () => {
 
       {/* Header */}
       <div className="border-b bg-background/80 backdrop-blur-sm px-6 py-4">
-        <div className="container mx-auto flex justify-between items-center">
+        <div className="container mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
-          <div className="flex gap-2">
-            <Button className="bg-gradient-primary" onClick={() => navigate("/master-art")}>
-              <Palette className="mr-2 h-4 w-4" />
-              Criar Artes
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" className="bg-gradient-primary" onClick={() => navigate("/master-art")}>
+              <Palette className="mr-1 h-4 w-4" />
+              Artes
             </Button>
-            <Button className="bg-gradient-primary" onClick={() => navigate("/master-video")}>
-              <Film className="mr-2 h-4 w-4" />
-              Criar Vídeos
+            <Button size="sm" className="bg-gradient-primary" onClick={() => navigate("/master-video")}>
+              <Film className="mr-1 h-4 w-4" />
+              Vídeos
             </Button>
-            <Button variant="outline" onClick={() => navigate("/receivables")}>
-              <FileDown className="mr-2 h-4 w-4" />
+            <Button size="sm" variant="outline" onClick={() => navigate("/receivables")}>
+              <FileDown className="mr-1 h-4 w-4" />
               Recebimentos
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Mover para Concluídos
+                <Button size="sm" variant="outline">
+                  <CheckCircle2 className="mr-1 h-4 w-4" />
+                  Concluir
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -490,9 +490,9 @@ const Index = () => {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Exportar Cards
+                <Button size="sm" variant="outline">
+                  <FileDown className="mr-1 h-4 w-4" />
+                  Exportar
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -513,9 +513,9 @@ const Index = () => {
             
             <Dialog open={isDeadlineDialogOpen} onOpenChange={setIsDeadlineDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Definir Prazo
+                <Button size="sm" variant="outline">
+                  <Calendar className="mr-1 h-4 w-4" />
+                  Prazo
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
@@ -552,16 +552,17 @@ const Index = () => {
             </Dialog>
             
             <Button
+              size="sm"
               variant="outline"
               onClick={async () => {
                 await signOut();
                 navigate("/auth");
               }}
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
+              <LogOut className="h-4 w-4" />
             </Button>
             <Button
+              size="sm"
               variant="gradient"
               onClick={() => {
                 setEditingClient(null);
@@ -569,8 +570,8 @@ const Index = () => {
               }}
               className="glow-effect"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Cliente
+              <Plus className="mr-1 h-4 w-4" />
+              Novo
             </Button>
           </div>
         </div>
