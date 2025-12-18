@@ -629,9 +629,13 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
             upload_type: "final",
           });
 
-          // Use first page as cover image
+          // Use first page as cover image and set as video
           if (i === 0) {
-            await updateProjectBrief(video.cardId, { cover_image: urlData.publicUrl });
+            await updateProjectBrief(video.cardId, { 
+              cover_image: urlData.publicUrl,
+              cover_video: urlData.publicUrl,
+              brief_type: 'video'
+            });
           }
         }
       }
