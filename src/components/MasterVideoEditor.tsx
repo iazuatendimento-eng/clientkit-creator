@@ -60,6 +60,22 @@ interface CanvasElement {
   placeholder?: boolean;
   rotation?: number;
   colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  opacity?: number; // 0-100
+  borderRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  shadowBlur?: number;
+  shadowColor?: string;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  gradient?: {
+    type: "linear" | "radial";
+    color1: string;
+    color2: string;
+    opacity1?: number; // 0-100
+    opacity2?: number; // 0-100
+    angle?: number;
+  };
 }
 
 interface VideoTemplate {
@@ -309,13 +325,78 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       100
     );
 
+    // Helper to apply common styles
+    const applyStyles = (el: CanvasElement) => {
+      // Opacity
+      ctx.globalAlpha = (el.opacity ?? 100) / 100;
+
+      // Shadow
+      if (el.shadowBlur && el.shadowBlur > 0) {
+        ctx.shadowBlur = el.shadowBlur;
+        ctx.shadowColor = el.shadowColor || "rgba(0,0,0,0.5)";
+        ctx.shadowOffsetX = el.shadowOffsetX || 0;
+        ctx.shadowOffsetY = el.shadowOffsetY || 0;
+      }
+
+      // Get fill style (gradient or solid)
+      if (el.gradient) {
+        let gradient;
+        if (el.gradient.type === "linear") {
+          const angle = (el.gradient.angle || 0) * Math.PI / 180;
+          const dx = Math.cos(angle) * el.width;
+          const dy = Math.sin(angle) * el.height;
+          gradient = ctx.createLinearGradient(el.x, el.y, el.x + dx, el.y + dy);
+        } else {
+          gradient = ctx.createRadialGradient(
+            el.x + el.width / 2, el.y + el.height / 2, 0,
+            el.x + el.width / 2, el.y + el.height / 2, Math.max(el.width, el.height) / 2
+          );
+        }
+        // Convert hex to rgba with opacity
+        const hexToRgba = (hex: string, opacity: number) => {
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
+        };
+        gradient.addColorStop(0, hexToRgba(el.gradient.color1, el.gradient.opacity1 ?? 100));
+        gradient.addColorStop(1, hexToRgba(el.gradient.color2, el.gradient.opacity2 ?? 100));
+        return gradient;
+      }
+      return el.color || currentColor;
+    };
+
+    // Helper to draw border
+    const drawBorder = (el: CanvasElement) => {
+      if (el.borderWidth && el.borderWidth > 0) {
+        ctx.strokeStyle = el.borderColor || "#000000";
+        ctx.lineWidth = el.borderWidth;
+        ctx.stroke();
+      }
+    };
+
     // Draw elements
     elements.forEach((el) => {
+      ctx.save();
+      const fillStyle = applyStyles(el);
+      ctx.fillStyle = fillStyle;
+
       if (el.type === "rect") {
-        ctx.fillStyle = el.color || currentColor;
-        ctx.fillRect(el.x, el.y, el.width, el.height);
+        const radius = el.borderRadius || 0;
+        if (radius > 0) {
+          ctx.beginPath();
+          ctx.roundRect(el.x, el.y, el.width, el.height, radius);
+          ctx.fill();
+          drawBorder(el);
+        } else {
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+          if (el.borderWidth && el.borderWidth > 0) {
+            ctx.strokeStyle = el.borderColor || "#000000";
+            ctx.lineWidth = el.borderWidth;
+            ctx.strokeRect(el.x, el.y, el.width, el.height);
+          }
+        }
       } else if (el.type === "circle") {
-        ctx.fillStyle = el.color || currentColor;
         ctx.beginPath();
         ctx.ellipse(
           el.x + el.width / 2,
@@ -327,16 +408,16 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
           Math.PI * 2
         );
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "triangle") {
-        ctx.fillStyle = el.color || currentColor;
         ctx.beginPath();
         ctx.moveTo(el.x + el.width / 2, el.y);
         ctx.lineTo(el.x + el.width, el.y + el.height);
         ctx.lineTo(el.x, el.y + el.height);
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "diamond") {
-        ctx.fillStyle = el.color || currentColor;
         ctx.beginPath();
         ctx.moveTo(el.x + el.width / 2, el.y);
         ctx.lineTo(el.x + el.width, el.y + el.height / 2);
@@ -344,8 +425,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         ctx.lineTo(el.x, el.y + el.height / 2);
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "hexagon") {
-        ctx.fillStyle = el.color || currentColor;
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;
         const r = Math.min(el.width, el.height) / 2;
@@ -359,8 +440,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         }
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "pentagon") {
-        ctx.fillStyle = el.color || currentColor;
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;
         const r = Math.min(el.width, el.height) / 2;
@@ -374,8 +455,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         }
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "star") {
-        ctx.fillStyle = el.color || currentColor;
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;
         const outerR = Math.min(el.width, el.height) / 2;
@@ -391,6 +472,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         }
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "line") {
         ctx.strokeStyle = el.color || currentColor;
         ctx.lineWidth = el.height || 4;
@@ -448,6 +530,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         ctx.textAlign = "center";
         ctx.fillText("MASCOTE", el.x + el.width / 2, el.y + el.height / 2 + 12);
       }
+
+      ctx.restore();
 
       // Draw selection with handles
       if (el.id === selectedElement) {
@@ -1041,6 +1125,222 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                         className="flex-1 h-8"
                       />
                     </div>
+                  </div>
+                )}
+
+                {/* Opacity */}
+                <div>
+                  <Label className="text-xs">Opacidade: {selectedEl.opacity ?? 100}%</Label>
+                  <Slider
+                    value={[selectedEl.opacity ?? 100]}
+                    onValueChange={([v]) => updateSelectedElement({ opacity: v })}
+                    min={0}
+                    max={100}
+                    step={1}
+                  />
+                </div>
+
+                {/* Border Radius for rect */}
+                {selectedEl.type === "rect" && (
+                  <div>
+                    <Label className="text-xs">Arredondamento: {selectedEl.borderRadius || 0}px</Label>
+                    <Slider
+                      value={[selectedEl.borderRadius || 0]}
+                      onValueChange={([v]) => updateSelectedElement({ borderRadius: v })}
+                      min={0}
+                      max={200}
+                      step={1}
+                    />
+                  </div>
+                )}
+
+                {/* Border */}
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star"].includes(selectedEl.type)) && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Borda</Label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Label className="text-[10px] text-muted-foreground">Espessura</Label>
+                        <Slider
+                          value={[selectedEl.borderWidth || 0]}
+                          onValueChange={([v]) => updateSelectedElement({ borderWidth: v })}
+                          min={0}
+                          max={20}
+                          step={1}
+                        />
+                      </div>
+                      <div className="w-10">
+                        <Label className="text-[10px] text-muted-foreground">Cor</Label>
+                        <Input
+                          type="color"
+                          value={selectedEl.borderColor || "#000000"}
+                          onChange={(e) => updateSelectedElement({ borderColor: e.target.value })}
+                          className="w-10 h-8 p-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Shadow */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Sombra</Label>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Desfoque: {selectedEl.shadowBlur || 0}px</Label>
+                    <Slider
+                      value={[selectedEl.shadowBlur || 0]}
+                      onValueChange={([v]) => updateSelectedElement({ shadowBlur: v })}
+                      min={0}
+                      max={50}
+                      step={1}
+                    />
+                  </div>
+                  {(selectedEl.shadowBlur || 0) > 0 && (
+                    <>
+                      <div className="flex gap-2">
+                        <Input
+                          type="color"
+                          value={selectedEl.shadowColor || "#000000"}
+                          onChange={(e) => updateSelectedElement({ shadowColor: e.target.value })}
+                          className="w-10 h-8 p-1"
+                        />
+                        <div className="flex-1 grid grid-cols-2 gap-1">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">X</Label>
+                            <Input
+                              type="number"
+                              value={selectedEl.shadowOffsetX || 0}
+                              onChange={(e) => updateSelectedElement({ shadowOffsetX: Number(e.target.value) })}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Y</Label>
+                            <Input
+                              type="number"
+                              value={selectedEl.shadowOffsetY || 0}
+                              onChange={(e) => updateSelectedElement({ shadowOffsetY: Number(e.target.value) })}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Gradient */}
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star"].includes(selectedEl.type)) && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium">Gradiente</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => updateSelectedElement({ 
+                          gradient: selectedEl.gradient 
+                            ? undefined 
+                            : { type: "linear", color1: selectedEl.color || "#3b82f6", color2: "#8b5cf6", angle: 45 }
+                        })}
+                      >
+                        {selectedEl.gradient ? "Remover" : "Adicionar"}
+                      </Button>
+                    </div>
+                    {selectedEl.gradient && (
+                      <div className="space-y-3">
+                        <Select
+                          value={selectedEl.gradient.type}
+                          onValueChange={(v) => updateSelectedElement({ 
+                            gradient: { ...selectedEl.gradient!, type: v as "linear" | "radial" }
+                          })}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="linear">Linear</SelectItem>
+                            <SelectItem value="radial">Radial</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        {/* Color 1 with opacity */}
+                        <div className="space-y-1 p-2 bg-muted/30 rounded">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={selectedEl.gradient.color1}
+                              onChange={(e) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, color1: e.target.value }
+                              })}
+                              className="w-10 h-8 p-1"
+                            />
+                            <Label className="text-[10px] text-muted-foreground flex-1">Cor 1</Label>
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">
+                              Transparência: {100 - (selectedEl.gradient.opacity1 ?? 100)}%
+                            </Label>
+                            <Slider
+                              value={[selectedEl.gradient.opacity1 ?? 100]}
+                              onValueChange={([v]) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, opacity1: v }
+                              })}
+                              min={0}
+                              max={100}
+                              step={5}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Color 2 with opacity */}
+                        <div className="space-y-1 p-2 bg-muted/30 rounded">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={selectedEl.gradient.color2}
+                              onChange={(e) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, color2: e.target.value }
+                              })}
+                              className="w-10 h-8 p-1"
+                            />
+                            <Label className="text-[10px] text-muted-foreground flex-1">Cor 2</Label>
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">
+                              Transparência: {100 - (selectedEl.gradient.opacity2 ?? 100)}%
+                            </Label>
+                            <Slider
+                              value={[selectedEl.gradient.opacity2 ?? 100]}
+                              onValueChange={([v]) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, opacity2: v }
+                              })}
+                              min={0}
+                              max={100}
+                              step={5}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Angle for linear gradient */}
+                        {selectedEl.gradient.type === "linear" && (
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">
+                              Ângulo: {selectedEl.gradient.angle || 0}°
+                            </Label>
+                            <Slider
+                              value={[selectedEl.gradient.angle || 0]}
+                              onValueChange={([v]) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, angle: v }
+                              })}
+                              min={0}
+                              max={360}
+                              step={15}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
