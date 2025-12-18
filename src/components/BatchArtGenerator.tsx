@@ -15,8 +15,11 @@ import {
   Image as ImageIcon,
   Search,
   Move,
+  Upload,
+  Link,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags } from "@/lib/clientDatabase";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
@@ -77,6 +80,8 @@ interface ClientArt {
   photoImage?: string;
   photoOffset?: { x: number; y: number };
   elementOverrides?: ElementOverrides;
+  pageIndex?: number; // For carousel - which page this is (0-based)
+  totalPages?: number; // For carousel - total pages in this card
 }
 
 // Helper to load image - handles both base64 data URLs and HTTP URLs
@@ -116,6 +121,8 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [searchQuery, setSearchQuery] = useState("");
   const [unsplashImages, setUnsplashImages] = useState<UnsplashImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [customImageUrl, setCustomImageUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Element override states
   const [logoX, setLogoX] = useState(0);
@@ -146,17 +153,46 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       setIsLoading(true);
       const taggedCards = await getTaggedCardsForArtGeneration();
 
-      const arts: ClientArt[] = taggedCards.map((card: any) => ({
-        clientId: card.client?.id || card.client_id,
-        clientName: card.client?.name || "Cliente",
-        company: card.client?.company || card.client?.name || "Cliente",
-        cardId: card.id,
-        cardTitle: card.title,
-        cardText: card.description || card.title,
-        brandKit: card.client?.brand_kit,
-        imageUrl: null,
-        status: "pending",
-      }));
+      const arts: ClientArt[] = [];
+      
+      taggedCards.forEach((card: any) => {
+        const fullText = card.description || card.title;
+        // Check if text contains semicolons - indicates carousel
+        const textParts = fullText.split(';').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+        const isCarousel = textParts.length > 1;
+        
+        if (isCarousel) {
+          // Create multiple arts for carousel
+          textParts.forEach((text: string, pageIndex: number) => {
+            arts.push({
+              clientId: card.client?.id || card.client_id,
+              clientName: card.client?.name || "Cliente",
+              company: card.client?.company || card.client?.name || "Cliente",
+              cardId: card.id,
+              cardTitle: card.title,
+              cardText: text,
+              brandKit: card.client?.brand_kit,
+              imageUrl: null,
+              status: "pending",
+              pageIndex,
+              totalPages: textParts.length,
+            });
+          });
+        } else {
+          // Single art
+          arts.push({
+            clientId: card.client?.id || card.client_id,
+            clientName: card.client?.name || "Cliente",
+            company: card.client?.company || card.client?.name || "Cliente",
+            cardId: card.id,
+            cardTitle: card.title,
+            cardText: fullText,
+            brandKit: card.client?.brand_kit,
+            imageUrl: null,
+            status: "pending",
+          });
+        }
+      });
 
       setClientArts(arts);
 
@@ -438,16 +474,62 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
   const handleSelectPhotoImage = (image: UnsplashImage) => {
     if (!selectedArt) return;
-    const index = clientArts.findIndex((a) => a.clientId === selectedArt.clientId);
+    const index = clientArts.findIndex((a) => 
+      a.clientId === selectedArt.clientId && 
+      a.cardId === selectedArt.cardId &&
+      a.pageIndex === selectedArt.pageIndex
+    );
     if (index === -1) return;
 
     const updatedArts = [...clientArts];
     updatedArts[index] = { ...updatedArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
     setClientArts(updatedArts);
     setIsImageDialogOpen(false);
+    setCustomImageUrl("");
 
     // Regenerate the art with new photo
     regenerateArt(index);
+  };
+
+  const handleCustomImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedArt) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      applyCustomImage(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCustomImageUrl = () => {
+    if (!customImageUrl.trim() || !selectedArt) return;
+    applyCustomImage(customImageUrl.trim());
+  };
+
+  const applyCustomImage = (imageUrl: string) => {
+    if (!selectedArt) return;
+    const index = clientArts.findIndex((a) => 
+      a.clientId === selectedArt.clientId && 
+      a.cardId === selectedArt.cardId &&
+      a.pageIndex === selectedArt.pageIndex
+    );
+    if (index === -1) return;
+
+    const updatedArts = [...clientArts];
+    updatedArts[index] = { ...updatedArts[index], photoImage: imageUrl, photoOffset: { x: 0, y: 0 } };
+    setClientArts(updatedArts);
+    setIsImageDialogOpen(false);
+    setCustomImageUrl("");
+
+    // Regenerate the art with new photo
+    regenerateArt(index);
+    
+    toast({
+      title: "Imagem aplicada!",
+      description: "A arte será regenerada com a nova imagem.",
+    });
   };
 
   const openAdjustDialog = (art: ClientArt) => {
@@ -469,7 +551,11 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
   const handleApplyElementOverrides = async () => {
     if (!selectedArt) return;
-    const index = clientArts.findIndex((a) => a.clientId === selectedArt.clientId);
+    const index = clientArts.findIndex((a) => 
+      a.clientId === selectedArt.clientId && 
+      a.cardId === selectedArt.cardId &&
+      a.pageIndex === selectedArt.pageIndex
+    );
     if (index === -1) return;
 
     const updatedArts = [...clientArts];
@@ -628,7 +714,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {clientArts.map((art, index) => (
             <div
-              key={art.clientId}
+              key={`${art.clientId}-${art.cardId}-${art.pageIndex ?? 0}`}
               className={`border rounded-lg overflow-hidden bg-card ${
                 art.status === "approved"
                   ? "ring-2 ring-green-500"
@@ -662,6 +748,13 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                 {art.status === "approved" && (
                   <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
                     <Check className="h-4 w-4" />
+                  </div>
+                )}
+
+                {/* Carousel page indicator */}
+                {art.totalPages && art.totalPages > 1 && (
+                  <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-semibold">
+                    {(art.pageIndex ?? 0) + 1}/{art.totalPages}
                   </div>
                 )}
                 
@@ -750,45 +843,121 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       </ScrollArea>
 
       {/* Image Search Dialog */}
-      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+      <Dialog open={isImageDialogOpen} onOpenChange={(open) => {
+        setIsImageDialogOpen(open);
+        if (!open) setCustomImageUrl("");
+      }}>
         <DialogContent className="max-w-3xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Trocar Foto</DialogTitle>
           </DialogHeader>
 
-          <div className="flex gap-2 mb-4">
-            <Input
-              placeholder="Buscar imagens..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearchImages()}
-            />
-            <Button onClick={handleSearchImages} disabled={isSearching}>
-              {isSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+          <Tabs defaultValue="bank" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="bank">
+                <Search className="h-4 w-4 mr-2" />
+                Banco de Imagens
+              </TabsTrigger>
+              <TabsTrigger value="custom">
+                <Upload className="h-4 w-4 mr-2" />
+                Minha Imagem
+              </TabsTrigger>
+            </TabsList>
 
-          <ScrollArea className="h-[400px]">
-            <div className="grid grid-cols-3 gap-2">
-              {unsplashImages.map((image) => (
-                <div
-                  key={image.id}
-                  className="aspect-[4/5] rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all"
-                  onClick={() => handleSelectPhotoImage(image)}
-                >
-                  <img
-                    src={image.urls.small}
-                    alt={image.description || "Unsplash image"}
-                    className="w-full h-full object-cover"
-                  />
+            <TabsContent value="bank" className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Buscar imagens..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearchImages()}
+                />
+                <Button onClick={handleSearchImages} disabled={isSearching}>
+                  {isSearching ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              <ScrollArea className="h-[350px]">
+                <div className="grid grid-cols-3 gap-2">
+                  {unsplashImages.map((image) => (
+                    <div
+                      key={image.id}
+                      className="aspect-[4/5] rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all"
+                      onClick={() => handleSelectPhotoImage(image)}
+                    >
+                      <img
+                        src={image.urls.small}
+                        alt={image.description || "Unsplash image"}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="custom" className="space-y-6">
+              {/* File Upload */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Fazer Upload</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCustomImageUpload}
+                />
+                <Button 
+                  variant="outline" 
+                  className="w-full h-24 border-dashed"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="h-6 w-6" />
+                    <span>Clique para selecionar uma imagem</span>
+                  </div>
+                </Button>
+              </div>
+
+              {/* URL Paste */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Ou cole uma URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://exemplo.com/imagem.jpg"
+                    value={customImageUrl}
+                    onChange={(e) => setCustomImageUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleCustomImageUrl()}
+                  />
+                  <Button onClick={handleCustomImageUrl} disabled={!customImageUrl.trim()}>
+                    <Link className="h-4 w-4 mr-2" />
+                    Usar
+                  </Button>
+                </div>
+              </div>
+
+              {/* Preview of custom URL */}
+              {customImageUrl.trim() && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Preview</Label>
+                  <div className="aspect-video bg-muted rounded-lg overflow-hidden max-w-xs">
+                    <img
+                      src={customImageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
