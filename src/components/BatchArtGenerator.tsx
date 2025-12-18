@@ -58,7 +58,6 @@ interface MasterTemplate {
 
 type ShapeOverride = { x: number; y: number; width: number; height: number };
 
-after
 interface ElementOverrides {
   logoX?: number;
   logoY?: number;

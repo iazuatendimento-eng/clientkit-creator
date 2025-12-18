@@ -272,18 +272,18 @@ export function ArtAdjustOverlay({
         }
 
         const baseW = els.logoEl?.width || 1;
-        const handle = s.handle || "se";
+        const h = s.handle as Handle;
 
-        const signedDx = handleHasW(handle) || handleHasE(handle) ? handleSignX(handle) * dx : 0;
-        const signedDy = handleHasN(handle) || handleHasS(handle) ? handleSignY(handle) * dy : 0;
+        const signedDx = handleHasW(h) || handleHasE(h) ? handleSignX(h) * dx : 0;
+        const signedDy = handleHasN(h) || handleHasS(h) ? handleSignY(h) * dy : 0;
         const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
 
         const newW = clamp(s.start.logoW + signedDelta, baseW * 0.25, baseW * 2);
         const newScale = clamp((newW / baseW) * 100, 25, 200);
         setLogoScale(newScale);
 
-        if (handleHasW(handle) || handle === "w") setLogoX(clamp(s.start.logoX + dx, -200, 200));
-        if (handleHasN(handle) || handle === "n") setLogoY(clamp(s.start.logoY + dy, -200, 200));
+        if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
+        if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
         return;
       }
 
@@ -295,18 +295,18 @@ export function ArtAdjustOverlay({
         }
 
         const baseW = els.contactEl?.width || 1;
-        const handle = s.handle || "se";
+        const h = s.handle as Handle;
 
-        const signedDx = handleHasW(handle) || handleHasE(handle) ? handleSignX(handle) * dx : 0;
-        const signedDy = handleHasN(handle) || handleHasS(handle) ? handleSignY(handle) * dy : 0;
+        const signedDx = handleHasW(h) || handleHasE(h) ? handleSignX(h) * dx : 0;
+        const signedDy = handleHasN(h) || handleHasS(h) ? handleSignY(h) * dy : 0;
         const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
 
         const newW = clamp(s.start.contactW + signedDelta, baseW * 0.25, baseW * 2);
         const newScale = clamp((newW / baseW) * 100, 25, 200);
         setContactScale(newScale);
 
-        if (handleHasW(handle) || handle === "w") setContactX(clamp(s.start.contactX + dx, -200, 200));
-        if (handleHasN(handle) || handle === "n") setContactY(clamp(s.start.contactY + dy, -200, 200));
+        if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -200, 200));
+        if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
         return;
       }
 
@@ -318,18 +318,18 @@ export function ArtAdjustOverlay({
         }
 
         const baseW = els.textEl?.width || 1;
-        const handle = s.handle || "se";
+        const h = s.handle as Handle;
 
-        const signedDx = handleHasW(handle) || handleHasE(handle) ? handleSignX(handle) * dx : 0;
-        const signedDy = handleHasN(handle) || handleHasS(handle) ? handleSignY(handle) * dy : 0;
+        const signedDx = handleHasW(h) || handleHasE(h) ? handleSignX(h) * dx : 0;
+        const signedDy = handleHasN(h) || handleHasS(h) ? handleSignY(h) * dy : 0;
         const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
 
         const newW = clamp(s.start.textW + signedDelta, baseW * 0.5, baseW * 2);
         const newScale = clamp((newW / baseW) * 100, 50, 200);
         setTextFontSize(newScale);
 
-        if (handleHasW(handle) || handle === "w") setTextX(clamp(s.start.textX + dx, -200, 200));
-        if (handleHasN(handle) || handle === "n") setTextY(clamp(s.start.textY + dy, -200, 200));
+        if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
+        if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
         return;
       }
 
