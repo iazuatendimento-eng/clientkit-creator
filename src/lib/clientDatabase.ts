@@ -12,6 +12,9 @@ export interface ClientData {
   brand_kit?: any;
   created_at?: string;
   active?: boolean;
+  payment_method?: "pix" | "credit_card";
+  payment_due_day?: number;
+  monthly_amount?: number;
 }
 
 export interface ProjectBrief {
@@ -277,6 +280,21 @@ export async function tagFirstCardsForArtGeneration(clientIds: string[]) {
 
   if (error) throw error;
   return data || [];
+}
+
+// Auto-tag first cards of all active clients
+export async function autoTagFirstCardsForAllActiveClients() {
+  // Get all active clients
+  const { data: clients, error: clientError } = await supabase
+    .from("client_data")
+    .select("id")
+    .eq("active", true);
+
+  if (clientError) throw clientError;
+  if (!clients || clients.length === 0) return [];
+
+  const clientIds = clients.map(c => c.id);
+  return tagFirstCardsForArtGeneration(clientIds);
 }
 
 export async function getTaggedCardsForArtGeneration() {

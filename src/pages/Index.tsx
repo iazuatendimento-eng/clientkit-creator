@@ -31,8 +31,7 @@ import {
   generateSlug,
   bulkUpdateBriefStatus,
   bulkUpdateBriefDeadline,
-  getProjectBriefsByClient,
-  tagFirstCardsForArtGeneration
+  getProjectBriefsByClient
 } from "@/lib/clientDatabase";
 
 interface Client {
@@ -48,6 +47,9 @@ interface Client {
   projectCount: number;
   created_at: string;
   active?: boolean;
+  payment_method?: "pix" | "credit_card";
+  payment_due_day?: number;
+  monthly_amount?: number;
 }
 
 const Index = () => {
@@ -85,6 +87,9 @@ const Index = () => {
         projectCount: 0,
         created_at: c.created_at || new Date().toISOString(),
         active: c.active !== false, // Default to true if not set
+        payment_method: c.payment_method,
+        payment_due_day: c.payment_due_day,
+        monthly_amount: c.monthly_amount,
       }));
       
       // Sort: active clients first, then by creation date
@@ -122,6 +127,9 @@ const Index = () => {
           team: clientData.team,
           slug,
           brand_kit: clientData.brandKit || clientData.brand_kit,
+          payment_method: clientData.payment_method,
+          payment_due_day: clientData.payment_due_day,
+          monthly_amount: clientData.monthly_amount,
         });
         toast({
           title: "Cliente atualizado!",
@@ -137,6 +145,9 @@ const Index = () => {
           team: clientData.team,
           slug,
           brand_kit: clientData.brandKit || clientData.brand_kit,
+          payment_method: clientData.payment_method,
+          payment_due_day: clientData.payment_due_day,
+          monthly_amount: clientData.monthly_amount,
         });
         toast({
           title: "Cliente cadastrado!",
@@ -302,52 +313,6 @@ const Index = () => {
       });
     }
   };
-
-  const handleTagAndCreateArts = async (selectedTeam?: string) => {
-    try {
-      const activeClients = clients.filter(c => c.active);
-      const filteredClients = selectedTeam 
-        ? activeClients.filter(c => c.team === selectedTeam)
-        : activeClients;
-      
-      const clientIds = filteredClients.map(c => c.id);
-      
-      if (clientIds.length === 0) {
-        toast({
-          title: "Nenhum cliente encontrado",
-          description: "Não há clientes ativos nesta equipe.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const taggedCards = await tagFirstCardsForArtGeneration(clientIds);
-      
-      if (taggedCards.length === 0) {
-        toast({
-          title: "Nenhum card encontrado",
-          description: "Não há cards 'A Fazer' para marcar.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      toast({
-        title: "Cards marcados!",
-        description: `${taggedCards.length} cards marcados para geração de arte.`,
-      });
-      
-      navigate("/master-art");
-    } catch (error) {
-      console.error("Error tagging cards:", error);
-      toast({
-        title: "Erro ao marcar cards",
-        description: "Não foi possível marcar os cards.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleExportToExcel = async (selectedTeam?: string) => {
     try {
       const excelData: any[] = [];

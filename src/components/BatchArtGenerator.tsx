@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief } from "@/lib/clientDatabase";
+import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -162,6 +162,10 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const loadTaggedCards = async () => {
     try {
       setIsLoading(true);
+      
+      // Auto-tag first cards of all active clients
+      await autoTagFirstCardsForAllActiveClients();
+      
       const taggedCards = await getTaggedCardsForArtGeneration();
 
       const arts: ClientArt[] = [];

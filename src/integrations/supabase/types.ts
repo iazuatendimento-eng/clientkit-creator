@@ -105,6 +105,7 @@ export type Database = {
           created_by: string | null
           email: string
           id: string
+          monthly_amount: number | null
           name: string
           notes: string | null
           payment_due_day: number | null
@@ -121,6 +122,7 @@ export type Database = {
           created_by?: string | null
           email: string
           id?: string
+          monthly_amount?: number | null
           name: string
           notes?: string | null
           payment_due_day?: number | null
@@ -137,6 +139,7 @@ export type Database = {
           created_by?: string | null
           email?: string
           id?: string
+          monthly_amount?: number | null
           name?: string
           notes?: string | null
           payment_due_day?: number | null
