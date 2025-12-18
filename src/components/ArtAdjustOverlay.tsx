@@ -194,6 +194,7 @@ export function ArtAdjustOverlay({
           photoOffsetY: number;
           photoScale: number;
           photoW: number;
+          photoH: number;
           logoX: number;
           logoY: number;
           logoScale: number;
@@ -222,6 +223,7 @@ export function ArtAdjustOverlay({
     const contactW = els.contactEl ? els.contactEl.width * (contactScale / 100) : 0;
     const textW = els.textEl ? els.textEl.width * (textFontSize / 100) : 0;
     const photoW = els.photoFrame ? els.photoFrame.width * (photoScale / 100) : 0;
+    const photoH = els.photoFrame ? els.photoFrame.height * (photoScale / 100) : 0;
 
     let shapeRect: ShapeOverride | undefined;
     if (isShapePart(part)) {
@@ -241,6 +243,7 @@ export function ArtAdjustOverlay({
         photoOffsetY,
         photoScale,
         photoW,
+        photoH,
         logoX,
         logoY,
         logoScale,
@@ -275,16 +278,45 @@ export function ArtAdjustOverlay({
           return;
         }
 
-        // Resize photo
-        const baseW = els.photoFrame?.width || 1;
+        // Resize photo - use height for vertical handles, width for horizontal
         const h = s.handle as Handle;
+        const isVerticalHandle = h === "n" || h === "s";
+        const isHorizontalHandle = h === "e" || h === "w";
+        
+        const baseW = els.photoFrame?.width || 1;
+        const baseH = els.photoFrame?.height || 1;
 
-        const signedDx = handleHasW(h) || handleHasE(h) ? handleSignX(h) * dx : 0;
-        const signedDy = handleHasN(h) || handleHasS(h) ? handleSignY(h) * dy : 0;
-        const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        let signedDelta: number;
+        let baseDimension: number;
+        let startDimension: number;
 
-        const newW = clamp(s.start.photoW + signedDelta, baseW * 0.25, baseW * 2);
-        const newScale = clamp((newW / baseW) * 100, 25, 200);
+        if (isVerticalHandle) {
+          // For N/S handles, use height-based calculation
+          signedDelta = handleSignY(h) * dy;
+          baseDimension = baseH;
+          startDimension = s.start.photoH;
+        } else if (isHorizontalHandle) {
+          // For E/W handles, use width-based calculation
+          signedDelta = handleSignX(h) * dx;
+          baseDimension = baseW;
+          startDimension = s.start.photoW;
+        } else {
+          // For corner handles, use the dominant direction
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          if (Math.abs(signedDx) > Math.abs(signedDy)) {
+            signedDelta = signedDx;
+            baseDimension = baseW;
+            startDimension = s.start.photoW;
+          } else {
+            signedDelta = signedDy;
+            baseDimension = baseH;
+            startDimension = s.start.photoH;
+          }
+        }
+
+        const newDimension = clamp(startDimension + signedDelta, baseDimension * 0.25, baseDimension * 2);
+        const newScale = clamp((newDimension / baseDimension) * 100, 25, 200);
         setPhotoScale(newScale);
         return;
       }
