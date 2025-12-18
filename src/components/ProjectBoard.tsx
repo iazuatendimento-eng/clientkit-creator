@@ -140,11 +140,23 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     }
   };
 
-  const handleDownload = (url: string, filename: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      toast.success("Download iniciado!");
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast.error("Erro ao baixar arquivo");
+    }
   };
 
   const handleCopyCardLink = () => {
@@ -193,17 +205,25 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               <User className="h-3 w-3 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
               {brief.artGenerationSelected && (
-                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-purple-500/20 text-purple-500 border-purple-500/50">
+                <Badge
+                  variant="outline"
+                  className="text-[11px] px-2 py-0.5 h-auto whitespace-nowrap bg-primary/10 text-primary border-primary/30"
+                >
                   Na Fila
                 </Badge>
               )}
               {isFirstInQueue && !brief.artGenerationSelected && (
-                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-blue-500/20 text-blue-500 border-blue-500/50">
+                <Badge
+                  variant="outline"
+                  className="text-[11px] px-2 py-0.5 h-auto whitespace-nowrap bg-accent/10 text-accent-foreground border-accent/30"
+                >
                   Próximo
                 </Badge>
               )}
             </div>
-            <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed">{brief.title}</h4>
+            <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed">
+              {(brief.description?.trim() ? brief.description : brief.title)}
+            </h4>
           </div>
           {!isPublicView && (
             <div className="flex gap-1">
@@ -257,6 +277,24 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {!isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
+              {(brief.coverImage || brief.coverVideo) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (brief.coverVideo) {
+                      handleDownload(brief.coverVideo, `${brief.clientName}-${brief.id}.mp4`);
+                    } else if (brief.coverImage) {
+                      handleDownload(brief.coverImage, `${brief.clientName}-${brief.id}.png`);
+                    }
+                  }}
+                  className="text-xs px-2 py-1 h-auto w-full"
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  {brief.coverVideo ? "Baixar MP4" : "Baixar Arte"}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
