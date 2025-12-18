@@ -1,0 +1,730 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft,
+  Square,
+  Circle,
+  Type,
+  Image as ImageIcon,
+  Trash2,
+  Copy,
+  Save,
+  Play,
+  Layers,
+  ChevronUp,
+  ChevronDown,
+  Search,
+  Loader2,
+  User,
+  Phone,
+  Sparkles,
+  FileVideo,
+  Film,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { searchImages, SearchImage } from "@/lib/imageSearch";
+import { supabase } from "@/integrations/supabase/client";
+
+interface CanvasElement {
+  id: string;
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color?: string;
+  text?: string;
+  fontSize?: number;
+  imageUrl?: string;
+  placeholder?: boolean;
+}
+
+interface VideoTemplate {
+  id: string;
+  name: string;
+  contentElements: CanvasElement[];
+  signatureElements: CanvasElement[];
+  width: number;
+  height: number;
+  backgroundColor: string;
+  pageDuration: number;
+}
+
+interface MasterVideoEditorProps {
+  onBack: () => void;
+  onGenerateBatch: (template: VideoTemplate) => void;
+}
+
+export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditorProps) => {
+  const [currentPage, setCurrentPage] = useState<"content" | "signature">("content");
+  const [contentElements, setContentElements] = useState<CanvasElement[]>([]);
+  const [signatureElements, setSignatureElements] = useState<CanvasElement[]>([]);
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [selectedTool, setSelectedTool] = useState<string>("select");
+  const [currentColor, setCurrentColor] = useState("#3B82F6");
+  const [backgroundColor, setBackgroundColor] = useState("#1a1a2e");
+  const [templateName, setTemplateName] = useState("Novo Template de Vídeo");
+  const [pageDuration, setPageDuration] = useState(10);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { toast } = useToast();
+
+  // Canvas dimensions for vertical video (9:16 aspect ratio)
+  const CANVAS_WIDTH = 1080;
+  const CANVAS_HEIGHT = 1920;
+  const SCALE = 0.35; // Scale for display
+
+  const elements = currentPage === "content" ? contentElements : signatureElements;
+  const setElements = currentPage === "content" ? setContentElements : setSignatureElements;
+
+  const tools = [
+    { id: "select", icon: Layers, label: "Selecionar" },
+    { id: "rect", icon: Square, label: "Retângulo" },
+    { id: "circle", icon: Circle, label: "Círculo" },
+    { id: "text", icon: Type, label: "Texto" },
+    { id: "image", icon: ImageIcon, label: "Imagem" },
+  ];
+
+  const placeholders = [
+    { id: "logo", icon: User, label: "Logo", type: "logo" as const },
+    { id: "contact", icon: Phone, label: "Contato", type: "contact" as const },
+    { id: "mascot", icon: Sparkles, label: "Mascote", type: "mascot" as const },
+  ];
+
+  // Draw canvas
+  useEffect(() => {
+    drawCanvas();
+  }, [elements, selectedElement, backgroundColor, currentPage]);
+
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Draw background
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Draw page indicator
+    ctx.fillStyle = "rgba(255,255,255,0.1)";
+    ctx.font = "bold 48px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      currentPage === "content" ? "PÁGINA DE CONTEÚDO" : "PÁGINA DE ASSINATURA",
+      CANVAS_WIDTH / 2,
+      100
+    );
+
+    // Draw elements
+    elements.forEach((el) => {
+      if (el.type === "rect") {
+        ctx.fillStyle = el.color || currentColor;
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+      } else if (el.type === "circle") {
+        ctx.fillStyle = el.color || currentColor;
+        ctx.beginPath();
+        ctx.ellipse(
+          el.x + el.width / 2,
+          el.y + el.height / 2,
+          el.width / 2,
+          el.height / 2,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      } else if (el.type === "text") {
+        ctx.fillStyle = el.color || "#ffffff";
+        ctx.font = `${el.fontSize || 48}px Arial`;
+        ctx.textAlign = "left";
+        ctx.fillText(el.text || "Texto", el.x, el.y + (el.fontSize || 48));
+      } else if (el.type === "image" && el.placeholder) {
+        // Draw image placeholder
+        ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+        ctx.strokeStyle = "#8B5CF6";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 5]);
+        ctx.strokeRect(el.x, el.y, el.width, el.height);
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#8B5CF6";
+        ctx.font = "bold 36px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("📷 IMAGEM", el.x + el.width / 2, el.y + el.height / 2);
+      } else if (el.type === "logo") {
+        ctx.fillStyle = "rgba(59, 130, 246, 0.3)";
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+        ctx.strokeStyle = "#3B82F6";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(el.x, el.y, el.width, el.height);
+        ctx.fillStyle = "#3B82F6";
+        ctx.font = "bold 32px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("LOGO", el.x + el.width / 2, el.y + el.height / 2 + 12);
+      } else if (el.type === "contact") {
+        ctx.fillStyle = "rgba(16, 185, 129, 0.3)";
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+        ctx.strokeStyle = "#10B981";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(el.x, el.y, el.width, el.height);
+        ctx.fillStyle = "#10B981";
+        ctx.font = "bold 32px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("CONTATO", el.x + el.width / 2, el.y + el.height / 2 + 12);
+      } else if (el.type === "mascot") {
+        ctx.fillStyle = "rgba(245, 158, 11, 0.3)";
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+        ctx.strokeStyle = "#F59E0B";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(el.x, el.y, el.width, el.height);
+        ctx.fillStyle = "#F59E0B";
+        ctx.font = "bold 32px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("MASCOTE", el.x + el.width / 2, el.y + el.height / 2 + 12);
+      }
+
+      // Draw selection
+      if (el.id === selectedElement) {
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 4]);
+        ctx.strokeRect(el.x - 4, el.y - 4, el.width + 8, el.height + 8);
+        ctx.setLineDash([]);
+      }
+    });
+  }, [elements, selectedElement, backgroundColor, currentPage, currentColor]);
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / SCALE;
+    const y = (e.clientY - rect.top) / SCALE;
+
+    if (selectedTool === "select") {
+      const clicked = [...elements].reverse().find(
+        (el) => x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height
+      );
+      setSelectedElement(clicked?.id || null);
+    } else {
+      addElement(selectedTool, x, y);
+    }
+  };
+
+  const addElement = (type: string, x: number, y: number) => {
+    const newElement: CanvasElement = {
+      id: `${type}-${Date.now()}`,
+      type: type as CanvasElement["type"],
+      x: x - 100,
+      y: y - 100,
+      width: type === "text" ? 600 : 200,
+      height: type === "text" ? 80 : 200,
+      color: type === "text" ? "#ffffff" : currentColor,
+      text: type === "text" ? "Texto do Card" : undefined,
+      fontSize: type === "text" ? 48 : undefined,
+      placeholder: type === "image",
+    };
+
+    setElements([...elements, newElement]);
+    setSelectedElement(newElement.id);
+    setSelectedTool("select");
+  };
+
+  const addPlaceholder = (type: "logo" | "contact" | "mascot") => {
+    const newElement: CanvasElement = {
+      id: `${type}-${Date.now()}`,
+      type,
+      x: CANVAS_WIDTH / 2 - 150,
+      y: CANVAS_HEIGHT / 2 - 100,
+      width: 300,
+      height: 200,
+    };
+
+    setElements([...elements, newElement]);
+    setSelectedElement(newElement.id);
+  };
+
+  const updateSelectedElement = (updates: Partial<CanvasElement>) => {
+    if (!selectedElement) return;
+    setElements(
+      elements.map((el) => (el.id === selectedElement ? { ...el, ...updates } : el))
+    );
+  };
+
+  const deleteSelectedElement = () => {
+    if (!selectedElement) return;
+    setElements(elements.filter((el) => el.id !== selectedElement));
+    setSelectedElement(null);
+  };
+
+  const duplicateSelectedElement = () => {
+    if (!selectedElement) return;
+    const el = elements.find((e) => e.id === selectedElement);
+    if (!el) return;
+
+    const newElement = {
+      ...el,
+      id: `${el.type}-${Date.now()}`,
+      x: el.x + 30,
+      y: el.y + 30,
+    };
+
+    setElements([...elements, newElement]);
+    setSelectedElement(newElement.id);
+  };
+
+  const handleSearchImages = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const images = await searchImages(searchQuery, 12);
+      setSearchResults(images);
+    } catch (error) {
+      toast({
+        title: "Erro ao buscar imagens",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleGenerateBatch = () => {
+    const template: VideoTemplate = {
+      id: `template-${Date.now()}`,
+      name: templateName,
+      contentElements,
+      signatureElements,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      backgroundColor,
+      pageDuration,
+    };
+
+    onGenerateBatch(template);
+  };
+
+  const selectedEl = elements.find((el) => el.id === selectedElement);
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Left Sidebar - Tools */}
+      <div className="w-72 border-r bg-card flex flex-col">
+        <div className="p-4 border-b">
+          <Button variant="outline" onClick={onBack} className="w-full">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+        </div>
+
+        <ScrollArea className="flex-1">
+          <div className="p-4 space-y-6">
+            {/* Template Name */}
+            <div className="space-y-2">
+              <Label>Nome do Template</Label>
+              <Input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Nome do template"
+              />
+            </div>
+
+            {/* Page Selector */}
+            <div className="space-y-2">
+              <Label>Página</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={currentPage === "content" ? "default" : "outline"}
+                  onClick={() => setCurrentPage("content")}
+                  className="text-xs"
+                >
+                  <Film className="mr-1 h-3 w-3" />
+                  Conteúdo
+                </Button>
+                <Button
+                  variant={currentPage === "signature" ? "default" : "outline"}
+                  onClick={() => setCurrentPage("signature")}
+                  className="text-xs"
+                >
+                  <User className="mr-1 h-3 w-3" />
+                  Assinatura
+                </Button>
+              </div>
+            </div>
+
+            {/* Page Duration */}
+            <div className="space-y-2">
+              <Label>Duração por Página: {pageDuration}s</Label>
+              <Slider
+                value={[pageDuration]}
+                onValueChange={(v) => setPageDuration(v[0])}
+                min={3}
+                max={30}
+                step={1}
+              />
+            </div>
+
+            {/* Tools */}
+            <div className="space-y-2">
+              <Label>Ferramentas</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {tools.map((tool) => (
+                  <Button
+                    key={tool.id}
+                    variant={selectedTool === tool.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedTool(tool.id)}
+                    className="flex flex-col h-16 text-xs"
+                  >
+                    <tool.icon className="h-4 w-4 mb-1" />
+                    {tool.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Placeholders */}
+            <div className="space-y-2">
+              <Label>Elementos de Marca</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {placeholders.map((p) => (
+                  <Button
+                    key={p.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addPlaceholder(p.type)}
+                    className="flex flex-col h-16 text-xs"
+                  >
+                    <p.icon className="h-4 w-4 mb-1" />
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Colors */}
+            <div className="space-y-2">
+              <Label>Cor do Fundo</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={backgroundColor}
+                  onChange={(e) => setBackgroundColor(e.target.value)}
+                  className="w-12 h-10 p-1"
+                />
+                <Input
+                  value={backgroundColor}
+                  onChange={(e) => setBackgroundColor(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Cor do Elemento</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={currentColor}
+                  onChange={(e) => setCurrentColor(e.target.value)}
+                  className="w-12 h-10 p-1"
+                />
+                <Input
+                  value={currentColor}
+                  onChange={(e) => setCurrentColor(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            {/* Element Properties */}
+            {selectedEl && (
+              <div className="space-y-3 p-3 border rounded-lg bg-muted/50">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium">Propriedades</Label>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={duplicateSelectedElement}>
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={deleteSelectedElement}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">X</Label>
+                    <Input
+                      type="number"
+                      value={Math.round(selectedEl.x)}
+                      onChange={(e) => updateSelectedElement({ x: Number(e.target.value) })}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Y</Label>
+                    <Input
+                      type="number"
+                      value={Math.round(selectedEl.y)}
+                      onChange={(e) => updateSelectedElement({ y: Number(e.target.value) })}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Largura</Label>
+                    <Input
+                      type="number"
+                      value={Math.round(selectedEl.width)}
+                      onChange={(e) => updateSelectedElement({ width: Number(e.target.value) })}
+                      className="h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Altura</Label>
+                    <Input
+                      type="number"
+                      value={Math.round(selectedEl.height)}
+                      onChange={(e) => updateSelectedElement({ height: Number(e.target.value) })}
+                      className="h-8"
+                    />
+                  </div>
+                </div>
+
+                {selectedEl.type === "text" && (
+                  <>
+                    <div>
+                      <Label className="text-xs">Texto</Label>
+                      <Input
+                        value={selectedEl.text || ""}
+                        onChange={(e) => updateSelectedElement({ text: e.target.value })}
+                        className="h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Tamanho da Fonte</Label>
+                      <Slider
+                        value={[selectedEl.fontSize || 48]}
+                        onValueChange={(v) => updateSelectedElement({ fontSize: v[0] })}
+                        min={12}
+                        max={200}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {(selectedEl.type === "rect" ||
+                  selectedEl.type === "circle" ||
+                  selectedEl.type === "text") && (
+                  <div>
+                    <Label className="text-xs">Cor</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={selectedEl.color || "#000000"}
+                        onChange={(e) => updateSelectedElement({ color: e.target.value })}
+                        className="w-10 h-8 p-1"
+                      />
+                      <Input
+                        value={selectedEl.color || "#000000"}
+                        onChange={(e) => updateSelectedElement({ color: e.target.value })}
+                        className="flex-1 h-8"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Generate Button */}
+        <div className="p-4 border-t">
+          <Button className="w-full bg-gradient-primary" onClick={handleGenerateBatch}>
+            <Play className="mr-2 h-4 w-4" />
+            Gerar Vídeos em Lote
+          </Button>
+        </div>
+      </div>
+
+      {/* Canvas Area */}
+      <div className="flex-1 flex items-center justify-center bg-muted/30 p-8 overflow-auto">
+        <div className="relative shadow-2xl rounded-lg overflow-hidden">
+          <canvas
+            ref={canvasRef}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            style={{
+              width: CANVAS_WIDTH * SCALE,
+              height: CANVAS_HEIGHT * SCALE,
+            }}
+            className="cursor-crosshair"
+            onClick={handleCanvasClick}
+          />
+        </div>
+      </div>
+
+      {/* Right Sidebar - Images */}
+      <div className="w-72 border-l bg-card flex flex-col">
+        <div className="p-4 border-b">
+          <h3 className="font-semibold flex items-center gap-2">
+            <FileVideo className="h-4 w-4" />
+            Template de Vídeo
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">1080x1920 • {pageDuration}s/página</p>
+        </div>
+
+        <Tabs defaultValue="images" className="flex-1 flex flex-col">
+          <TabsList className="mx-4 mt-2">
+            <TabsTrigger value="images" className="flex-1">Imagens</TabsTrigger>
+            <TabsTrigger value="layers" className="flex-1">Camadas</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="images" className="flex-1 p-4">
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Buscar imagens..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearchImages()}
+                />
+                <Button size="icon" onClick={handleSearchImages} disabled={isSearching}>
+                  {isSearching ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              <ScrollArea className="h-[500px]">
+                <div className="grid grid-cols-2 gap-2">
+                  {searchResults.map((img) => (
+                    <div
+                      key={img.id}
+                      className="aspect-[9/16] rounded-md overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all"
+                      onClick={() => {
+                        const newElement: CanvasElement = {
+                          id: `image-${Date.now()}`,
+                          type: "image",
+                          x: CANVAS_WIDTH / 2 - 200,
+                          y: CANVAS_HEIGHT / 2 - 300,
+                          width: 400,
+                          height: 600,
+                          imageUrl: img.urls.regular,
+                          placeholder: true,
+                        };
+                        setElements([...elements, newElement]);
+                        setSelectedElement(newElement.id);
+                      }}
+                    >
+                      <img
+                        src={img.urls.thumb}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="layers" className="flex-1 p-4">
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-2">
+                {[...elements].reverse().map((el, index) => (
+                  <div
+                    key={el.id}
+                    className={`p-2 rounded border cursor-pointer flex items-center justify-between ${
+                      selectedElement === el.id ? "border-primary bg-primary/10" : "border-border"
+                    }`}
+                    onClick={() => setSelectedElement(el.id)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {el.type === "rect" && <Square className="h-4 w-4" />}
+                      {el.type === "circle" && <Circle className="h-4 w-4" />}
+                      {el.type === "text" && <Type className="h-4 w-4" />}
+                      {el.type === "image" && <ImageIcon className="h-4 w-4" />}
+                      {el.type === "logo" && <User className="h-4 w-4" />}
+                      {el.type === "contact" && <Phone className="h-4 w-4" />}
+                      {el.type === "mascot" && <Sparkles className="h-4 w-4" />}
+                      <span className="text-sm capitalize truncate max-w-[100px]">
+                        {el.type === "text" ? el.text?.substring(0, 15) : el.type}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const idx = elements.findIndex((e) => e.id === el.id);
+                          if (idx < elements.length - 1) {
+                            const newElements = [...elements];
+                            [newElements[idx], newElements[idx + 1]] = [
+                              newElements[idx + 1],
+                              newElements[idx],
+                            ];
+                            setElements(newElements);
+                          }
+                        }}
+                      >
+                        <ChevronUp className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const idx = elements.findIndex((e) => e.id === el.id);
+                          if (idx > 0) {
+                            const newElements = [...elements];
+                            [newElements[idx], newElements[idx - 1]] = [
+                              newElements[idx - 1],
+                              newElements[idx],
+                            ];
+                            setElements(newElements);
+                          }
+                        }}
+                      >
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
