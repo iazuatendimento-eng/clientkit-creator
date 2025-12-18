@@ -58,6 +58,33 @@ export type Database = {
           },
         ]
       }
+      batch_generations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          items: Json
+          template_snapshot: Json
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: Json
+          template_snapshot: Json
+          type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: Json
+          template_snapshot?: Json
+          type?: string
+        }
+        Relationships: []
+      }
       card_uploads: {
         Row: {
           card_id: string | null

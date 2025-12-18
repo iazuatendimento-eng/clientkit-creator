@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
+import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
 import {
   Dialog,
   DialogContent,
@@ -940,6 +941,20 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
       // Clear the art generation tags
       await clearArtGenerationTags();
+
+      // Save batch to history
+      const batchItems: BatchItem[] = approvedArts.map((art) => ({
+        cardId: art.cardId,
+        clientId: art.clientId,
+        clientName: art.clientName,
+        company: art.company,
+        cardTitle: art.cardTitle,
+        cardText: art.cardText,
+        brandKit: art.brandKit,
+        files: [art.imageUrl!],
+        backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
+      }));
+      await saveBatchGeneration("art", template, batchItems);
 
       // Dispatch event to notify all ProjectBoard instances to reload
       window.dispatchEvent(new Event("bulkBriefsUpdated"));
