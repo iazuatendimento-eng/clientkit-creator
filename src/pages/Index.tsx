@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
@@ -587,6 +587,21 @@ const Index = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingClient(client);
+                          setCurrentView("client-editor");
+                        }}
+                        className={`p-1 rounded transition-colors ${
+                          selectedClient?.id === client.id
+                            ? 'hover:bg-primary-foreground/20'
+                            : 'hover:bg-muted'
+                        }`}
+                        title="Editar cliente"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
