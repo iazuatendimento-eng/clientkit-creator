@@ -135,6 +135,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string>("");
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(0);
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
@@ -500,23 +501,32 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
 
   const generateAllVideos = async () => {
     setIsGenerating(true);
+    setGenerationStatus("Preparando geração...");
+
     try {
       const updatedVideos = [...clientVideos];
 
       for (let i = 0; i < updatedVideos.length; i++) {
         const video = updatedVideos[i];
-        
+        setGenerationStatus(`Gerando páginas (${i + 1}/${updatedVideos.length}) • ${video.clientName}`);
+
         // Search for images for each content page with translation
         const searchedImages: string[] = [];
         for (const text of video.pageTexts) {
           try {
             let searchTerms = text.split(" ").slice(0, 5).join(" ");
 
-            // Translate to English for better image search results
+            // Translate to English for better image search results (with timeout)
             try {
-              const { data, error } = await supabase.functions.invoke("translate-text", {
+              const translatePromise = supabase.functions.invoke("translate-text", {
                 body: { text },
               });
+
+              const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("Timeout na tradução")), 15000)
+              );
+
+              const { data, error } = await Promise.race([translatePromise, timeoutPromise]);
 
               if (!error && data?.translatedText) {
                 searchTerms = data.translatedText;
@@ -536,7 +546,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
             searchedImages.push("");
           }
         }
-        
+
         const pages = await generateVideoForClient(video, searchedImages);
         updatedVideos[i] = { ...video, pages, searchedImages };
         setClientVideos([...updatedVideos]);
@@ -550,10 +560,12 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       console.error("Error generating videos:", error);
       toast({
         title: "Erro ao gerar vídeos",
+        description: error instanceof Error ? error.message : undefined,
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
+      setGenerationStatus("");
     }
   };
 
@@ -598,9 +610,14 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     }
 
     setIsGenerating(true);
-    
+    setGenerationStatus("Iniciando exportação MP4...");
+
     try {
-      for (const video of approvedVideos) {
+      for (let idx = 0; idx < approvedVideos.length; idx++) {
+        const video = approvedVideos[idx];
+
+        setGenerationStatus(`Gerando MP4 (${idx + 1}/${approvedVideos.length}) • ${video.clientName}`);
+
         toast({
           title: `Gerando vídeo MP4...`,
           description: `Processando ${video.clientName} (pode demorar alguns segundos)`,
@@ -618,7 +635,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         const fileName = `video_${video.cardId}_${Date.now()}.mp4`;
 
         // Upload video file
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("card-uploads")
           .upload(`videos/${fileName}`, videoBlob, {
             contentType: "video/mp4",
@@ -626,12 +643,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
 
         if (uploadError) {
           console.error("Upload error:", uploadError);
-          toast({
-            title: "Erro ao fazer upload",
-            description: `Erro para ${video.clientName}`,
-            variant: "destructive",
-          });
-          continue;
+          throw uploadError;
         }
 
         const { data: urlData } = supabase.storage
@@ -648,25 +660,31 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         });
 
         // Also upload first frame as thumbnail
+        setGenerationStatus(`Gerando capa (${idx + 1}/${approvedVideos.length}) • ${video.clientName}`);
         const thumbResponse = await fetch(video.pages[0]);
         const thumbBlob = await thumbResponse.blob();
         const thumbFileName = `thumb_${video.cardId}_${Date.now()}.png`;
 
-        await supabase.storage
+        const { error: thumbUploadError } = await supabase.storage
           .from("card-uploads")
           .upload(`videos/${thumbFileName}`, thumbBlob, {
             contentType: "image/png",
           });
+
+        if (thumbUploadError) {
+          console.error("Thumb upload error:", thumbUploadError);
+          throw thumbUploadError;
+        }
 
         const { data: thumbUrlData } = supabase.storage
           .from("card-uploads")
           .getPublicUrl(`videos/${thumbFileName}`);
 
         // Update card with video URL and thumbnail
-        await updateProjectBrief(video.cardId, { 
+        await updateProjectBrief(video.cardId, {
           cover_image: thumbUrlData.publicUrl,
           cover_video: urlData.publicUrl,
-          brief_type: 'video'
+          brief_type: "video",
         });
       }
 
@@ -699,10 +717,12 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       console.error("Error saving videos:", error);
       toast({
         title: "Erro ao salvar vídeos",
+        description: error instanceof Error ? error.message : undefined,
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
+      setGenerationStatus("");
     }
   };
 
@@ -760,9 +780,9 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       {/* Content */}
       <ScrollArea className="flex-1 p-6">
         {isGenerating ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="flex flex-col items-center justify-center h-64 gap-2">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Gerando vídeos...</p>
+            <p className="text-muted-foreground">{generationStatus || "Gerando vídeos..."}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
