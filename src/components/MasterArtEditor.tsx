@@ -44,7 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon";
   x: number;
   y: number;
   width: number;
@@ -55,7 +55,21 @@ interface CanvasElement {
   imageUrl?: string;
   placeholder?: boolean;
   rotation?: number;
-  colorRole?: "background" | "text" | "accessory1" | "accessory2"; // Which brand kit color to use
+  colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  opacity?: number; // 0-100
+  borderRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  shadowBlur?: number;
+  shadowColor?: string;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  gradient?: {
+    type: "linear" | "radial";
+    color1: string;
+    color2: string;
+    angle?: number;
+  };
 }
 
 interface MasterTemplate {
@@ -257,6 +271,12 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
     { id: "hexagon", icon: Hexagon, label: "Hexágono" },
     { id: "pentagon", icon: Pentagon, label: "Pentágono" },
     { id: "star", icon: Star, label: "Estrela" },
+    { id: "wave", icon: Minus, label: "Onda" },
+    { id: "blob", icon: Circle, label: "Blob" },
+    { id: "arch", icon: Circle, label: "Arco" },
+    { id: "arrow", icon: Triangle, label: "Seta" },
+    { id: "badge", icon: Hexagon, label: "Badge" },
+    { id: "ribbon", icon: Minus, label: "Fita" },
     { id: "line", icon: Minus, label: "Linha" },
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
@@ -283,15 +303,71 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    // Helper to apply common styles
+    const applyStyles = (el: CanvasElement) => {
+      // Opacity
+      ctx.globalAlpha = (el.opacity ?? 100) / 100;
+
+      // Shadow
+      if (el.shadowBlur && el.shadowBlur > 0) {
+        ctx.shadowBlur = el.shadowBlur;
+        ctx.shadowColor = el.shadowColor || "rgba(0,0,0,0.5)";
+        ctx.shadowOffsetX = el.shadowOffsetX || 0;
+        ctx.shadowOffsetY = el.shadowOffsetY || 0;
+      }
+
+      // Get fill style (gradient or solid)
+      if (el.gradient) {
+        let gradient;
+        if (el.gradient.type === "linear") {
+          const angle = (el.gradient.angle || 0) * Math.PI / 180;
+          const dx = Math.cos(angle) * el.width;
+          const dy = Math.sin(angle) * el.height;
+          gradient = ctx.createLinearGradient(el.x, el.y, el.x + dx, el.y + dy);
+        } else {
+          gradient = ctx.createRadialGradient(
+            el.x + el.width / 2, el.y + el.height / 2, 0,
+            el.x + el.width / 2, el.y + el.height / 2, Math.max(el.width, el.height) / 2
+          );
+        }
+        gradient.addColorStop(0, el.gradient.color1);
+        gradient.addColorStop(1, el.gradient.color2);
+        return gradient;
+      }
+      return el.color || "#cccccc";
+    };
+
+    // Helper to draw border
+    const drawBorder = (el: CanvasElement) => {
+      if (el.borderWidth && el.borderWidth > 0) {
+        ctx.strokeStyle = el.borderColor || "#000000";
+        ctx.lineWidth = el.borderWidth;
+        ctx.stroke();
+      }
+    };
+
     // Draw elements
     elements.forEach((el) => {
       ctx.save();
+      const fillStyle = applyStyles(el);
+      ctx.fillStyle = fillStyle;
 
       if (el.type === "rect") {
-        ctx.fillStyle = el.color || "#cccccc";
-        ctx.fillRect(el.x, el.y, el.width, el.height);
+        const radius = el.borderRadius || 0;
+        if (radius > 0) {
+          ctx.beginPath();
+          ctx.roundRect(el.x, el.y, el.width, el.height, radius);
+          ctx.fill();
+          drawBorder(el);
+        } else {
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+          if (el.borderWidth && el.borderWidth > 0) {
+            ctx.strokeStyle = el.borderColor || "#000000";
+            ctx.lineWidth = el.borderWidth;
+            ctx.strokeRect(el.x, el.y, el.width, el.height);
+          }
+        }
       } else if (el.type === "circle") {
-        ctx.fillStyle = el.color || "#cccccc";
         ctx.beginPath();
         ctx.ellipse(
           el.x + el.width / 2,
@@ -303,16 +379,16 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
           Math.PI * 2
         );
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "triangle") {
-        ctx.fillStyle = el.color || "#cccccc";
         ctx.beginPath();
         ctx.moveTo(el.x + el.width / 2, el.y);
         ctx.lineTo(el.x + el.width, el.y + el.height);
         ctx.lineTo(el.x, el.y + el.height);
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "diamond") {
-        ctx.fillStyle = el.color || "#cccccc";
         ctx.beginPath();
         ctx.moveTo(el.x + el.width / 2, el.y);
         ctx.lineTo(el.x + el.width, el.y + el.height / 2);
@@ -320,8 +396,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         ctx.lineTo(el.x, el.y + el.height / 2);
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "hexagon") {
-        ctx.fillStyle = el.color || "#cccccc";
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;
         const r = Math.min(el.width, el.height) / 2;
@@ -335,8 +411,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         }
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "pentagon") {
-        ctx.fillStyle = el.color || "#cccccc";
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;
         const r = Math.min(el.width, el.height) / 2;
@@ -350,8 +426,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         }
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
       } else if (el.type === "star") {
-        ctx.fillStyle = el.color || "#cccccc";
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;
         const outerR = Math.min(el.width, el.height) / 2;
@@ -367,6 +443,103 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         }
         ctx.closePath();
         ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "wave") {
+        // Wavy shape
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height);
+        const waves = 4;
+        const waveHeight = el.height * 0.3;
+        for (let i = 0; i <= waves; i++) {
+          const x = el.x + (el.width / waves) * i;
+          const y = el.y + (i % 2 === 0 ? waveHeight : 0);
+          if (i === 0) {
+            ctx.lineTo(x, y);
+          } else {
+            const prevX = el.x + (el.width / waves) * (i - 1);
+            const cpX = (prevX + x) / 2;
+            const prevY = el.y + ((i - 1) % 2 === 0 ? waveHeight : 0);
+            ctx.quadraticCurveTo(prevX + (x - prevX) * 0.5, prevY, x, y);
+          }
+        }
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "blob") {
+        // Organic blob shape
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const rx = el.width / 2;
+        const ry = el.height / 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + rx * 0.9, cy);
+        ctx.bezierCurveTo(cx + rx, cy + ry * 0.6, cx + rx * 0.6, cy + ry, cx, cy + ry * 0.95);
+        ctx.bezierCurveTo(cx - rx * 0.7, cy + ry * 0.9, cx - rx, cy + ry * 0.5, cx - rx * 0.95, cy);
+        ctx.bezierCurveTo(cx - rx * 0.9, cy - ry * 0.6, cx - rx * 0.5, cy - ry, cx, cy - ry * 0.9);
+        ctx.bezierCurveTo(cx + rx * 0.6, cy - ry * 0.95, cx + rx * 0.95, cy - ry * 0.4, cx + rx * 0.9, cy);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "arch") {
+        // Arch/half-circle shape
+        ctx.beginPath();
+        ctx.arc(el.x + el.width / 2, el.y + el.height, el.width / 2, Math.PI, 0);
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "arrow") {
+        // Arrow pointing right
+        const arrowWidth = el.width * 0.6;
+        const arrowHead = el.width * 0.4;
+        const shaftHeight = el.height * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height / 2 - shaftHeight / 2);
+        ctx.lineTo(el.x + arrowWidth, el.y + el.height / 2 - shaftHeight / 2);
+        ctx.lineTo(el.x + arrowWidth, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+        ctx.lineTo(el.x + arrowWidth, el.y + el.height);
+        ctx.lineTo(el.x + arrowWidth, el.y + el.height / 2 + shaftHeight / 2);
+        ctx.lineTo(el.x, el.y + el.height / 2 + shaftHeight / 2);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "badge") {
+        // Badge/seal shape with scalloped edges
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const outerR = Math.min(el.width, el.height) / 2;
+        const innerR = outerR * 0.85;
+        const points = 16;
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+          const angle = (Math.PI / points) * i;
+          const r = i % 2 === 0 ? outerR : innerR;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "ribbon") {
+        // Ribbon/banner shape
+        const notchDepth = el.width * 0.1;
+        const foldHeight = el.height * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y);
+        ctx.lineTo(el.x + el.width, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height - foldHeight);
+        ctx.lineTo(el.x + el.width - notchDepth, el.y + el.height);
+        ctx.lineTo(el.x + el.width / 2, el.y + el.height - foldHeight);
+        ctx.lineTo(el.x + notchDepth, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height - foldHeight);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
       } else if (el.type === "line") {
         ctx.strokeStyle = el.color || "#cccccc";
         ctx.lineWidth = el.height || 4;
@@ -383,6 +556,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
+          ctx.globalAlpha = (el.opacity ?? 100) / 100;
           ctx.drawImage(img, el.x, el.y, el.width, el.height);
           if (selectedElement === el.id) {
             drawSelection(ctx, el);
@@ -391,6 +565,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         img.src = el.imageUrl;
       } else if (el.placeholder || ["logo", "contact", "mascot"].includes(el.type)) {
         // Draw placeholder
+        ctx.globalAlpha = (el.opacity ?? 100) / 100;
         ctx.fillStyle = el.color || "#e5e7eb";
         ctx.fillRect(el.x, el.y, el.width, el.height);
         ctx.strokeStyle = el.type === "image" ? "#8b5cf6" : "#9ca3af";
@@ -924,108 +1099,288 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
           </div>
 
           {selectedEl && (
-            <div className="space-y-3 border-t pt-4">
-              <Label className="text-sm font-medium">Propriedades</Label>
+            <ScrollArea className="flex-1">
+              <div className="space-y-3 border-t pt-4 pr-2">
+                <Label className="text-sm font-medium">Propriedades</Label>
               
-              {selectedEl.type === "text" && (
-                <>
+                {selectedEl.type === "text" && (
+                  <>
+                    <div>
+                      <Label className="text-xs">Texto</Label>
+                      <Input
+                        value={selectedEl.text || ""}
+                        onChange={(e) => updateSelectedElement({ text: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Tamanho: {selectedEl.fontSize}px</Label>
+                      <Slider
+                        value={[selectedEl.fontSize || 32]}
+                        onValueChange={([v]) => updateSelectedElement({ fontSize: v })}
+                        min={12}
+                        max={120}
+                        step={1}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Color Role for shapes */}
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon"].includes(selectedEl.type)) && (
                   <div>
-                    <Label className="text-xs">Texto</Label>
-                    <Input
-                      value={selectedEl.text || ""}
-                      onChange={(e) => updateSelectedElement({ text: e.target.value })}
-                    />
+                    <Label className="text-xs">Papel da Cor (Kit de Marca)</Label>
+                    <Select
+                      value={selectedEl.colorRole || "none"}
+                      onValueChange={(v) => updateSelectedElement({ colorRole: v === "none" ? undefined : v as any })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Cor fixa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Cor fixa (não muda)</SelectItem>
+                        <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                        <SelectItem value="text">Texto (Cor 2)</SelectItem>
+                        <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
+                        <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                )}
+
+                {/* Color picker */}
+                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon"].includes(selectedEl.type)) && (
                   <div>
-                    <Label className="text-xs">Tamanho: {selectedEl.fontSize}px</Label>
+                    <Label className="text-xs">Cor {selectedEl.colorRole ? "(preview)" : ""}</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={selectedEl.color || "#000000"}
+                        onChange={(e) => updateSelectedElement({ color: e.target.value })}
+                        className="w-12 h-8 p-1"
+                      />
+                      <Input
+                        value={selectedEl.color || "#000000"}
+                        onChange={(e) => updateSelectedElement({ color: e.target.value })}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Opacity */}
+                <div>
+                  <Label className="text-xs">Opacidade: {selectedEl.opacity ?? 100}%</Label>
+                  <Slider
+                    value={[selectedEl.opacity ?? 100]}
+                    onValueChange={([v]) => updateSelectedElement({ opacity: v })}
+                    min={0}
+                    max={100}
+                    step={1}
+                  />
+                </div>
+
+                {/* Border Radius for rect */}
+                {selectedEl.type === "rect" && (
+                  <div>
+                    <Label className="text-xs">Arredondamento: {selectedEl.borderRadius || 0}px</Label>
                     <Slider
-                      value={[selectedEl.fontSize || 32]}
-                      onValueChange={([v]) => updateSelectedElement({ fontSize: v })}
-                      min={12}
-                      max={120}
+                      value={[selectedEl.borderRadius || 0]}
+                      onValueChange={([v]) => updateSelectedElement({ borderRadius: v })}
+                      min={0}
+                      max={200}
                       step={1}
                     />
                   </div>
-                </>
-              )}
+                )}
 
-              {(selectedEl.type === "rect" || selectedEl.type === "circle" || selectedEl.type === "triangle" || selectedEl.type === "diamond" || selectedEl.type === "hexagon" || selectedEl.type === "pentagon" || selectedEl.type === "star") && (
-                <div>
-                  <Label className="text-xs">Papel da Cor (Kit de Marca)</Label>
-                  <Select
-                    value={selectedEl.colorRole || "none"}
-                    onValueChange={(v) => updateSelectedElement({ colorRole: v === "none" ? undefined : v as any })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Cor fixa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Cor fixa (não muda)</SelectItem>
-                      <SelectItem value="background">Fundo (Cor 1)</SelectItem>
-                      <SelectItem value="text">Texto (Cor 2)</SelectItem>
-                      <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
-                      <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {selectedEl.colorRole ? "Cor será do kit de marca do cliente" : "Cor não muda na geração"}
-                  </p>
-                </div>
-              )}
+                {/* Border */}
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon"].includes(selectedEl.type)) && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Borda</Label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Label className="text-[10px] text-muted-foreground">Espessura</Label>
+                        <Slider
+                          value={[selectedEl.borderWidth || 0]}
+                          onValueChange={([v]) => updateSelectedElement({ borderWidth: v })}
+                          min={0}
+                          max={20}
+                          step={1}
+                        />
+                      </div>
+                      <div className="w-10">
+                        <Label className="text-[10px] text-muted-foreground">Cor</Label>
+                        <Input
+                          type="color"
+                          value={selectedEl.borderColor || "#000000"}
+                          onChange={(e) => updateSelectedElement({ borderColor: e.target.value })}
+                          className="w-10 h-8 p-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-              {(selectedEl.type === "rect" || selectedEl.type === "circle" || selectedEl.type === "text" || selectedEl.type === "triangle" || selectedEl.type === "diamond" || selectedEl.type === "hexagon" || selectedEl.type === "pentagon" || selectedEl.type === "star" || selectedEl.type === "line") && (
-                <div>
-                  <Label className="text-xs">Cor {selectedEl.colorRole ? "(preview)" : ""}</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="color"
-                      value={selectedEl.color || "#000000"}
-                      onChange={(e) => updateSelectedElement({ color: e.target.value })}
-                      className="w-12 h-8 p-1"
+                {/* Shadow */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Sombra</Label>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Desfoque: {selectedEl.shadowBlur || 0}px</Label>
+                    <Slider
+                      value={[selectedEl.shadowBlur || 0]}
+                      onValueChange={([v]) => updateSelectedElement({ shadowBlur: v })}
+                      min={0}
+                      max={50}
+                      step={1}
                     />
+                  </div>
+                  {(selectedEl.shadowBlur || 0) > 0 && (
+                    <>
+                      <div className="flex gap-2">
+                        <Input
+                          type="color"
+                          value={selectedEl.shadowColor || "#000000"}
+                          onChange={(e) => updateSelectedElement({ shadowColor: e.target.value })}
+                          className="w-10 h-8 p-1"
+                        />
+                        <div className="flex-1 grid grid-cols-2 gap-1">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">X</Label>
+                            <Input
+                              type="number"
+                              value={selectedEl.shadowOffsetX || 0}
+                              onChange={(e) => updateSelectedElement({ shadowOffsetX: Number(e.target.value) })}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Y</Label>
+                            <Input
+                              type="number"
+                              value={selectedEl.shadowOffsetY || 0}
+                              onChange={(e) => updateSelectedElement({ shadowOffsetY: Number(e.target.value) })}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Gradient */}
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon"].includes(selectedEl.type)) && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium">Gradiente</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => updateSelectedElement({ 
+                          gradient: selectedEl.gradient 
+                            ? undefined 
+                            : { type: "linear", color1: selectedEl.color || "#3b82f6", color2: "#8b5cf6", angle: 45 }
+                        })}
+                      >
+                        {selectedEl.gradient ? "Remover" : "Adicionar"}
+                      </Button>
+                    </div>
+                    {selectedEl.gradient && (
+                      <div className="space-y-2">
+                        <Select
+                          value={selectedEl.gradient.type}
+                          onValueChange={(v) => updateSelectedElement({ 
+                            gradient: { ...selectedEl.gradient!, type: v as "linear" | "radial" }
+                          })}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="linear">Linear</SelectItem>
+                            <SelectItem value="radial">Radial</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="flex gap-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Cor 1</Label>
+                            <Input
+                              type="color"
+                              value={selectedEl.gradient.color1}
+                              onChange={(e) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, color1: e.target.value }
+                              })}
+                              className="w-12 h-8 p-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Cor 2</Label>
+                            <Input
+                              type="color"
+                              value={selectedEl.gradient.color2}
+                              onChange={(e) => updateSelectedElement({ 
+                                gradient: { ...selectedEl.gradient!, color2: e.target.value }
+                              })}
+                              className="w-12 h-8 p-1"
+                            />
+                          </div>
+                          {selectedEl.gradient.type === "linear" && (
+                            <div className="flex-1">
+                              <Label className="text-[10px] text-muted-foreground">Ângulo</Label>
+                              <Slider
+                                value={[selectedEl.gradient.angle || 0]}
+                                onValueChange={([v]) => updateSelectedElement({ 
+                                  gradient: { ...selectedEl.gradient!, angle: v }
+                                })}
+                                min={0}
+                                max={360}
+                                step={15}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Dimensions */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Largura</Label>
                     <Input
-                      value={selectedEl.color || "#000000"}
-                      onChange={(e) => updateSelectedElement({ color: e.target.value })}
-                      className="flex-1"
+                      type="number"
+                      value={selectedEl.width}
+                      onChange={(e) => updateSelectedElement({ width: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Altura</Label>
+                    <Input
+                      type="number"
+                      value={selectedEl.height}
+                      onChange={(e) => updateSelectedElement({ height: Number(e.target.value) })}
                     />
                   </div>
                 </div>
-              )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Largura</Label>
-                  <Input
-                    type="number"
-                    value={selectedEl.width}
-                    onChange={(e) => updateSelectedElement({ width: Number(e.target.value) })}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Altura</Label>
-                  <Input
-                    type="number"
-                    value={selectedEl.height}
-                    onChange={(e) => updateSelectedElement({ height: Number(e.target.value) })}
-                  />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={duplicateSelectedElement}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => moveLayer("up")}>
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => moveLayer("down")}>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={deleteSelectedElement}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={duplicateSelectedElement}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => moveLayer("up")}>
-                  <ChevronUp className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => moveLayer("down")}>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="destructive" onClick={deleteSelectedElement}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            </ScrollArea>
           )}
         </div>
 
