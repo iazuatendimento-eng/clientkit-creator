@@ -47,6 +47,23 @@ interface CanvasElement {
   imageUrl?: string;
   placeholder?: boolean;
   colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  opacity?: number;
+  borderRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  shadowBlur?: number;
+  shadowColor?: string;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  gradient?: {
+    type: "linear" | "radial";
+    color1: string;
+    color2: string;
+    opacity1?: number;
+    opacity2?: number;
+    angle?: number;
+    fadeMode?: boolean;
+  };
 }
 
 interface VideoTemplate {
@@ -301,6 +318,52 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       return el.color || defaultColor;
     };
 
+    // Helper to convert hex to rgba
+    const hexToRgba = (hex: string, opacity: number): string => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
+    };
+
+    // Helper to get fill style with gradient support
+    const getElementFillStyle = (el: CanvasElement, x: number, y: number, elW: number, elH: number, defaultColor: string): string | CanvasGradient => {
+      if (el.gradient) {
+        let gradient;
+        if (el.gradient.type === "linear") {
+          const angle = (el.gradient.angle || 0) * Math.PI / 180;
+          const dx = Math.cos(angle) * elW;
+          const dy = Math.sin(angle) * elH;
+          gradient = ctx.createLinearGradient(x, y, x + dx, y + dy);
+        } else {
+          gradient = ctx.createRadialGradient(
+            x + elW / 2, y + elH / 2, 0,
+            x + elW / 2, y + elH / 2, Math.max(elW, elH) / 2
+          );
+        }
+        gradient.addColorStop(0, hexToRgba(el.gradient.color1, el.gradient.opacity1 ?? 100));
+        gradient.addColorStop(1, hexToRgba(el.gradient.color2, el.gradient.opacity2 ?? 100));
+        return gradient;
+      }
+      return getElementColor(el, defaultColor);
+    };
+
+    // Helper to apply element styles (opacity, shadow)
+    const applyElementStyles = (el: CanvasElement) => {
+      ctx.globalAlpha = (el.opacity ?? 100) / 100;
+      if (el.shadowBlur && el.shadowBlur > 0) {
+        ctx.shadowBlur = el.shadowBlur;
+        ctx.shadowColor = el.shadowColor || "#000000";
+        ctx.shadowOffsetX = el.shadowOffsetX || 0;
+        ctx.shadowOffsetY = el.shadowOffsetY || 0;
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+    };
+
     // Draw background
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, w, h);
@@ -337,11 +400,20 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
 
     // Draw elements
     for (const el of elements) {
+      ctx.save();
+      applyElementStyles(el);
+      
       if (el.type === "rect") {
-        ctx.fillStyle = getElementColor(el, accessoryColor1);
-        ctx.fillRect(el.x, el.y, el.width, el.height);
+        ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
+        if (el.borderRadius && el.borderRadius > 0) {
+          ctx.beginPath();
+          ctx.roundRect(el.x, el.y, el.width, el.height, el.borderRadius);
+          ctx.fill();
+        } else {
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+        }
       } else if (el.type === "circle") {
-        ctx.fillStyle = getElementColor(el, accessoryColor2);
+        ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor2);
         ctx.beginPath();
         ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -419,6 +491,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           }
         }
       }
+      ctx.restore();
     }
 
     return canvas.toDataURL("image/png");

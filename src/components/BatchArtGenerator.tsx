@@ -49,6 +49,23 @@ interface CanvasElement {
   imageUrl?: string;
   placeholder?: boolean;
   colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  opacity?: number;
+  borderRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  shadowBlur?: number;
+  shadowColor?: string;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  gradient?: {
+    type: "linear" | "radial";
+    color1: string;
+    color2: string;
+    opacity1?: number;
+    opacity2?: number;
+    angle?: number;
+    fadeMode?: boolean;
+  };
 }
 
 interface MasterTemplate {
@@ -266,6 +283,61 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       if (el.colorRole === "accessory2") return accessoryColor2;
       return el.color || defaultColor;
     };
+
+    // Helper to convert hex to rgba
+    const hexToRgba = (hex: string, opacity: number): string => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
+    };
+
+    // Helper to get fill style with gradient support
+    const getElementFillStyle = (el: CanvasElement, x: number, y: number, w: number, h: number, defaultColor: string): string | CanvasGradient => {
+      if (el.gradient) {
+        let gradient;
+        if (el.gradient.type === "linear") {
+          const angle = (el.gradient.angle || 0) * Math.PI / 180;
+          const dx = Math.cos(angle) * w;
+          const dy = Math.sin(angle) * h;
+          gradient = ctx.createLinearGradient(x, y, x + dx, y + dy);
+        } else {
+          gradient = ctx.createRadialGradient(
+            x + w / 2, y + h / 2, 0,
+            x + w / 2, y + h / 2, Math.max(w, h) / 2
+          );
+        }
+        gradient.addColorStop(0, hexToRgba(el.gradient.color1, el.gradient.opacity1 ?? 100));
+        gradient.addColorStop(1, hexToRgba(el.gradient.color2, el.gradient.opacity2 ?? 100));
+        return gradient;
+      }
+      return getElementColor(el, defaultColor);
+    };
+
+    // Helper to apply element styles (opacity, shadow)
+    const applyElementStyles = (el: CanvasElement) => {
+      ctx.globalAlpha = (el.opacity ?? 100) / 100;
+      if (el.shadowBlur && el.shadowBlur > 0) {
+        ctx.shadowBlur = el.shadowBlur;
+        ctx.shadowColor = el.shadowColor || "#000000";
+        ctx.shadowOffsetX = el.shadowOffsetX || 0;
+        ctx.shadowOffsetY = el.shadowOffsetY || 0;
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+    };
+
+    // Helper to reset styles
+    const resetStyles = () => {
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    };
     
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
@@ -280,21 +352,30 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
     // Draw elements
     for (const el of template.elements) {
+      ctx.save();
+      applyElementStyles(el);
+      
       if (el.type === "rect") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementColor(el, accessoryColor1);
-        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor1);
+        if (el.borderRadius && el.borderRadius > 0) {
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, el.borderRadius);
+          ctx.fill();
+        } else {
+          ctx.fillRect(x, y, w, h);
+        }
       } else if (el.type === "circle") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementColor(el, accessoryColor2);
+        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor2);
         ctx.beginPath();
         ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -304,7 +385,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementColor(el, accessoryColor1);
+        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor1);
         ctx.beginPath();
         ctx.moveTo(x + w / 2, y);
         ctx.lineTo(x + w, y + h);
@@ -317,7 +398,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementColor(el, accessoryColor2);
+        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor2);
         ctx.beginPath();
         ctx.moveTo(x + w / 2, y);
         ctx.lineTo(x + w, y + h / 2);
@@ -331,7 +412,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementColor(el, accessoryColor1);
+        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor1);
         const cx = x + w / 2;
         const cy = y + h / 2;
         const r = Math.min(w, h) / 2;
@@ -351,7 +432,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementColor(el, accessoryColor2);
+        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor2);
         const cx = x + w / 2;
         const cy = y + h / 2;
         const r = Math.min(w, h) / 2;
@@ -371,7 +452,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementColor(el, accessoryColor1);
+        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor1);
         const cx = x + w / 2;
         const cy = y + h / 2;
         const outerR = Math.min(w, h) / 2;
@@ -541,6 +622,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           }
         }
       }
+      ctx.restore();
     }
 
     return canvas.toDataURL("image/png");
