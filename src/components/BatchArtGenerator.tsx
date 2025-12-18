@@ -422,7 +422,31 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         // Search for relevant image if template has image placeholder
         if (hasImagePlaceholder && !art.photoImage) {
           try {
-            const searchTerms = art.cardText.split(" ").slice(0, 3).join(" ");
+            // Translate text to English for better image search results
+            let searchTerms = art.cardText.split(" ").slice(0, 5).join(" ");
+            
+            try {
+              const translateResponse = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-text`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                  },
+                  body: JSON.stringify({ text: art.cardText }),
+                }
+              );
+              
+              if (translateResponse.ok) {
+                const { translatedText } = await translateResponse.json();
+                searchTerms = translatedText;
+                console.log("Searching images with translated terms:", searchTerms);
+              }
+            } catch (translateError) {
+              console.error("Translation failed, using original text:", translateError);
+            }
+            
             const images = await searchImages(searchTerms, 1);
             if (images.length > 0) {
               updatedArts[i] = { ...art, photoImage: images[0].urls.regular };

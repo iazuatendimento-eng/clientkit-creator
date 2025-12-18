@@ -67,6 +67,7 @@ interface ClientVideo {
   status: "pending" | "approved" | "rejected";
   backgroundImages?: string[];
   pageTexts: string[]; // Text for each content page
+  searchedImages?: string[]; // Images found for each page
 }
 
 interface BatchVideoGeneratorProps {
@@ -161,7 +162,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     elements: CanvasElement[],
     text: string,
     brandKit: any,
-    isSignature: boolean
+    isSignature: boolean,
+    backgroundImage?: string
   ): Promise<string> => {
     const canvas = document.createElement("canvas");
     canvas.width = template.width;
@@ -177,6 +179,35 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     // Draw background
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
+
+    // Draw background image if provided
+    if (backgroundImage) {
+      const bgImg = await loadImage(backgroundImage);
+      if (bgImg) {
+        // Cover the canvas with the image
+        const imgAspect = bgImg.width / bgImg.height;
+        const canvasAspect = template.width / template.height;
+        let drawWidth, drawHeight, drawX, drawY;
+        
+        if (imgAspect > canvasAspect) {
+          drawHeight = template.height;
+          drawWidth = drawHeight * imgAspect;
+          drawX = (template.width - drawWidth) / 2;
+          drawY = 0;
+        } else {
+          drawWidth = template.width;
+          drawHeight = drawWidth / imgAspect;
+          drawX = 0;
+          drawY = (template.height - drawHeight) / 2;
+        }
+        
+        ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
+        
+        // Add overlay for text readability
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.fillRect(0, 0, template.width, template.height);
+      }
+    }
 
     // Draw elements
     for (const el of elements) {
@@ -252,16 +283,19 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     return canvas.toDataURL("image/png");
   };
 
-  const generateVideoForClient = async (video: ClientVideo): Promise<string[]> => {
+  const generateVideoForClient = async (video: ClientVideo, searchedImages: string[]): Promise<string[]> => {
     const pages: string[] = [];
 
     // Generate content pages (one per text segment)
-    for (const text of video.pageTexts) {
+    for (let i = 0; i < video.pageTexts.length; i++) {
+      const text = video.pageTexts[i];
+      const bgImage = searchedImages[i] || undefined;
       const pageImage = await generatePageImage(
         template.contentElements,
         text,
         video.brandKit,
-        false
+        false,
+        bgImage
       );
       pages.push(pageImage);
     }
@@ -285,8 +319,50 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
 
       for (let i = 0; i < updatedVideos.length; i++) {
         const video = updatedVideos[i];
-        const pages = await generateVideoForClient(video);
-        updatedVideos[i] = { ...video, pages };
+        
+        // Search for images for each content page with translation
+        const searchedImages: string[] = [];
+        for (const text of video.pageTexts) {
+          try {
+            let searchTerms = text.split(" ").slice(0, 5).join(" ");
+            
+            // Translate to English for better image search results
+            try {
+              const translateResponse = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-text`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                  },
+                  body: JSON.stringify({ text }),
+                }
+              );
+              
+              if (translateResponse.ok) {
+                const { translatedText } = await translateResponse.json();
+                searchTerms = translatedText;
+                console.log("Video - Searching images with translated terms:", searchTerms);
+              }
+            } catch (translateError) {
+              console.error("Translation failed, using original text:", translateError);
+            }
+            
+            const images = await searchImages(searchTerms, 1);
+            if (images.length > 0) {
+              searchedImages.push(images[0].urls.regular);
+            } else {
+              searchedImages.push("");
+            }
+          } catch (error) {
+            console.error("Error searching image for video:", error);
+            searchedImages.push("");
+          }
+        }
+        
+        const pages = await generateVideoForClient(video, searchedImages);
+        updatedVideos[i] = { ...video, pages, searchedImages };
         setClientVideos([...updatedVideos]);
       }
 
