@@ -137,7 +137,13 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
   const [isSearching, setIsSearching] = useState(false);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
 
+  const selectedVideoRef = useRef<ClientVideo | null>(null);
+
   const { toast } = useToast();
+
+  useEffect(() => {
+    selectedVideoRef.current = selectedVideo;
+  }, [selectedVideo]);
 
   useEffect(() => {
     loadTaggedCards();
@@ -436,7 +442,14 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
   };
 
   const updateAdjustmentLocal = useCallback((key: keyof ElementAdjustments, value: number) => {
-    if (!selectedVideo) return;
+    const current = selectedVideoRef.current;
+    if (!current) return;
+
+    // Update ref synchronously so "onCommit" always sees the latest values
+    selectedVideoRef.current = {
+      ...current,
+      adjustments: { ...current.adjustments, [key]: value },
+    };
 
     setSelectedVideo((prev) =>
       prev ? { ...prev, adjustments: { ...prev.adjustments, [key]: value } } : prev
@@ -444,22 +457,24 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
 
     setClientVideos((prev) =>
       prev.map((v) =>
-        v.cardId === selectedVideo.cardId
+        v.cardId === current.cardId
           ? { ...v, adjustments: { ...v.adjustments, [key]: value } }
           : v
       )
     );
-  }, [selectedVideo]);
+  }, []);
 
   const applyAdjustments = useCallback(
     async (override?: ClientVideo) => {
-      const base = override ?? selectedVideo;
+      const base = override ?? selectedVideoRef.current;
       if (!base) return;
 
       setIsApplyingAdjustments(true);
       try {
         const newPages = await regenerateSingleVideo(base);
         const updatedVideo = { ...base, pages: newPages };
+
+        selectedVideoRef.current = updatedVideo;
 
         setClientVideos((prev) =>
           prev.map((v) => (v.cardId === updatedVideo.cardId ? updatedVideo : v))
@@ -469,7 +484,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         setIsApplyingAdjustments(false);
       }
     },
-    [selectedVideo]
+    []
   );
 
 
