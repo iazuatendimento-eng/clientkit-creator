@@ -1086,6 +1086,16 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
+              // Sort completed column by deadline descending (most recent deadline first)
+              if (column.id === "completed") {
+                columnBriefs = [...columnBriefs].sort((a, b) => {
+                  if (!a.deadline && !b.deadline) return 0;
+                  if (!a.deadline) return 1;
+                  if (!b.deadline) return -1;
+                  return new Date(b.deadline).getTime() - new Date(a.deadline).getTime();
+                });
+              }
+              
               return (
                 <ColumnDroppable key={column.id} id={column.id}>
                   <div className="space-y-4">
