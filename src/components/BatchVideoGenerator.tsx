@@ -1147,6 +1147,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                     previewUrl={selectedVideo.pages[currentPreviewPage] || null}
                     isBusy={isApplyingAdjustments}
                     onCommit={() => applyAdjustments()}
+                    isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
                     logoX={selectedVideo.adjustments.logoX}
                     logoY={selectedVideo.adjustments.logoY}
                     logoScaleX={selectedVideo.adjustments.logoScaleX}
@@ -1177,12 +1178,18 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                     setTextX={(v) => updatePageTextAdjustment(currentPreviewPage, "textX", v)}
                     setTextY={(v) => updatePageTextAdjustment(currentPreviewPage, "textY", v)}
                     setTextScale={(v) => updatePageTextAdjustment(currentPreviewPage, "textScale", v)}
+                    imageX={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageX || 0}
+                    imageY={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageY || 0}
+                    imageScale={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageScale || 100}
+                    setImageX={(v) => updatePageImageAdjustment(currentPreviewPage, "imageX", v)}
+                    setImageY={(v) => updatePageImageAdjustment(currentPreviewPage, "imageY", v)}
+                    setImageScale={(v) => updatePageImageAdjustment(currentPreviewPage, "imageScale", v)}
                   />
 
                   <p className="text-center text-xs text-muted-foreground">
                     Arraste os elementos para mover. Arraste as alças nos cantos para redimensionar.
                     <br />
-                    <span className="text-primary/80">Ajustes de texto são individuais por página.</span>
+                    <span className="text-primary/80">Ajustes de texto e foto são individuais por página.</span>
                   </p>
 
                   {/* Page navigation */}
@@ -1242,6 +1249,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                           ...selectedVideo,
                           adjustments: { ...defaultAdjustments },
                           pageTextAdjustments: selectedVideo.pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
+                          pageImageAdjustments: selectedVideo.pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
                         };
 
                         selectedVideoRef.current = resetVideo;
@@ -1253,6 +1261,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                                   ...v, 
                                   adjustments: { ...defaultAdjustments },
                                   pageTextAdjustments: selectedVideo.pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
+                                  pageImageAdjustments: selectedVideo.pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
                                 }
                               : v
                           )
