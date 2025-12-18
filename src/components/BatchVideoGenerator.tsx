@@ -4,7 +4,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -24,6 +23,7 @@ import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTag
 import { searchImages, SearchImage } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
+import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import {
   Dialog,
   DialogContent,
@@ -781,243 +781,104 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           setIsPlayingPreview(false);
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedVideo?.clientName} - Preview e Ajustes</DialogTitle>
+            <DialogTitle>{selectedVideo?.clientName} - Ajustar Elementos</DialogTitle>
           </DialogHeader>
 
           {selectedVideo && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Preview */}
-              <div className="space-y-4">
-                <div className="aspect-[9/16] bg-muted rounded-lg overflow-hidden max-h-[400px]">
-                  {selectedVideo.pages[currentPreviewPage] && (
-                    <img
-                      src={selectedVideo.pages[currentPreviewPage]}
-                      alt={`Página ${currentPreviewPage + 1} do carrossel`}
-                      className="w-full h-full object-contain"
-                    />
-                  )}
-                </div>
+            <div className="space-y-4">
+              {/* Adjust Overlay - drag corners to resize */}
+              <VideoAdjustOverlay
+                template={{
+                  width: template.width,
+                  height: template.height,
+                  contentElements: template.contentElements,
+                  signatureElements: template.signatureElements,
+                }}
+                previewUrl={selectedVideo.pages[currentPreviewPage] || null}
+                isBusy={false}
+                logoX={selectedVideo.adjustments.logoX}
+                logoY={selectedVideo.adjustments.logoY}
+                logoScaleX={selectedVideo.adjustments.logoScaleX}
+                logoScaleY={selectedVideo.adjustments.logoScaleY}
+                setLogoX={(v) => handleUpdateAdjustment("logoX", v)}
+                setLogoY={(v) => handleUpdateAdjustment("logoY", v)}
+                setLogoScaleX={(v) => handleUpdateAdjustment("logoScaleX", v)}
+                setLogoScaleY={(v) => handleUpdateAdjustment("logoScaleY", v)}
+                contactX={selectedVideo.adjustments.contactX}
+                contactY={selectedVideo.adjustments.contactY}
+                contactScaleX={selectedVideo.adjustments.contactScaleX}
+                contactScaleY={selectedVideo.adjustments.contactScaleY}
+                setContactX={(v) => handleUpdateAdjustment("contactX", v)}
+                setContactY={(v) => handleUpdateAdjustment("contactY", v)}
+                setContactScaleX={(v) => handleUpdateAdjustment("contactScaleX", v)}
+                setContactScaleY={(v) => handleUpdateAdjustment("contactScaleY", v)}
+                mascotX={selectedVideo.adjustments.mascotX}
+                mascotY={selectedVideo.adjustments.mascotY}
+                mascotScaleX={selectedVideo.adjustments.mascotScaleX}
+                mascotScaleY={selectedVideo.adjustments.mascotScaleY}
+                setMascotX={(v) => handleUpdateAdjustment("mascotX", v)}
+                setMascotY={(v) => handleUpdateAdjustment("mascotY", v)}
+                setMascotScaleX={(v) => handleUpdateAdjustment("mascotScaleX", v)}
+                setMascotScaleY={(v) => handleUpdateAdjustment("mascotScaleY", v)}
+              />
 
-                <div className="flex items-center justify-center gap-2">
-                  <Button
-                    variant={isPlayingPreview ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setIsPlayingPreview((v) => !v)}
-                    disabled={selectedVideo.pages.length <= 1}
+              <p className="text-center text-xs text-muted-foreground">
+                Arraste os elementos para mover. Arraste as alças nos cantos para redimensionar.
+              </p>
+
+              {/* Page navigation */}
+              <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
+                {selectedVideo.pages.map((page, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
+                      currentPreviewPage === idx
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-border"
+                    }`}
+                    onClick={() => {
+                      setIsPlayingPreview(false);
+                      setCurrentPreviewPage(idx);
+                    }}
+                    aria-label={`Abrir página ${idx + 1}`}
                   >
-                    <Play className="mr-2 h-4 w-4" />
-                    {isPlayingPreview ? "Pausar" : "Play"}
-                  </Button>
-                </div>
-
-                {/* Thumbnails */}
-                <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
-                  {selectedVideo.pages.map((page, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
-                        currentPreviewPage === idx
-                          ? "border-primary ring-2 ring-primary/30"
-                          : "border-border"
-                      }`}
-                      onClick={() => {
-                        setIsPlayingPreview(false);
-                        setCurrentPreviewPage(idx);
-                      }}
-                      aria-label={`Abrir página ${idx + 1}`}
-                    >
-                      <img
-                        src={page}
-                        alt={`Miniatura da página ${idx + 1}`}
-                        className="h-16 w-10 object-cover"
-                        loading="lazy"
-                      />
-                    </button>
-                  ))}
-                </div>
-
-                <p className="text-center text-sm text-muted-foreground">
-                  Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
-                  {currentPreviewPage === selectedVideo.pages.length - 1 && " (Assinatura)"}
-                </p>
+                    <img
+                      src={page}
+                      alt={`Miniatura da página ${idx + 1}`}
+                      className="h-12 w-8 object-cover"
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
               </div>
 
-              {/* Adjustment Controls */}
-              <div className="space-y-6">
-                <h3 className="font-semibold text-sm">Ajustar Elementos</h3>
-                
-                {/* Logo */}
-                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                  <Label className="text-xs font-medium text-blue-500">Logo</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs">Largura: {selectedVideo.adjustments.logoScaleX}%</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.logoScaleX]}
-                        onValueChange={([v]) => handleUpdateAdjustment("logoScaleX", v)}
-                        min={25}
-                        max={300}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Altura: {selectedVideo.adjustments.logoScaleY}%</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.logoScaleY]}
-                        onValueChange={([v]) => handleUpdateAdjustment("logoScaleY", v)}
-                        min={25}
-                        max={300}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Posição X: {selectedVideo.adjustments.logoX}</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.logoX]}
-                        onValueChange={([v]) => handleUpdateAdjustment("logoX", v)}
-                        min={-200}
-                        max={200}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Posição Y: {selectedVideo.adjustments.logoY}</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.logoY]}
-                        onValueChange={([v]) => handleUpdateAdjustment("logoY", v)}
-                        min={-200}
-                        max={200}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                </div>
+              <p className="text-center text-sm text-muted-foreground">
+                Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
+                {currentPreviewPage === selectedVideo.pages.length - 1 && " (Assinatura)"}
+              </p>
 
-                {/* Contact */}
-                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                  <Label className="text-xs font-medium text-green-500">Contato</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs">Largura: {selectedVideo.adjustments.contactScaleX}%</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.contactScaleX]}
-                        onValueChange={([v]) => handleUpdateAdjustment("contactScaleX", v)}
-                        min={25}
-                        max={300}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Altura: {selectedVideo.adjustments.contactScaleY}%</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.contactScaleY]}
-                        onValueChange={([v]) => handleUpdateAdjustment("contactScaleY", v)}
-                        min={25}
-                        max={300}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Posição X: {selectedVideo.adjustments.contactX}</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.contactX]}
-                        onValueChange={([v]) => handleUpdateAdjustment("contactX", v)}
-                        min={-200}
-                        max={200}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Posição Y: {selectedVideo.adjustments.contactY}</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.contactY]}
-                        onValueChange={([v]) => handleUpdateAdjustment("contactY", v)}
-                        min={-200}
-                        max={200}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mascot */}
-                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                  <Label className="text-xs font-medium text-purple-500">Mascote</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs">Largura: {selectedVideo.adjustments.mascotScaleX}%</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.mascotScaleX]}
-                        onValueChange={([v]) => handleUpdateAdjustment("mascotScaleX", v)}
-                        min={25}
-                        max={300}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Altura: {selectedVideo.adjustments.mascotScaleY}%</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.mascotScaleY]}
-                        onValueChange={([v]) => handleUpdateAdjustment("mascotScaleY", v)}
-                        min={25}
-                        max={300}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Posição X: {selectedVideo.adjustments.mascotX}</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.mascotX]}
-                        onValueChange={([v]) => handleUpdateAdjustment("mascotX", v)}
-                        min={-200}
-                        max={200}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Posição Y: {selectedVideo.adjustments.mascotY}</Label>
-                      <Slider
-                        value={[selectedVideo.adjustments.mascotY]}
-                        onValueChange={([v]) => handleUpdateAdjustment("mascotY", v)}
-                        min={-200}
-                        max={200}
-                        step={5}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                </div>
-
+              <div className="flex gap-2 justify-center">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full"
-                  onClick={() => {
+                  onClick={async () => {
                     const videoIndex = clientVideos.findIndex(v => v.cardId === selectedVideo.cardId);
                     if (videoIndex !== -1) {
+                      const updatedVideo = { ...selectedVideo, adjustments: { ...defaultAdjustments } };
+                      const newPages = await regenerateSingleVideo(updatedVideo);
+                      updatedVideo.pages = newPages;
                       const updatedVideos = [...clientVideos];
-                      updatedVideos[videoIndex] = { ...selectedVideo, adjustments: { ...defaultAdjustments } };
+                      updatedVideos[videoIndex] = updatedVideo;
                       setClientVideos(updatedVideos);
-                      setSelectedVideo({ ...selectedVideo, adjustments: { ...defaultAdjustments } });
+                      setSelectedVideo(updatedVideo);
                     }
                   }}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Resetar Ajustes
+                  Resetar
                 </Button>
               </div>
             </div>
