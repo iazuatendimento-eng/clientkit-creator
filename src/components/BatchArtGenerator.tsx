@@ -37,7 +37,7 @@ import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon";
   x: number;
   y: number;
   width: number;
@@ -286,11 +286,112 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        // Accessories use colors 3 or 4
         ctx.fillStyle = accessoryColor2;
         ctx.beginPath();
         ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
         ctx.fill();
+      } else if (el.type === "triangle") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+        ctx.fillStyle = accessoryColor1;
+        ctx.beginPath();
+        ctx.moveTo(x + w / 2, y);
+        ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x, y + h);
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "diamond") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+        ctx.fillStyle = accessoryColor2;
+        ctx.beginPath();
+        ctx.moveTo(x + w / 2, y);
+        ctx.lineTo(x + w, y + h / 2);
+        ctx.lineTo(x + w / 2, y + h);
+        ctx.lineTo(x, y + h / 2);
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "hexagon") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+        ctx.fillStyle = accessoryColor1;
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const r = Math.min(w, h) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i - Math.PI / 2;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "pentagon") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+        ctx.fillStyle = accessoryColor2;
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const r = Math.min(w, h) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "star") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+        ctx.fillStyle = accessoryColor1;
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const outerR = Math.min(w, h) / 2;
+        const innerR = outerR * 0.4;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const angle = (Math.PI / 5) * i - Math.PI / 2;
+          const r = i % 2 === 0 ? outerR : innerR;
+          const px = cx + r * Math.cos(angle);
+          const py = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (el.type === "line") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+        ctx.strokeStyle = accessoryColor1;
+        ctx.lineWidth = h || 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x, y + h / 2);
+        ctx.lineTo(x + w, y + h / 2);
+        ctx.stroke();
       } else if (el.type === "text") {
         // Text uses color 2 and client's font
         ctx.fillStyle = textColor;
