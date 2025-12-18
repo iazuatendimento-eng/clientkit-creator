@@ -17,6 +17,7 @@ import {
   Search,
   Play,
   Film,
+  Upload,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
@@ -144,8 +145,10 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
+  const [customImageUrl, setCustomImageUrl] = useState("");
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
 
@@ -597,6 +600,126 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     }
   };
 
+  const handleSelectImage = async (image: SearchImage) => {
+    const video = selectedVideoRef.current;
+    if (!video) return;
+
+    // Only change image for content pages (not signature page)
+    const isSignaturePage = currentPreviewPage === video.pages.length - 1;
+    if (isSignaturePage) {
+      toast({
+        title: "Página de assinatura",
+        description: "A página de assinatura não usa imagem de fundo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update the searchedImages array for the current page
+    const newSearchedImages = [...(video.searchedImages || [])];
+    newSearchedImages[currentPreviewPage] = image.urls.regular;
+
+    const updatedVideo: ClientVideo = {
+      ...video,
+      searchedImages: newSearchedImages,
+    };
+
+    selectedVideoRef.current = updatedVideo;
+    setSelectedVideo(updatedVideo);
+    setClientVideos((prev) =>
+      prev.map((v) => (v.cardId === updatedVideo.cardId ? updatedVideo : v))
+    );
+
+    setIsImageDialogOpen(false);
+    setCustomImageUrl("");
+
+    // Regenerate video with new image
+    setIsApplyingAdjustments(true);
+    try {
+      const newPages = await regenerateSingleVideo(updatedVideo);
+      const finalVideo = { ...updatedVideo, pages: newPages };
+      selectedVideoRef.current = finalVideo;
+      setSelectedVideo(finalVideo);
+      setClientVideos((prev) =>
+        prev.map((v) => (v.cardId === finalVideo.cardId ? finalVideo : v))
+      );
+      toast({
+        title: "Foto aplicada!",
+        description: "Vídeo regenerado com a nova imagem.",
+      });
+    } finally {
+      setIsApplyingAdjustments(false);
+    }
+  };
+
+  const handleCustomImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      applyCustomImage(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCustomImageUrl = () => {
+    if (!customImageUrl.trim()) return;
+    applyCustomImage(customImageUrl.trim());
+  };
+
+  const applyCustomImage = async (imageUrl: string) => {
+    const video = selectedVideoRef.current;
+    if (!video) return;
+
+    // Only change image for content pages
+    const isSignaturePage = currentPreviewPage === video.pages.length - 1;
+    if (isSignaturePage) {
+      toast({
+        title: "Página de assinatura",
+        description: "A página de assinatura não usa imagem de fundo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newSearchedImages = [...(video.searchedImages || [])];
+    newSearchedImages[currentPreviewPage] = imageUrl;
+
+    const updatedVideo: ClientVideo = {
+      ...video,
+      searchedImages: newSearchedImages,
+    };
+
+    selectedVideoRef.current = updatedVideo;
+    setSelectedVideo(updatedVideo);
+    setClientVideos((prev) =>
+      prev.map((v) => (v.cardId === updatedVideo.cardId ? updatedVideo : v))
+    );
+
+    setIsImageDialogOpen(false);
+    setCustomImageUrl("");
+
+    // Regenerate video
+    setIsApplyingAdjustments(true);
+    try {
+      const newPages = await regenerateSingleVideo(updatedVideo);
+      const finalVideo = { ...updatedVideo, pages: newPages };
+      selectedVideoRef.current = finalVideo;
+      setSelectedVideo(finalVideo);
+      setClientVideos((prev) =>
+        prev.map((v) => (v.cardId === finalVideo.cardId ? finalVideo : v))
+      );
+      toast({
+        title: "Imagem aplicada!",
+        description: "Vídeo regenerado com a nova imagem.",
+      });
+    } finally {
+      setIsApplyingAdjustments(false);
+    }
+  };
+
   const handleApproveAll = async () => {
     const approvedVideos = clientVideos.filter((v) => v.status === "approved" && v.pages.length > 0);
 
@@ -984,6 +1107,21 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                   </p>
 
                   <div className="flex gap-2 justify-center">
+                    {/* Only show change photo button for content pages */}
+                    {currentPreviewPage < selectedVideo.pages.length - 1 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const pageText = selectedVideo.pageTexts[currentPreviewPage] || "";
+                          setSearchQuery(pageText.split(" ").slice(0, 3).join(" "));
+                          setIsImageDialogOpen(true);
+                        }}
+                      >
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        Trocar Foto
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -1014,6 +1152,116 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
               </TabsContent>
             </Tabs>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Search Dialog */}
+      <Dialog open={isImageDialogOpen} onOpenChange={(open) => {
+        setIsImageDialogOpen(open);
+        if (!open) setCustomImageUrl("");
+      }}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Trocar Foto da Página {currentPreviewPage + 1}</DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="bank" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="bank">
+                <Search className="h-4 w-4 mr-2" />
+                Banco de Imagens
+              </TabsTrigger>
+              <TabsTrigger value="custom">
+                <Upload className="h-4 w-4 mr-2" />
+                Minha Imagem
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="bank" className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Buscar imagens..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearchImages()}
+                />
+                <Button onClick={handleSearchImages} disabled={isSearching}>
+                  {isSearching ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              <ScrollArea className="h-[350px]">
+                <div className="grid grid-cols-3 gap-2">
+                  {searchResults.map((image) => (
+                    <div
+                      key={image.id}
+                      className="aspect-[9/16] rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all relative"
+                      onClick={() => handleSelectImage(image)}
+                    >
+                      <img
+                        src={image.urls.small}
+                        alt={image.description || "Image"}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-1 right-1 bg-background/80 text-[10px] px-1 rounded">
+                        {image.source}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {searchResults.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Busque por imagens acima</p>
+                    <p className="text-xs mt-2">Digite um termo e clique em buscar</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="custom" className="space-y-6">
+              {/* File Upload */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Fazer Upload</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCustomImageUpload}
+                />
+                <Button 
+                  variant="outline" 
+                  className="w-full h-24 border-dashed"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="h-6 w-6" />
+                    <span>Clique para selecionar uma imagem</span>
+                  </div>
+                </Button>
+              </div>
+
+              {/* URL Paste */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Ou cole uma URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://exemplo.com/imagem.jpg"
+                    value={customImageUrl}
+                    onChange={(e) => setCustomImageUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleCustomImageUrl()}
+                  />
+                  <Button onClick={handleCustomImageUrl} disabled={!customImageUrl.trim()}>
+                    Aplicar
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>
