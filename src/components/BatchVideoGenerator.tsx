@@ -42,6 +42,7 @@ interface CanvasElement {
   fontSize?: number;
   imageUrl?: string;
   placeholder?: boolean;
+  colorRole?: "background" | "text" | "accessory1" | "accessory2";
 }
 
 interface VideoTemplate {
@@ -206,6 +207,15 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     const accessoryColor1 = ensureColor(colors[2], "#cccccc");
     const accessoryColor2 = ensureColor(colors[3], "#aaaaaa");
 
+    // Helper to get color based on colorRole
+    const getElementColor = (el: CanvasElement, defaultColor: string): string => {
+      if (el.colorRole === "background") return bgColor;
+      if (el.colorRole === "text") return textColor;
+      if (el.colorRole === "accessory1") return accessoryColor1;
+      if (el.colorRole === "accessory2") return accessoryColor2;
+      return el.color || defaultColor;
+    };
+
     // Draw background
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, w, h);
@@ -242,10 +252,10 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     // Draw elements
     for (const el of elements) {
       if (el.type === "rect") {
-        ctx.fillStyle = accessoryColor1;
+        ctx.fillStyle = getElementColor(el, accessoryColor1);
         ctx.fillRect(el.x, el.y, el.width, el.height);
       } else if (el.type === "circle") {
-        ctx.fillStyle = accessoryColor2;
+        ctx.fillStyle = getElementColor(el, accessoryColor2);
         ctx.beginPath();
         ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
         ctx.fill();
