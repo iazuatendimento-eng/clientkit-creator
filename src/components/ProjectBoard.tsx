@@ -193,7 +193,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
               {brief.artGenerationSelected && (
                 <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-purple-500/20 text-purple-500 border-purple-500/50">
-                  Arte em Lote
+                  Em Andamento
                 </Badge>
               )}
             </div>
