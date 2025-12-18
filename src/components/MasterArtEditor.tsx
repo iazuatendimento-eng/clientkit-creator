@@ -72,6 +72,7 @@ interface CanvasElement {
     opacity1?: number; // 0-100
     opacity2?: number; // 0-100
     angle?: number;
+    fadeMode?: boolean; // Single color to transparent mode
   };
 }
 
@@ -1297,7 +1298,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                         onClick={() => updateSelectedElement({ 
                           gradient: selectedEl.gradient 
                             ? undefined 
-                            : { type: "linear", color1: selectedEl.color || "#3b82f6", color2: "#8b5cf6", angle: 45 }
+                            : { type: "linear", color1: selectedEl.color || "#3b82f6", color2: "#8b5cf6", angle: 45, fadeMode: false }
                         })}
                       >
                         {selectedEl.gradient ? "Remover" : "Adicionar"}
@@ -1319,64 +1320,135 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                             <SelectItem value="radial">Radial</SelectItem>
                           </SelectContent>
                         </Select>
-                        
-                        {/* Color 1 with opacity */}
-                        <div className="space-y-1 p-2 bg-muted/30 rounded">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="color"
-                              value={selectedEl.gradient.color1}
-                              onChange={(e) => updateSelectedElement({ 
-                                gradient: { ...selectedEl.gradient!, color1: e.target.value }
-                              })}
-                              className="w-10 h-8 p-1"
-                            />
-                            <Label className="text-[10px] text-muted-foreground flex-1">Cor 1</Label>
-                          </div>
-                          <div>
-                            <Label className="text-[10px] text-muted-foreground">
-                              Transparência: {100 - (selectedEl.gradient.opacity1 ?? 100)}%
-                            </Label>
-                            <Slider
-                              value={[selectedEl.gradient.opacity1 ?? 100]}
-                              onValueChange={([v]) => updateSelectedElement({ 
-                                gradient: { ...selectedEl.gradient!, opacity1: v }
-                              })}
-                              min={0}
-                              max={100}
-                              step={5}
-                            />
-                          </div>
+
+                        {/* Fade Mode Toggle */}
+                        <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                          <Label className="text-[10px] text-muted-foreground">Modo Transparência</Label>
+                          <Button
+                            variant={selectedEl.gradient.fadeMode ? "default" : "outline"}
+                            size="sm"
+                            className="h-6 text-xs"
+                            onClick={() => {
+                              const fadeMode = !selectedEl.gradient?.fadeMode;
+                              updateSelectedElement({ 
+                                gradient: { 
+                                  ...selectedEl.gradient!, 
+                                  fadeMode,
+                                  // When enabling fade mode, set color2 same as color1 and opacity2 to 0
+                                  ...(fadeMode ? { color2: selectedEl.gradient!.color1, opacity1: 100, opacity2: 0 } : {})
+                                }
+                              });
+                            }}
+                          >
+                            {selectedEl.gradient.fadeMode ? "Ativado" : "Desativado"}
+                          </Button>
                         </div>
-                        
-                        {/* Color 2 with opacity */}
-                        <div className="space-y-1 p-2 bg-muted/30 rounded">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="color"
-                              value={selectedEl.gradient.color2}
-                              onChange={(e) => updateSelectedElement({ 
-                                gradient: { ...selectedEl.gradient!, color2: e.target.value }
-                              })}
-                              className="w-10 h-8 p-1"
-                            />
-                            <Label className="text-[10px] text-muted-foreground flex-1">Cor 2</Label>
+
+                        {selectedEl.gradient.fadeMode ? (
+                          /* Fade Mode - Single color to transparent */
+                          <div className="space-y-3">
+                            <div className="space-y-1 p-2 bg-muted/30 rounded">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="color"
+                                  value={selectedEl.gradient.color1}
+                                  onChange={(e) => updateSelectedElement({ 
+                                    gradient: { ...selectedEl.gradient!, color1: e.target.value, color2: e.target.value }
+                                  })}
+                                  className="w-10 h-8 p-1"
+                                />
+                                <Label className="text-[10px] text-muted-foreground flex-1">Cor</Label>
+                              </div>
+                            </div>
+                            
+                            <div className="p-2 bg-muted/30 rounded space-y-2">
+                              <Label className="text-[10px] text-muted-foreground">Direção do Fade</Label>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant={(selectedEl.gradient.opacity1 ?? 100) === 100 ? "default" : "outline"}
+                                  size="sm"
+                                  className="flex-1 h-7 text-xs"
+                                  onClick={() => updateSelectedElement({ 
+                                    gradient: { ...selectedEl.gradient!, opacity1: 100, opacity2: 0 }
+                                  })}
+                                >
+                                  Cor → Trans
+                                </Button>
+                                <Button
+                                  variant={(selectedEl.gradient.opacity1 ?? 100) === 0 ? "default" : "outline"}
+                                  size="sm"
+                                  className="flex-1 h-7 text-xs"
+                                  onClick={() => updateSelectedElement({ 
+                                    gradient: { ...selectedEl.gradient!, opacity1: 0, opacity2: 100 }
+                                  })}
+                                >
+                                  Trans → Cor
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <Label className="text-[10px] text-muted-foreground">
-                              Transparência: {100 - (selectedEl.gradient.opacity2 ?? 100)}%
-                            </Label>
-                            <Slider
-                              value={[selectedEl.gradient.opacity2 ?? 100]}
-                              onValueChange={([v]) => updateSelectedElement({ 
-                                gradient: { ...selectedEl.gradient!, opacity2: v }
-                              })}
-                              min={0}
-                              max={100}
-                              step={5}
-                            />
-                          </div>
-                        </div>
+                        ) : (
+                          /* Normal Mode - Two colors */
+                          <>
+                            {/* Color 1 with opacity */}
+                            <div className="space-y-1 p-2 bg-muted/30 rounded">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="color"
+                                  value={selectedEl.gradient.color1}
+                                  onChange={(e) => updateSelectedElement({ 
+                                    gradient: { ...selectedEl.gradient!, color1: e.target.value }
+                                  })}
+                                  className="w-10 h-8 p-1"
+                                />
+                                <Label className="text-[10px] text-muted-foreground flex-1">Cor 1</Label>
+                              </div>
+                              <div>
+                                <Label className="text-[10px] text-muted-foreground">
+                                  Transparência: {100 - (selectedEl.gradient.opacity1 ?? 100)}%
+                                </Label>
+                                <Slider
+                                  value={[selectedEl.gradient.opacity1 ?? 100]}
+                                  onValueChange={([v]) => updateSelectedElement({ 
+                                    gradient: { ...selectedEl.gradient!, opacity1: v }
+                                  })}
+                                  min={0}
+                                  max={100}
+                                  step={5}
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Color 2 with opacity */}
+                            <div className="space-y-1 p-2 bg-muted/30 rounded">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="color"
+                                  value={selectedEl.gradient.color2}
+                                  onChange={(e) => updateSelectedElement({ 
+                                    gradient: { ...selectedEl.gradient!, color2: e.target.value }
+                                  })}
+                                  className="w-10 h-8 p-1"
+                                />
+                                <Label className="text-[10px] text-muted-foreground flex-1">Cor 2</Label>
+                              </div>
+                              <div>
+                                <Label className="text-[10px] text-muted-foreground">
+                                  Transparência: {100 - (selectedEl.gradient.opacity2 ?? 100)}%
+                                </Label>
+                                <Slider
+                                  value={[selectedEl.gradient.opacity2 ?? 100]}
+                                  onValueChange={([v]) => updateSelectedElement({ 
+                                    gradient: { ...selectedEl.gradient!, opacity2: v }
+                                  })}
+                                  min={0}
+                                  max={100}
+                                  step={5}
+                                />
+                              </div>
+                            </div>
+                          </>
+                        )}
                         
                         {selectedEl.gradient.type === "linear" && (
                           <div>
