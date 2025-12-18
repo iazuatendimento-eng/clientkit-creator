@@ -203,7 +203,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 </Badge>
               )}
             </div>
-            <h4 className="font-semibold text-sm text-left break-words whitespace-normal leading-relaxed">{brief.title}</h4>
+            <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed">{brief.title}</h4>
           </div>
           {!isPublicView && (
             <div className="flex gap-1">
