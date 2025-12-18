@@ -66,10 +66,22 @@ interface PageTextAdjustment {
   textY: number;
 }
 
+interface PageImageAdjustment {
+  imageX: number;
+  imageY: number;
+  imageScale: number;
+}
+
 const defaultPageTextAdjustment: PageTextAdjustment = {
   textScale: 100,
   textX: 0,
   textY: 0,
+};
+
+const defaultPageImageAdjustment: PageImageAdjustment = {
+  imageX: 0,
+  imageY: 0,
+  imageScale: 100,
 };
 
 interface ElementAdjustments {
@@ -125,6 +137,7 @@ interface ClientVideo {
   searchedImages?: string[]; // Images found for each page
   adjustments: ElementAdjustments;
   pageTextAdjustments: PageTextAdjustment[]; // Per-page text adjustments
+  pageImageAdjustments: PageImageAdjustment[]; // Per-page image adjustments
 }
 
 interface BatchVideoGeneratorProps {
@@ -228,6 +241,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           pageTexts,
           adjustments: { ...defaultAdjustments },
           pageTextAdjustments: pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
+          pageImageAdjustments: pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
         };
       });
 
@@ -257,7 +271,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     isSignature: boolean,
     backgroundImage?: string,
     adjustments: ElementAdjustments = defaultAdjustments,
-    textAdjustment: PageTextAdjustment = defaultPageTextAdjustment
+    textAdjustment: PageTextAdjustment = defaultPageTextAdjustment,
+    imageAdjustment: PageImageAdjustment = defaultPageImageAdjustment
   ): Promise<string> => {
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -294,21 +309,22 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     if (backgroundImage) {
       const bgImg = await loadImage(backgroundImage);
       if (bgImg) {
-        // Cover the canvas with the image
+        // Cover the canvas with the image, applying adjustments
+        const scale = imageAdjustment.imageScale / 100;
         const imgAspect = bgImg.width / bgImg.height;
         const canvasAspect = w / h;
         let drawWidth, drawHeight, drawX, drawY;
 
         if (imgAspect > canvasAspect) {
-          drawHeight = h;
+          drawHeight = h * scale;
           drawWidth = drawHeight * imgAspect;
-          drawX = (w - drawWidth) / 2;
-          drawY = 0;
+          drawX = (w - drawWidth) / 2 + imageAdjustment.imageX;
+          drawY = (h - drawHeight) / 2 + imageAdjustment.imageY;
         } else {
-          drawWidth = w;
+          drawWidth = w * scale;
           drawHeight = drawWidth / imgAspect;
-          drawX = 0;
-          drawY = (h - drawHeight) / 2;
+          drawX = (w - drawWidth) / 2 + imageAdjustment.imageX;
+          drawY = (h - drawHeight) / 2 + imageAdjustment.imageY;
         }
 
         ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
@@ -416,6 +432,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       const text = video.pageTexts[i];
       const bgImage = searchedImages[i] || undefined;
       const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
+      const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
       const pageImage = await generatePageImage(
         template.contentElements,
         text,
@@ -423,7 +440,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         false,
         bgImage,
         video.adjustments,
-        textAdj
+        textAdj,
+        imageAdj
       );
       pages.push(pageImage);
     }
@@ -436,7 +454,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       true,
       undefined,
       video.adjustments,
-      defaultPageTextAdjustment
+      defaultPageTextAdjustment,
+      defaultPageImageAdjustment
     );
     pages.push(signaturePage);
 
@@ -451,6 +470,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       const text = video.pageTexts[i];
       const bgImage = video.searchedImages?.[i] || undefined;
       const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
+      const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
       const pageImage = await generatePageImage(
         template.contentElements,
         text,
@@ -458,7 +478,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         false,
         bgImage,
         video.adjustments,
-        textAdj
+        textAdj,
+        imageAdj
       );
       pages.push(pageImage);
     }
@@ -471,7 +492,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       true,
       undefined,
       video.adjustments,
-      defaultPageTextAdjustment
+      defaultPageTextAdjustment,
+      defaultPageImageAdjustment
     );
     pages.push(signaturePage);
 
@@ -528,6 +550,38 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       prev.map((v) =>
         v.cardId === current.cardId
           ? { ...v, pageTextAdjustments: updatedPageTextAdjustments }
+          : v
+      )
+    );
+  }, []);
+
+  // Update image adjustment for a specific page
+  const updatePageImageAdjustment = useCallback((pageIndex: number, key: keyof PageImageAdjustment, value: number) => {
+    const current = selectedVideoRef.current;
+    if (!current) return;
+
+    const updatedPageImageAdjustments = [...current.pageImageAdjustments];
+    if (!updatedPageImageAdjustments[pageIndex]) {
+      updatedPageImageAdjustments[pageIndex] = { ...defaultPageImageAdjustment };
+    }
+    updatedPageImageAdjustments[pageIndex] = {
+      ...updatedPageImageAdjustments[pageIndex],
+      [key]: value,
+    };
+
+    selectedVideoRef.current = {
+      ...current,
+      pageImageAdjustments: updatedPageImageAdjustments,
+    };
+
+    setSelectedVideo((prev) =>
+      prev ? { ...prev, pageImageAdjustments: updatedPageImageAdjustments } : prev
+    );
+
+    setClientVideos((prev) =>
+      prev.map((v) =>
+        v.cardId === current.cardId
+          ? { ...v, pageImageAdjustments: updatedPageImageAdjustments }
           : v
       )
     );
