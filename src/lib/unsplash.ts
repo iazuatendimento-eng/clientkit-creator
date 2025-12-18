@@ -29,15 +29,15 @@ export const searchUnsplashImages = async (query: string, perPage: number = 12):
         return data.results || [];
       }
     }
-    // Fallback: generate pseudo results using source.unsplash.com
+    // Fallback: use picsum.photos which works reliably
     const results: UnsplashImage[] = Array.from({ length: perPage }).map((_, i) => ({
-      id: `${Date.now()}-${i}`,
+      id: `picsum-${Date.now()}-${i}`,
       urls: {
-        regular: `https://source.unsplash.com/1080x1350/?${encodeURIComponent(query)}&sig=${i}`,
-        small: `https://source.unsplash.com/400x300/?${encodeURIComponent(query)}&sig=${i}`,
-        thumb: `https://source.unsplash.com/100x100/?${encodeURIComponent(query)}&sig=${i}`,
+        regular: `https://picsum.photos/seed/${encodeURIComponent(query.replace(/\s+/g, '-'))}-${i}/1080/1350`,
+        small: `https://picsum.photos/seed/${encodeURIComponent(query.replace(/\s+/g, '-'))}-${i}/400/500`,
+        thumb: `https://picsum.photos/seed/${encodeURIComponent(query.replace(/\s+/g, '-'))}-${i}/100/125`,
       },
-      user: { name: "Unsplash (random)", links: { html: "https://unsplash.com" } },
+      user: { name: "Picsum Photos", links: { html: "https://picsum.photos" } },
       description: query,
     }));
     return results;
