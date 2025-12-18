@@ -14,6 +14,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Download,
+  Film,
 } from "lucide-react";
 import {
   Dialog,
@@ -30,6 +32,7 @@ import {
 import { searchImages, SearchImage } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { createCardUpload, updateProjectBrief } from "@/lib/clientDatabase";
+import { encodeVideoToMP4, MotionEffect, TransitionEffect } from "@/lib/videoEncoder";
 
 interface BatchHistoryEditorProps {
   batch: BatchGeneration;
@@ -54,6 +57,12 @@ export const BatchHistoryEditor = ({
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [editingPageIndex, setEditingPageIndex] = useState<number>(0);
+
+  // Video effects
+  const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
+  const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
+  const [isExportingVideo, setIsExportingVideo] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
 
   // Element adjustments
   const [adjustments, setAdjustments] = useState<BatchItem["adjustments"]>({});
@@ -287,6 +296,54 @@ export const BatchHistoryEditor = ({
       img.onerror = () => resolve(null);
       img.src = url;
     });
+  };
+
+  const handleExportVideo = async () => {
+    if (!selectedItem || batch.type !== "video") return;
+
+    setIsExportingVideo(true);
+    setExportProgress(0);
+
+    try {
+      toast({
+        title: "Gerando vídeo MP4...",
+        description: "Aplicando efeitos de movimento e transição",
+      });
+
+      const videoBlob = await encodeVideoToMP4(selectedItem.files, {
+        width: template.width || 1080,
+        height: template.height || 1920,
+        pageDuration: template.pageDuration || 3,
+        fps: 24,
+        motionEffect,
+        transitionEffect,
+        onProgress: (p) => setExportProgress(Math.round(p * 100)),
+      });
+
+      // Download the video
+      const url = URL.createObjectURL(videoBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `video_${selectedItem.clientName}_${Date.now()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Vídeo exportado!",
+        description: "O download foi iniciado.",
+      });
+    } catch (error) {
+      console.error("Error exporting video:", error);
+      toast({
+        title: "Erro ao exportar vídeo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingVideo(false);
+      setExportProgress(0);
+    }
   };
 
   const handleSaveChanges = async () => {
@@ -528,6 +585,81 @@ export const BatchHistoryEditor = ({
                     Clique para buscar uma nova imagem de fundo para esta página.
                   </div>
                 </div>
+
+                {/* Video Effects - Only show for video batches */}
+                {batch.type === "video" && (
+                  <div className="bg-card border rounded-lg p-4 space-y-4">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <Film className="h-4 w-4" />
+                      Efeitos do Vídeo
+                    </h3>
+
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Movimento</Label>
+                        <select
+                          value={motionEffect}
+                          onChange={(e) => setMotionEffect(e.target.value as MotionEffect)}
+                          className="w-full h-8 px-2 text-sm border rounded-md bg-background"
+                        >
+                          <option value="none">Nenhum</option>
+                          <option value="ken-burns">Ken Burns</option>
+                          <option value="ken-burns-reverse">Ken Burns Reverso</option>
+                          <option value="pulse">Pulsar Suave</option>
+                          <option value="pulse-strong">Pulsar Forte</option>
+                          <option value="float">Flutuar</option>
+                          <option value="float-diagonal">Flutuar Diagonal</option>
+                          <option value="sway">Balançar</option>
+                          <option value="breathe">Respirar</option>
+                          <option value="drift">Deriva</option>
+                          <option value="wobble">Bambolear</option>
+                          <option value="zoom-pulse">Zoom Pulsar</option>
+                          <option value="pan-left">Pan Esquerda</option>
+                          <option value="pan-right">Pan Direita</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Transição</Label>
+                        <select
+                          value={transitionEffect}
+                          onChange={(e) => setTransitionEffect(e.target.value as TransitionEffect)}
+                          className="w-full h-8 px-2 text-sm border rounded-md bg-background"
+                        >
+                          <option value="fade">Fade</option>
+                          <option value="slide-left">Deslizar Esquerda</option>
+                          <option value="slide-right">Deslizar Direita</option>
+                          <option value="slide-up">Deslizar Cima</option>
+                          <option value="slide-down">Deslizar Baixo</option>
+                          <option value="zoom">Zoom In</option>
+                          <option value="zoom-out">Zoom Out</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleExportVideo}
+                      disabled={isExportingVideo}
+                      className="w-full"
+                    >
+                      {isExportingVideo ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Exportando... {exportProgress}%
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          Exportar Vídeo MP4
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="text-xs text-muted-foreground">
+                      Exporte o vídeo com os efeitos de movimento e transição selecionados.
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-card border rounded-lg p-4">
                   <h4 className="font-medium mb-2">Texto do Card</h4>
