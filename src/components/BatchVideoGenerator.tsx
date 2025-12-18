@@ -124,6 +124,9 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         // Split by semicolons for carousel pages
         const textParts = fullText.split(';').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
         
+        const brandKit = card.client?.brand_kit;
+        console.log("Client brand kit for video:", card.client?.name, brandKit);
+        
         return {
           clientId: card.client?.id || card.client_id,
           clientName: card.client?.name || "Cliente",
@@ -131,13 +134,15 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           cardId: card.id,
           cardTitle: card.title,
           cardText: fullText,
-          brandKit: card.client?.brand_kit,
+          brandKit: brandKit,
           pages: [],
           videoUrl: null,
           status: "pending",
-          pageTexts: textParts.length > 1 ? textParts : [fullText],
+          pageTexts: textParts.length > 0 ? textParts : [fullText],
         };
       });
+      
+      console.log("Videos to generate:", videos.length, "with pageTexts:", videos.map(v => v.pageTexts.length));
 
       setClientVideos(videos);
 
@@ -166,15 +171,18 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     backgroundImage?: string
   ): Promise<string> => {
     const canvas = document.createElement("canvas");
-    canvas.width = template.width;
-    canvas.height = template.height;
+    canvas.width = template.width || 1080;
+    canvas.height = template.height || 1920;
     const ctx = canvas.getContext("2d")!;
 
-    // Colors from brand kit
-    const bgColor = brandKit?.colors?.[0] || template.backgroundColor;
-    const textColor = brandKit?.colors?.[1] || "#ffffff";
-    const accessoryColor1 = brandKit?.colors?.[2] || "#cccccc";
-    const accessoryColor2 = brandKit?.colors?.[3] || "#aaaaaa";
+    // Colors from brand kit - ensure proper extraction
+    const colors = Array.isArray(brandKit?.colors) ? brandKit.colors : [];
+    const bgColor = colors[0] || template.backgroundColor || "#1a1a2e";
+    const textColor = colors[1] || "#ffffff";
+    const accessoryColor1 = colors[2] || "#cccccc";
+    const accessoryColor2 = colors[3] || "#aaaaaa";
+    
+    console.log("Video page generation - brandKit colors:", colors, "bgColor:", bgColor);
 
     // Draw background
     ctx.fillStyle = bgColor;
