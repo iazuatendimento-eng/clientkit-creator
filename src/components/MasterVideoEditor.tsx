@@ -40,6 +40,7 @@ import {
   Hexagon,
   Pentagon,
   Move,
+  History,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { searchImages, SearchImage } from "@/lib/imageSearch";
@@ -88,9 +89,10 @@ interface SavedVideoTemplate {
 interface MasterVideoEditorProps {
   onBack: () => void;
   onGenerateBatch: (template: VideoTemplate) => void;
+  onOpenHistory?: () => void;
 }
 
-export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditorProps) => {
+export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: MasterVideoEditorProps) => {
   const [currentPage, setCurrentPage] = useState<"content" | "signature">("content");
   const [contentElements, setContentElements] = useState<CanvasElement[]>([]);
   const [signatureElements, setSignatureElements] = useState<CanvasElement[]>([]);
@@ -1047,7 +1049,13 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch }: MasterVideoEditor
         </ScrollArea>
 
         {/* Generate Button */}
-        <div className="p-4 border-t">
+        <div className="p-4 border-t space-y-2">
+          {onOpenHistory && (
+            <Button variant="outline" className="w-full" onClick={onOpenHistory}>
+              <History className="mr-2 h-4 w-4" />
+              Histórico de Vídeos
+            </Button>
+          )}
           <Button className="w-full bg-gradient-primary" onClick={handleGenerateBatch}>
             <Play className="mr-2 h-4 w-4" />
             Gerar Vídeos em Lote

@@ -32,12 +32,13 @@ import { ptBR } from "date-fns/locale";
 interface BatchHistoryProps {
   onBack: () => void;
   onEditBatch: (batch: BatchGeneration) => void;
+  filterType?: "art" | "video";
 }
 
-export const BatchHistory = ({ onBack, onEditBatch }: BatchHistoryProps) => {
+export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryProps) => {
   const [batches, setBatches] = useState<BatchGeneration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"all" | "art" | "video">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "art" | "video">(filterType || "all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
 

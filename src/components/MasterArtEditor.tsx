@@ -37,6 +37,7 @@ import {
   Hexagon,
   Pentagon,
   Octagon,
+  History,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
@@ -95,9 +96,10 @@ interface SavedTemplate {
 interface MasterArtEditorProps {
   onBack: () => void;
   onGenerateBatch: (template: MasterTemplate) => void;
+  onOpenHistory?: () => void;
 }
 
-export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProps) => {
+export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: MasterArtEditorProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -1020,6 +1022,12 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
           />
         </div>
         <div className="flex gap-2">
+          {onOpenHistory && (
+            <Button variant="outline" onClick={onOpenHistory}>
+              <History className="mr-2 h-4 w-4" />
+              Histórico
+            </Button>
+          )}
           <Button variant="outline" onClick={saveTemplate} disabled={isSaving}>
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
