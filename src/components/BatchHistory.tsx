@@ -98,7 +98,7 @@ export const BatchHistory = ({ onBack, onEditBatch }: BatchHistoryProps) => {
           <div>
             <h1 className="text-lg font-semibold">Histórico de Lotes</h1>
             <p className="text-sm text-muted-foreground">
-              {batches.length} lote(s) salvos • máximo 6 por tipo
+              {batches.length} lote(s) salvos
             </p>
           </div>
         </div>

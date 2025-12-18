@@ -29,8 +29,6 @@ export interface BatchGeneration {
   created_at: string;
 }
 
-const MAX_BATCHES_PER_TYPE = 6;
-
 export async function saveBatchGeneration(
   type: "art" | "video",
   templateSnapshot: any,
@@ -39,9 +37,6 @@ export async function saveBatchGeneration(
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-
-    // Auto-cleanup: delete oldest batches if we have 6 or more
-    await cleanupOldBatches(type, user.id);
 
     const { data, error } = await supabase
       .from("batch_generations")
@@ -63,37 +58,6 @@ export async function saveBatchGeneration(
   } catch (error) {
     console.error("Error saving batch:", error);
     return null;
-  }
-}
-
-async function cleanupOldBatches(type: "art" | "video", userId: string) {
-  try {
-    // Get all batches of this type for this user, ordered by date
-    const { data: batches, error } = await supabase
-      .from("batch_generations")
-      .select("id, created_at")
-      .eq("type", type)
-      .eq("created_by", userId)
-      .order("created_at", { ascending: false });
-
-    if (error || !batches) return;
-
-    // If we have MAX or more, delete the oldest ones
-    if (batches.length >= MAX_BATCHES_PER_TYPE) {
-      const batchesToDelete = batches.slice(MAX_BATCHES_PER_TYPE - 1);
-      const idsToDelete = batchesToDelete.map((b) => b.id);
-
-      if (idsToDelete.length > 0) {
-        await supabase
-          .from("batch_generations")
-          .delete()
-          .in("id", idsToDelete);
-        
-        console.log(`Auto-deleted ${idsToDelete.length} old ${type} batch(es)`);
-      }
-    }
-  } catch (error) {
-    console.error("Error cleaning up old batches:", error);
   }
 }
 
