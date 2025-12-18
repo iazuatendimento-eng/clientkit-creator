@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Palette } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
@@ -440,6 +440,10 @@ const Index = () => {
         <div className="container mx-auto flex justify-between items-center">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex gap-2">
+            <Button onClick={() => navigate("/master-art")} className="bg-gradient-primary">
+              <Palette className="mr-2 h-4 w-4" />
+              Criar Artes
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
