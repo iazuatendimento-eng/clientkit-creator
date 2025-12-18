@@ -68,6 +68,7 @@ interface ElementOverrides {
   contactX?: number;
   contactY?: number;
   contactScale?: number;
+  photoScale?: number;
   shapes?: Record<string, ShapeOverride>;
 }
 
@@ -123,6 +124,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [photoOffsetX, setPhotoOffsetX] = useState(0);
   const [photoOffsetY, setPhotoOffsetY] = useState(0);
+  const [photoScale, setPhotoScale] = useState(100);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchImages_results, setSearchImagesResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -314,13 +316,21 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         ctx.fillText(line.trim(), baseX, y);
         console.log("Drew text at:", baseX, baseY, "Text:", text.substring(0, 50), "Font:", fontFamily);
       } else if (el.type === "image" && el.placeholder && art.photoImage) {
-        // Draw photo with offset support
+        // Draw photo with offset and scale support
         const img = await loadImage(art.photoImage);
         if (img) {
           const offset = art.photoOffset || { x: 0, y: 0 };
+          const scale = (art.elementOverrides?.photoScale || 100) / 100;
+          
+          // Apply scale to frame dimensions
+          const frameW = el.width * scale;
+          const frameH = el.height * scale;
+          const frameX = el.x + (el.width - frameW) / 2;
+          const frameY = el.y + (el.height - frameH) / 2;
+          
           // Calculate source dimensions to maintain aspect ratio and allow panning
           const imgAspect = img.width / img.height;
-          const frameAspect = el.width / el.height;
+          const frameAspect = frameW / frameH;
           
           let sx = 0, sy = 0, sw = img.width, sh = img.height;
           
@@ -328,17 +338,17 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
             // Image is wider - allow horizontal panning
             sh = img.height;
             sw = sh * frameAspect;
-            sx = (img.width - sw) / 2 + (offset.x * img.width / el.width);
+            sx = (img.width - sw) / 2 + (offset.x * img.width / frameW);
             sx = Math.max(0, Math.min(sx, img.width - sw));
           } else {
             // Image is taller - allow vertical panning
             sw = img.width;
             sh = sw / frameAspect;
-            sy = (img.height - sh) / 2 + (offset.y * img.height / el.height);
+            sy = (img.height - sh) / 2 + (offset.y * img.height / frameH);
             sy = Math.max(0, Math.min(sy, img.height - sh));
           }
           
-          ctx.drawImage(img, sx, sy, sw, sh, el.x, el.y, el.width, el.height);
+          ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
         } else {
           // Draw placeholder if image fails to load
           ctx.fillStyle = "#e5e7eb";
@@ -573,6 +583,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     setLivePreviewUrl(art.imageUrl); // Start with current image
     setPhotoOffsetX(art.photoOffset?.x || 0);
     setPhotoOffsetY(art.photoOffset?.y || 0);
+    setPhotoScale(art.elementOverrides?.photoScale || 100);
     // Load element overrides
     setLogoX(art.elementOverrides?.logoX || 0);
     setLogoY(art.elementOverrides?.logoY || 0);
@@ -593,6 +604,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     overrides: {
       photoOffsetX: number;
       photoOffsetY: number;
+      photoScale: number;
       logoX: number;
       logoY: number;
       logoScale: number;
@@ -618,6 +630,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         contactX: overrides.contactX,
         contactY: overrides.contactY,
         contactScale: overrides.contactScale,
+        photoScale: overrides.photoScale,
         shapes: overrides.shapeOverrides,
       }
     };
@@ -647,6 +660,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       regenerateLivePreview(selectedArt, {
         photoOffsetX,
         photoOffsetY,
+        photoScale,
         logoX,
         logoY,
         logoScale,
@@ -665,7 +679,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, textX, textY, textFontSize, contactX, contactY, contactScale, shapeOverrides, regenerateLivePreview]);
+  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, photoScale, logoX, logoY, logoScale, textX, textY, textFontSize, contactX, contactY, contactScale, shapeOverrides, regenerateLivePreview]);
 
   const handleApplyElementOverrides = async () => {
     if (!selectedArt) return;
@@ -690,6 +704,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         contactX,
         contactY,
         contactScale,
+        photoScale,
         shapes: shapeOverrides,
       }
     };
@@ -1121,8 +1136,10 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               isBusy={isRegenerating}
               photoOffsetX={photoOffsetX}
               photoOffsetY={photoOffsetY}
+              photoScale={photoScale}
               setPhotoOffsetX={setPhotoOffsetX}
               setPhotoOffsetY={setPhotoOffsetY}
+              setPhotoScale={setPhotoScale}
               logoX={logoX}
               logoY={logoY}
               logoScale={logoScale}

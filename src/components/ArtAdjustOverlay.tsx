@@ -49,8 +49,10 @@ export function ArtAdjustOverlay({
   isBusy,
   photoOffsetX,
   photoOffsetY,
+  photoScale,
   setPhotoOffsetX,
   setPhotoOffsetY,
+  setPhotoScale,
   logoX,
   logoY,
   logoScale,
@@ -78,8 +80,10 @@ export function ArtAdjustOverlay({
 
   photoOffsetX: number;
   photoOffsetY: number;
+  photoScale: number;
   setPhotoOffsetX: (v: number) => void;
   setPhotoOffsetY: (v: number) => void;
+  setPhotoScale: (v: number) => void;
 
   logoX: number;
   logoY: number;
@@ -122,11 +126,12 @@ export function ArtAdjustOverlay({
   const getRect = (part: Part) => {
     if (part === "photo") {
       if (!els.photoFrame) return null;
+      const scale = photoScale / 100;
       return {
-        x: els.photoFrame.x,
-        y: els.photoFrame.y,
-        w: els.photoFrame.width,
-        h: els.photoFrame.height,
+        x: els.photoFrame.x + (els.photoFrame.width * (1 - scale)) / 2,
+        y: els.photoFrame.y + (els.photoFrame.height * (1 - scale)) / 2,
+        w: els.photoFrame.width * scale,
+        h: els.photoFrame.height * scale,
       };
     }
 
@@ -187,6 +192,8 @@ export function ArtAdjustOverlay({
         start: {
           photoOffsetX: number;
           photoOffsetY: number;
+          photoScale: number;
+          photoW: number;
           logoX: number;
           logoY: number;
           logoScale: number;
@@ -214,6 +221,7 @@ export function ArtAdjustOverlay({
     const logoW = els.logoEl ? els.logoEl.width * (logoScale / 100) : 0;
     const contactW = els.contactEl ? els.contactEl.width * (contactScale / 100) : 0;
     const textW = els.textEl ? els.textEl.width * (textFontSize / 100) : 0;
+    const photoW = els.photoFrame ? els.photoFrame.width * (photoScale / 100) : 0;
 
     let shapeRect: ShapeOverride | undefined;
     if (isShapePart(part)) {
@@ -231,6 +239,8 @@ export function ArtAdjustOverlay({
       start: {
         photoOffsetX,
         photoOffsetY,
+        photoScale,
+        photoW,
         logoX,
         logoY,
         logoScale,
@@ -259,8 +269,23 @@ export function ArtAdjustOverlay({
       const dy = (dyClient / r.height) * template.height;
 
       if (s.part === "photo") {
-        setPhotoOffsetX(clamp(s.start.photoOffsetX + dx, -100, 100));
-        setPhotoOffsetY(clamp(s.start.photoOffsetY + dy, -100, 100));
+        if (s.mode === "move") {
+          setPhotoOffsetX(clamp(s.start.photoOffsetX + dx, -100, 100));
+          setPhotoOffsetY(clamp(s.start.photoOffsetY + dy, -100, 100));
+          return;
+        }
+
+        // Resize photo
+        const baseW = els.photoFrame?.width || 1;
+        const h = s.handle as Handle;
+
+        const signedDx = handleHasW(h) || handleHasE(h) ? handleSignX(h) * dx : 0;
+        const signedDy = handleHasN(h) || handleHasS(h) ? handleSignY(h) * dy : 0;
+        const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+
+        const newW = clamp(s.start.photoW + signedDelta, baseW * 0.25, baseW * 2);
+        const newScale = clamp((newW / baseW) * 100, 25, 200);
+        setPhotoScale(newScale);
         return;
       }
 
@@ -504,7 +529,7 @@ export function ArtAdjustOverlay({
       )}
 
       <div className="absolute inset-0">
-        <Box part="photo" label="Foto" />
+        <Box part="photo" label="Foto" resizable />
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
         <Box part="contact" label="Contato" resizable />
