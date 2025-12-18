@@ -83,6 +83,13 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     loadTaggedCards();
   }, []);
 
+  // Auto-generate arts when cards are loaded
+  useEffect(() => {
+    if (clientArts.length > 0 && !isLoading && !isGenerating && !clientArts.some(a => a.imageUrl)) {
+      generateAllArts();
+    }
+  }, [clientArts, isLoading]);
+
   const loadTaggedCards = async () => {
     try {
       setIsLoading(true);
@@ -121,6 +128,8 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
   const generateArtForClient = async (art: ClientArt): Promise<string> => {
     return new Promise((resolve) => {
+      console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
+      
       const canvas = document.createElement("canvas");
       canvas.width = template.width;
       canvas.height = template.height;
@@ -128,6 +137,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
       // Background color from client's brand kit or template
       const bgColor = art.brandKit?.colors?.[0] || template.backgroundColor;
+      console.log("Using background color:", bgColor);
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, template.width, template.height);
 
@@ -169,11 +179,32 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
             // Use font color from brand kit
             const fontColor = art.brandKit?.colors?.[1] || el.color || "#000000";
             ctx.fillStyle = fontColor;
-            ctx.font = `${el.fontSize || 32}px Arial`;
+            const fontSize = el.fontSize || 32;
+            ctx.font = `${fontSize}px Arial`;
             
-            // Replace placeholder text with card text if it's a generic placeholder
-            const text = el.text?.toLowerCase().includes("texto") ? art.cardText : el.text || "";
-            ctx.fillText(text, el.x, el.y + (el.fontSize || 32));
+            // Use card text for text elements (the position from template determines where text appears)
+            const text = art.cardText || el.text || "";
+            
+            // Word wrap text within element width
+            const words = text.split(' ');
+            let line = '';
+            let y = el.y + fontSize;
+            const maxWidth = el.width || 400;
+            const lineHeight = fontSize * 1.2;
+            
+            for (let i = 0; i < words.length; i++) {
+              const testLine = line + words[i] + ' ';
+              const metrics = ctx.measureText(testLine);
+              if (metrics.width > maxWidth && i > 0) {
+                ctx.fillText(line.trim(), el.x, y);
+                line = words[i] + ' ';
+                y += lineHeight;
+              } else {
+                line = testLine;
+              }
+            }
+            ctx.fillText(line.trim(), el.x, y);
+            console.log("Drew text at:", el.x, el.y, "Text:", text.substring(0, 50));
           } else if (el.type === "image" && el.placeholder && art.photoImage) {
             // Draw searched photo in the image placeholder
             const promise = new Promise<void>((imgResolve) => {
