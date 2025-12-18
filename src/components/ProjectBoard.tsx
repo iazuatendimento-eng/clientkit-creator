@@ -194,12 +194,12 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
               {brief.artGenerationSelected && (
                 <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-purple-500/20 text-purple-500 border-purple-500/50">
-                  Arte em Lote
+                  Na Fila
                 </Badge>
               )}
               {isFirstInQueue && !brief.artGenerationSelected && (
                 <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-blue-500/20 text-blue-500 border-blue-500/50">
-                  Na Fila
+                  Próximo
                 </Badge>
               )}
             </div>

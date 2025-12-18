@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags } from "@/lib/clientDatabase";
+import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -316,71 +316,62 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         ctx.fillText(line.trim(), baseX, y);
         console.log("Drew text at:", baseX, baseY, "Text:", text.substring(0, 50), "Font:", fontFamily);
       } else if (el.type === "image" && el.placeholder && art.photoImage) {
-        // Draw photo with offset and scale support
+        // Draw photo with pan (offset) + zoom (photoScale)
         const img = await loadImage(art.photoImage);
         if (img) {
           const offset = art.photoOffset || { x: 0, y: 0 };
-          const scale = (art.elementOverrides?.photoScale || 100) / 100;
-          
-          // Apply scale to frame dimensions
-          const frameW = el.width * scale;
-          const frameH = el.height * scale;
-          const frameX = el.x + (el.width - frameW) / 2;
-          const frameY = el.y + (el.height - frameH) / 2;
-          
-          // Calculate source dimensions to maintain aspect ratio and allow panning
+          const zoom = (art.elementOverrides?.photoScale || 100) / 100; // < 1 = zoom out, > 1 = zoom in
+
+          const frameW = el.width;
+          const frameH = el.height;
+          const frameX = el.x;
+          const frameY = el.y;
+
           const imgAspect = img.width / img.height;
           const frameAspect = frameW / frameH;
-          
-          let sx = 0, sy = 0, sw = img.width, sh = img.height;
-          
+
+          // Start with "cover" crop
+          let sw = img.width;
+          let sh = img.height;
+
           if (imgAspect > frameAspect) {
-            // Image is wider - allow horizontal panning
             sh = img.height;
             sw = sh * frameAspect;
-            sx = (img.width - sw) / 2 + (offset.x * img.width / frameW);
-            sx = Math.max(0, Math.min(sx, img.width - sw));
           } else {
-            // Image is taller - allow vertical panning
             sw = img.width;
             sh = sw / frameAspect;
-            sy = (img.height - sh) / 2 + (offset.y * img.height / frameH);
-            sy = Math.max(0, Math.min(sy, img.height - sh));
           }
-          
+
+          // Apply zoom: zoom < 1 = zoom out (show more), zoom > 1 = zoom in
+          sw = sw / zoom;
+          sh = sh / zoom;
+
+          // Clamp crop to image bounds
+          if (sw > img.width) {
+            sw = img.width;
+            sh = sw / frameAspect;
+          }
+          if (sh > img.height) {
+            sh = img.height;
+            sw = sh * frameAspect;
+          }
+
+          // Center and apply panning
+          let sx = (img.width - sw) / 2;
+          let sy = (img.height - sh) / 2;
+
+          const maxPanX = (img.width - sw) / 2;
+          const maxPanY = (img.height - sh) / 2;
+          sx += (offset.x / 100) * maxPanX;
+          sy += (offset.y / 100) * maxPanY;
+
+          sx = Math.max(0, Math.min(sx, img.width - sw));
+          sy = Math.max(0, Math.min(sy, img.height - sh));
+
           ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
         } else {
-          // Draw placeholder if image fails to load
           ctx.fillStyle = "#e5e7eb";
           ctx.fillRect(el.x, el.y, el.width, el.height);
-        }
-      } else if (el.type === "image" && el.imageUrl && !el.placeholder) {
-        const img = await loadImage(el.imageUrl);
-        if (img) {
-          ctx.drawImage(img, el.x, el.y, el.width, el.height);
-        }
-      } else if (el.type === "logo") {
-        // Logo uses PNG[0] from brand kit with optional overrides
-        const logoUrl = art.brandKit?.pngs?.[0] || art.brandKit?.logo;
-        console.log("Loading logo from:", logoUrl?.substring(0, 50));
-        if (logoUrl) {
-          const img = await loadImage(logoUrl);
-          if (img) {
-            const logoOffsetX = art.elementOverrides?.logoX || 0;
-            const logoOffsetY = art.elementOverrides?.logoY || 0;
-            const logoScaleMultiplier = (art.elementOverrides?.logoScale || 100) / 100;
-            const newWidth = el.width * logoScaleMultiplier;
-            const newHeight = el.height * logoScaleMultiplier;
-            ctx.drawImage(img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
-          } else {
-            ctx.fillStyle = "#e5e7eb";
-            ctx.fillRect(el.x, el.y, el.width, el.height);
-            ctx.fillStyle = "#666";
-            ctx.font = "14px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText("Logo", el.x + el.width / 2, el.y + el.height / 2);
-            ctx.textAlign = "left";
-          }
         }
       } else if (el.type === "contact") {
         // Contact uses PNG[1] from brand kit with optional overrides
@@ -764,6 +755,9 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           file_type: "image/png",
           upload_type: "final",
         });
+
+        // Update card cover image
+        await updateProjectBrief(art.cardId, { cover_image: urlData.publicUrl });
       }
 
       // Clear the art generation tags
