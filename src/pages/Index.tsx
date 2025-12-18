@@ -71,10 +71,18 @@ const Index = () => {
   }, []);
 
   const loadClients = async () => {
+    const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
+      Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          window.setTimeout(() => reject(new Error("timeout")), ms)
+        ),
+      ]);
+
     try {
       setIsLoadingClients(true);
-      const data = await getAllClients();
-      const mappedClients: Client[] = data.map((c: any) => ({
+      const data = await withTimeout(getAllClients(), 15000);
+      const mappedClients: Client[] = (data as any[]).map((c: any) => ({
         id: c.id,
         name: c.name,
         email: c.email,
@@ -91,7 +99,7 @@ const Index = () => {
         payment_due_day: c.payment_due_day,
         monthly_amount: c.monthly_amount,
       }));
-      
+
       // Sort: active clients first, then by creation date
       mappedClients.sort((a, b) => {
         if (a.active === b.active) {
@@ -99,15 +107,19 @@ const Index = () => {
         }
         return a.active ? -1 : 1;
       });
-      
+
       setClients(mappedClients);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading clients:", error);
       toast({
         title: "Erro ao carregar clientes",
-        description: "Não foi possível carregar a lista de clientes.",
+        description:
+          error?.message === "timeout"
+            ? "O carregamento demorou demais. Tente novamente em instantes."
+            : "Não foi possível carregar a lista de clientes.",
         variant: "destructive",
       });
+      setClients([]);
     } finally {
       setIsLoadingClients(false);
     }
