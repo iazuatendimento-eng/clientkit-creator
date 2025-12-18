@@ -83,6 +83,9 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
   const [templateName, setTemplateName] = useState("Template Principal");
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null); // 'nw', 'ne', 'sw', 'se'
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, elX: 0, elY: 0 });
   const [unsplashImages, setUnsplashImages] = useState<UnsplashImage[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -419,35 +422,142 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
     const y = (e.clientY - rect.top) / SCALE;
 
     const element = elements.find((el) => el.id === selectedElement);
-    if (element && x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
+    if (!element) return;
+
+    const handleSize = 15; // Larger hit area for handles
+    const handles = [
+      { id: 'nw', x: element.x, y: element.y },
+      { id: 'ne', x: element.x + element.width, y: element.y },
+      { id: 'sw', x: element.x, y: element.y + element.height },
+      { id: 'se', x: element.x + element.width, y: element.y + element.height },
+    ];
+
+    // Check if clicking on a resize handle
+    for (const handle of handles) {
+      if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
+        setIsResizing(true);
+        setResizeHandle(handle.id);
+        setResizeStart({ 
+          x, 
+          y, 
+          width: element.width, 
+          height: element.height,
+          elX: element.x,
+          elY: element.y
+        });
+        return;
+      }
+    }
+
+    // Otherwise, start dragging
+    if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
       setIsDragging(true);
       setDragOffset({ x: x - element.x, y: y - element.y });
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !selectedElement) return;
-
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !selectedElement) return;
 
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) / SCALE;
     const y = (e.clientY - rect.top) / SCALE;
 
-    setElements((prev) =>
-      prev.map((el) =>
-        el.id === selectedElement
-          ? { ...el, x: x - dragOffset.x, y: y - dragOffset.y }
-          : el
-      )
-    );
+    if (isResizing && resizeHandle) {
+      const deltaX = x - resizeStart.x;
+      const deltaY = y - resizeStart.y;
+      
+      let newWidth = resizeStart.width;
+      let newHeight = resizeStart.height;
+      let newX = resizeStart.elX;
+      let newY = resizeStart.elY;
+
+      if (resizeHandle === 'se') {
+        newWidth = Math.max(50, resizeStart.width + deltaX);
+        newHeight = Math.max(50, resizeStart.height + deltaY);
+      } else if (resizeHandle === 'sw') {
+        newWidth = Math.max(50, resizeStart.width - deltaX);
+        newHeight = Math.max(50, resizeStart.height + deltaY);
+        newX = resizeStart.elX + (resizeStart.width - newWidth);
+      } else if (resizeHandle === 'ne') {
+        newWidth = Math.max(50, resizeStart.width + deltaX);
+        newHeight = Math.max(50, resizeStart.height - deltaY);
+        newY = resizeStart.elY + (resizeStart.height - newHeight);
+      } else if (resizeHandle === 'nw') {
+        newWidth = Math.max(50, resizeStart.width - deltaX);
+        newHeight = Math.max(50, resizeStart.height - deltaY);
+        newX = resizeStart.elX + (resizeStart.width - newWidth);
+        newY = resizeStart.elY + (resizeStart.height - newHeight);
+      }
+
+      setElements((prev) =>
+        prev.map((el) =>
+          el.id === selectedElement
+            ? { ...el, x: newX, y: newY, width: newWidth, height: newHeight }
+            : el
+        )
+      );
+      return;
+    }
+
+    if (isDragging) {
+      setElements((prev) =>
+        prev.map((el) =>
+          el.id === selectedElement
+            ? { ...el, x: x - dragOffset.x, y: y - dragOffset.y }
+            : el
+        )
+      );
+    }
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    setIsResizing(false);
+    setResizeHandle(null);
   };
 
+  const getCursorStyle = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (selectedTool !== "move" || !selectedElement) return "crosshair";
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return "crosshair";
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / SCALE;
+    const y = (e.clientY - rect.top) / SCALE;
+    
+    const element = elements.find((el) => el.id === selectedElement);
+    if (!element) return "crosshair";
+    
+    const handleSize = 15;
+    const handles = [
+      { id: 'nw', x: element.x, y: element.y, cursor: 'nwse-resize' },
+      { id: 'ne', x: element.x + element.width, y: element.y, cursor: 'nesw-resize' },
+      { id: 'sw', x: element.x, y: element.y + element.height, cursor: 'nesw-resize' },
+      { id: 'se', x: element.x + element.width, y: element.y + element.height, cursor: 'nwse-resize' },
+    ];
+    
+    for (const handle of handles) {
+      if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
+        return handle.cursor;
+      }
+    }
+    
+    if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
+      return "move";
+    }
+    
+    return "crosshair";
+  };
+
+  const [cursorStyle, setCursorStyle] = useState("crosshair");
+
+  const handleMouseMoveWithCursor = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setCursorStyle(getCursorStyle(e));
+    handleMouseMove(e);
+  };
   const addElement = (elementData: Omit<CanvasElement, "id">) => {
     const newElement: CanvasElement = {
       ...elementData,
@@ -756,11 +866,11 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
               ref={canvasRef}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
-              style={{ width: CANVAS_WIDTH * SCALE, height: CANVAS_HEIGHT * SCALE }}
-              className="cursor-crosshair bg-white"
+              style={{ width: CANVAS_WIDTH * SCALE, height: CANVAS_HEIGHT * SCALE, cursor: cursorStyle }}
+              className="bg-white"
               onClick={handleCanvasClick}
               onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
+              onMouseMove={handleMouseMoveWithCursor}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             />
