@@ -347,18 +347,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCopyCardLink();
-                }}
-                className="text-xs px-2 py-1 h-auto w-full"
-              >
-                {copiedLink ? <Check className="h-3 w-3 mr-1" /> : <Link2 className="h-3 w-3 mr-1" />}
-                {copiedLink ? "Link Copiado!" : "Copiar Link do Card"}
-              </Button>
               {brief.generatedCaption && (
                 <Button
                   variant="outline"
