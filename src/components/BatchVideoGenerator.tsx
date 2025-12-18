@@ -114,6 +114,19 @@ interface ElementAdjustments {
   mascotScaleY: number;
   mascotX: number;
   mascotY: number;
+  // Signature page specific adjustments
+  sigLogoScaleX: number;
+  sigLogoScaleY: number;
+  sigLogoX: number;
+  sigLogoY: number;
+  sigContactScaleX: number;
+  sigContactScaleY: number;
+  sigContactX: number;
+  sigContactY: number;
+  sigMascotScaleX: number;
+  sigMascotScaleY: number;
+  sigMascotX: number;
+  sigMascotY: number;
   // Deprecated - keeping for backward compatibility but not used for text anymore
   textScale: number;
   textX: number;
@@ -133,6 +146,18 @@ const defaultAdjustments: ElementAdjustments = {
   mascotScaleY: 100,
   mascotX: 0,
   mascotY: 0,
+  sigLogoScaleX: 100,
+  sigLogoScaleY: 100,
+  sigLogoX: 0,
+  sigLogoY: 0,
+  sigContactScaleX: 100,
+  sigContactScaleY: 100,
+  sigContactX: 0,
+  sigContactY: 0,
+  sigMascotScaleX: 100,
+  sigMascotScaleY: 100,
+  sigMascotX: 0,
+  sigMascotY: 0,
   textScale: 100,
   textX: 0,
   textY: 0,
@@ -461,10 +486,14 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         if (logoUrl) {
           const img = await loadImage(logoUrl);
           if (img) {
-            const adjustedX = el.x + adjustments.logoX;
-            const adjustedY = el.y + adjustments.logoY;
-            const adjustedW = el.width * (adjustments.logoScaleX / 100);
-            const adjustedH = el.height * (adjustments.logoScaleY / 100);
+            const logoX = isSignature ? (adjustments.sigLogoX ?? adjustments.logoX) : adjustments.logoX;
+            const logoY = isSignature ? (adjustments.sigLogoY ?? adjustments.logoY) : adjustments.logoY;
+            const logoScaleX = isSignature ? (adjustments.sigLogoScaleX ?? adjustments.logoScaleX) : adjustments.logoScaleX;
+            const logoScaleY = isSignature ? (adjustments.sigLogoScaleY ?? adjustments.logoScaleY) : adjustments.logoScaleY;
+            const adjustedX = el.x + logoX;
+            const adjustedY = el.y + logoY;
+            const adjustedW = el.width * (logoScaleX / 100);
+            const adjustedH = el.height * (logoScaleY / 100);
             ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
           }
         } else {
@@ -476,10 +505,14 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         if (contactUrl) {
           const img = await loadImage(contactUrl);
           if (img) {
-            const adjustedX = el.x + adjustments.contactX;
-            const adjustedY = el.y + adjustments.contactY;
-            const adjustedW = el.width * (adjustments.contactScaleX / 100);
-            const adjustedH = el.height * (adjustments.contactScaleY / 100);
+            const contactX = isSignature ? (adjustments.sigContactX ?? adjustments.contactX) : adjustments.contactX;
+            const contactY = isSignature ? (adjustments.sigContactY ?? adjustments.contactY) : adjustments.contactY;
+            const contactScaleX = isSignature ? (adjustments.sigContactScaleX ?? adjustments.contactScaleX) : adjustments.contactScaleX;
+            const contactScaleY = isSignature ? (adjustments.sigContactScaleY ?? adjustments.contactScaleY) : adjustments.contactScaleY;
+            const adjustedX = el.x + contactX;
+            const adjustedY = el.y + contactY;
+            const adjustedW = el.width * (contactScaleX / 100);
+            const adjustedH = el.height * (contactScaleY / 100);
             ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
           }
         } else {
@@ -491,10 +524,14 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         if (mascotUrl) {
           const img = await loadImage(mascotUrl);
           if (img) {
-            const adjustedX = el.x + adjustments.mascotX;
-            const adjustedY = el.y + adjustments.mascotY;
-            const adjustedW = el.width * (adjustments.mascotScaleX / 100);
-            const adjustedH = el.height * (adjustments.mascotScaleY / 100);
+            const mascotX = isSignature ? (adjustments.sigMascotX ?? adjustments.mascotX) : adjustments.mascotX;
+            const mascotY = isSignature ? (adjustments.sigMascotY ?? adjustments.mascotY) : adjustments.mascotY;
+            const mascotScaleX = isSignature ? (adjustments.sigMascotScaleX ?? adjustments.mascotScaleX) : adjustments.mascotScaleX;
+            const mascotScaleY = isSignature ? (adjustments.sigMascotScaleY ?? adjustments.mascotScaleY) : adjustments.mascotScaleY;
+            const adjustedX = el.x + mascotX;
+            const adjustedY = el.y + mascotY;
+            const adjustedW = el.width * (mascotScaleX / 100);
+            const adjustedH = el.height * (mascotScaleY / 100);
             ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
           }
         }
@@ -1229,30 +1266,78 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                     isBusy={isApplyingAdjustments}
                     onCommit={() => applyAdjustments()}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
-                    logoX={selectedVideo.adjustments.logoX}
-                    logoY={selectedVideo.adjustments.logoY}
-                    logoScaleX={selectedVideo.adjustments.logoScaleX}
-                    logoScaleY={selectedVideo.adjustments.logoScaleY}
-                    setLogoX={(v) => updateAdjustmentLocal("logoX", v)}
-                    setLogoY={(v) => updateAdjustmentLocal("logoY", v)}
-                    setLogoScaleX={(v) => updateAdjustmentLocal("logoScaleX", v)}
-                    setLogoScaleY={(v) => updateAdjustmentLocal("logoScaleY", v)}
-                    contactX={selectedVideo.adjustments.contactX}
-                    contactY={selectedVideo.adjustments.contactY}
-                    contactScaleX={selectedVideo.adjustments.contactScaleX}
-                    contactScaleY={selectedVideo.adjustments.contactScaleY}
-                    setContactX={(v) => updateAdjustmentLocal("contactX", v)}
-                    setContactY={(v) => updateAdjustmentLocal("contactY", v)}
-                    setContactScaleX={(v) => updateAdjustmentLocal("contactScaleX", v)}
-                    setContactScaleY={(v) => updateAdjustmentLocal("contactScaleY", v)}
-                    mascotX={selectedVideo.adjustments.mascotX}
-                    mascotY={selectedVideo.adjustments.mascotY}
-                    mascotScaleX={selectedVideo.adjustments.mascotScaleX}
-                    mascotScaleY={selectedVideo.adjustments.mascotScaleY}
-                    setMascotX={(v) => updateAdjustmentLocal("mascotX", v)}
-                    setMascotY={(v) => updateAdjustmentLocal("mascotY", v)}
-                    setMascotScaleX={(v) => updateAdjustmentLocal("mascotScaleX", v)}
-                    setMascotScaleY={(v) => updateAdjustmentLocal("mascotScaleY", v)}
+                    logoX={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.logoX 
+                      : (selectedVideo.adjustments.sigLogoX ?? selectedVideo.adjustments.logoX)}
+                    logoY={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.logoY 
+                      : (selectedVideo.adjustments.sigLogoY ?? selectedVideo.adjustments.logoY)}
+                    logoScaleX={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.logoScaleX 
+                      : (selectedVideo.adjustments.sigLogoScaleX ?? selectedVideo.adjustments.logoScaleX)}
+                    logoScaleY={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.logoScaleY 
+                      : (selectedVideo.adjustments.sigLogoScaleY ?? selectedVideo.adjustments.logoScaleY)}
+                    setLogoX={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "logoX" : "sigLogoX", v
+                    )}
+                    setLogoY={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "logoY" : "sigLogoY", v
+                    )}
+                    setLogoScaleX={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "logoScaleX" : "sigLogoScaleX", v
+                    )}
+                    setLogoScaleY={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "logoScaleY" : "sigLogoScaleY", v
+                    )}
+                    contactX={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.contactX 
+                      : (selectedVideo.adjustments.sigContactX ?? selectedVideo.adjustments.contactX)}
+                    contactY={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.contactY 
+                      : (selectedVideo.adjustments.sigContactY ?? selectedVideo.adjustments.contactY)}
+                    contactScaleX={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.contactScaleX 
+                      : (selectedVideo.adjustments.sigContactScaleX ?? selectedVideo.adjustments.contactScaleX)}
+                    contactScaleY={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.contactScaleY 
+                      : (selectedVideo.adjustments.sigContactScaleY ?? selectedVideo.adjustments.contactScaleY)}
+                    setContactX={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "contactX" : "sigContactX", v
+                    )}
+                    setContactY={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "contactY" : "sigContactY", v
+                    )}
+                    setContactScaleX={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "contactScaleX" : "sigContactScaleX", v
+                    )}
+                    setContactScaleY={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "contactScaleY" : "sigContactScaleY", v
+                    )}
+                    mascotX={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.mascotX 
+                      : (selectedVideo.adjustments.sigMascotX ?? selectedVideo.adjustments.mascotX)}
+                    mascotY={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.mascotY 
+                      : (selectedVideo.adjustments.sigMascotY ?? selectedVideo.adjustments.mascotY)}
+                    mascotScaleX={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.mascotScaleX 
+                      : (selectedVideo.adjustments.sigMascotScaleX ?? selectedVideo.adjustments.mascotScaleX)}
+                    mascotScaleY={currentPreviewPage < selectedVideo.pages.length - 1 
+                      ? selectedVideo.adjustments.mascotScaleY 
+                      : (selectedVideo.adjustments.sigMascotScaleY ?? selectedVideo.adjustments.mascotScaleY)}
+                    setMascotX={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "mascotX" : "sigMascotX", v
+                    )}
+                    setMascotY={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "mascotY" : "sigMascotY", v
+                    )}
+                    setMascotScaleX={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "mascotScaleX" : "sigMascotScaleX", v
+                    )}
+                    setMascotScaleY={(v) => updateAdjustmentLocal(
+                      currentPreviewPage < selectedVideo.pages.length - 1 ? "mascotScaleY" : "sigMascotScaleY", v
+                    )}
                     textX={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textX || 0}
                     textY={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textY || 0}
                     textScale={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textScale || 100}
@@ -1270,7 +1355,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                   <p className="text-center text-xs text-muted-foreground">
                     Arraste os elementos para mover. Arraste as alças nos cantos para redimensionar.
                     <br />
-                    <span className="text-primary/80">Ajustes de texto e foto são individuais por página.</span>
+                    <span className="text-primary/80">Ajustes de logo, contato, mascote, texto e foto são independentes entre página de conteúdo e assinatura.</span>
                   </p>
 
                   {/* Page navigation */}
