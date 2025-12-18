@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -56,6 +57,36 @@ interface VideoTemplate {
   pageDuration: number;
 }
 
+interface ElementAdjustments {
+  logoScaleX: number;
+  logoScaleY: number;
+  logoX: number;
+  logoY: number;
+  contactScaleX: number;
+  contactScaleY: number;
+  contactX: number;
+  contactY: number;
+  mascotScaleX: number;
+  mascotScaleY: number;
+  mascotX: number;
+  mascotY: number;
+}
+
+const defaultAdjustments: ElementAdjustments = {
+  logoScaleX: 100,
+  logoScaleY: 100,
+  logoX: 0,
+  logoY: 0,
+  contactScaleX: 100,
+  contactScaleY: 100,
+  contactX: 0,
+  contactY: 0,
+  mascotScaleX: 100,
+  mascotScaleY: 100,
+  mascotX: 0,
+  mascotY: 0,
+};
+
 interface ClientVideo {
   clientId: string;
   clientName: string;
@@ -70,6 +101,7 @@ interface ClientVideo {
   backgroundImages?: string[];
   pageTexts: string[]; // Text for each content page
   searchedImages?: string[]; // Images found for each page
+  adjustments: ElementAdjustments;
 }
 
 interface BatchVideoGeneratorProps {
@@ -158,8 +190,9 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           brandKit: brandKit,
           pages: [],
           videoUrl: null,
-          status: "pending",
+          status: "pending" as const,
           pageTexts: textParts.length > 0 ? textParts : [fullText],
+          adjustments: { ...defaultAdjustments },
         };
       });
 
@@ -187,7 +220,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     text: string,
     brandKit: any,
     isSignature: boolean,
-    backgroundImage?: string
+    backgroundImage?: string,
+    adjustments: ElementAdjustments = defaultAdjustments
   ): Promise<string> => {
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -292,7 +326,11 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         if (logoUrl) {
           const img = await loadImage(logoUrl);
           if (img) {
-            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+            const adjustedX = el.x + adjustments.logoX;
+            const adjustedY = el.y + adjustments.logoY;
+            const adjustedW = el.width * (adjustments.logoScaleX / 100);
+            const adjustedH = el.height * (adjustments.logoScaleY / 100);
+            ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
           }
         } else {
           ctx.fillStyle = "rgba(59, 130, 246, 0.3)";
@@ -303,7 +341,11 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         if (contactUrl) {
           const img = await loadImage(contactUrl);
           if (img) {
-            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+            const adjustedX = el.x + adjustments.contactX;
+            const adjustedY = el.y + adjustments.contactY;
+            const adjustedW = el.width * (adjustments.contactScaleX / 100);
+            const adjustedH = el.height * (adjustments.contactScaleY / 100);
+            ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
           }
         } else {
           ctx.fillStyle = "rgba(16, 185, 129, 0.3)";
@@ -314,7 +356,11 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         if (mascotUrl) {
           const img = await loadImage(mascotUrl);
           if (img) {
-            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+            const adjustedX = el.x + adjustments.mascotX;
+            const adjustedY = el.y + adjustments.mascotY;
+            const adjustedW = el.width * (adjustments.mascotScaleX / 100);
+            const adjustedH = el.height * (adjustments.mascotScaleY / 100);
+            ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
           }
         }
       }
@@ -335,7 +381,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         text,
         video.brandKit,
         false,
-        bgImage
+        bgImage,
+        video.adjustments
       );
       pages.push(pageImage);
     }
@@ -345,11 +392,64 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       template.signatureElements,
       "",
       video.brandKit,
-      true
+      true,
+      undefined,
+      video.adjustments
     );
     pages.push(signaturePage);
 
     return pages;
+  };
+
+  const regenerateSingleVideo = async (video: ClientVideo): Promise<string[]> => {
+    const pages: string[] = [];
+
+    // Generate content pages with current searchedImages
+    for (let i = 0; i < video.pageTexts.length; i++) {
+      const text = video.pageTexts[i];
+      const bgImage = video.searchedImages?.[i] || undefined;
+      const pageImage = await generatePageImage(
+        template.contentElements,
+        text,
+        video.brandKit,
+        false,
+        bgImage,
+        video.adjustments
+      );
+      pages.push(pageImage);
+    }
+
+    // Add signature page
+    const signaturePage = await generatePageImage(
+      template.signatureElements,
+      "",
+      video.brandKit,
+      true,
+      undefined,
+      video.adjustments
+    );
+    pages.push(signaturePage);
+
+    return pages;
+  };
+
+  const handleUpdateAdjustment = async (key: keyof ElementAdjustments, value: number) => {
+    if (!selectedVideo) return;
+    
+    const videoIndex = clientVideos.findIndex(v => v.cardId === selectedVideo.cardId);
+    if (videoIndex === -1) return;
+
+    const updatedAdjustments = { ...selectedVideo.adjustments, [key]: value };
+    const updatedVideo = { ...selectedVideo, adjustments: updatedAdjustments };
+    
+    // Regenerate pages with new adjustments
+    const newPages = await regenerateSingleVideo(updatedVideo);
+    updatedVideo.pages = newPages;
+    
+    const updatedVideos = [...clientVideos];
+    updatedVideos[videoIndex] = updatedVideo;
+    setClientVideos(updatedVideos);
+    setSelectedVideo(updatedVideo);
   };
 
   const generateAllVideos = async () => {
@@ -681,84 +781,245 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           setIsPlayingPreview(false);
         }}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedVideo?.clientName} - Preview</DialogTitle>
+            <DialogTitle>{selectedVideo?.clientName} - Preview e Ajustes</DialogTitle>
           </DialogHeader>
 
           {selectedVideo && (
-            <div className="space-y-4">
-              <div className="aspect-[9/16] bg-muted rounded-lg overflow-hidden">
-                {selectedVideo.pages[currentPreviewPage] && (
-                  <img
-                    src={selectedVideo.pages[currentPreviewPage]}
-                    alt={`Página ${currentPreviewPage + 1} do carrossel`}
-                    className="w-full h-full object-contain"
-                  />
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Preview */}
+              <div className="space-y-4">
+                <div className="aspect-[9/16] bg-muted rounded-lg overflow-hidden max-h-[400px]">
+                  {selectedVideo.pages[currentPreviewPage] && (
+                    <img
+                      src={selectedVideo.pages[currentPreviewPage]}
+                      alt={`Página ${currentPreviewPage + 1} do carrossel`}
+                      className="w-full h-full object-contain"
+                    />
+                  )}
+                </div>
+
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant={isPlayingPreview ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsPlayingPreview((v) => !v)}
+                    disabled={selectedVideo.pages.length <= 1}
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    {isPlayingPreview ? "Pausar" : "Play"}
+                  </Button>
+                </div>
+
+                {/* Thumbnails */}
+                <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
+                  {selectedVideo.pages.map((page, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
+                        currentPreviewPage === idx
+                          ? "border-primary ring-2 ring-primary/30"
+                          : "border-border"
+                      }`}
+                      onClick={() => {
+                        setIsPlayingPreview(false);
+                        setCurrentPreviewPage(idx);
+                      }}
+                      aria-label={`Abrir página ${idx + 1}`}
+                    >
+                      <img
+                        src={page}
+                        alt={`Miniatura da página ${idx + 1}`}
+                        className="h-16 w-10 object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-center text-sm text-muted-foreground">
+                  Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
+                  {currentPreviewPage === selectedVideo.pages.length - 1 && " (Assinatura)"}
+                </p>
               </div>
 
-              <div className="flex items-center justify-center gap-2">
+              {/* Adjustment Controls */}
+              <div className="space-y-6">
+                <h3 className="font-semibold text-sm">Ajustar Elementos</h3>
+                
+                {/* Logo */}
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                  <Label className="text-xs font-medium text-blue-500">Logo</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Largura: {selectedVideo.adjustments.logoScaleX}%</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.logoScaleX]}
+                        onValueChange={([v]) => handleUpdateAdjustment("logoScaleX", v)}
+                        min={25}
+                        max={300}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Altura: {selectedVideo.adjustments.logoScaleY}%</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.logoScaleY]}
+                        onValueChange={([v]) => handleUpdateAdjustment("logoScaleY", v)}
+                        min={25}
+                        max={300}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Posição X: {selectedVideo.adjustments.logoX}</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.logoX]}
+                        onValueChange={([v]) => handleUpdateAdjustment("logoX", v)}
+                        min={-200}
+                        max={200}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Posição Y: {selectedVideo.adjustments.logoY}</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.logoY]}
+                        onValueChange={([v]) => handleUpdateAdjustment("logoY", v)}
+                        min={-200}
+                        max={200}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact */}
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                  <Label className="text-xs font-medium text-green-500">Contato</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Largura: {selectedVideo.adjustments.contactScaleX}%</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.contactScaleX]}
+                        onValueChange={([v]) => handleUpdateAdjustment("contactScaleX", v)}
+                        min={25}
+                        max={300}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Altura: {selectedVideo.adjustments.contactScaleY}%</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.contactScaleY]}
+                        onValueChange={([v]) => handleUpdateAdjustment("contactScaleY", v)}
+                        min={25}
+                        max={300}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Posição X: {selectedVideo.adjustments.contactX}</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.contactX]}
+                        onValueChange={([v]) => handleUpdateAdjustment("contactX", v)}
+                        min={-200}
+                        max={200}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Posição Y: {selectedVideo.adjustments.contactY}</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.contactY]}
+                        onValueChange={([v]) => handleUpdateAdjustment("contactY", v)}
+                        min={-200}
+                        max={200}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mascot */}
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                  <Label className="text-xs font-medium text-purple-500">Mascote</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Largura: {selectedVideo.adjustments.mascotScaleX}%</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.mascotScaleX]}
+                        onValueChange={([v]) => handleUpdateAdjustment("mascotScaleX", v)}
+                        min={25}
+                        max={300}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Altura: {selectedVideo.adjustments.mascotScaleY}%</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.mascotScaleY]}
+                        onValueChange={([v]) => handleUpdateAdjustment("mascotScaleY", v)}
+                        min={25}
+                        max={300}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Posição X: {selectedVideo.adjustments.mascotX}</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.mascotX]}
+                        onValueChange={([v]) => handleUpdateAdjustment("mascotX", v)}
+                        min={-200}
+                        max={200}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Posição Y: {selectedVideo.adjustments.mascotY}</Label>
+                      <Slider
+                        value={[selectedVideo.adjustments.mascotY]}
+                        onValueChange={([v]) => handleUpdateAdjustment("mascotY", v)}
+                        min={-200}
+                        max={200}
+                        step={5}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <Button
-                  variant={isPlayingPreview ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => setIsPlayingPreview((v) => !v)}
-                  disabled={selectedVideo.pages.length <= 1}
+                  className="w-full"
+                  onClick={() => {
+                    const videoIndex = clientVideos.findIndex(v => v.cardId === selectedVideo.cardId);
+                    if (videoIndex !== -1) {
+                      const updatedVideos = [...clientVideos];
+                      updatedVideos[videoIndex] = { ...selectedVideo, adjustments: { ...defaultAdjustments } };
+                      setClientVideos(updatedVideos);
+                      setSelectedVideo({ ...selectedVideo, adjustments: { ...defaultAdjustments } });
+                    }
+                  }}
                 >
-                  <Play className="mr-2 h-4 w-4" />
-                  {isPlayingPreview ? "Pausar" : "Play"}
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Resetar Ajustes
                 </Button>
               </div>
-
-              {/* Thumbnails */}
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {selectedVideo.pages.map((page, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
-                      currentPreviewPage === idx
-                        ? "border-primary ring-2 ring-primary/30"
-                        : "border-border"
-                    }`}
-                    onClick={() => {
-                      setIsPlayingPreview(false);
-                      setCurrentPreviewPage(idx);
-                    }}
-                    aria-label={`Abrir página ${idx + 1}`}
-                  >
-                    <img
-                      src={page}
-                      alt={`Miniatura da página ${idx + 1}`}
-                      className="h-20 w-12 object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
-
-              {/* Page navigation */}
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                {selectedVideo.pages.map((_, idx) => (
-                  <Button
-                    key={idx}
-                    variant={currentPreviewPage === idx ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setIsPlayingPreview(false);
-                      setCurrentPreviewPage(idx);
-                    }}
-                  >
-                    {idx + 1}
-                  </Button>
-                ))}
-              </div>
-
-              <p className="text-center text-sm text-muted-foreground">
-                Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
-                {currentPreviewPage === selectedVideo.pages.length - 1 && " (Assinatura)"}
-                {selectedVideo.pages.length > 1 && " • preview rápido (1s/página)"}
-              </p>
             </div>
           )}
         </DialogContent>
