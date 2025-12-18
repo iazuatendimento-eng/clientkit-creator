@@ -65,7 +65,19 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
   const [unsplashImages, setUnsplashImages] = useState<UnsplashImage[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [activeTab, setActiveTab] = useState("images");
   const { toast } = useToast();
+
+  const handleToolSelect = (toolId: string) => {
+    setSelectedTool(toolId);
+    if (toolId === "image") {
+      setActiveTab("images");
+      toast({
+        title: "Buscar imagem",
+        description: "Use o painel à direita para buscar e adicionar imagens.",
+      });
+    }
+  };
 
   const CANVAS_WIDTH = 1080;
   const CANVAS_HEIGHT = 1350;
@@ -399,7 +411,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
                   key={tool.id}
                   variant={selectedTool === tool.id ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedTool(tool.id)}
+                  onClick={() => handleToolSelect(tool.id)}
                   className="flex flex-col h-16 gap-1"
                 >
                   <tool.icon className="h-5 w-5" />
@@ -553,7 +565,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
 
         {/* Right Sidebar - Images & Layers */}
         <div className="w-80 border-l bg-card">
-          <Tabs defaultValue="images" className="h-full flex flex-col">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="w-full rounded-none border-b">
               <TabsTrigger value="images" className="flex-1">
                 <ImageIcon className="h-4 w-4 mr-2" />
