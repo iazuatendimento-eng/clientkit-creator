@@ -307,8 +307,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
             x + w / 2, y + h / 2, Math.max(w, h) / 2
           );
         }
-        gradient.addColorStop(0, hexToRgba(el.gradient.color1, el.gradient.opacity1 ?? 100));
-        gradient.addColorStop(1, hexToRgba(el.gradient.color2, el.gradient.opacity2 ?? 100));
+        // Apply colorRole to gradient colors if set
+        let color1 = el.gradient.color1;
+        let color2 = el.gradient.color2;
+        if (el.colorRole) {
+          const roleColor = getElementColor(el, defaultColor);
+          color1 = roleColor;
+          color2 = el.gradient.fadeMode ? roleColor : el.gradient.color2;
+        }
+        gradient.addColorStop(0, hexToRgba(color1, el.gradient.opacity1 ?? 100));
+        gradient.addColorStop(1, hexToRgba(color2, el.gradient.opacity2 ?? 100));
         return gradient;
       }
       return getElementColor(el, defaultColor);
