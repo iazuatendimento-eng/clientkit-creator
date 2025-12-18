@@ -17,6 +17,8 @@ import {
   Move,
   Upload,
   Link,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1201,6 +1203,28 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               shapeOverrides={shapeOverrides}
               setShapeOverrides={setShapeOverrides}
             />
+
+            {/* Photo Zoom Controls */}
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Label className="text-sm font-medium">Zoom da Foto:</Label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPhotoScale(Math.max(10, photoScale - 10))}
+                disabled={photoScale <= 10}
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium w-14 text-center">{photoScale}%</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPhotoScale(Math.min(300, photoScale + 10))}
+                disabled={photoScale >= 300}
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </div>
 
             <p className="text-xs text-muted-foreground text-center">
               Clique no elemento para selecionar, arraste os cantos azuis para redimensionar.
