@@ -567,8 +567,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                   : ""
               }`}
             >
-              {/* Art Preview */}
-              <div className="aspect-[4/5] bg-muted relative">
+              {/* Art Preview - Double click to adjust photo position */}
+              <div 
+                className="aspect-[4/5] bg-muted relative cursor-pointer"
+                onDoubleClick={() => {
+                  if (art.imageUrl && art.status === "pending") {
+                    openAdjustDialog(art);
+                  }
+                }}
+                title={art.status === "pending" ? "Duplo clique para ajustar posição" : ""}
+              >
                 {art.imageUrl ? (
                   <img
                     src={art.imageUrl}
@@ -584,6 +592,12 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                 {art.status === "approved" && (
                   <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
                     <Check className="h-4 w-4" />
+                  </div>
+                )}
+                
+                {art.status === "pending" && art.imageUrl && (
+                  <div className="absolute bottom-2 left-2 bg-background/80 text-foreground text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity">
+                    Duplo clique para ajustar
                   </div>
                 )}
               </div>
