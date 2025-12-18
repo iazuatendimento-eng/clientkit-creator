@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, User, Palette, Image, Upload, X, Type } from "lucide-react";
+import { ArrowLeft, Save, User, Palette, Image, Upload, X, Type, CreditCard, QrCode, Calendar, DollarSign } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -51,6 +51,9 @@ interface Client {
   brand_kit?: BrandKit;
   projectCount: number;
   created_at: string;
+  payment_method?: "pix" | "credit_card";
+  payment_due_day?: number;
+  monthly_amount?: number;
 }
 
 interface ClientEditorProps {
@@ -69,6 +72,9 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     team: "1",
     projectCount: 0,
     created_at: new Date().toISOString().split('T')[0],
+    payment_method: undefined,
+    payment_due_day: undefined,
+    monthly_amount: undefined,
     brand_kit: {
       colors: ["#FFFFFF", "#000000", "#3B82F6", "#10B981"],
       fontFamily: "Arial"
@@ -104,7 +110,10 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       team: formData.team || "1",
       brand_kit: formData.brand_kit,
       projectCount: client?.projectCount || 0,
-      created_at: client?.created_at || new Date().toISOString().split('T')[0]
+      created_at: client?.created_at || new Date().toISOString().split('T')[0],
+      payment_method: formData.payment_method,
+      payment_due_day: formData.payment_due_day,
+      monthly_amount: formData.monthly_amount,
     };
 
     onSave(clientData);
@@ -261,6 +270,76 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   <option value="2">TER, QUI E SÁB</option>
                   <option value="3">SEG A SEX</option>
                 </select>
+              </div>
+
+              {/* Payment Section */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="payment_method" className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Forma de Pagamento
+                  </Label>
+                  <Select
+                    value={formData.payment_method || ""}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as "pix" | "credit_card" }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pix">
+                        <div className="flex items-center gap-2">
+                          <QrCode className="h-4 w-4" />
+                          PIX
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="credit_card">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4" />
+                          Cartão de Crédito
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payment_due_day" className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Dia de Vencimento
+                  </Label>
+                  <Select
+                    value={formData.payment_due_day?.toString() || ""}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_due_day: parseInt(value) }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Dia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <SelectItem key={day} value={day.toString()}>
+                          Dia {day}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="monthly_amount" className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Valor Mensal (R$)
+                  </Label>
+                  <Input
+                    id="monthly_amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.monthly_amount || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, monthly_amount: parseFloat(e.target.value) || undefined }))}
+                    placeholder="0,00"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
