@@ -60,6 +60,18 @@ interface VideoTemplate {
   pageDuration: number;
 }
 
+interface PageTextAdjustment {
+  textScale: number;
+  textX: number;
+  textY: number;
+}
+
+const defaultPageTextAdjustment: PageTextAdjustment = {
+  textScale: 100,
+  textX: 0,
+  textY: 0,
+};
+
 interface ElementAdjustments {
   logoScaleX: number;
   logoScaleY: number;
@@ -73,6 +85,7 @@ interface ElementAdjustments {
   mascotScaleY: number;
   mascotX: number;
   mascotY: number;
+  // Deprecated - keeping for backward compatibility but not used for text anymore
   textScale: number;
   textX: number;
   textY: number;
@@ -111,6 +124,7 @@ interface ClientVideo {
   pageTexts: string[]; // Text for each content page
   searchedImages?: string[]; // Images found for each page
   adjustments: ElementAdjustments;
+  pageTextAdjustments: PageTextAdjustment[]; // Per-page text adjustments
 }
 
 interface BatchVideoGeneratorProps {
@@ -198,6 +212,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           .filter((t: string) => t.length > 0);
 
         const brandKit = card.client?.brand_kit;
+        const pageTexts = textParts.length > 0 ? textParts : [fullText];
 
         return {
           clientId: card.client?.id || card.client_id,
@@ -210,8 +225,9 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           pages: [],
           videoUrl: null,
           status: "pending" as const,
-          pageTexts: textParts.length > 0 ? textParts : [fullText],
+          pageTexts,
           adjustments: { ...defaultAdjustments },
+          pageTextAdjustments: pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
         };
       });
 
@@ -240,7 +256,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     brandKit: any,
     isSignature: boolean,
     backgroundImage?: string,
-    adjustments: ElementAdjustments = defaultAdjustments
+    adjustments: ElementAdjustments = defaultAdjustments,
+    textAdjustment: PageTextAdjustment = defaultPageTextAdjustment
   ): Promise<string> => {
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -315,7 +332,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       } else if (el.type === "text") {
         ctx.fillStyle = textColor;
         const baseFontSize = el.fontSize || 48;
-        const fontSize = Math.round(baseFontSize * (adjustments.textScale / 100));
+        const fontSize = Math.round(baseFontSize * (textAdjustment.textScale / 100));
         const fontFamily = brandKit?.fontFamily || "Arial";
         ctx.font = `${fontSize}px ${fontFamily}`;
         
@@ -323,8 +340,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         const displayText = isSignature ? (el.text || "") : text;
         
         // Word wrap with adjusted position
-        const adjustedX = el.x + adjustments.textX;
-        const adjustedY = el.y + adjustments.textY;
+        const adjustedX = el.x + textAdjustment.textX;
+        const adjustedY = el.y + textAdjustment.textY;
         const words = displayText.split(" ");
         let line = "";
         let y = adjustedY + fontSize;
@@ -398,25 +415,28 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     for (let i = 0; i < video.pageTexts.length; i++) {
       const text = video.pageTexts[i];
       const bgImage = searchedImages[i] || undefined;
+      const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
       const pageImage = await generatePageImage(
         template.contentElements,
         text,
         video.brandKit,
         false,
         bgImage,
-        video.adjustments
+        video.adjustments,
+        textAdj
       );
       pages.push(pageImage);
     }
 
-    // Always add signature page at the end
+    // Always add signature page at the end (no text adjustment needed for signature)
     const signaturePage = await generatePageImage(
       template.signatureElements,
       "",
       video.brandKit,
       true,
       undefined,
-      video.adjustments
+      video.adjustments,
+      defaultPageTextAdjustment
     );
     pages.push(signaturePage);
 
@@ -430,13 +450,15 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     for (let i = 0; i < video.pageTexts.length; i++) {
       const text = video.pageTexts[i];
       const bgImage = video.searchedImages?.[i] || undefined;
+      const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
       const pageImage = await generatePageImage(
         template.contentElements,
         text,
         video.brandKit,
         false,
         bgImage,
-        video.adjustments
+        video.adjustments,
+        textAdj
       );
       pages.push(pageImage);
     }
@@ -448,7 +470,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       video.brandKit,
       true,
       undefined,
-      video.adjustments
+      video.adjustments,
+      defaultPageTextAdjustment
     );
     pages.push(signaturePage);
 
@@ -473,6 +496,38 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       prev.map((v) =>
         v.cardId === current.cardId
           ? { ...v, adjustments: { ...v.adjustments, [key]: value } }
+          : v
+      )
+    );
+  }, []);
+
+  // Update text adjustment for a specific page
+  const updatePageTextAdjustment = useCallback((pageIndex: number, key: keyof PageTextAdjustment, value: number) => {
+    const current = selectedVideoRef.current;
+    if (!current) return;
+
+    const updatedPageTextAdjustments = [...current.pageTextAdjustments];
+    if (!updatedPageTextAdjustments[pageIndex]) {
+      updatedPageTextAdjustments[pageIndex] = { ...defaultPageTextAdjustment };
+    }
+    updatedPageTextAdjustments[pageIndex] = {
+      ...updatedPageTextAdjustments[pageIndex],
+      [key]: value,
+    };
+
+    selectedVideoRef.current = {
+      ...current,
+      pageTextAdjustments: updatedPageTextAdjustments,
+    };
+
+    setSelectedVideo((prev) =>
+      prev ? { ...prev, pageTextAdjustments: updatedPageTextAdjustments } : prev
+    );
+
+    setClientVideos((prev) =>
+      prev.map((v) =>
+        v.cardId === current.cardId
+          ? { ...v, pageTextAdjustments: updatedPageTextAdjustments }
           : v
       )
     );
@@ -1062,16 +1117,18 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                     setMascotY={(v) => updateAdjustmentLocal("mascotY", v)}
                     setMascotScaleX={(v) => updateAdjustmentLocal("mascotScaleX", v)}
                     setMascotScaleY={(v) => updateAdjustmentLocal("mascotScaleY", v)}
-                    textX={selectedVideo.adjustments.textX}
-                    textY={selectedVideo.adjustments.textY}
-                    textScale={selectedVideo.adjustments.textScale}
-                    setTextX={(v) => updateAdjustmentLocal("textX", v)}
-                    setTextY={(v) => updateAdjustmentLocal("textY", v)}
-                    setTextScale={(v) => updateAdjustmentLocal("textScale", v)}
+                    textX={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textX || 0}
+                    textY={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textY || 0}
+                    textScale={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textScale || 100}
+                    setTextX={(v) => updatePageTextAdjustment(currentPreviewPage, "textX", v)}
+                    setTextY={(v) => updatePageTextAdjustment(currentPreviewPage, "textY", v)}
+                    setTextScale={(v) => updatePageTextAdjustment(currentPreviewPage, "textScale", v)}
                   />
 
                   <p className="text-center text-xs text-muted-foreground">
                     Arraste os elementos para mover. Arraste as alças nos cantos para redimensionar.
+                    <br />
+                    <span className="text-primary/80">Ajustes de texto são individuais por página.</span>
                   </p>
 
                   {/* Page navigation */}
@@ -1130,13 +1187,19 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                         const resetVideo: ClientVideo = {
                           ...selectedVideo,
                           adjustments: { ...defaultAdjustments },
+                          pageTextAdjustments: selectedVideo.pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
                         };
 
+                        selectedVideoRef.current = resetVideo;
                         setSelectedVideo(resetVideo);
                         setClientVideos((prev) =>
                           prev.map((v) =>
                             v.cardId === resetVideo.cardId
-                              ? { ...v, adjustments: { ...defaultAdjustments } }
+                              ? { 
+                                  ...v, 
+                                  adjustments: { ...defaultAdjustments },
+                                  pageTextAdjustments: selectedVideo.pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
+                                }
                               : v
                           )
                         );
