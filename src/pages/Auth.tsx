@@ -31,13 +31,46 @@ export default function Auth() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
-    Promise.race([
-      promise,
-      new Promise<T>((_, reject) =>
-        window.setTimeout(() => reject(new Error("timeout")), ms)
-      ),
-    ]);
+  const withTimeout = <T,>(promise: Promise<T>, ms: number) => {
+    let t: number | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      t = window.setTimeout(() => reject(new Error("timeout")), ms);
+    });
+
+    return Promise.race([
+      promise.finally(() => {
+        if (t) window.clearTimeout(t);
+      }),
+      timeout,
+    ]) as Promise<T>;
+  };
+
+  const checkBackendHealth = async () => {
+    if (!navigator.onLine) throw new Error("offline");
+
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("missing_config");
+
+    const controller = new AbortController();
+    const abortId = window.setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const res = await fetch(`${url}/auth/v1/health`, {
+        method: "GET",
+        headers: { apikey: key },
+        signal: controller.signal,
+      });
+
+      if (!res.ok) throw new Error(`backend_http_${res.status}`);
+      return true;
+    } catch (err: any) {
+      if (err?.name === "AbortError") throw new Error("backend_timeout");
+      throw err;
+    } finally {
+      window.clearTimeout(abortId);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +84,8 @@ export default function Auth() {
 
     try {
       console.info("auth: login start");
+
+      await checkBackendHealth();
 
       const { data, error } = await withTimeout(
         supabase.auth.signInWithPassword({
@@ -76,7 +111,14 @@ export default function Auth() {
         toast.error("Login não foi concluído. Tente novamente.");
       }
     } catch (error: any) {
-      if (error?.message === "timeout") {
+      const msg = String(error?.message ?? "");
+      if (msg === "offline") {
+        toast.error("Sem internet. Conecte-se e tente novamente.");
+      } else if (msg === "backend_timeout" || msg.startsWith("backend_http_")) {
+        toast.error("Servidor indisponível no momento. Tente novamente em instantes.");
+      } else if (msg === "missing_config") {
+        toast.error("Configuração do login está incompleta.");
+      } else if (msg === "timeout") {
         toast.error("Sem resposta do servidor. Verifique sua conexão e tente novamente.");
       } else {
         toast.error("Erro ao fazer login");
