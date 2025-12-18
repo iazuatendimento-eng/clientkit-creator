@@ -483,7 +483,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     }
   };
 
-  const handleSelectPhotoImage = (image: SearchImage) => {
+  const handleSelectPhotoImage = async (image: SearchImage) => {
     if (!selectedArt) return;
     const index = clientArts.findIndex((a) => 
       a.clientId === selectedArt.clientId && 
@@ -492,14 +492,25 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     );
     if (index === -1) return;
 
+    const updatedArt = { ...clientArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
     const updatedArts = [...clientArts];
-    updatedArts[index] = { ...updatedArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
+    updatedArts[index] = updatedArt;
     setClientArts(updatedArts);
+    setSelectedArt(updatedArt); // Update selectedArt too
     setIsImageDialogOpen(false);
     setCustomImageUrl("");
 
-    // Regenerate the art with new photo
-    regenerateArt(index);
+    // Regenerate the art with new photo and update state
+    const newImageUrl = await generateArtForClient(updatedArt);
+    const finalArts = [...updatedArts];
+    finalArts[index] = { ...updatedArt, imageUrl: newImageUrl };
+    setClientArts(finalArts);
+    setSelectedArt({ ...updatedArt, imageUrl: newImageUrl });
+    
+    toast({
+      title: "Foto aplicada!",
+      description: "Arte regenerada com a nova imagem.",
+    });
   };
 
   const handleCustomImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -519,7 +530,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     applyCustomImage(customImageUrl.trim());
   };
 
-  const applyCustomImage = (imageUrl: string) => {
+  const applyCustomImage = async (imageUrl: string) => {
     if (!selectedArt) return;
     const index = clientArts.findIndex((a) => 
       a.clientId === selectedArt.clientId && 
@@ -528,18 +539,24 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     );
     if (index === -1) return;
 
+    const updatedArt = { ...clientArts[index], photoImage: imageUrl, photoOffset: { x: 0, y: 0 } };
     const updatedArts = [...clientArts];
-    updatedArts[index] = { ...updatedArts[index], photoImage: imageUrl, photoOffset: { x: 0, y: 0 } };
+    updatedArts[index] = updatedArt;
     setClientArts(updatedArts);
+    setSelectedArt(updatedArt);
     setIsImageDialogOpen(false);
     setCustomImageUrl("");
 
     // Regenerate the art with new photo
-    regenerateArt(index);
+    const newImageUrl = await generateArtForClient(updatedArt);
+    const finalArts = [...updatedArts];
+    finalArts[index] = { ...updatedArt, imageUrl: newImageUrl };
+    setClientArts(finalArts);
+    setSelectedArt({ ...updatedArt, imageUrl: newImageUrl });
     
     toast({
       title: "Imagem aplicada!",
-      description: "A arte será regenerada com a nova imagem.",
+      description: "Arte regenerada com a nova imagem.",
     });
   };
 
