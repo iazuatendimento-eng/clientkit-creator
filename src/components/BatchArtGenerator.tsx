@@ -66,28 +66,23 @@ interface ClientArt {
   photoOffset?: { x: number; y: number }; // Offset for photo position adjustment
 }
 
-// Helper to load image via fetch to avoid CORS issues
-const loadImageAsBlob = async (url: string): Promise<HTMLImageElement | null> => {
-  try {
-    const response = await fetch(url, { mode: 'cors' });
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        resolve(img);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        resolve(null);
-      };
-      img.src = objectUrl;
-    });
-  } catch (error) {
-    console.error("Error loading image:", error);
-    return null;
-  }
+// Helper to load image - handles both base64 data URLs and HTTP URLs
+const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
+  if (!url) return null;
+  
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      console.log("Image loaded successfully:", url.substring(0, 50));
+      resolve(img);
+    };
+    img.onerror = (e) => {
+      console.error("Error loading image:", url.substring(0, 50), e);
+      resolve(null);
+    };
+    img.src = url;
+  });
 };
 
 interface BatchArtGeneratorProps {
@@ -182,7 +177,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
 
     // Draw background image if set
     if (art.backgroundImage) {
-      const bgImg = await loadImageAsBlob(art.backgroundImage);
+      const bgImg = await loadImage(art.backgroundImage);
       if (bgImg) {
         ctx.drawImage(bgImg, 0, 0, template.width, template.height);
       }
@@ -239,7 +234,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         console.log("Drew text at:", el.x, el.y, "Text:", text.substring(0, 50));
       } else if (el.type === "image" && el.placeholder && art.photoImage) {
         // Draw photo with offset support
-        const img = await loadImageAsBlob(art.photoImage);
+        const img = await loadImage(art.photoImage);
         if (img) {
           const offset = art.photoOffset || { x: 0, y: 0 };
           // Calculate source dimensions to maintain aspect ratio and allow panning
@@ -269,32 +264,47 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           ctx.fillRect(el.x, el.y, el.width, el.height);
         }
       } else if (el.type === "image" && el.imageUrl && !el.placeholder) {
-        const img = await loadImageAsBlob(el.imageUrl);
+        const img = await loadImage(el.imageUrl);
         if (img) {
           ctx.drawImage(img, el.x, el.y, el.width, el.height);
         }
-      } else if (el.type === "logo" && art.brandKit?.pngs?.[0]) {
-        const img = await loadImageAsBlob(art.brandKit.pngs[0]);
-        if (img) {
-          ctx.drawImage(img, el.x, el.y, el.width, el.height);
-        } else {
-          ctx.fillStyle = "#e5e7eb";
-          ctx.fillRect(el.x, el.y, el.width, el.height);
-          ctx.fillStyle = "#666";
-          ctx.font = "14px Arial";
-          ctx.textAlign = "center";
-          ctx.fillText("Logo", el.x + el.width / 2, el.y + el.height / 2);
-          ctx.textAlign = "left";
+      } else if (el.type === "logo") {
+        // Logo uses PNG[0] from brand kit
+        const logoUrl = art.brandKit?.pngs?.[0] || art.brandKit?.logo;
+        console.log("Loading logo from:", logoUrl?.substring(0, 50));
+        if (logoUrl) {
+          const img = await loadImage(logoUrl);
+          if (img) {
+            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+          } else {
+            ctx.fillStyle = "#e5e7eb";
+            ctx.fillRect(el.x, el.y, el.width, el.height);
+            ctx.fillStyle = "#666";
+            ctx.font = "14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Logo", el.x + el.width / 2, el.y + el.height / 2);
+            ctx.textAlign = "left";
+          }
         }
-      } else if (el.type === "contact" && art.brandKit?.pngs?.[1]) {
-        const img = await loadImageAsBlob(art.brandKit.pngs[1]);
-        if (img) {
-          ctx.drawImage(img, el.x, el.y, el.width, el.height);
+      } else if (el.type === "contact") {
+        // Contact uses PNG[1] from brand kit
+        const contactUrl = art.brandKit?.pngs?.[1] || art.brandKit?.contactInfo;
+        console.log("Loading contact from:", contactUrl?.substring(0, 50));
+        if (contactUrl) {
+          const img = await loadImage(contactUrl);
+          if (img) {
+            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+          }
         }
-      } else if (el.type === "mascot" && art.brandKit?.pngs?.[2]) {
-        const img = await loadImageAsBlob(art.brandKit.pngs[2]);
-        if (img) {
-          ctx.drawImage(img, el.x, el.y, el.width, el.height);
+      } else if (el.type === "mascot") {
+        // Mascot uses PNG[2] from brand kit
+        const mascotUrl = art.brandKit?.pngs?.[2] || art.brandKit?.mascot;
+        console.log("Loading mascot from:", mascotUrl?.substring(0, 50));
+        if (mascotUrl) {
+          const img = await loadImage(mascotUrl);
+          if (img) {
+            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+          }
         }
       }
     }
