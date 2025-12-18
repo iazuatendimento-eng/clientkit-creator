@@ -339,19 +339,24 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
 
   const drawSelection = (ctx: CanvasRenderingContext2D, el: CanvasElement) => {
     ctx.strokeStyle = "#3b82f6";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(el.x - 2, el.y - 2, el.width + 4, el.height + 4);
+    ctx.lineWidth = 4;
+    ctx.strokeRect(el.x - 3, el.y - 3, el.width + 6, el.height + 6);
 
-    // Draw handles
-    const handleSize = 10;
+    // Draw handles - larger for better visibility at 40% scale
+    const handleSize = 24; // Larger handles (24 * 0.4 = ~10px on screen)
     ctx.fillStyle = "#3b82f6";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
     const corners = [
       { x: el.x - handleSize / 2, y: el.y - handleSize / 2 },
       { x: el.x + el.width - handleSize / 2, y: el.y - handleSize / 2 },
       { x: el.x - handleSize / 2, y: el.y + el.height - handleSize / 2 },
       { x: el.x + el.width - handleSize / 2, y: el.y + el.height - handleSize / 2 },
     ];
-    corners.forEach((c) => ctx.fillRect(c.x, c.y, handleSize, handleSize));
+    corners.forEach((c) => {
+      ctx.fillRect(c.x, c.y, handleSize, handleSize);
+      ctx.strokeRect(c.x, c.y, handleSize, handleSize);
+    });
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -424,7 +429,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
     const element = elements.find((el) => el.id === selectedElement);
     if (!element) return;
 
-    const handleSize = 15; // Larger hit area for handles
+    const handleSize = 30; // Larger hit area for handles (matches visual size)
     const handles = [
       { id: 'nw', x: element.x, y: element.y },
       { id: 'ne', x: element.x + element.width, y: element.y },
@@ -531,7 +536,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
     const element = elements.find((el) => el.id === selectedElement);
     if (!element) return "crosshair";
     
-    const handleSize = 15;
+    const handleSize = 30;
     const handles = [
       { id: 'nw', x: element.x, y: element.y, cursor: 'nwse-resize' },
       { id: 'ne', x: element.x + element.width, y: element.y, cursor: 'nesw-resize' },
