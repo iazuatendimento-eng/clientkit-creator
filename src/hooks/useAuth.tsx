@@ -8,23 +8,44 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+    let active = true;
+    const safetyTimeout = window.setTimeout(() => {
+      // Safety net: avoid infinite loading screens if auth/network hangs.
+      if (active) setLoading(false);
+    }, 8000);
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Set up auth state listener FIRST
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      window.clearTimeout(safetyTimeout);
     });
 
-    return () => subscription.unsubscribe();
+    // THEN check for existing session
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!active) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        window.clearTimeout(safetyTimeout);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoading(false);
+        window.clearTimeout(safetyTimeout);
+      });
+
+    return () => {
+      active = false;
+      window.clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
