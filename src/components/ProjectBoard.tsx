@@ -74,9 +74,10 @@ interface SortableCardProps {
   onCoverUpdate: (briefId: string, coverUrl: string, isVideo?: boolean) => void;
   isPublicView?: boolean;
   isInactive?: boolean;
+  isFirstInQueue?: boolean;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -193,6 +194,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
               {brief.artGenerationSelected && (
                 <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-purple-500/20 text-purple-500 border-purple-500/50">
+                  Arte em Lote
+                </Badge>
+              )}
+              {isFirstInQueue && !brief.artGenerationSelected && (
+                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-blue-500/20 text-blue-500 border-blue-500/50">
                   Na Fila
                 </Badge>
               )}
@@ -1118,7 +1124,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                     
                     <SortableContext items={columnBriefs.map(b => b.id)} strategy={verticalListSortingStrategy}>
                       <div className="space-y-3">
-                        {columnBriefs.map(brief => (
+                        {columnBriefs.map((brief, index) => (
                           <SortableCard
                             key={brief.id}
                             brief={brief}
@@ -1131,6 +1137,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             onCoverUpdate={handleBriefCoverUpdate}
                             isPublicView={isPublicView}
                             isInactive={isInactive}
+                            isFirstInQueue={column.id === "todo" && index === 0}
                           />
                         ))}
                       </div>
