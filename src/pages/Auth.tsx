@@ -31,21 +31,34 @@ export default function Auth() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        window.setTimeout(() => reject(new Error("timeout")), ms)
+      ),
+    ]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error("Por favor, preencha todos os campos");
       return;
     }
 
     setLoading(true);
-    
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      console.info("auth: login start");
+
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }),
+        12000
+      );
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
@@ -56,14 +69,21 @@ export default function Auth() {
         return;
       }
 
-      if (data.user) {
+      if (data.session?.user) {
         toast.success("Login realizado com sucesso!");
         navigate("/");
+      } else {
+        toast.error("Login não foi concluído. Tente novamente.");
       }
     } catch (error: any) {
-      toast.error("Erro ao fazer login");
+      if (error?.message === "timeout") {
+        toast.error("Sem resposta do servidor. Verifique sua conexão e tente novamente.");
+      } else {
+        toast.error("Erro ao fazer login");
+      }
       console.error("Login error:", error);
     } finally {
+      console.info("auth: login end");
       setLoading(false);
     }
   };
@@ -82,18 +102,23 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      console.info("auth: signup start");
+
       const redirectUrl = `${window.location.origin}/`;
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            email: email
-          }
-        },
-      });
+
+      const { data, error } = await withTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirectUrl,
+            data: {
+              email: email,
+            },
+          },
+        }),
+        15000
+      );
 
       if (error) {
         if (error.message.includes("already registered")) {
@@ -104,14 +129,21 @@ export default function Auth() {
         return;
       }
 
-      if (data.user) {
+      if (data.session?.user) {
         toast.success("Conta criada com sucesso!");
         navigate("/");
+      } else {
+        toast.success("Conta criada! Agora você já pode entrar.");
       }
     } catch (error: any) {
-      toast.error("Erro ao criar conta");
+      if (error?.message === "timeout") {
+        toast.error("Sem resposta do servidor. Verifique sua conexão e tente novamente.");
+      } else {
+        toast.error("Erro ao criar conta");
+      }
       console.error("Signup error:", error);
     } finally {
+      console.info("auth: signup end");
       setLoading(false);
     }
   };
@@ -167,6 +199,16 @@ export default function Auth() {
               ) : (
                 "Entrar"
               )}
+            </Button>
+
+            <Button
+              type="button"
+              className="w-full"
+              variant="outline"
+              onClick={handleSignUp}
+              disabled={loading}
+            >
+              Criar conta
             </Button>
           </form>
         </CardContent>
