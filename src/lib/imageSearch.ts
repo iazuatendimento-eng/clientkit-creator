@@ -15,7 +15,8 @@ export interface SearchImage {
 
 // Pexels API search (free, excellent quality)
 export const searchPexelsImages = async (query: string, perPage: number = 15): Promise<SearchImage[]> => {
-  const apiKey = import.meta.env.VITE_PEXELS_API_KEY as string | undefined;
+  // Pexels API key (publishable, client-side)
+  const apiKey = import.meta.env.VITE_PEXELS_API_KEY || 'Ogmbd5yQ7EvLxAyzUKA7o9JqFsQj28loZrZKNoPzzQflzmBjCl28EUuk';
   
   if (!apiKey) {
     console.log('Pexels API key not configured');
