@@ -730,11 +730,22 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {selectedArt?.photoImage && (
+            {/* Show the generated art preview */}
+            {selectedArt?.imageUrl && (
+              <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden">
+                <img
+                  src={selectedArt.imageUrl}
+                  alt="Preview da arte gerada"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            
+            {!selectedArt?.imageUrl && selectedArt?.photoImage && (
               <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden">
                 <img
                   src={selectedArt.photoImage}
-                  alt="Preview"
+                  alt="Preview da foto"
                   className="w-full h-full object-cover"
                   style={{
                     objectPosition: `${50 + photoOffsetX}% ${50 + photoOffsetY}%`
