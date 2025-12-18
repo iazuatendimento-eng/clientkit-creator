@@ -91,28 +91,26 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     isDragging,
   } = useSortable({ id: brief.id, disabled: isPublicView || isInactive });
 
-  // Load final artworks for public view
+  // Load final artworks for both admin and public view
   useEffect(() => {
-    if (isPublicView) {
-      const loadFinalArtworks = async () => {
-        try {
-          const uploads = await getCardUploads(brief.id);
-          const finals = uploads
-            .filter((u: any) => u.upload_type === "final")
-            .map((u: any) => ({
-              id: u.id,
-              name: u.file_name,
-              url: u.file_url,
-              fileType: u.file_type,
-            }));
-          setFinalArtworks(finals);
-        } catch (error) {
-          console.error("Error loading final artworks:", error);
-        }
-      };
-      loadFinalArtworks();
-    }
-  }, [brief.id, isPublicView]);
+    const loadFinalArtworks = async () => {
+      try {
+        const uploads = await getCardUploads(brief.id);
+        const finals = uploads
+          .filter((u: any) => u.upload_type === "final")
+          .map((u: any) => ({
+            id: u.id,
+            name: u.file_name,
+            url: u.file_url,
+            fileType: u.file_type,
+          }));
+        setFinalArtworks(finals);
+      } catch (error) {
+        console.error("Error loading final artworks:", error);
+      }
+    };
+    loadFinalArtworks();
+  }, [brief.id, isDetailModalOpen]);
 
   // Auto-open modal if URL hash matches this card
   useEffect(() => {
@@ -277,7 +275,44 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {!isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
-              {(brief.coverImage || brief.coverVideo) && (
+              {finalArtworks.length > 0 ? (
+                <>
+                  {finalArtworks.length === 1 ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const artwork = finalArtworks[0];
+                        handleDownload(artwork.url, artwork.name);
+                      }}
+                      className="text-xs px-2 py-1 h-auto w-full"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Baixar {finalArtworks[0].fileType.startsWith("video") ? 'Vídeo' : 'Arte'}
+                    </Button>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium">Baixar:</p>
+                      {finalArtworks.map((artwork, index) => (
+                        <Button
+                          key={artwork.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(artwork.url, artwork.name);
+                          }}
+                          className="text-xs px-2 py-1 h-auto w-full"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          {artwork.fileType.startsWith("video") ? 'Vídeo' : 'Arte'} {index + 1}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (brief.coverImage || brief.coverVideo) && (
                 <Button
                   variant="outline"
                   size="sm"
