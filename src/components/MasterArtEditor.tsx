@@ -6,6 +6,13 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   Square,
   Circle,
@@ -21,9 +28,12 @@ import {
   Loader2,
   Save,
   Play,
+  FolderOpen,
+  Plus,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CanvasElement {
   id: string;
@@ -48,6 +58,17 @@ interface MasterTemplate {
   backgroundColor: string;
 }
 
+interface SavedTemplate {
+  id: string;
+  name: string;
+  elements: CanvasElement[];
+  width: number;
+  height: number;
+  background_color: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface MasterArtEditorProps {
   onBack: () => void;
   onGenerateBatch: (template: MasterTemplate) => void;
@@ -66,7 +87,140 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState("images");
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Load saved templates on mount
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('master_templates')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      const templates = (data || []).map(t => ({
+        ...t,
+        elements: t.elements as unknown as CanvasElement[],
+      }));
+      setSavedTemplates(templates as SavedTemplate[]);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveTemplate = async () => {
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para salvar templates.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const templateData = {
+        name: templateName,
+        elements: JSON.parse(JSON.stringify(elements)),
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        background_color: backgroundColor,
+        created_by: user.id,
+      };
+
+      if (currentTemplateId) {
+        // Update existing template
+        const { error } = await supabase
+          .from('master_templates')
+          .update(templateData)
+          .eq('id', currentTemplateId);
+
+        if (error) throw error;
+        toast({
+          title: "Template atualizado!",
+          description: "Suas alterações foram salvas.",
+        });
+      } else {
+        // Create new template
+        const { data, error } = await supabase
+          .from('master_templates')
+          .insert(templateData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        setCurrentTemplateId(data.id);
+        toast({
+          title: "Template salvo!",
+          description: "Seu template foi criado com sucesso.",
+        });
+      }
+
+      loadTemplates();
+    } catch (error) {
+      console.error('Error saving template:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar o template.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const loadTemplate = async (templateId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('master_templates')
+        .select('*')
+        .eq('id', templateId)
+        .single();
+
+      if (error) throw error;
+      
+      setCurrentTemplateId(data.id);
+      setTemplateName(data.name);
+      setElements(data.elements as unknown as CanvasElement[]);
+      setBackgroundColor(data.background_color);
+      
+      toast({
+        title: "Template carregado!",
+        description: `"${data.name}" foi carregado.`,
+      });
+    } catch (error) {
+      console.error('Error loading template:', error);
+      toast({
+        title: "Erro ao carregar",
+        description: "Não foi possível carregar o template.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const createNewTemplate = () => {
+    setCurrentTemplateId(null);
+    setTemplateName("Novo Template");
+    setElements([]);
+    setBackgroundColor("#ffffff");
+    toast({
+      title: "Novo template",
+      description: "Canvas limpo para um novo template.",
+    });
+  };
 
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
@@ -382,16 +536,48 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
+          
+          {/* Template Selector */}
+          <Select 
+            value={currentTemplateId || "new"} 
+            onValueChange={(value) => value === "new" ? createNewTemplate() : loadTemplate(value)}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Carregar template..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="new">
+                <div className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Novo Template
+                </div>
+              </SelectItem>
+              {savedTemplates.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4" />
+                    {t.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Input
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
             className="w-64 font-semibold"
+            placeholder="Nome do template"
           />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => toast({ title: "Template salvo!" })}>
-            <Save className="mr-2 h-4 w-4" />
-            Salvar Template
+          <Button variant="outline" onClick={saveTemplate} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {currentTemplateId ? "Atualizar" : "Salvar"} Template
           </Button>
           <Button onClick={handleGenerateBatch} className="bg-gradient-primary">
             <Play className="mr-2 h-4 w-4" />

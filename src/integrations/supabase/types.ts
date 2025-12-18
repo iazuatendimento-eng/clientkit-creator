@@ -174,6 +174,42 @@ export type Database = {
         }
         Relationships: []
       }
+      master_templates: {
+        Row: {
+          background_color: string
+          created_at: string
+          created_by: string | null
+          elements: Json
+          height: number
+          id: string
+          name: string
+          updated_at: string
+          width: number
+        }
+        Insert: {
+          background_color?: string
+          created_at?: string
+          created_by?: string | null
+          elements?: Json
+          height?: number
+          id?: string
+          name: string
+          updated_at?: string
+          width?: number
+        }
+        Update: {
+          background_color?: string
+          created_at?: string
+          created_by?: string | null
+          elements?: Json
+          height?: number
+          id?: string
+          name?: string
+          updated_at?: string
+          width?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
