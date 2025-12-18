@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Check,
@@ -12,6 +14,7 @@ import {
   CheckCircle2,
   Image as ImageIcon,
   Search,
+  Move,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -60,7 +63,32 @@ interface ClientArt {
   status: "pending" | "approved" | "rejected";
   backgroundImage?: string;
   photoImage?: string; // Image from Unsplash for the photo placeholder
+  photoOffset?: { x: number; y: number }; // Offset for photo position adjustment
 }
+
+// Helper to load image via fetch to avoid CORS issues
+const loadImageAsBlob = async (url: string): Promise<HTMLImageElement | null> => {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(null);
+      };
+      img.src = objectUrl;
+    });
+  } catch (error) {
+    console.error("Error loading image:", error);
+    return null;
+  }
+};
 
 interface BatchArtGeneratorProps {
   template: MasterTemplate;
@@ -74,6 +102,9 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedArt, setSelectedArt] = useState<ClientArt | null>(null);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
+  const [photoOffsetX, setPhotoOffsetX] = useState(0);
+  const [photoOffsetY, setPhotoOffsetY] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [unsplashImages, setUnsplashImages] = useState<UnsplashImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -127,163 +158,148 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   };
 
   const generateArtForClient = async (art: ClientArt): Promise<string> => {
-    return new Promise((resolve) => {
-      console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
-      
-      const canvas = document.createElement("canvas");
-      canvas.width = template.width;
-      canvas.height = template.height;
-      const ctx = canvas.getContext("2d")!;
+    console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
+    
+    const canvas = document.createElement("canvas");
+    canvas.width = template.width;
+    canvas.height = template.height;
+    const ctx = canvas.getContext("2d")!;
 
-      // Background color from client's brand kit or template
-      const bgColor = art.brandKit?.colors?.[0] || template.backgroundColor;
-      console.log("Using background color:", bgColor);
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, template.width, template.height);
+    // Color mapping from brand kit:
+    // colors[0] = background color
+    // colors[1] = text color  
+    // colors[2] = accessory color 1
+    // colors[3] = accessory color 2
+    const bgColor = art.brandKit?.colors?.[0] || template.backgroundColor;
+    const textColor = art.brandKit?.colors?.[1] || "#000000";
+    const accessoryColor1 = art.brandKit?.colors?.[2] || "#cccccc";
+    const accessoryColor2 = art.brandKit?.colors?.[3] || "#aaaaaa";
+    
+    console.log("Colors - BG:", bgColor, "Text:", textColor, "Acc1:", accessoryColor1, "Acc2:", accessoryColor2);
+    
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, template.width, template.height);
 
-      // Draw background image if set
-      if (art.backgroundImage) {
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.onload = () => {
-          ctx.drawImage(bgImg, 0, 0, template.width, template.height);
-          drawElements();
-        };
-        bgImg.onerror = () => drawElements();
-        bgImg.src = art.backgroundImage;
-      } else {
-        drawElements();
+    // Draw background image if set
+    if (art.backgroundImage) {
+      const bgImg = await loadImageAsBlob(art.backgroundImage);
+      if (bgImg) {
+        ctx.drawImage(bgImg, 0, 0, template.width, template.height);
       }
+    }
 
-      function drawElements() {
-        const imagesLoaded: Promise<void>[] = [];
-
-        template.elements.forEach((el) => {
-          if (el.type === "rect") {
-            ctx.fillStyle = el.color || "#cccccc";
-            ctx.fillRect(el.x, el.y, el.width, el.height);
-          } else if (el.type === "circle") {
-            ctx.fillStyle = el.color || "#cccccc";
-            ctx.beginPath();
-            ctx.ellipse(
-              el.x + el.width / 2,
-              el.y + el.height / 2,
-              el.width / 2,
-              el.height / 2,
-              0,
-              0,
-              Math.PI * 2
-            );
-            ctx.fill();
-          } else if (el.type === "text") {
-            // Use font color from brand kit
-            const fontColor = art.brandKit?.colors?.[1] || el.color || "#000000";
-            ctx.fillStyle = fontColor;
-            const fontSize = el.fontSize || 32;
-            ctx.font = `${fontSize}px Arial`;
-            
-            // Use card text for text elements (the position from template determines where text appears)
-            const text = art.cardText || el.text || "";
-            
-            // Word wrap text within element width
-            const words = text.split(' ');
-            let line = '';
-            let y = el.y + fontSize;
-            const maxWidth = el.width || 400;
-            const lineHeight = fontSize * 1.2;
-            
-            for (let i = 0; i < words.length; i++) {
-              const testLine = line + words[i] + ' ';
-              const metrics = ctx.measureText(testLine);
-              if (metrics.width > maxWidth && i > 0) {
-                ctx.fillText(line.trim(), el.x, y);
-                line = words[i] + ' ';
-                y += lineHeight;
-              } else {
-                line = testLine;
-              }
-            }
+    // Draw elements
+    for (const el of template.elements) {
+      if (el.type === "rect") {
+        // Accessories use colors 3 or 4
+        ctx.fillStyle = accessoryColor1;
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+      } else if (el.type === "circle") {
+        // Accessories use colors 3 or 4
+        ctx.fillStyle = accessoryColor2;
+        ctx.beginPath();
+        ctx.ellipse(
+          el.x + el.width / 2,
+          el.y + el.height / 2,
+          el.width / 2,
+          el.height / 2,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      } else if (el.type === "text") {
+        // Text uses color 2
+        ctx.fillStyle = textColor;
+        const fontSize = el.fontSize || 32;
+        ctx.font = `${fontSize}px Arial`;
+        
+        // Use card text for text elements
+        const text = art.cardText || el.text || "";
+        
+        // Word wrap text within element width
+        const words = text.split(' ');
+        let line = '';
+        let y = el.y + fontSize;
+        const maxWidth = el.width || 400;
+        const lineHeight = fontSize * 1.2;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && i > 0) {
             ctx.fillText(line.trim(), el.x, y);
-            console.log("Drew text at:", el.x, el.y, "Text:", text.substring(0, 50));
-          } else if (el.type === "image" && el.placeholder && art.photoImage) {
-            // Draw searched photo in the image placeholder
-            const promise = new Promise<void>((imgResolve) => {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              img.onload = () => {
-                ctx.drawImage(img, el.x, el.y, el.width, el.height);
-                imgResolve();
-              };
-              img.onerror = () => {
-                // Draw placeholder if image fails to load
-                ctx.fillStyle = "#e5e7eb";
-                ctx.fillRect(el.x, el.y, el.width, el.height);
-                imgResolve();
-              };
-              img.src = art.photoImage!;
-            });
-            imagesLoaded.push(promise);
-          } else if (el.type === "image" && el.imageUrl && !el.placeholder) {
-            const promise = new Promise<void>((imgResolve) => {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              img.onload = () => {
-                ctx.drawImage(img, el.x, el.y, el.width, el.height);
-                imgResolve();
-              };
-              img.onerror = () => imgResolve();
-              img.src = el.imageUrl!;
-            });
-            imagesLoaded.push(promise);
-          } else if (el.type === "logo" && art.brandKit?.pngs?.[0]) {
-            const promise = new Promise<void>((imgResolve) => {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              img.onload = () => {
-                ctx.drawImage(img, el.x, el.y, el.width, el.height);
-                imgResolve();
-              };
-              img.onerror = () => {
-                // Draw placeholder if logo fails to load
-                ctx.fillStyle = "#e5e7eb";
-                ctx.fillRect(el.x, el.y, el.width, el.height);
-                imgResolve();
-              };
-              img.src = art.brandKit.pngs[0];
-            });
-            imagesLoaded.push(promise);
-          } else if (el.type === "contact" && art.brandKit?.pngs?.[1]) {
-            const promise = new Promise<void>((imgResolve) => {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              img.onload = () => {
-                ctx.drawImage(img, el.x, el.y, el.width, el.height);
-                imgResolve();
-              };
-              img.onerror = () => imgResolve();
-              img.src = art.brandKit.pngs[1];
-            });
-            imagesLoaded.push(promise);
-          } else if (el.type === "mascot" && art.brandKit?.pngs?.[2]) {
-            const promise = new Promise<void>((imgResolve) => {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              img.onload = () => {
-                ctx.drawImage(img, el.x, el.y, el.width, el.height);
-                imgResolve();
-              };
-              img.onerror = () => imgResolve();
-              img.src = art.brandKit.pngs[2];
-            });
-            imagesLoaded.push(promise);
+            line = words[i] + ' ';
+            y += lineHeight;
+          } else {
+            line = testLine;
           }
-        });
-
-        Promise.all(imagesLoaded).then(() => {
-          resolve(canvas.toDataURL("image/png"));
-        });
+        }
+        ctx.fillText(line.trim(), el.x, y);
+        console.log("Drew text at:", el.x, el.y, "Text:", text.substring(0, 50));
+      } else if (el.type === "image" && el.placeholder && art.photoImage) {
+        // Draw photo with offset support
+        const img = await loadImageAsBlob(art.photoImage);
+        if (img) {
+          const offset = art.photoOffset || { x: 0, y: 0 };
+          // Calculate source dimensions to maintain aspect ratio and allow panning
+          const imgAspect = img.width / img.height;
+          const frameAspect = el.width / el.height;
+          
+          let sx = 0, sy = 0, sw = img.width, sh = img.height;
+          
+          if (imgAspect > frameAspect) {
+            // Image is wider - allow horizontal panning
+            sh = img.height;
+            sw = sh * frameAspect;
+            sx = (img.width - sw) / 2 + (offset.x * img.width / el.width);
+            sx = Math.max(0, Math.min(sx, img.width - sw));
+          } else {
+            // Image is taller - allow vertical panning
+            sw = img.width;
+            sh = sw / frameAspect;
+            sy = (img.height - sh) / 2 + (offset.y * img.height / el.height);
+            sy = Math.max(0, Math.min(sy, img.height - sh));
+          }
+          
+          ctx.drawImage(img, sx, sy, sw, sh, el.x, el.y, el.width, el.height);
+        } else {
+          // Draw placeholder if image fails to load
+          ctx.fillStyle = "#e5e7eb";
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+        }
+      } else if (el.type === "image" && el.imageUrl && !el.placeholder) {
+        const img = await loadImageAsBlob(el.imageUrl);
+        if (img) {
+          ctx.drawImage(img, el.x, el.y, el.width, el.height);
+        }
+      } else if (el.type === "logo" && art.brandKit?.pngs?.[0]) {
+        const img = await loadImageAsBlob(art.brandKit.pngs[0]);
+        if (img) {
+          ctx.drawImage(img, el.x, el.y, el.width, el.height);
+        } else {
+          ctx.fillStyle = "#e5e7eb";
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+          ctx.fillStyle = "#666";
+          ctx.font = "14px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("Logo", el.x + el.width / 2, el.y + el.height / 2);
+          ctx.textAlign = "left";
+        }
+      } else if (el.type === "contact" && art.brandKit?.pngs?.[1]) {
+        const img = await loadImageAsBlob(art.brandKit.pngs[1]);
+        if (img) {
+          ctx.drawImage(img, el.x, el.y, el.width, el.height);
+        }
+      } else if (el.type === "mascot" && art.brandKit?.pngs?.[2]) {
+        const img = await loadImageAsBlob(art.brandKit.pngs[2]);
+        if (img) {
+          ctx.drawImage(img, el.x, el.y, el.width, el.height);
+        }
       }
-    });
+    }
+
+    return canvas.toDataURL("image/png");
   };
 
   const generateAllArts = async () => {
@@ -372,12 +388,38 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     if (index === -1) return;
 
     const updatedArts = [...clientArts];
-    updatedArts[index] = { ...updatedArts[index], photoImage: image.urls.regular };
+    updatedArts[index] = { ...updatedArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
     setClientArts(updatedArts);
     setIsImageDialogOpen(false);
 
     // Regenerate the art with new photo
     regenerateArt(index);
+  };
+
+  const openAdjustDialog = (art: ClientArt) => {
+    setSelectedArt(art);
+    setPhotoOffsetX(art.photoOffset?.x || 0);
+    setPhotoOffsetY(art.photoOffset?.y || 0);
+    setIsAdjustDialogOpen(true);
+  };
+
+  const handleApplyPhotoOffset = async () => {
+    if (!selectedArt) return;
+    const index = clientArts.findIndex((a) => a.clientId === selectedArt.clientId);
+    if (index === -1) return;
+
+    const updatedArts = [...clientArts];
+    updatedArts[index] = { 
+      ...updatedArts[index], 
+      photoOffset: { x: photoOffsetX, y: photoOffsetY } 
+    };
+    setClientArts(updatedArts);
+    setIsAdjustDialogOpen(false);
+
+    // Regenerate the art with new offset
+    const imageUrl = await generateArtForClient(updatedArts[index]);
+    updatedArts[index] = { ...updatedArts[index], imageUrl };
+    setClientArts([...updatedArts]);
   };
 
   const handleApproveAll = async () => {
@@ -547,7 +589,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-1"
+                      title="Trocar foto"
                       onClick={() => {
                         setSelectedArt(art);
                         setSearchQuery(art.cardText.split(" ").slice(0, 3).join(" "));
@@ -556,6 +598,16 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                     >
                       <ImageIcon className="h-4 w-4" />
                     </Button>
+                    {art.photoImage && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        title="Ajustar posição da foto"
+                        onClick={() => openAdjustDialog(art)}
+                      >
+                        <Move className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -643,6 +695,65 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               ))}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo Position Adjustment Dialog */}
+      <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajustar Posição da Foto</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {selectedArt?.photoImage && (
+              <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden">
+                <img
+                  src={selectedArt.photoImage}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                  style={{
+                    objectPosition: `${50 + photoOffsetX}% ${50 + photoOffsetY}%`
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm">Posição Horizontal: {photoOffsetX}</Label>
+                <Slider
+                  value={[photoOffsetX]}
+                  onValueChange={([v]) => setPhotoOffsetX(v)}
+                  min={-50}
+                  max={50}
+                  step={5}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label className="text-sm">Posição Vertical: {photoOffsetY}</Label>
+                <Slider
+                  value={[photoOffsetY]}
+                  onValueChange={([v]) => setPhotoOffsetY(v)}
+                  min={-50}
+                  max={50}
+                  step={5}
+                  className="mt-2"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleApplyPhotoOffset} className="bg-gradient-primary">
+                Aplicar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
