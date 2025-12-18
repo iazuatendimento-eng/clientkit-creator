@@ -225,10 +225,9 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
     if (toolId === "image") {
-      setActiveTab("images");
       toast({
-        title: "Buscar imagem",
-        description: "Use o painel à direita para buscar e adicionar imagens.",
+        title: "Moldura de imagem",
+        description: "Clique no canvas para adicionar uma moldura onde a foto será posicionada.",
       });
     }
   };
@@ -290,7 +289,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         ctx.fillStyle = el.color || "#000000";
         ctx.font = `${el.fontSize || 32}px Arial`;
         ctx.fillText(el.text || "Texto", el.x, el.y + (el.fontSize || 32));
-      } else if (el.type === "image" && el.imageUrl) {
+      } else if (el.type === "image" && el.imageUrl && !el.placeholder) {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
@@ -304,22 +303,30 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         // Draw placeholder
         ctx.fillStyle = el.color || "#e5e7eb";
         ctx.fillRect(el.x, el.y, el.width, el.height);
-        ctx.strokeStyle = "#9ca3af";
+        ctx.strokeStyle = el.type === "image" ? "#8b5cf6" : "#9ca3af";
+        ctx.lineWidth = el.type === "image" ? 3 : 1;
         ctx.setLineDash([10, 5]);
         ctx.strokeRect(el.x, el.y, el.width, el.height);
         ctx.setLineDash([]);
+        ctx.lineWidth = 1;
         
         // Label
-        ctx.fillStyle = "#6b7280";
+        ctx.fillStyle = el.type === "image" ? "#8b5cf6" : "#6b7280";
         ctx.font = "24px Arial";
         ctx.textAlign = "center";
-        const label = el.type === "logo" ? "LOGO" : el.type === "contact" ? "CONTATO" : el.type === "mascot" ? "MASCOTE" : "IMAGEM";
+        const label = el.type === "logo" ? "LOGO" : el.type === "contact" ? "CONTATO" : el.type === "mascot" ? "MASCOTE" : "FOTO";
         ctx.fillText(label, el.x + el.width / 2, el.y + el.height / 2 + 8);
+        
+        // Draw image icon for image placeholder
+        if (el.type === "image") {
+          ctx.font = "16px Arial";
+          ctx.fillText("(Buscar no Unsplash)", el.x + el.width / 2, el.y + el.height / 2 + 35);
+        }
         ctx.textAlign = "left";
       }
 
       // Draw selection border
-      if (selectedElement === el.id && el.type !== "image") {
+      if (selectedElement === el.id && !(el.type === "image" && el.imageUrl && !el.placeholder)) {
         drawSelection(ctx, el);
       }
 
@@ -386,6 +393,17 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch }: MasterArtEditorProp
         text: "Seu texto aqui",
         fontSize: 32,
         color: "#000000",
+      });
+    } else if (selectedTool === "image") {
+      // Add image placeholder frame
+      addElement({
+        type: "image",
+        x: x - 200,
+        y: y - 250,
+        width: 400,
+        height: 500,
+        placeholder: true,
+        color: "#8b5cf6", // Purple color for image placeholder
       });
     }
   };
