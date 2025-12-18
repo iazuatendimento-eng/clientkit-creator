@@ -59,6 +59,7 @@ interface ClientArt {
   imageUrl: string | null;
   status: "pending" | "approved" | "rejected";
   backgroundImage?: string;
+  photoImage?: string; // Image from Unsplash for the photo placeholder
 }
 
 interface BatchArtGeneratorProps {
@@ -173,7 +174,25 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
             // Replace placeholder text with card text if it's a generic placeholder
             const text = el.text?.toLowerCase().includes("texto") ? art.cardText : el.text || "";
             ctx.fillText(text, el.x, el.y + (el.fontSize || 32));
-          } else if (el.type === "image" && el.imageUrl) {
+          } else if (el.type === "image" && el.placeholder && art.photoImage) {
+            // Draw searched photo in the image placeholder
+            const promise = new Promise<void>((imgResolve) => {
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => {
+                ctx.drawImage(img, el.x, el.y, el.width, el.height);
+                imgResolve();
+              };
+              img.onerror = () => {
+                // Draw placeholder if image fails to load
+                ctx.fillStyle = "#e5e7eb";
+                ctx.fillRect(el.x, el.y, el.width, el.height);
+                imgResolve();
+              };
+              img.src = art.photoImage!;
+            });
+            imagesLoaded.push(promise);
+          } else if (el.type === "image" && el.imageUrl && !el.placeholder) {
             const promise = new Promise<void>((imgResolve) => {
               const img = new Image();
               img.crossOrigin = "anonymous";
@@ -240,11 +259,28 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     setIsGenerating(true);
     try {
       const updatedArts = [...clientArts];
+      
+      // Check if template has image placeholders
+      const hasImagePlaceholder = template.elements.some(el => el.type === "image" && el.placeholder);
 
       for (let i = 0; i < updatedArts.length; i++) {
         const art = updatedArts[i];
-        const imageUrl = await generateArtForClient(art);
-        updatedArts[i] = { ...art, imageUrl };
+        
+        // Search for relevant image if template has image placeholder
+        if (hasImagePlaceholder && !art.photoImage) {
+          try {
+            const searchTerms = art.cardText.split(" ").slice(0, 3).join(" ");
+            const images = await searchUnsplashImages(searchTerms, 1);
+            if (images.length > 0) {
+              updatedArts[i] = { ...art, photoImage: images[0].urls.regular };
+            }
+          } catch (error) {
+            console.error("Error searching image for:", art.cardText);
+          }
+        }
+        
+        const imageUrl = await generateArtForClient(updatedArts[i]);
+        updatedArts[i] = { ...updatedArts[i], imageUrl };
         setClientArts([...updatedArts]);
       }
 
@@ -299,17 +335,17 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     }
   };
 
-  const handleSelectBackgroundImage = (image: UnsplashImage) => {
+  const handleSelectPhotoImage = (image: UnsplashImage) => {
     if (!selectedArt) return;
     const index = clientArts.findIndex((a) => a.clientId === selectedArt.clientId);
     if (index === -1) return;
 
     const updatedArts = [...clientArts];
-    updatedArts[index] = { ...updatedArts[index], backgroundImage: image.urls.regular };
+    updatedArts[index] = { ...updatedArts[index], photoImage: image.urls.regular };
     setClientArts(updatedArts);
     setIsImageDialogOpen(false);
 
-    // Regenerate the art with new background
+    // Regenerate the art with new photo
     regenerateArt(index);
   };
 
@@ -540,7 +576,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Trocar Imagem de Fundo</DialogTitle>
+            <DialogTitle>Trocar Foto</DialogTitle>
           </DialogHeader>
 
           <div className="flex gap-2 mb-4">
@@ -565,7 +601,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                 <div
                   key={image.id}
                   className="aspect-[4/5] rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all"
-                  onClick={() => handleSelectBackgroundImage(image)}
+                  onClick={() => handleSelectPhotoImage(image)}
                 >
                   <img
                     src={image.urls.small}
