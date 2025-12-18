@@ -23,8 +23,8 @@ interface VideoTemplateLike {
 }
 
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
-type Part = "logo" | "contact" | "mascot" | "text";
-type Tone = "primary" | "secondary" | "accent" | "muted";
+type Part = "logo" | "contact" | "mascot" | "text" | "image";
+type Tone = "primary" | "secondary" | "accent" | "muted" | "warning";
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
@@ -62,6 +62,15 @@ const toneClasses = (tone: Tone) => {
     } as const;
   }
 
+  if (tone === "warning") {
+    return {
+      border: "border-orange-500",
+      bg: "bg-orange-500/10",
+      handle: "bg-orange-500",
+      badge: "bg-orange-500 text-white",
+    } as const;
+  }
+
   return {
     border: "border-muted-foreground",
     bg: "bg-muted-foreground/10",
@@ -75,6 +84,7 @@ export function VideoAdjustOverlay({
   previewUrl,
   isBusy,
   onCommit,
+  isContentPage,
 
   logoX,
   logoY,
@@ -109,11 +119,19 @@ export function VideoAdjustOverlay({
   setTextX,
   setTextY,
   setTextScale,
+
+  imageX,
+  imageY,
+  imageScale,
+  setImageX,
+  setImageY,
+  setImageScale,
 }: {
   template: VideoTemplateLike;
   previewUrl: string | null;
   isBusy?: boolean;
   onCommit?: () => void;
+  isContentPage?: boolean;
 
   logoX: number;
   logoY: number;
@@ -148,6 +166,13 @@ export function VideoAdjustOverlay({
   setTextX: (v: number) => void;
   setTextY: (v: number) => void;
   setTextScale: (v: number) => void;
+
+  imageX?: number;
+  imageY?: number;
+  imageScale?: number;
+  setImageX?: (v: number) => void;
+  setImageY?: (v: number) => void;
+  setImageScale?: (v: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part>("logo");
@@ -203,6 +228,22 @@ export function VideoAdjustOverlay({
       };
     }
 
+    if (part === "image") {
+      // Image covers the full canvas, scaled/offset from center
+      const scale = (imageScale ?? 100) / 100;
+      const baseW = template.width * scale;
+      const baseH = template.height * scale;
+      // Center the scaled image and apply offset
+      const offsetX = (imageX ?? 0);
+      const offsetY = (imageY ?? 0);
+      return {
+        x: (template.width - baseW) / 2 + offsetX,
+        y: (template.height - baseH) / 2 + offsetY,
+        w: baseW,
+        h: baseH,
+      };
+    }
+
     return null;
   };
 
@@ -238,6 +279,11 @@ export function VideoAdjustOverlay({
           textScale: number;
           textW: number;
           textH: number;
+          imageX: number;
+          imageY: number;
+          imageScale: number;
+          imageW: number;
+          imageH: number;
         };
       }
   >(null);
@@ -263,6 +309,9 @@ export function VideoAdjustOverlay({
     const mascotH = els.mascotEl ? els.mascotEl.height * (mascotScaleY / 100) : 0;
     const textW = els.textEl ? els.textEl.width * (textScale / 100) : 0;
     const textH = els.textEl ? els.textEl.height * (textScale / 100) : 0;
+    const currentImageScale = imageScale ?? 100;
+    const imageW = template.width * (currentImageScale / 100);
+    const imageH = template.height * (currentImageScale / 100);
 
     setActive(part);
     startRef.current = {
@@ -295,6 +344,11 @@ export function VideoAdjustOverlay({
         textScale,
         textW,
         textH,
+        imageX: imageX ?? 0,
+        imageY: imageY ?? 0,
+        imageScale: currentImageScale,
+        imageW,
+        imageH,
       },
     };
 
@@ -451,6 +505,31 @@ export function VideoAdjustOverlay({
         
         if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -500, 500));
         if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -500, 500));
+        return;
+      }
+
+      if (s.part === "image" && setImageX && setImageY && setImageScale) {
+        if (s.mode === "move") {
+          setImageX(clamp(s.start.imageX + dx, -1000, 1000));
+          setImageY(clamp(s.start.imageY + dy, -1000, 1000));
+          return;
+        }
+
+        // Image uses uniform scale from center
+        const baseW = template.width;
+        const h = s.handle as Handle;
+
+        const signedDx = handleSignX(h) * dx;
+        const signedDy = handleSignY(h) * dy;
+        const delta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        
+        const newW = clamp(s.start.imageW + delta, baseW * 0.5, baseW * 2);
+        const newScale = clamp((newW / baseW) * 100, 50, 200);
+        setImageScale(newScale);
+        
+        // Adjust position to maintain anchor point when resizing
+        if (handleHasW(h)) setImageX(clamp(s.start.imageX + dx / 2, -1000, 1000));
+        if (handleHasN(h)) setImageY(clamp(s.start.imageY + dy / 2, -1000, 1000));
       }
     };
 
@@ -594,6 +673,7 @@ export function VideoAdjustOverlay({
       )}
 
       <div className="absolute inset-0">
+        {isContentPage && setImageX && <Box part="image" label="Foto" tone="warning" />}
         {els.textEl && <Box part="text" label="Texto" tone="muted" />}
         {els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
         {els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
