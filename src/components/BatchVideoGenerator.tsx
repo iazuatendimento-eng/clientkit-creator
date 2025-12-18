@@ -23,6 +23,7 @@ import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTag
 import { searchImages, SearchImage } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
+import { encodeVideoSimple } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
@@ -596,48 +597,76 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
       return;
     }
 
+    setIsGenerating(true);
+    
     try {
       for (const video of approvedVideos) {
-        // Save all pages as images (for now - video encoding would require additional tools)
-        for (let i = 0; i < video.pages.length; i++) {
-          const response = await fetch(video.pages[i]);
-          const blob = await response.blob();
-          const isLastPage = i === video.pages.length - 1;
-          const fileName = `video_${video.cardId}_page${i + 1}_${Date.now()}.png`;
+        toast({
+          title: `Gerando vídeo...`,
+          description: `Processando ${video.clientName}`,
+        });
 
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("card-uploads")
-            .upload(`videos/${fileName}`, blob, {
-              contentType: "image/png",
-            });
+        // Encode video from pages
+        const videoBlob = await encodeVideoSimple(video.pages, {
+          width: template.width,
+          height: template.height,
+          pageDuration: template.pageDuration,
+          fps: 24,
+        });
 
-          if (uploadError) {
-            console.error("Upload error:", uploadError);
-            continue;
-          }
+        const fileName = `video_${video.cardId}_${Date.now()}.webm`;
 
-          const { data: urlData } = supabase.storage
-            .from("card-uploads")
-            .getPublicUrl(`videos/${fileName}`);
-
-          // Create card upload record
-          await createCardUpload({
-            card_id: video.cardId,
-            file_name: fileName,
-            file_url: urlData.publicUrl,
-            file_type: "image/png",
-            upload_type: "final",
+        // Upload video file
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("card-uploads")
+          .upload(`videos/${fileName}`, videoBlob, {
+            contentType: "video/webm",
           });
 
-          // Use first page as cover image and set as video
-          if (i === 0) {
-            await updateProjectBrief(video.cardId, { 
-              cover_image: urlData.publicUrl,
-              cover_video: urlData.publicUrl,
-              brief_type: 'video'
-            });
-          }
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          toast({
+            title: "Erro ao fazer upload",
+            description: `Erro para ${video.clientName}`,
+            variant: "destructive",
+          });
+          continue;
         }
+
+        const { data: urlData } = supabase.storage
+          .from("card-uploads")
+          .getPublicUrl(`videos/${fileName}`);
+
+        // Create card upload record for video
+        await createCardUpload({
+          card_id: video.cardId,
+          file_name: fileName,
+          file_url: urlData.publicUrl,
+          file_type: "video/webm",
+          upload_type: "final",
+        });
+
+        // Also upload first frame as thumbnail
+        const thumbResponse = await fetch(video.pages[0]);
+        const thumbBlob = await thumbResponse.blob();
+        const thumbFileName = `thumb_${video.cardId}_${Date.now()}.png`;
+
+        await supabase.storage
+          .from("card-uploads")
+          .upload(`videos/${thumbFileName}`, thumbBlob, {
+            contentType: "image/png",
+          });
+
+        const { data: thumbUrlData } = supabase.storage
+          .from("card-uploads")
+          .getPublicUrl(`videos/${thumbFileName}`);
+
+        // Update card with video URL and thumbnail
+        await updateProjectBrief(video.cardId, { 
+          cover_image: thumbUrlData.publicUrl,
+          cover_video: urlData.publicUrl,
+          brief_type: 'video'
+        });
       }
 
       await clearArtGenerationTags();
@@ -661,7 +690,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
 
       toast({
         title: "Vídeos salvos!",
-        description: `${approvedVideos.length} vídeos foram salvos como slides.`,
+        description: `${approvedVideos.length} vídeos foram gerados e salvos.`,
       });
 
       onComplete();
@@ -671,6 +700,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         title: "Erro ao salvar vídeos",
         variant: "destructive",
       });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
