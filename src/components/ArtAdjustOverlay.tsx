@@ -126,12 +126,13 @@ export function ArtAdjustOverlay({
   const getRect = (part: Part) => {
     if (part === "photo") {
       if (!els.photoFrame) return null;
-      const scale = photoScale / 100;
+      // "photoScale" controls zoom inside the frame (crop), not the frame size.
+      // Keep the overlay box fixed to the placeholder frame.
       return {
-        x: els.photoFrame.x + (els.photoFrame.width * (1 - scale)) / 2,
-        y: els.photoFrame.y + (els.photoFrame.height * (1 - scale)) / 2,
-        w: els.photoFrame.width * scale,
-        h: els.photoFrame.height * scale,
+        x: els.photoFrame.x,
+        y: els.photoFrame.y,
+        w: els.photoFrame.width,
+        h: els.photoFrame.height,
       };
     }
 
@@ -315,8 +316,8 @@ export function ArtAdjustOverlay({
           }
         }
 
-        const newDimension = clamp(startDimension + signedDelta, baseDimension * 0.25, baseDimension * 2);
-        const newScale = clamp((newDimension / baseDimension) * 100, 25, 200);
+        const newDimension = clamp(startDimension + signedDelta, baseDimension * 0.1, baseDimension * 3);
+        const newScale = clamp((newDimension / baseDimension) * 100, 10, 300);
         setPhotoScale(newScale);
         return;
       }
