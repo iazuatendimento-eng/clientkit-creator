@@ -23,6 +23,7 @@ interface VideoTemplateLike {
 
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 type Part = "logo" | "contact" | "mascot";
+type Tone = "primary" | "secondary" | "accent";
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
@@ -34,10 +35,39 @@ const handleHasS = (h: Handle) => h === "sw" || h === "se" || h === "s";
 const handleSignX = (h: Handle) => (handleHasW(h) ? -1 : 1);
 const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
 
+const toneClasses = (tone: Tone) => {
+  if (tone === "primary") {
+    return {
+      border: "border-primary",
+      bg: "bg-primary/10",
+      handle: "bg-primary",
+      badge: "bg-primary text-primary-foreground",
+    } as const;
+  }
+
+  if (tone === "secondary") {
+    return {
+      border: "border-secondary",
+      bg: "bg-secondary/10",
+      handle: "bg-secondary",
+      badge: "bg-secondary text-secondary-foreground",
+    } as const;
+  }
+
+  return {
+    border: "border-accent",
+    bg: "bg-accent/10",
+    handle: "bg-accent",
+    badge: "bg-accent text-accent-foreground",
+  } as const;
+};
+
 export function VideoAdjustOverlay({
   template,
   previewUrl,
   isBusy,
+  onCommit,
+
   logoX,
   logoY,
   logoScaleX,
@@ -46,6 +76,7 @@ export function VideoAdjustOverlay({
   setLogoY,
   setLogoScaleX,
   setLogoScaleY,
+
   contactX,
   contactY,
   contactScaleX,
@@ -54,6 +85,7 @@ export function VideoAdjustOverlay({
   setContactY,
   setContactScaleX,
   setContactScaleY,
+
   mascotX,
   mascotY,
   mascotScaleX,
@@ -66,6 +98,7 @@ export function VideoAdjustOverlay({
   template: VideoTemplateLike;
   previewUrl: string | null;
   isBusy?: boolean;
+  onCommit?: () => void;
 
   logoX: number;
   logoY: number;
@@ -97,7 +130,6 @@ export function VideoAdjustOverlay({
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part>("logo");
 
-  // Combine content and signature elements to find logo/contact/mascot
   const els = useMemo(() => {
     const allElements = [...template.contentElements, ...template.signatureElements];
     const logoEl = allElements.find((e) => e.type === "logo");
@@ -175,8 +207,14 @@ export function VideoAdjustOverlay({
     e.preventDefault();
     e.stopPropagation();
 
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
+    const r = containerRef.current?.getBoundingClientRect();
+    if (!r) return;
 
     const logoW = els.logoEl ? els.logoEl.width * (logoScaleX / 100) : 0;
     const logoH = els.logoEl ? els.logoEl.height * (logoScaleY / 100) : 0;
@@ -216,14 +254,14 @@ export function VideoAdjustOverlay({
 
     const onMove = (ev: PointerEvent) => {
       const s = startRef.current;
-      const r = containerRef.current?.getBoundingClientRect();
-      if (!s || !r) return;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!s || !rect) return;
 
       const dxClient = ev.clientX - s.startClientX;
       const dyClient = ev.clientY - s.startClientY;
 
-      const dx = (dxClient / r.width) * template.width;
-      const dy = (dyClient / r.height) * template.height;
+      const dx = (dxClient / rect.width) * template.width;
+      const dy = (dyClient / rect.height) * template.height;
 
       if (s.part === "logo") {
         if (s.mode === "move") {
@@ -251,7 +289,6 @@ export function VideoAdjustOverlay({
           setLogoScaleY(newScaleY);
           if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -500, 500));
         } else {
-          // Corner handles - update both X and Y
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
@@ -343,28 +380,34 @@ export function VideoAdjustOverlay({
           if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + dx, -500, 500));
           if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + dy, -500, 500));
         }
-        return;
       }
     };
 
-    const onUp = () => {
+    const cleanup = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+
+    const onUp = () => {
+      cleanup();
       startRef.current = null;
+      void onCommit?.();
     };
 
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   };
 
   const Box = ({
     part,
     label,
-    color,
+    tone,
   }: {
     part: Part;
     label: string;
-    color: string;
+    tone: Tone;
   }) => {
     const rect = getRect(part);
     if (!rect) return null;
@@ -375,6 +418,7 @@ export function VideoAdjustOverlay({
     const height = (rect.h / template.height) * 100;
 
     const isActive = active === part;
+    const t = toneClasses(tone);
 
     const HandleDot = ({ h }: { h: Handle }) => {
       const pos =
@@ -411,7 +455,7 @@ export function VideoAdjustOverlay({
             "absolute z-20 h-3.5 w-3.5 rounded-sm border-2 border-background",
             pos,
             cursor,
-            color
+            t.handle
           )}
           onPointerDown={(e) => begin(e, part, "resize", h)}
         />
@@ -422,18 +466,22 @@ export function VideoAdjustOverlay({
       <div
         className={cn(
           "absolute rounded-md border-2 border-dashed bg-background/0 touch-none cursor-move",
-          isActive ? `border-${color.replace("bg-", "")} bg-${color.replace("bg-", "")}/10` : "border-border/70 hover:border-primary/70"
+          isActive ? cn(t.border, t.bg) : "border-border/70 hover:border-primary/70"
         )}
-        style={{ 
-          left: `${left}%`, 
-          top: `${top}%`, 
-          width: `${width}%`, 
+        style={{
+          left: `${left}%`,
+          top: `${top}%`,
+          width: `${width}%`,
           height: `${height}%`,
-          borderColor: isActive ? undefined : undefined,
         }}
         onPointerDown={(e) => begin(e, part, "move")}
       >
-        <div className={cn("absolute -top-6 left-0 rounded border px-1.5 py-0.5 text-[10px] shadow-sm", color, "text-white")}>
+        <div
+          className={cn(
+            "absolute -top-6 left-0 rounded border px-1.5 py-0.5 text-[10px] shadow-sm",
+            t.badge
+          )}
+        >
           {label}
         </div>
 
@@ -456,7 +504,7 @@ export function VideoAdjustOverlay({
   return (
     <div
       ref={containerRef}
-      className="relative mx-auto w-full aspect-[9/16] overflow-hidden rounded-lg border bg-muted"
+      className="relative mx-auto w-full aspect-[9/16] overflow-hidden rounded-lg border bg-muted touch-none"
     >
       {previewUrl ? (
         <img
@@ -475,9 +523,9 @@ export function VideoAdjustOverlay({
       )}
 
       <div className="absolute inset-0">
-        {els.logoEl && <Box part="logo" label="Logo" color="bg-blue-500" />}
-        {els.contactEl && <Box part="contact" label="Contato" color="bg-green-500" />}
-        {els.mascotEl && <Box part="mascot" label="Mascote" color="bg-purple-500" />}
+        {els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
+        {els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
+        {els.mascotEl && <Box part="mascot" label="Mascote" tone="secondary" />}
       </div>
 
       {isBusy && (

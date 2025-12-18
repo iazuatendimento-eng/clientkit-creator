@@ -135,6 +135,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
 
   const { toast } = useToast();
 
@@ -434,24 +435,43 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     return pages;
   };
 
-  const handleUpdateAdjustment = async (key: keyof ElementAdjustments, value: number) => {
+  const updateAdjustmentLocal = useCallback((key: keyof ElementAdjustments, value: number) => {
     if (!selectedVideo) return;
-    
-    const videoIndex = clientVideos.findIndex(v => v.cardId === selectedVideo.cardId);
-    if (videoIndex === -1) return;
 
-    const updatedAdjustments = { ...selectedVideo.adjustments, [key]: value };
-    const updatedVideo = { ...selectedVideo, adjustments: updatedAdjustments };
-    
-    // Regenerate pages with new adjustments
-    const newPages = await regenerateSingleVideo(updatedVideo);
-    updatedVideo.pages = newPages;
-    
-    const updatedVideos = [...clientVideos];
-    updatedVideos[videoIndex] = updatedVideo;
-    setClientVideos(updatedVideos);
-    setSelectedVideo(updatedVideo);
-  };
+    setSelectedVideo((prev) =>
+      prev ? { ...prev, adjustments: { ...prev.adjustments, [key]: value } } : prev
+    );
+
+    setClientVideos((prev) =>
+      prev.map((v) =>
+        v.cardId === selectedVideo.cardId
+          ? { ...v, adjustments: { ...v.adjustments, [key]: value } }
+          : v
+      )
+    );
+  }, [selectedVideo]);
+
+  const applyAdjustments = useCallback(
+    async (override?: ClientVideo) => {
+      const base = override ?? selectedVideo;
+      if (!base) return;
+
+      setIsApplyingAdjustments(true);
+      try {
+        const newPages = await regenerateSingleVideo(base);
+        const updatedVideo = { ...base, pages: newPages };
+
+        setClientVideos((prev) =>
+          prev.map((v) => (v.cardId === updatedVideo.cardId ? updatedVideo : v))
+        );
+        setSelectedVideo(updatedVideo);
+      } finally {
+        setIsApplyingAdjustments(false);
+      }
+    },
+    [selectedVideo]
+  );
+
 
   const generateAllVideos = async () => {
     setIsGenerating(true);
@@ -813,31 +833,32 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                       signatureElements: template.signatureElements,
                     }}
                     previewUrl={selectedVideo.pages[currentPreviewPage] || null}
-                    isBusy={false}
+                    isBusy={isApplyingAdjustments}
+                    onCommit={() => applyAdjustments()}
                     logoX={selectedVideo.adjustments.logoX}
                     logoY={selectedVideo.adjustments.logoY}
                     logoScaleX={selectedVideo.adjustments.logoScaleX}
                     logoScaleY={selectedVideo.adjustments.logoScaleY}
-                    setLogoX={(v) => handleUpdateAdjustment("logoX", v)}
-                    setLogoY={(v) => handleUpdateAdjustment("logoY", v)}
-                    setLogoScaleX={(v) => handleUpdateAdjustment("logoScaleX", v)}
-                    setLogoScaleY={(v) => handleUpdateAdjustment("logoScaleY", v)}
+                    setLogoX={(v) => updateAdjustmentLocal("logoX", v)}
+                    setLogoY={(v) => updateAdjustmentLocal("logoY", v)}
+                    setLogoScaleX={(v) => updateAdjustmentLocal("logoScaleX", v)}
+                    setLogoScaleY={(v) => updateAdjustmentLocal("logoScaleY", v)}
                     contactX={selectedVideo.adjustments.contactX}
                     contactY={selectedVideo.adjustments.contactY}
                     contactScaleX={selectedVideo.adjustments.contactScaleX}
                     contactScaleY={selectedVideo.adjustments.contactScaleY}
-                    setContactX={(v) => handleUpdateAdjustment("contactX", v)}
-                    setContactY={(v) => handleUpdateAdjustment("contactY", v)}
-                    setContactScaleX={(v) => handleUpdateAdjustment("contactScaleX", v)}
-                    setContactScaleY={(v) => handleUpdateAdjustment("contactScaleY", v)}
+                    setContactX={(v) => updateAdjustmentLocal("contactX", v)}
+                    setContactY={(v) => updateAdjustmentLocal("contactY", v)}
+                    setContactScaleX={(v) => updateAdjustmentLocal("contactScaleX", v)}
+                    setContactScaleY={(v) => updateAdjustmentLocal("contactScaleY", v)}
                     mascotX={selectedVideo.adjustments.mascotX}
                     mascotY={selectedVideo.adjustments.mascotY}
                     mascotScaleX={selectedVideo.adjustments.mascotScaleX}
                     mascotScaleY={selectedVideo.adjustments.mascotScaleY}
-                    setMascotX={(v) => handleUpdateAdjustment("mascotX", v)}
-                    setMascotY={(v) => handleUpdateAdjustment("mascotY", v)}
-                    setMascotScaleX={(v) => handleUpdateAdjustment("mascotScaleX", v)}
-                    setMascotScaleY={(v) => handleUpdateAdjustment("mascotScaleY", v)}
+                    setMascotX={(v) => updateAdjustmentLocal("mascotX", v)}
+                    setMascotY={(v) => updateAdjustmentLocal("mascotY", v)}
+                    setMascotScaleX={(v) => updateAdjustmentLocal("mascotScaleX", v)}
+                    setMascotScaleY={(v) => updateAdjustmentLocal("mascotScaleY", v)}
                   />
 
                   <p className="text-center text-xs text-muted-foreground">
@@ -880,17 +901,23 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={async () => {
-                        const videoIndex = clientVideos.findIndex(v => v.cardId === selectedVideo.cardId);
-                        if (videoIndex !== -1) {
-                          const updatedVideo = { ...selectedVideo, adjustments: { ...defaultAdjustments } };
-                          const newPages = await regenerateSingleVideo(updatedVideo);
-                          updatedVideo.pages = newPages;
-                          const updatedVideos = [...clientVideos];
-                          updatedVideos[videoIndex] = updatedVideo;
-                          setClientVideos(updatedVideos);
-                          setSelectedVideo(updatedVideo);
-                        }
+                      onClick={() => {
+                        if (!selectedVideo) return;
+                        const resetVideo: ClientVideo = {
+                          ...selectedVideo,
+                          adjustments: { ...defaultAdjustments },
+                        };
+
+                        setSelectedVideo(resetVideo);
+                        setClientVideos((prev) =>
+                          prev.map((v) =>
+                            v.cardId === resetVideo.cardId
+                              ? { ...v, adjustments: { ...defaultAdjustments } }
+                              : v
+                          )
+                        );
+
+                        void applyAdjustments(resetVideo);
                       }}
                     >
                       <RefreshCw className="mr-2 h-4 w-4" />
