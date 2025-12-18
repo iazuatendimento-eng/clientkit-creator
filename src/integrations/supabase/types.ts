@@ -107,6 +107,8 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          payment_due_day: number | null
+          payment_method: string | null
           phone: string | null
           slug: string
           team: string | null
@@ -121,6 +123,8 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          payment_due_day?: number | null
+          payment_method?: string | null
           phone?: string | null
           slug: string
           team?: string | null
@@ -135,11 +139,60 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          payment_due_day?: number | null
+          payment_method?: string | null
           phone?: string | null
           slug?: string
           team?: string | null
         }
         Relationships: []
+      }
+      client_payments: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          paid: boolean
+          paid_at: string | null
+          payment_method: string | null
+        }
+        Insert: {
+          amount?: number
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid?: boolean
+          paid_at?: string | null
+          payment_method?: string | null
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid?: boolean
+          paid_at?: string | null
+          payment_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_data"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {

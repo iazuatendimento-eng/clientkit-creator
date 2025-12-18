@@ -486,30 +486,14 @@ const Index = () => {
         <div className="container mx-auto flex justify-between items-center">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-gradient-primary">
-                  <Palette className="mr-2 h-4 w-4" />
-                  Criar Artes
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Marcar 1º Card e Criar</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleTagAndCreateArts()}>
-                  Todas as Equipes
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleTagAndCreateArts("1")}>
-                  SEG, QUA E SEX
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleTagAndCreateArts("2")}>
-                  TER, QUI E SÁB
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleTagAndCreateArts("3")}>
-                  SEG A SEX
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button className="bg-gradient-primary" onClick={() => navigate("/master-art")}>
+              <Palette className="mr-2 h-4 w-4" />
+              Criar Artes
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/receivables")}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Recebimentos
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">

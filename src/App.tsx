@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ClientPublicView from "./pages/ClientPublicView";
 import MasterArt from "./pages/MasterArt";
+import Receivables from "./pages/Receivables";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/master-art" element={<ProtectedRoute><MasterArt /></ProtectedRoute>} />
+          <Route path="/receivables" element={<ProtectedRoute><Receivables /></ProtectedRoute>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/client/:clientId" element={<ClientPublicView />} />
           <Route path="/:clientSlug" element={<ClientPublicView />} />
