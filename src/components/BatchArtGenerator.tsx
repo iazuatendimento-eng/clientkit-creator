@@ -51,6 +51,18 @@ interface MasterTemplate {
   backgroundColor: string;
 }
 
+interface ElementOverrides {
+  logoX?: number;
+  logoY?: number;
+  logoScale?: number;
+  textX?: number;
+  textY?: number;
+  textFontSize?: number;
+  contactX?: number;
+  contactY?: number;
+  contactScale?: number;
+}
+
 interface ClientArt {
   clientId: string;
   clientName: string;
@@ -62,8 +74,9 @@ interface ClientArt {
   imageUrl: string | null;
   status: "pending" | "approved" | "rejected";
   backgroundImage?: string;
-  photoImage?: string; // Image from Unsplash for the photo placeholder
-  photoOffset?: { x: number; y: number }; // Offset for photo position adjustment
+  photoImage?: string;
+  photoOffset?: { x: number; y: number };
+  elementOverrides?: ElementOverrides;
 }
 
 // Helper to load image - handles both base64 data URLs and HTTP URLs
@@ -103,6 +116,18 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [searchQuery, setSearchQuery] = useState("");
   const [unsplashImages, setUnsplashImages] = useState<UnsplashImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Element override states
+  const [logoX, setLogoX] = useState(0);
+  const [logoY, setLogoY] = useState(0);
+  const [logoScale, setLogoScale] = useState(100);
+  const [textX, setTextX] = useState(0);
+  const [textY, setTextY] = useState(0);
+  const [textFontSize, setTextFontSize] = useState(100);
+  const [contactX, setContactX] = useState(0);
+  const [contactY, setContactY] = useState(0);
+  const [contactScale, setContactScale] = useState(100);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -204,18 +229,27 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         );
         ctx.fill();
       } else if (el.type === "text") {
-        // Text uses color 2
+        // Text uses color 2 and client's font
         ctx.fillStyle = textColor;
-        const fontSize = el.fontSize || 32;
-        ctx.font = `${fontSize}px Arial`;
+        const baseFontSize = el.fontSize || 32;
+        const fontSizeMultiplier = (art.elementOverrides?.textFontSize || 100) / 100;
+        const fontSize = Math.round(baseFontSize * fontSizeMultiplier);
+        const fontFamily = art.brandKit?.fontFamily || "Arial";
+        ctx.font = `${fontSize}px ${fontFamily}`;
         
         // Use card text for text elements
         const text = art.cardText || el.text || "";
         
+        // Apply text position overrides
+        const textOffsetX = art.elementOverrides?.textX || 0;
+        const textOffsetY = art.elementOverrides?.textY || 0;
+        const baseX = el.x + textOffsetX;
+        const baseY = el.y + textOffsetY;
+        
         // Word wrap text within element width
         const words = text.split(' ');
         let line = '';
-        let y = el.y + fontSize;
+        let y = baseY + fontSize;
         const maxWidth = el.width || 400;
         const lineHeight = fontSize * 1.2;
         
@@ -223,15 +257,15 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           const testLine = line + words[i] + ' ';
           const metrics = ctx.measureText(testLine);
           if (metrics.width > maxWidth && i > 0) {
-            ctx.fillText(line.trim(), el.x, y);
+            ctx.fillText(line.trim(), baseX, y);
             line = words[i] + ' ';
             y += lineHeight;
           } else {
             line = testLine;
           }
         }
-        ctx.fillText(line.trim(), el.x, y);
-        console.log("Drew text at:", el.x, el.y, "Text:", text.substring(0, 50));
+        ctx.fillText(line.trim(), baseX, y);
+        console.log("Drew text at:", baseX, baseY, "Text:", text.substring(0, 50), "Font:", fontFamily);
       } else if (el.type === "image" && el.placeholder && art.photoImage) {
         // Draw photo with offset support
         const img = await loadImage(art.photoImage);
@@ -269,13 +303,18 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           ctx.drawImage(img, el.x, el.y, el.width, el.height);
         }
       } else if (el.type === "logo") {
-        // Logo uses PNG[0] from brand kit
+        // Logo uses PNG[0] from brand kit with optional overrides
         const logoUrl = art.brandKit?.pngs?.[0] || art.brandKit?.logo;
         console.log("Loading logo from:", logoUrl?.substring(0, 50));
         if (logoUrl) {
           const img = await loadImage(logoUrl);
           if (img) {
-            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+            const logoOffsetX = art.elementOverrides?.logoX || 0;
+            const logoOffsetY = art.elementOverrides?.logoY || 0;
+            const logoScaleMultiplier = (art.elementOverrides?.logoScale || 100) / 100;
+            const newWidth = el.width * logoScaleMultiplier;
+            const newHeight = el.height * logoScaleMultiplier;
+            ctx.drawImage(img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
           } else {
             ctx.fillStyle = "#e5e7eb";
             ctx.fillRect(el.x, el.y, el.width, el.height);
@@ -287,13 +326,18 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           }
         }
       } else if (el.type === "contact") {
-        // Contact uses PNG[1] from brand kit
+        // Contact uses PNG[1] from brand kit with optional overrides
         const contactUrl = art.brandKit?.pngs?.[1] || art.brandKit?.contactInfo;
         console.log("Loading contact from:", contactUrl?.substring(0, 50));
         if (contactUrl) {
           const img = await loadImage(contactUrl);
           if (img) {
-            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+            const contactOffsetX = art.elementOverrides?.contactX || 0;
+            const contactOffsetY = art.elementOverrides?.contactY || 0;
+            const contactScaleMultiplier = (art.elementOverrides?.contactScale || 100) / 100;
+            const newWidth = el.width * contactScaleMultiplier;
+            const newHeight = el.height * contactScaleMultiplier;
+            ctx.drawImage(img, el.x + contactOffsetX, el.y + contactOffsetY, newWidth, newHeight);
           }
         }
       } else if (el.type === "mascot") {
@@ -410,10 +454,20 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     setSelectedArt(art);
     setPhotoOffsetX(art.photoOffset?.x || 0);
     setPhotoOffsetY(art.photoOffset?.y || 0);
+    // Load element overrides
+    setLogoX(art.elementOverrides?.logoX || 0);
+    setLogoY(art.elementOverrides?.logoY || 0);
+    setLogoScale(art.elementOverrides?.logoScale || 100);
+    setTextX(art.elementOverrides?.textX || 0);
+    setTextY(art.elementOverrides?.textY || 0);
+    setTextFontSize(art.elementOverrides?.textFontSize || 100);
+    setContactX(art.elementOverrides?.contactX || 0);
+    setContactY(art.elementOverrides?.contactY || 0);
+    setContactScale(art.elementOverrides?.contactScale || 100);
     setIsAdjustDialogOpen(true);
   };
 
-  const handleApplyPhotoOffset = async () => {
+  const handleApplyElementOverrides = async () => {
     if (!selectedArt) return;
     const index = clientArts.findIndex((a) => a.clientId === selectedArt.clientId);
     if (index === -1) return;
@@ -421,15 +475,31 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     const updatedArts = [...clientArts];
     updatedArts[index] = { 
       ...updatedArts[index], 
-      photoOffset: { x: photoOffsetX, y: photoOffsetY } 
+      photoOffset: { x: photoOffsetX, y: photoOffsetY },
+      elementOverrides: {
+        logoX,
+        logoY,
+        logoScale,
+        textX,
+        textY,
+        textFontSize,
+        contactX,
+        contactY,
+        contactScale,
+      }
     };
     setClientArts(updatedArts);
     setIsAdjustDialogOpen(false);
 
-    // Regenerate the art with new offset
+    // Regenerate the art with new overrides
     const imageUrl = await generateArtForClient(updatedArts[index]);
     updatedArts[index] = { ...updatedArts[index], imageUrl };
     setClientArts([...updatedArts]);
+    
+    toast({
+      title: "Ajustes aplicados!",
+      description: "A arte foi regenerada com as novas configurações.",
+    });
   };
 
   const handleApproveAll = async () => {
@@ -722,72 +792,180 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         </DialogContent>
       </Dialog>
 
-      {/* Photo Position Adjustment Dialog */}
+      {/* Element Adjustment Dialog */}
       <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Ajustar Posição da Foto</DialogTitle>
+            <DialogTitle>Ajustar Elementos da Arte</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            {/* Show the generated art preview */}
-            {selectedArt?.imageUrl && (
-              <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden">
-                <img
-                  src={selectedArt.imageUrl}
-                  alt="Preview da arte gerada"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-            
-            {!selectedArt?.imageUrl && selectedArt?.photoImage && (
-              <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden">
-                <img
-                  src={selectedArt.photoImage}
-                  alt="Preview da foto"
-                  className="w-full h-full object-cover"
-                  style={{
-                    objectPosition: `${50 + photoOffsetX}% ${50 + photoOffsetY}%`
-                  }}
-                />
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm">Posição Horizontal: {photoOffsetX}</Label>
-                <Slider
-                  value={[photoOffsetX]}
-                  onValueChange={([v]) => setPhotoOffsetX(v)}
-                  min={-50}
-                  max={50}
-                  step={5}
-                  className="mt-2"
-                />
-              </div>
-
-              <div>
-                <Label className="text-sm">Posição Vertical: {photoOffsetY}</Label>
-                <Slider
-                  value={[photoOffsetY]}
-                  onValueChange={([v]) => setPhotoOffsetY(v)}
-                  min={-50}
-                  max={50}
-                  step={5}
-                  className="mt-2"
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            {/* Preview Column */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Preview</Label>
+              {selectedArt?.imageUrl && (
+                <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden border">
+                  <img
+                    src={selectedArt.imageUrl}
+                    alt="Preview da arte gerada"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleApplyPhotoOffset} className="bg-gradient-primary">
-                Aplicar
-              </Button>
+            {/* Controls Column */}
+            <div className="space-y-6">
+              {/* Photo Position */}
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Posição da Foto
+                </Label>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Horizontal: {photoOffsetX}</span>
+                    <Slider
+                      value={[photoOffsetX]}
+                      onValueChange={([v]) => setPhotoOffsetX(v)}
+                      min={-100}
+                      max={100}
+                      step={5}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Vertical: {photoOffsetY}</span>
+                    <Slider
+                      value={[photoOffsetY]}
+                      onValueChange={([v]) => setPhotoOffsetY(v)}
+                      min={-100}
+                      max={100}
+                      step={5}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Logo Controls */}
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <Label className="text-sm font-semibold">🏷️ Logo</Label>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Posição X: {logoX}</span>
+                    <Slider
+                      value={[logoX]}
+                      onValueChange={([v]) => setLogoX(v)}
+                      min={-200}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Posição Y: {logoY}</span>
+                    <Slider
+                      value={[logoY]}
+                      onValueChange={([v]) => setLogoY(v)}
+                      min={-200}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Tamanho: {logoScale}%</span>
+                    <Slider
+                      value={[logoScale]}
+                      onValueChange={([v]) => setLogoScale(v)}
+                      min={25}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Text Controls */}
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <Label className="text-sm font-semibold">📝 Texto</Label>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Posição X: {textX}</span>
+                    <Slider
+                      value={[textX]}
+                      onValueChange={([v]) => setTextX(v)}
+                      min={-200}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Posição Y: {textY}</span>
+                    <Slider
+                      value={[textY]}
+                      onValueChange={([v]) => setTextY(v)}
+                      min={-200}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Tamanho Fonte: {textFontSize}%</span>
+                    <Slider
+                      value={[textFontSize]}
+                      onValueChange={([v]) => setTextFontSize(v)}
+                      min={50}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Controls */}
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <Label className="text-sm font-semibold">📞 Contato</Label>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Posição X: {contactX}</span>
+                    <Slider
+                      value={[contactX]}
+                      onValueChange={([v]) => setContactX(v)}
+                      min={-200}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Posição Y: {contactY}</span>
+                    <Slider
+                      value={[contactY]}
+                      onValueChange={([v]) => setContactY(v)}
+                      min={-200}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Tamanho: {contactScale}%</span>
+                    <Slider
+                      value={[contactScale]}
+                      onValueChange={([v]) => setContactScale(v)}
+                      min={25}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div className="flex gap-2 justify-end pt-4 border-t">
+            <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleApplyElementOverrides} className="bg-gradient-primary">
+              Aplicar Ajustes
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

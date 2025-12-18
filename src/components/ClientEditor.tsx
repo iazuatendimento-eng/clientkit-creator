@@ -4,14 +4,40 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, User, Palette, Image, Upload, X } from "lucide-react";
+import { ArrowLeft, Save, User, Palette, Image, Upload, X, Type } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface BrandKit {
   logo?: string;
   contactInfo?: string;
   mascot?: string;
   colors: string[];
+  fontFamily?: string;
 }
+
+const FONT_OPTIONS = [
+  { value: "Arial", label: "Arial" },
+  { value: "Helvetica", label: "Helvetica" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "Times New Roman", label: "Times New Roman" },
+  { value: "Verdana", label: "Verdana" },
+  { value: "Trebuchet MS", label: "Trebuchet MS" },
+  { value: "Impact", label: "Impact" },
+  { value: "Comic Sans MS", label: "Comic Sans MS" },
+  { value: "Courier New", label: "Courier New" },
+  { value: "Lucida Console", label: "Lucida Console" },
+  { value: "Tahoma", label: "Tahoma" },
+  { value: "Palatino Linotype", label: "Palatino Linotype" },
+  { value: "Book Antiqua", label: "Book Antiqua" },
+  { value: "Century Gothic", label: "Century Gothic" },
+  { value: "Garamond", label: "Garamond" },
+];
 
 interface Client {
   id?: string;
@@ -44,7 +70,8 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     projectCount: 0,
     created_at: new Date().toISOString().split('T')[0],
     brand_kit: {
-      colors: ["#FFFFFF", "#000000", "#3B82F6", "#10B981"]
+      colors: ["#FFFFFF", "#000000", "#3B82F6", "#10B981"],
+      fontFamily: "Arial"
     }
   });
 
@@ -57,7 +84,8 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       setFormData({
         ...client,
         brand_kit: client.brand_kit || {
-          colors: ["#FFFFFF", "#000000", "#3B82F6", "#10B981"]
+          colors: ["#FFFFFF", "#000000", "#3B82F6", "#10B981"],
+          fontFamily: "Arial"
         }
       });
     }
@@ -103,6 +131,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
         brand_kit: {
           ...prev.brand_kit,
           colors: prev.brand_kit?.colors || ["#FFFFFF", "#000000", "#3B82F6", "#10B981"],
+          fontFamily: prev.brand_kit?.fontFamily || "Arial",
           [field]: base64
         }
       }));
@@ -116,6 +145,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       brand_kit: {
         ...prev.brand_kit,
         colors: prev.brand_kit?.colors || ["#FFFFFF", "#000000", "#3B82F6", "#10B981"],
+        fontFamily: prev.brand_kit?.fontFamily || "Arial",
         [field]: undefined
       }
     }));
@@ -366,6 +396,45 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                     </button>
                   )}
                 </div>
+              </div>
+
+              {/* Font Selection */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="flex items-center gap-2 mb-4">
+                  <Type className="h-5 w-5" />
+                  <Label className="text-base font-semibold">Fonte do Cliente</Label>
+                </div>
+                <Select
+                  value={formData.brand_kit?.fontFamily || "Arial"}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      brand_kit: {
+                        ...prev.brand_kit,
+                        colors: prev.brand_kit?.colors || ["#FFFFFF", "#000000", "#3B82F6", "#10B981"],
+                        fontFamily: value
+                      }
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="w-full md:w-64">
+                    <SelectValue placeholder="Selecione uma fonte" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FONT_OPTIONS.map((font) => (
+                      <SelectItem 
+                        key={font.value} 
+                        value={font.value}
+                        style={{ fontFamily: font.value }}
+                      >
+                        {font.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Esta fonte será usada nos textos das artes geradas
+                </p>
               </div>
             </CardContent>
           </Card>
