@@ -1097,14 +1097,18 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            {/* Preview Column - Live Preview */}
-            <div className="sticky top-0">
-              <Label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                Preview em Tempo Real
-                {isRegenerating && <span className="text-xs text-muted-foreground">(atualizando...)</span>}
+          <div className="py-4">
+            {/* Interactive Preview - Drag elements directly */}
+            <div className="space-y-4">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                Preview Interativo - Arraste para mover, scroll para redimensionar
+                {isRegenerating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               </Label>
-              <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden border relative">
+              
+              <div 
+                className="aspect-[4/5] bg-muted rounded-lg overflow-hidden border relative mx-auto max-w-md"
+                style={{ cursor: 'default' }}
+              >
                 {(livePreviewUrl || selectedArt?.imageUrl) && (
                   <img
                     src={livePreviewUrl || selectedArt?.imageUrl || ""}
@@ -1112,157 +1116,209 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                     className={`w-full h-full object-contain transition-opacity ${isRegenerating ? 'opacity-70' : 'opacity-100'}`}
                   />
                 )}
+                
+                {/* Overlay for interactive drag zones */}
+                <div className="absolute inset-0">
+                  {/* Photo drag zone */}
+                  <div
+                    className="absolute cursor-move border-2 border-dashed border-purple-400/50 hover:border-purple-400 hover:bg-purple-400/10 transition-all rounded flex items-center justify-center group"
+                    style={{
+                      top: '10%',
+                      left: '5%',
+                      width: '90%',
+                      height: '50%',
+                    }}
+                    draggable={false}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const startX = e.clientX;
+                      const startY = e.clientY;
+                      const startOffsetX = photoOffsetX;
+                      const startOffsetY = photoOffsetY;
+                      
+                      const onMove = (moveEvent: MouseEvent) => {
+                        const dx = (moveEvent.clientX - startX) / 2;
+                        const dy = (moveEvent.clientY - startY) / 2;
+                        setPhotoOffsetX(Math.max(-100, Math.min(100, startOffsetX + dx)));
+                        setPhotoOffsetY(Math.max(-100, Math.min(100, startOffsetY + dy)));
+                      };
+                      
+                      const onUp = () => {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onUp);
+                      };
+                      
+                      window.addEventListener('mousemove', onMove);
+                      window.addEventListener('mouseup', onUp);
+                    }}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      // No scale for photo, just position
+                    }}
+                  >
+                    <span className="text-purple-400 text-xs opacity-0 group-hover:opacity-100 bg-background/80 px-2 py-1 rounded">
+                      📷 Foto
+                    </span>
+                  </div>
+                  
+                  {/* Logo drag zone */}
+                  <div
+                    className="absolute cursor-move border-2 border-dashed border-blue-400/50 hover:border-blue-400 hover:bg-blue-400/10 transition-all rounded flex items-center justify-center group"
+                    style={{
+                      top: '3%',
+                      left: '5%',
+                      width: '25%',
+                      height: '12%',
+                      transform: `translate(${logoX / 5}px, ${logoY / 5}px) scale(${logoScale / 100})`,
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const startX = e.clientX;
+                      const startY = e.clientY;
+                      const startLogoX = logoX;
+                      const startLogoY = logoY;
+                      
+                      const onMove = (moveEvent: MouseEvent) => {
+                        const dx = (moveEvent.clientX - startX) * 2;
+                        const dy = (moveEvent.clientY - startY) * 2;
+                        setLogoX(Math.max(-200, Math.min(200, startLogoX + dx)));
+                        setLogoY(Math.max(-200, Math.min(200, startLogoY + dy)));
+                      };
+                      
+                      const onUp = () => {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onUp);
+                      };
+                      
+                      window.addEventListener('mousemove', onMove);
+                      window.addEventListener('mouseup', onUp);
+                    }}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      const delta = e.deltaY > 0 ? -10 : 10;
+                      setLogoScale(Math.max(25, Math.min(200, logoScale + delta)));
+                    }}
+                  >
+                    <span className="text-blue-400 text-xs opacity-0 group-hover:opacity-100 bg-background/80 px-2 py-1 rounded">
+                      🏷️ Logo (scroll p/ tamanho)
+                    </span>
+                  </div>
+                  
+                  {/* Text drag zone */}
+                  <div
+                    className="absolute cursor-move border-2 border-dashed border-green-400/50 hover:border-green-400 hover:bg-green-400/10 transition-all rounded flex items-center justify-center group"
+                    style={{
+                      top: '4%',
+                      right: '5%',
+                      width: '50%',
+                      height: '15%',
+                      transform: `translate(${textX / 5}px, ${textY / 5}px)`,
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const startX = e.clientX;
+                      const startY = e.clientY;
+                      const startTextX = textX;
+                      const startTextY = textY;
+                      
+                      const onMove = (moveEvent: MouseEvent) => {
+                        const dx = (moveEvent.clientX - startX) * 2;
+                        const dy = (moveEvent.clientY - startY) * 2;
+                        setTextX(Math.max(-200, Math.min(200, startTextX + dx)));
+                        setTextY(Math.max(-200, Math.min(200, startTextY + dy)));
+                      };
+                      
+                      const onUp = () => {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onUp);
+                      };
+                      
+                      window.addEventListener('mousemove', onMove);
+                      window.addEventListener('mouseup', onUp);
+                    }}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      const delta = e.deltaY > 0 ? -10 : 10;
+                      setTextFontSize(Math.max(50, Math.min(200, textFontSize + delta)));
+                    }}
+                  >
+                    <span className="text-green-400 text-xs opacity-0 group-hover:opacity-100 bg-background/80 px-2 py-1 rounded">
+                      📝 Texto (scroll p/ fonte)
+                    </span>
+                  </div>
+                  
+                  {/* Contact drag zone */}
+                  <div
+                    className="absolute cursor-move border-2 border-dashed border-orange-400/50 hover:border-orange-400 hover:bg-orange-400/10 transition-all rounded flex items-center justify-center group"
+                    style={{
+                      bottom: '3%',
+                      left: '50%',
+                      transform: `translateX(-50%) translate(${contactX / 5}px, ${contactY / 5}px) scale(${contactScale / 100})`,
+                      width: '80%',
+                      height: '10%',
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const startX = e.clientX;
+                      const startY = e.clientY;
+                      const startContactX = contactX;
+                      const startContactY = contactY;
+                      
+                      const onMove = (moveEvent: MouseEvent) => {
+                        const dx = (moveEvent.clientX - startX) * 2;
+                        const dy = (moveEvent.clientY - startY) * 2;
+                        setContactX(Math.max(-200, Math.min(200, startContactX + dx)));
+                        setContactY(Math.max(-200, Math.min(200, startContactY + dy)));
+                      };
+                      
+                      const onUp = () => {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onUp);
+                      };
+                      
+                      window.addEventListener('mousemove', onMove);
+                      window.addEventListener('mouseup', onUp);
+                    }}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      const delta = e.deltaY > 0 ? -10 : 10;
+                      setContactScale(Math.max(25, Math.min(200, contactScale + delta)));
+                    }}
+                  >
+                    <span className="text-orange-400 text-xs opacity-0 group-hover:opacity-100 bg-background/80 px-2 py-1 rounded">
+                      📞 Contato (scroll p/ tamanho)
+                    </span>
+                  </div>
+                </div>
+                
                 {isRegenerating && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/30">
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/30 pointer-events-none">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Arraste os sliders - a arte atualiza automaticamente
+              
+              <p className="text-xs text-muted-foreground text-center">
+                Arraste as áreas coloridas para mover • Use scroll do mouse para redimensionar
               </p>
-            </div>
 
-            {/* Controls Column */}
-            <div className="space-y-6">
-              {/* Photo Position */}
-              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                <Label className="text-sm font-semibold flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Posição da Foto
-                </Label>
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-xs text-muted-foreground">Horizontal: {photoOffsetX}</span>
-                    <Slider
-                      value={[photoOffsetX]}
-                      onValueChange={([v]) => setPhotoOffsetX(v)}
-                      min={-100}
-                      max={100}
-                      step={5}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Vertical: {photoOffsetY}</span>
-                    <Slider
-                      value={[photoOffsetY]}
-                      onValueChange={([v]) => setPhotoOffsetY(v)}
-                      min={-100}
-                      max={100}
-                      step={5}
-                    />
-                  </div>
+              {/* Quick value display */}
+              <div className="grid grid-cols-4 gap-2 text-xs text-center">
+                <div className="p-2 bg-purple-500/20 rounded">
+                  <div className="font-semibold text-purple-400">Foto</div>
+                  <div>X:{photoOffsetX} Y:{photoOffsetY}</div>
                 </div>
-              </div>
-
-              {/* Logo Controls */}
-              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                <Label className="text-sm font-semibold">🏷️ Logo</Label>
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-xs text-muted-foreground">Posição X: {logoX}</span>
-                    <Slider
-                      value={[logoX]}
-                      onValueChange={([v]) => setLogoX(v)}
-                      min={-200}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Posição Y: {logoY}</span>
-                    <Slider
-                      value={[logoY]}
-                      onValueChange={([v]) => setLogoY(v)}
-                      min={-200}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Tamanho: {logoScale}%</span>
-                    <Slider
-                      value={[logoScale]}
-                      onValueChange={([v]) => setLogoScale(v)}
-                      min={25}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
+                <div className="p-2 bg-blue-500/20 rounded">
+                  <div className="font-semibold text-blue-400">Logo</div>
+                  <div>X:{logoX} Y:{logoY} {logoScale}%</div>
                 </div>
-              </div>
-
-              {/* Text Controls */}
-              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                <Label className="text-sm font-semibold">📝 Texto</Label>
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-xs text-muted-foreground">Posição X: {textX}</span>
-                    <Slider
-                      value={[textX]}
-                      onValueChange={([v]) => setTextX(v)}
-                      min={-200}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Posição Y: {textY}</span>
-                    <Slider
-                      value={[textY]}
-                      onValueChange={([v]) => setTextY(v)}
-                      min={-200}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Tamanho Fonte: {textFontSize}%</span>
-                    <Slider
-                      value={[textFontSize]}
-                      onValueChange={([v]) => setTextFontSize(v)}
-                      min={50}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
+                <div className="p-2 bg-green-500/20 rounded">
+                  <div className="font-semibold text-green-400">Texto</div>
+                  <div>X:{textX} Y:{textY} {textFontSize}%</div>
                 </div>
-              </div>
-
-              {/* Contact Controls */}
-              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                <Label className="text-sm font-semibold">📞 Contato</Label>
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-xs text-muted-foreground">Posição X: {contactX}</span>
-                    <Slider
-                      value={[contactX]}
-                      onValueChange={([v]) => setContactX(v)}
-                      min={-200}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Posição Y: {contactY}</span>
-                    <Slider
-                      value={[contactY]}
-                      onValueChange={([v]) => setContactY(v)}
-                      min={-200}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Tamanho: {contactScale}%</span>
-                    <Slider
-                      value={[contactScale]}
-                      onValueChange={([v]) => setContactScale(v)}
-                      min={25}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
+                <div className="p-2 bg-orange-500/20 rounded">
+                  <div className="font-semibold text-orange-400">Contato</div>
+                  <div>X:{contactX} Y:{contactY} {contactScale}%</div>
                 </div>
               </div>
             </div>
