@@ -996,22 +996,22 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80 p-6">
+    <div className={`min-h-screen bg-gradient-to-br from-background via-background to-background/80 ${isPublicView ? 'p-0' : 'p-6'}`}>
       <div className="container mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold gradient-text mb-2">
-              {clientName ? `Projetos - ${clientName}` : "Board de Projetos"}
-            </h1>
-            <p className="text-muted-foreground">
-              {clientName 
-                ? `Organize os projetos de ${clientName}` 
-                : "Organize os briefings e projetos dos seus clientes"
-              }
-            </p>
-          </div>
+        {!isPublicView && (
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-4xl font-bold gradient-text mb-2">
+                {clientName ? `Projetos - ${clientName}` : "Board de Projetos"}
+              </h1>
+              <p className="text-muted-foreground">
+                {clientName 
+                  ? `Organize os projetos de ${clientName}` 
+                  : "Organize os briefings e projetos dos seus clientes"
+                }
+              </p>
+            </div>
           
-          {!isPublicView && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="gradient" className="glow-effect">
@@ -1131,8 +1131,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                 </div>
               </DialogContent>
             </Dialog>
-          )}
-        </div>
+          </div>
+        )}
 
         <AlertDialog open={showSplitDialog} onOpenChange={setShowSplitDialog}>
           <AlertDialogContent>
@@ -1159,7 +1159,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={`grid gap-4 sm:gap-6 ${isPublicView ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
