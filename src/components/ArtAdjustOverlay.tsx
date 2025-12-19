@@ -666,7 +666,7 @@ export function ArtAdjustOverlay({
       <div
         className={cn(
           "absolute rounded-md border-2 border-dashed bg-background/0 touch-none",
-          isActive ? "border-primary bg-primary/5 z-20" : "border-border/70 hover:border-primary/70 z-10"
+          isActive ? "border-primary bg-primary/5 z-30" : "border-border/70 hover:border-primary/70 z-10"
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
         onPointerDown={(e) => begin(e, part, "move")}
@@ -712,15 +712,15 @@ export function ArtAdjustOverlay({
         </div>
       )}
 
-      <div className="absolute left-3 bottom-3 z-40 rounded-md border bg-background/80 backdrop-blur px-2 py-1">
+      <div className="absolute left-3 bottom-3 z-50 rounded-md border bg-background backdrop-blur px-2 py-1 shadow-lg">
         <label className="mr-2 text-[10px] text-muted-foreground">Camada</label>
         <select
-          className="bg-transparent text-xs text-foreground outline-none"
+          className="bg-background text-xs text-foreground outline-none border-none cursor-pointer"
           value={active}
           onChange={(e) => setActive(e.target.value as Part)}
         >
           {partOptions.map((o) => (
-            <option key={o.value} value={o.value}>
+            <option key={o.value} value={o.value} className="bg-background text-foreground">
               {o.label}
             </option>
           ))}
