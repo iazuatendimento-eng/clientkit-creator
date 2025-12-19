@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Palette, Film } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Palette, Film, Search, FileX } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +62,9 @@ const Index = () => {
   const [isDeadlineDialogOpen, setIsDeadlineDialogOpen] = useState(false);
   const [bulkDeadline, setBulkDeadline] = useState("");
   const [selectedTeamForDeadline, setSelectedTeamForDeadline] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showOnlyWithoutText, setShowOnlyWithoutText] = useState(false);
+  const [clientsWithoutText, setClientsWithoutText] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -69,6 +72,40 @@ const Index = () => {
   useEffect(() => {
     loadClients();
   }, []);
+
+  // Load clients without text in first todo card
+  useEffect(() => {
+    const checkClientsWithoutText = async () => {
+      const clientsNoText = new Set<string>();
+      for (const client of clients) {
+        try {
+          const briefs = await getProjectBriefsByClient(client.id);
+          const firstTodoCard = briefs.find((b: any) => b.status === "todo");
+          if (firstTodoCard && (!firstTodoCard.description || firstTodoCard.description.trim() === "")) {
+            clientsNoText.add(client.id);
+          }
+        } catch (error) {
+          console.error(`Error checking client ${client.id}:`, error);
+        }
+      }
+      setClientsWithoutText(clientsNoText);
+    };
+
+    if (clients.length > 0) {
+      checkClientsWithoutText();
+    }
+  }, [clients]);
+
+  // Filter clients based on search and filters
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = searchQuery === "" || 
+      (client.company?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (client.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesTextFilter = !showOnlyWithoutText || clientsWithoutText.has(client.id);
+    
+    return matchesSearch && matchesTextFilter;
+  });
 
   const loadClients = async () => {
     const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
@@ -594,11 +631,43 @@ const Index = () => {
         {/* Sidebar - Client List */}
         <div className="w-80 border-r bg-card/50 overflow-y-auto">
           <div className="p-4 space-y-2">
+            {/* Search and Filters */}
+            <div className="space-y-2 mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar empresa..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
+                />
+              </div>
+              <button
+                onClick={() => setShowOnlyWithoutText(!showOnlyWithoutText)}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+                  showOnlyWithoutText 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                }`}
+              >
+                <FileX className="h-4 w-4" />
+                Sem texto para fazer
+                {clientsWithoutText.size > 0 && (
+                  <span className={`ml-auto px-2 py-0.5 rounded-full text-xs ${
+                    showOnlyWithoutText 
+                      ? 'bg-primary-foreground/20' 
+                      : 'bg-primary/20 text-primary'
+                  }`}>
+                    {clientsWithoutText.size}
+                  </span>
+                )}
+              </button>
+            </div>
             <p className="text-sm text-muted-foreground px-3 mb-2">
-              Gerencie todos os seus clientes e projetos
+              {filteredClients.length} de {clients.length} clientes
             </p>
-            {clients.length > 0 ? (
-              clients.map((client) => (
+            {filteredClients.length > 0 ? (
+              filteredClients.map((client) => (
                 <button
                   key={client.id}
                   onClick={() => {
@@ -698,7 +767,9 @@ const Index = () => {
               <div className="text-center p-8">
                 <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Nenhum cliente cadastrado
+                  {searchQuery || showOnlyWithoutText 
+                    ? "Nenhum cliente encontrado com os filtros aplicados" 
+                    : "Nenhum cliente cadastrado"}
                 </p>
               </div>
             )}
