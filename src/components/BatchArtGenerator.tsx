@@ -856,7 +856,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
           sx = Math.max(0, Math.min(sx, img.width - sw));
           sy = Math.max(0, Math.min(sy, img.height - sh));
 
-          ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
+          // Apply border radius clipping if present
+          const radius = el.borderRadius || 0;
+          if (radius > 0) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(frameX, frameY, frameW, frameH, radius);
+            ctx.clip();
+            ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
+          }
         } else {
           ctx.fillStyle = "#e5e7eb";
           ctx.fillRect(frameX, frameY, frameW, frameH);
