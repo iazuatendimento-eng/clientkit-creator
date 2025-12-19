@@ -102,7 +102,7 @@ interface SavedTemplate {
   updated_at: string;
 }
 
-type TeamFilter = "2" | "3" | "weekdays" | undefined;
+type TeamFilter = "2" | "3" | undefined;
 
 interface MasterArtEditorProps {
   onBack: () => void;
@@ -1368,9 +1368,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Clientes</SelectItem>
-              <SelectItem value="2">SEG, QUA E SEX</SelectItem>
-              <SelectItem value="3">TER, QUI E SÁB</SelectItem>
-              <SelectItem value="weekdays">SEG A SEX</SelectItem>
+              <SelectItem value="2">TER, QUI E SÁB</SelectItem>
+              <SelectItem value="3">SEG A SEX</SelectItem>
             </SelectContent>
           </Select>
           
