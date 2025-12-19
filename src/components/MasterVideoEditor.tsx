@@ -1320,7 +1320,13 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   selectedEl.type === "diamond" ||
                   selectedEl.type === "hexagon" ||
                   selectedEl.type === "pentagon" ||
-                  selectedEl.type === "star") && (
+                  selectedEl.type === "star" ||
+                  selectedEl.type === "polkaDots" ||
+                  selectedEl.type === "dotsGrid" ||
+                  selectedEl.type === "confetti" ||
+                  selectedEl.type === "splatter" ||
+                  selectedEl.type === "zigzag" ||
+                  selectedEl.type === "spiral") && (
                   <div>
                     <Label className="text-xs">Papel da Cor</Label>
                     <Select
@@ -1349,7 +1355,13 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   selectedEl.type === "hexagon" ||
                   selectedEl.type === "pentagon" ||
                   selectedEl.type === "star" ||
-                  selectedEl.type === "line") && (
+                  selectedEl.type === "line" ||
+                  selectedEl.type === "polkaDots" ||
+                  selectedEl.type === "dotsGrid" ||
+                  selectedEl.type === "confetti" ||
+                  selectedEl.type === "splatter" ||
+                  selectedEl.type === "zigzag" ||
+                  selectedEl.type === "spiral") && (
                   <div>
                     <Label className="text-xs">Cor {selectedEl.colorRole ? "(preview)" : ""}</Label>
                     <div className="flex gap-2">

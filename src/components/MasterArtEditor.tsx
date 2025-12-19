@@ -1452,7 +1452,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                 )}
 
                 {/* Color Role for shapes */}
-                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polka-dots", "dots-grid", "confetti", "splatter", "zigzag", "spiral"].includes(selectedEl.type)) && (
                   <div>
                     <Label className="text-xs">Papel da Cor (Kit de Marca)</Label>
                     <Select
@@ -1474,7 +1474,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                 )}
 
                 {/* Color picker */}
-                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polka-dots", "dots-grid", "confetti", "splatter", "zigzag", "spiral"].includes(selectedEl.type)) && (
                   <div>
                     <Label className="text-xs">Cor {selectedEl.colorRole ? "(preview)" : ""}</Label>
                     <div className="flex gap-2">
