@@ -85,22 +85,22 @@ const ClientPublicView = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80">
-      {/* Header */}
-      <div className="border-b bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold gradient-text">{client.name}</h1>
-              <p className="text-muted-foreground">{client.email}</p>
+      {/* Header - Mobile Optimized */}
+      <div className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+            <div className="text-center sm:text-left">
+              <h1 className="text-xl sm:text-2xl font-bold gradient-text truncate">{client.name}</h1>
+              <p className="text-sm text-muted-foreground truncate">{client.email}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
               {client.company && (
-                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                <span className="px-2 sm:px-3 py-1 bg-primary/10 text-primary rounded-full text-xs sm:text-sm">
                   {client.company}
                 </span>
               )}
               {client.team && (
-                <span className="px-3 py-1 bg-secondary/10 text-secondary-foreground rounded-full text-sm">
+                <span className="px-2 sm:px-3 py-1 bg-secondary/10 text-secondary-foreground rounded-full text-xs sm:text-sm whitespace-nowrap">
                   {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "SEG A SEX"}
                 </span>
               )}
@@ -109,12 +109,12 @@ const ClientPublicView = () => {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-blue-600 dark:text-blue-400 mb-1">Visualização do Cliente</h3>
-          <p className="text-sm text-blue-600/80 dark:text-blue-400/80">
-            Esta é uma visualização apenas para consulta. Você pode visualizar e baixar as artes, mas não pode fazer alterações ou mover cards.
+      {/* Content - Mobile Optimized */}
+      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+          <h3 className="font-semibold text-blue-600 dark:text-blue-400 mb-1 text-sm sm:text-base">📱 Portal do Cliente</h3>
+          <p className="text-xs sm:text-sm text-blue-600/80 dark:text-blue-400/80">
+            Visualize e baixe suas artes. Toque no card para ver detalhes.
           </p>
         </div>
         <ProjectBoard 
