@@ -134,17 +134,12 @@ export function ArtAdjustOverlay({
   const getRect = (part: Part) => {
     if (part === "photo") {
       if (!els.photoFrame) return null;
-      // photoScale controls the visual size of the photo
-      const scaledW = els.photoFrame.width * (photoScale / 100);
-      const scaledH = els.photoFrame.height * (photoScale / 100);
-      // Center the scaled box around the original center, then apply offset
-      const centerX = els.photoFrame.x + els.photoFrame.width / 2;
-      const centerY = els.photoFrame.y + els.photoFrame.height / 2;
+      // The photo box represents the placeholder frame. Resizing changes zoom *inside* the frame.
       return {
-        x: centerX - scaledW / 2 + photoOffsetX,
-        y: centerY - scaledH / 2 + photoOffsetY,
-        w: scaledW,
-        h: scaledH,
+        x: els.photoFrame.x,
+        y: els.photoFrame.y,
+        w: els.photoFrame.width,
+        h: els.photoFrame.height,
       };
     }
 
@@ -529,22 +524,23 @@ export function ArtAdjustOverlay({
     const isActive = active === part;
 
     const HandleDot = ({ h }: { h: Handle }) => {
+      // Keep handles INSIDE the box so they never get clipped by the container.
       const pos =
         h === "nw"
-          ? "-left-2 -top-2"
+          ? "left-0 top-0"
           : h === "ne"
-            ? "-right-2 -top-2"
+            ? "right-0 top-0 -translate-x-full"
             : h === "sw"
-              ? "-left-2 -bottom-2"
+              ? "left-0 bottom-0 -translate-y-full"
               : h === "se"
-                ? "-right-2 -bottom-2"
+                ? "right-0 bottom-0 -translate-x-full -translate-y-full"
                 : h === "n"
-                  ? "left-1/2 -top-2 -translate-x-1/2"
+                  ? "left-1/2 top-0 -translate-x-1/2"
                   : h === "s"
-                    ? "left-1/2 -bottom-2 -translate-x-1/2"
+                    ? "left-1/2 bottom-0 -translate-x-1/2 -translate-y-full"
                     : h === "w"
-                      ? "-left-2 top-1/2 -translate-y-1/2"
-                      : "-right-2 top-1/2 -translate-y-1/2";
+                      ? "left-0 top-1/2 -translate-y-1/2"
+                      : "right-0 top-1/2 -translate-x-full -translate-y-1/2";
 
       const cursor =
         h === "n" || h === "s"
