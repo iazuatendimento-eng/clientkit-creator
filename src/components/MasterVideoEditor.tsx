@@ -43,6 +43,7 @@ import {
   History,
   Scissors,
   Pencil,
+  Plus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { searchImages, SearchImage } from "@/lib/imageSearch";
@@ -51,7 +52,7 @@ import { removeBackground } from "@/lib/backgroundRemoval";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
   x: number;
   y: number;
   width: number;
@@ -230,6 +231,12 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
     { id: "pentagon", icon: Pentagon, label: "Pentágono" },
     { id: "star", icon: Star, label: "Estrela" },
     { id: "line", icon: Minus, label: "Linha" },
+    { id: "polkaDots", icon: Circle, label: "Bolinhas" },
+    { id: "dotsGrid", icon: Circle, label: "Pontos" },
+    { id: "confetti", icon: Sparkles, label: "Confetti" },
+    { id: "splatter", icon: Circle, label: "Splash" },
+    { id: "zigzag", icon: Minus, label: "Zigzag" },
+    { id: "spiral", icon: Circle, label: "Espiral" },
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
   ];
@@ -553,6 +560,158 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         ctx.moveTo(el.x, el.y + el.height / 2);
         ctx.lineTo(el.x + el.width, el.y + el.height / 2);
         ctx.stroke();
+      } else if (el.type === "polkaDots") {
+        // Polka dots pattern
+        const color = el.color || currentColor;
+        const dotRadius = Math.min(el.width, el.height) * 0.08;
+        const spacing = dotRadius * 3;
+        const cols = Math.floor(el.width / spacing);
+        const rows = Math.floor(el.height / spacing);
+        const offsetX = (el.width - (cols - 1) * spacing) / 2;
+        const offsetY = (el.height - (rows - 1) * spacing) / 2;
+        
+        ctx.fillStyle = color;
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cx = el.x + offsetX + col * spacing;
+            const cy = el.y + offsetY + row * spacing;
+            ctx.beginPath();
+            ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (el.type === "dotsGrid") {
+        // Scattered dots pattern
+        const color = el.color || currentColor;
+        const dotCount = 25;
+        ctx.fillStyle = color;
+        
+        const seed = el.x + el.y;
+        const random = (i: number) => {
+          const x = Math.sin(seed + i * 9.999) * 10000;
+          return x - Math.floor(x);
+        };
+        
+        for (let i = 0; i < dotCount; i++) {
+          const cx = el.x + random(i * 2) * el.width;
+          const cy = el.y + random(i * 2 + 1) * el.height;
+          const radius = 3 + random(i * 3) * 12;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (el.type === "confetti") {
+        // Confetti scattered shapes
+        const colors = [el.color || currentColor, "#f59e0b", "#3b82f6", "#10b981", "#8b5cf6"];
+        const shapeCount = 30;
+        
+        const seed = el.x + el.y;
+        const random = (i: number) => {
+          const x = Math.sin(seed + i * 9.999) * 10000;
+          return x - Math.floor(x);
+        };
+        
+        for (let i = 0; i < shapeCount; i++) {
+          const cx = el.x + random(i * 2) * el.width;
+          const cy = el.y + random(i * 2 + 1) * el.height;
+          const size = 5 + random(i * 3) * 15;
+          const rotation = random(i * 4) * Math.PI * 2;
+          ctx.fillStyle = colors[Math.floor(random(i * 5) * colors.length)];
+          
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(rotation);
+          
+          const shapeType = Math.floor(random(i * 6) * 3);
+          if (shapeType === 0) {
+            ctx.fillRect(-size / 2, -size / 4, size, size / 2);
+          } else if (shapeType === 1) {
+            ctx.beginPath();
+            ctx.arc(0, 0, size / 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.moveTo(0, -size / 2);
+            ctx.lineTo(size / 2, size / 2);
+            ctx.lineTo(-size / 2, size / 2);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      } else if (el.type === "splatter") {
+        // Paint splatter effect
+        const color = el.color || currentColor;
+        ctx.fillStyle = color;
+        
+        const seed = el.x + el.y;
+        const random = (i: number) => {
+          const x = Math.sin(seed + i * 9.999) * 10000;
+          return x - Math.floor(x);
+        };
+        
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const mainRadius = Math.min(el.width, el.height) * 0.3;
+        
+        ctx.beginPath();
+        ctx.arc(cx, cy, mainRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        for (let i = 0; i < 20; i++) {
+          const angle = random(i) * Math.PI * 2;
+          const distance = mainRadius + random(i + 20) * mainRadius * 1.5;
+          const dx = cx + Math.cos(angle) * distance;
+          const dy = cy + Math.sin(angle) * distance;
+          const dropRadius = 3 + random(i + 40) * 10;
+          
+          ctx.beginPath();
+          ctx.arc(dx, dy, dropRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (el.type === "zigzag") {
+        // Zigzag line pattern
+        const color = el.color || currentColor;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        
+        const peaks = 8;
+        const peakWidth = el.width / peaks;
+        
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height / 2);
+        
+        for (let i = 0; i <= peaks; i++) {
+          const x = el.x + i * peakWidth;
+          const y = el.y + (i % 2 === 0 ? el.height : 0);
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      } else if (el.type === "spiral") {
+        // Spiral decorative element
+        const color = el.color || currentColor;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const maxRadius = Math.min(el.width, el.height) / 2;
+        const turns = 3;
+        const points = 100;
+        
+        ctx.beginPath();
+        for (let i = 0; i <= points; i++) {
+          const t = (i / points) * turns * Math.PI * 2;
+          const r = (i / points) * maxRadius;
+          const x = cx + r * Math.cos(t);
+          const y = cy + r * Math.sin(t);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#ffffff";
         ctx.font = `${el.fontSize || 48}px Arial`;
@@ -795,6 +954,15 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
     } else if (type === "line") {
       width = 300;
       height = 8;
+    } else if (type === "zigzag") {
+      width = 300;
+      height = 80;
+    } else if (type === "polkaDots" || type === "dotsGrid" || type === "confetti" || type === "splatter") {
+      width = 250;
+      height = 250;
+    } else if (type === "spiral") {
+      width = 150;
+      height = 150;
     }
     
     const newElement: CanvasElement = {

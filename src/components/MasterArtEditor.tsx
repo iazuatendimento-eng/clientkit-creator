@@ -40,6 +40,7 @@ import {
   History,
   Scissors,
   Pencil,
+  Sparkles,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
@@ -49,7 +50,7 @@ import { ImageEraserModal } from "./ImageEraserModal";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
   x: number;
   y: number;
   width: number;
@@ -155,6 +156,12 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
       arrow: "Seta",
       badge: "Badge",
       ribbon: "Fita",
+      polkaDots: "Bolinhas",
+      dotsGrid: "Pontos",
+      confetti: "Confetti",
+      splatter: "Splash",
+      zigzag: "Zigzag",
+      spiral: "Espiral",
     };
     return el.name || typeNames[el.type] || el.type;
   };
@@ -360,6 +367,12 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     { id: "badge", icon: Hexagon, label: "Badge" },
     { id: "ribbon", icon: Minus, label: "Fita" },
     { id: "line", icon: Minus, label: "Linha" },
+    { id: "polkaDots", icon: Circle, label: "Bolinhas" },
+    { id: "dotsGrid", icon: Circle, label: "Pontos" },
+    { id: "confetti", icon: Sparkles, label: "Confetti" },
+    { id: "splatter", icon: Circle, label: "Splash" },
+    { id: "zigzag", icon: Minus, label: "Zigzag" },
+    { id: "spiral", icon: Circle, label: "Espiral" },
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
   ];
@@ -637,6 +650,170 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         ctx.moveTo(el.x, el.y + el.height / 2);
         ctx.lineTo(el.x + el.width, el.y + el.height / 2);
         ctx.stroke();
+      } else if (el.type === "polkaDots") {
+        // Polka dots pattern - like the Canva reference image
+        const color = el.color || "#f59e0b";
+        const dotRadius = Math.min(el.width, el.height) * 0.08;
+        const spacing = dotRadius * 3;
+        const cols = Math.floor(el.width / spacing);
+        const rows = Math.floor(el.height / spacing);
+        const offsetX = (el.width - (cols - 1) * spacing) / 2;
+        const offsetY = (el.height - (rows - 1) * spacing) / 2;
+        
+        ctx.fillStyle = color;
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cx = el.x + offsetX + col * spacing;
+            const cy = el.y + offsetY + row * spacing;
+            ctx.beginPath();
+            ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        drawBorder(el);
+      } else if (el.type === "dotsGrid") {
+        // Scattered dots pattern
+        const color = el.color || "#3b82f6";
+        const dotCount = 25;
+        ctx.fillStyle = color;
+        
+        // Use seeded random based on element position for consistency
+        const seed = el.x + el.y;
+        const random = (i: number) => {
+          const x = Math.sin(seed + i * 9.999) * 10000;
+          return x - Math.floor(x);
+        };
+        
+        for (let i = 0; i < dotCount; i++) {
+          const cx = el.x + random(i * 2) * el.width;
+          const cy = el.y + random(i * 2 + 1) * el.height;
+          const radius = 3 + random(i * 3) * 12;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        drawBorder(el);
+      } else if (el.type === "confetti") {
+        // Confetti scattered shapes
+        const colors = [el.color || "#ec4899", "#f59e0b", "#3b82f6", "#10b981", "#8b5cf6"];
+        const shapeCount = 30;
+        
+        const seed = el.x + el.y;
+        const random = (i: number) => {
+          const x = Math.sin(seed + i * 9.999) * 10000;
+          return x - Math.floor(x);
+        };
+        
+        for (let i = 0; i < shapeCount; i++) {
+          const cx = el.x + random(i * 2) * el.width;
+          const cy = el.y + random(i * 2 + 1) * el.height;
+          const size = 5 + random(i * 3) * 15;
+          const rotation = random(i * 4) * Math.PI * 2;
+          ctx.fillStyle = colors[Math.floor(random(i * 5) * colors.length)];
+          
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(rotation);
+          
+          const shapeType = Math.floor(random(i * 6) * 3);
+          if (shapeType === 0) {
+            // Rectangle
+            ctx.fillRect(-size / 2, -size / 4, size, size / 2);
+          } else if (shapeType === 1) {
+            // Circle
+            ctx.beginPath();
+            ctx.arc(0, 0, size / 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // Triangle
+            ctx.beginPath();
+            ctx.moveTo(0, -size / 2);
+            ctx.lineTo(size / 2, size / 2);
+            ctx.lineTo(-size / 2, size / 2);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+        drawBorder(el);
+      } else if (el.type === "splatter") {
+        // Paint splatter effect
+        const color = el.color || "#10b981";
+        ctx.fillStyle = color;
+        
+        const seed = el.x + el.y;
+        const random = (i: number) => {
+          const x = Math.sin(seed + i * 9.999) * 10000;
+          return x - Math.floor(x);
+        };
+        
+        // Main blob
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const mainRadius = Math.min(el.width, el.height) * 0.3;
+        
+        ctx.beginPath();
+        ctx.arc(cx, cy, mainRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Splatter droplets
+        for (let i = 0; i < 20; i++) {
+          const angle = random(i) * Math.PI * 2;
+          const distance = mainRadius + random(i + 20) * mainRadius * 1.5;
+          const dx = cx + Math.cos(angle) * distance;
+          const dy = cy + Math.sin(angle) * distance;
+          const dropRadius = 3 + random(i + 40) * 10;
+          
+          ctx.beginPath();
+          ctx.arc(dx, dy, dropRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        drawBorder(el);
+      } else if (el.type === "zigzag") {
+        // Zigzag line pattern
+        const color = el.color || "#8b5cf6";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        
+        const peaks = 8;
+        const peakWidth = el.width / peaks;
+        
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height / 2);
+        
+        for (let i = 0; i <= peaks; i++) {
+          const x = el.x + i * peakWidth;
+          const y = el.y + (i % 2 === 0 ? el.height : 0);
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        drawBorder(el);
+      } else if (el.type === "spiral") {
+        // Spiral decorative element
+        const color = el.color || "#f97316";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const maxRadius = Math.min(el.width, el.height) / 2;
+        const turns = 3;
+        const points = 100;
+        
+        ctx.beginPath();
+        for (let i = 0; i <= points; i++) {
+          const t = (i / points) * turns * Math.PI * 2;
+          const r = (i / points) * maxRadius;
+          const x = cx + r * Math.cos(t);
+          const y = cy + r * Math.sin(t);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        drawBorder(el);
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#000000";
         ctx.font = `${el.fontSize || 32}px Arial`;
@@ -817,6 +994,60 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         height: 500,
         placeholder: true,
         color: "#8b5cf6", // Purple color for image placeholder
+      });
+    } else if (selectedTool === "polkaDots") {
+      addElement({
+        type: "polkaDots",
+        x: x - 100,
+        y: y - 100,
+        width: 200,
+        height: 200,
+        color: "#f59e0b",
+      });
+    } else if (selectedTool === "dotsGrid") {
+      addElement({
+        type: "dotsGrid",
+        x: x - 100,
+        y: y - 100,
+        width: 200,
+        height: 200,
+        color: "#3b82f6",
+      });
+    } else if (selectedTool === "confetti") {
+      addElement({
+        type: "confetti",
+        x: x - 100,
+        y: y - 100,
+        width: 200,
+        height: 200,
+        color: "#ec4899",
+      });
+    } else if (selectedTool === "splatter") {
+      addElement({
+        type: "splatter",
+        x: x - 100,
+        y: y - 100,
+        width: 200,
+        height: 200,
+        color: "#10b981",
+      });
+    } else if (selectedTool === "zigzag") {
+      addElement({
+        type: "zigzag",
+        x: x - 100,
+        y: y - 25,
+        width: 200,
+        height: 50,
+        color: "#8b5cf6",
+      });
+    } else if (selectedTool === "spiral") {
+      addElement({
+        type: "spiral",
+        x: x - 75,
+        y: y - 75,
+        width: 150,
+        height: 150,
+        color: "#f97316",
       });
     }
   };
