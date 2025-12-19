@@ -1185,6 +1185,20 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                   </div>
                 )}
 
+                {/* Border Radius for rect - MOVED UP for visibility */}
+                {selectedEl.type === "rect" && (
+                  <div className="p-2 bg-primary/10 rounded-md">
+                    <Label className="text-xs font-medium">Arredondamento: {selectedEl.borderRadius || 0}px</Label>
+                    <Slider
+                      value={[selectedEl.borderRadius || 0]}
+                      onValueChange={([v]) => updateSelectedElement({ borderRadius: v })}
+                      min={0}
+                      max={200}
+                      step={1}
+                    />
+                  </div>
+                )}
+
                 {/* Opacity */}
                 <div>
                   <Label className="text-xs">Opacidade: {selectedEl.opacity ?? 100}%</Label>
@@ -1196,20 +1210,6 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                     step={1}
                   />
                 </div>
-
-                {/* Border Radius for rect */}
-                {selectedEl.type === "rect" && (
-                  <div>
-                    <Label className="text-xs">Arredondamento: {selectedEl.borderRadius || 0}px</Label>
-                    <Slider
-                      value={[selectedEl.borderRadius || 0]}
-                      onValueChange={([v]) => updateSelectedElement({ borderRadius: v })}
-                      min={0}
-                      max={200}
-                      step={1}
-                    />
-                  </div>
-                )}
 
                 {/* Border */}
                 {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon"].includes(selectedEl.type)) && (
