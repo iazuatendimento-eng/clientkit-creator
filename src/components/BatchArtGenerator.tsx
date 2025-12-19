@@ -20,6 +20,7 @@ import {
   ZoomIn,
   ZoomOut,
   Scissors,
+  Eraser,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { removeBackground } from "@/lib/backgroundRemoval";
+import { ImageEraserModal } from "./ImageEraserModal";
 
 interface CanvasElement {
   id: string;
@@ -179,9 +181,41 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [removeBgProgress, setRemoveBgProgress] = useState("");
+  const [eraserModalOpen, setEraserModalOpen] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
+  
+  // Handle eraser save - update the photo with erased version
+  const handleEraserSave = async (newImageUrl: string) => {
+    if (!selectedArt) return;
+    
+    const index = clientArts.findIndex((a) => 
+      a.clientId === selectedArt.clientId && 
+      a.cardId === selectedArt.cardId &&
+      a.pageIndex === selectedArt.pageIndex
+    );
+    if (index === -1) return;
+
+    const updatedArt = { ...clientArts[index], photoImage: newImageUrl };
+    const updatedArts = [...clientArts];
+    updatedArts[index] = updatedArt;
+    setClientArts(updatedArts);
+    setSelectedArt(updatedArt);
+
+    // Regenerate the art with cleaned photo
+    const artImageUrl = await generateArtForClient(updatedArt);
+    const finalArts = [...updatedArts];
+    finalArts[index] = { ...updatedArt, imageUrl: artImageUrl };
+    setClientArts(finalArts);
+    setSelectedArt({ ...updatedArt, imageUrl: artImageUrl });
+    setLivePreviewUrl(artImageUrl);
+    
+    toast({
+      title: "Imagem limpa!",
+      description: "A foto foi atualizada e a arte regenerada.",
+    });
+  };
 
   // Handle background removal for current photo
   const handleRemoveBackground = async () => {
@@ -1460,29 +1494,41 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                 </div>
               )}
 
-              {/* Remove Background Option */}
+              {/* Remove Background & Eraser Options */}
               {selectedArt?.photoImage && (
-                <div className="pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleRemoveBackground}
-                    disabled={isRemovingBg}
-                  >
-                    {isRemovingBg ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {removeBgProgress || "Processando..."}
-                      </>
-                    ) : (
-                      <>
-                        <Scissors className="h-4 w-4 mr-2" />
-                        Remover Fundo da Foto Atual
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    Remove o fundo da foto atual usando IA
+                <div className="pt-4 border-t space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleRemoveBackground}
+                      disabled={isRemovingBg}
+                    >
+                      {isRemovingBg ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {removeBgProgress || "Processando..."}
+                        </>
+                      ) : (
+                        <>
+                          <Scissors className="h-4 w-4 mr-2" />
+                          Recortar Fundo
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsImageDialogOpen(false);
+                        setTimeout(() => setEraserModalOpen(true), 100);
+                      }}
+                    >
+                      <Eraser className="h-4 w-4 mr-2" />
+                      Borracha
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Recortar remove o fundo com IA. Borracha limpa artefatos manualmente.
                   </p>
                 </div>
               )}
@@ -1554,30 +1600,47 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               Clique no elemento para selecionar, arraste os cantos azuis para redimensionar.
             </p>
 
-            {/* Remove Background Button */}
+            {/* Remove Background & Eraser Buttons */}
             {selectedArt?.photoImage && (
-              <div className="pt-4 border-t">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleRemoveBackground}
-                  disabled={isRemovingBg || isRegenerating}
-                >
-                  {isRemovingBg ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {removeBgProgress || "Processando..."}
-                    </>
-                  ) : (
-                    <>
-                      <Scissors className="h-4 w-4 mr-2" />
-                      Remover Fundo da Foto
-                    </>
-                  )}
-                </Button>
-                <p className="text-xs text-muted-foreground text-center mt-2">
-                  Remove o fundo da foto automaticamente usando IA
+              <div className="pt-4 border-t space-y-3">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleRemoveBackground}
+                    disabled={isRemovingBg || isRegenerating}
+                  >
+                    {isRemovingBg ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {removeBgProgress || "Processando..."}
+                      </>
+                    ) : (
+                      <>
+                        <Scissors className="h-4 w-4 mr-2" />
+                        Recortar Fundo
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEraserModalOpen(true)}
+                    disabled={isRegenerating}
+                  >
+                    <Eraser className="h-4 w-4 mr-2" />
+                    Borracha
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Recortar remove o fundo com IA. Borracha limpa artefatos manualmente.
                 </p>
+                
+                <ImageEraserModal
+                  open={eraserModalOpen}
+                  onOpenChange={setEraserModalOpen}
+                  imageUrl={selectedArt.photoImage}
+                  onSave={handleEraserSave}
+                />
               </div>
             )}
           </div>
