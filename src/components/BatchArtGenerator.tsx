@@ -21,6 +21,7 @@ import {
   ZoomOut,
   Scissors,
   Eraser,
+  Save,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1281,6 +1282,52 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
     });
   };
 
+  // Save current state as draft to history (without finalizing)
+  const handleSaveDraft = async () => {
+    const artsWithImages = clientArts.filter((a) => a.imageUrl);
+    
+    if (artsWithImages.length === 0) {
+      toast({
+        title: "Nenhuma arte gerada",
+        description: "Gere as artes antes de salvar o rascunho.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Save batch to history as draft (not finalized)
+      const batchItems: BatchItem[] = artsWithImages.map((art) => ({
+        cardId: art.cardId,
+        clientId: art.clientId,
+        clientName: art.clientName,
+        company: art.company,
+        cardTitle: art.cardTitle,
+        cardText: art.cardText,
+        brandKit: art.brandKit,
+        files: [art.imageUrl!],
+        backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
+      }));
+      await saveBatchGeneration("art", template, batchItems);
+
+      // Clear the art generation tags so they can regenerate later
+      await clearArtGenerationTags();
+
+      toast({
+        title: "Rascunho salvo!",
+        description: `${artsWithImages.length} artes salvas no histórico. Você pode continuar editando depois.`,
+      });
+
+      onComplete();
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      toast({
+        title: "Erro ao salvar rascunho",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleApproveAll = async () => {
     const approvedArts = clientArts.filter((a) => a.status === "approved" && a.imageUrl);
 
@@ -1423,6 +1470,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
             <Badge variant="outline">{pendingCount} pendentes</Badge>
             <Badge className="bg-green-500">{approvedCount} aprovadas</Badge>
           </div>
+          
+          {/* Save Draft button - always visible when arts are generated */}
+          {clientArts.some((a) => a.imageUrl) && (
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Salvar Rascunho
+            </Button>
+          )}
+          
           {!clientArts.some((a) => a.imageUrl) ? (
             <Button
               onClick={generateAllArts}
