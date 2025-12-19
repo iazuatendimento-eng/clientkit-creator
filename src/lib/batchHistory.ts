@@ -63,6 +63,10 @@ export async function saveBatchGeneration(
 
 export async function getBatchGenerations(type?: "art" | "video"): Promise<BatchGeneration[]> {
   try {
+    // First check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log("getBatchGenerations - Current user:", user?.id);
+
     let query = supabase
       .from("batch_generations")
       .select("*")
@@ -73,6 +77,8 @@ export async function getBatchGenerations(type?: "art" | "video"): Promise<Batch
     }
 
     const { data, error } = await query;
+
+    console.log("getBatchGenerations - Result:", { data, error, count: data?.length });
 
     if (error) {
       console.error("Error fetching batches:", error);
