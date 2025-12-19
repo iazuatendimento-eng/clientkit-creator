@@ -102,9 +102,11 @@ interface SavedTemplate {
   updated_at: string;
 }
 
+type TeamFilter = "2" | "3" | "weekdays" | undefined;
+
 interface MasterArtEditorProps {
   onBack: () => void;
-  onGenerateBatch: (template: MasterTemplate) => void;
+  onGenerateBatch: (template: MasterTemplate, teamFilter: TeamFilter) => void;
   onOpenHistory?: () => void;
 }
 
@@ -133,6 +135,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const [eraserModalOpen, setEraserModalOpen] = useState(false);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingLayerName, setEditingLayerName] = useState("");
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<TeamFilter>(undefined);
   const { toast } = useToast();
 
   const getDefaultLayerName = (el: CanvasElement) => {
@@ -1292,7 +1295,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
       height: CANVAS_HEIGHT,
       backgroundColor,
     };
-    onGenerateBatch(template);
+    onGenerateBatch(template, selectedTeamFilter);
   };
 
   const selectedEl = elements.find((el) => el.id === selectedElement);
@@ -1339,7 +1342,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
             placeholder="Nome do template"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {onOpenHistory && (
             <Button variant="outline" onClick={onOpenHistory}>
               <History className="mr-2 h-4 w-4" />
@@ -1354,6 +1357,23 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
             )}
             {currentTemplateId ? "Atualizar" : "Salvar"} Template
           </Button>
+          
+          {/* Team Filter Selector */}
+          <Select 
+            value={selectedTeamFilter || "all"} 
+            onValueChange={(value) => setSelectedTeamFilter(value === "all" ? undefined : value as TeamFilter)}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Equipe..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Clientes</SelectItem>
+              <SelectItem value="2">SEG, QUA E SEX</SelectItem>
+              <SelectItem value="3">TER, QUI E SÁB</SelectItem>
+              <SelectItem value="weekdays">SEG A SEX</SelectItem>
+            </SelectContent>
+          </Select>
+          
           <Button onClick={handleGenerateBatch} className="bg-gradient-primary">
             <Play className="mr-2 h-4 w-4" />
             Gerar Artes em Lote
