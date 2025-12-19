@@ -826,7 +826,17 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         img.crossOrigin = "anonymous";
         img.onload = () => {
           ctx.globalAlpha = (el.opacity ?? 100) / 100;
-          ctx.drawImage(img, el.x, el.y, el.width, el.height);
+          const radius = el.borderRadius || 0;
+          if (radius > 0) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(el.x, el.y, el.width, el.height, radius);
+            ctx.clip();
+            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+          }
           if (selectedElement === el.id) {
             drawSelection(ctx, el);
           }
@@ -1558,7 +1568,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                   </div>
                 )}
 
-                {selectedEl.type === "rect" && (
+                {(selectedEl.type === "rect" || selectedEl.type === "image") && (
                   <div className="p-2 bg-primary/10 rounded-md">
                     <Label className="text-xs font-medium">Arredondamento: {selectedEl.borderRadius || 0}px</Label>
                     <Slider
