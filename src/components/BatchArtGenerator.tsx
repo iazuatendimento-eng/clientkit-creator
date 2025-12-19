@@ -162,7 +162,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
   const [searchImages_results, setSearchImagesResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
-  const [teamFilter, setTeamFilter] = useState<"2" | "3" | undefined>(initialTeamFilter);
+  // Team filter is now fixed based on initial selection - no runtime switching
+  const teamFilter = initialTeamFilter;
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Element override states
@@ -278,7 +279,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
 
   useEffect(() => {
     loadTaggedCards(teamFilter);
-  }, [teamFilter]);
+  }, []);
 
   // Auto-generate arts when cards are loaded
   useEffect(() => {
@@ -1437,33 +1438,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
           </div>
         </div>
         
-        {/* Team Filter Buttons */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant={teamFilter === undefined ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTeamFilter(undefined)}
-            disabled={isGenerating}
-          >
-            Todos
-          </Button>
-          <Button
-            variant={teamFilter === "2" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTeamFilter("2")}
-            disabled={isGenerating}
-          >
-            TER, QUI E SÁB
-          </Button>
-          <Button
-            variant={teamFilter === "3" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTeamFilter("3")}
-            disabled={isGenerating}
-          >
-            SEG A SEX
-          </Button>
-        </div>
+        {/* Show which team is being generated */}
+        {teamFilter && (
+          <Badge variant="secondary" className="text-sm">
+            {teamFilter === "2" ? "TER, QUI E SÁB" : "SEG A SEX"}
+          </Badge>
+        )}
         
         <div className="flex items-center gap-4">
           <div className="flex gap-2">
