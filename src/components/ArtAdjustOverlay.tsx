@@ -152,12 +152,17 @@ export function ArtAdjustOverlay({
   const getRect = (part: Part) => {
     if (part === "photo") {
       if (!els.photoFrame) return null;
-      // The photo box represents the placeholder frame. Resizing changes zoom *inside* the frame.
+      // Photo box visually scales with photoScale so user can see the resize effect
+      const scaledW = els.photoFrame.width * (photoScale / 100);
+      const scaledH = els.photoFrame.height * (photoScale / 100);
+      // Center the scaled box around the original center, then apply offset
+      const centerX = els.photoFrame.x + els.photoFrame.width / 2;
+      const centerY = els.photoFrame.y + els.photoFrame.height / 2;
       return {
-        x: els.photoFrame.x,
-        y: els.photoFrame.y,
-        w: els.photoFrame.width,
-        h: els.photoFrame.height,
+        x: centerX - scaledW / 2 + photoOffsetX,
+        y: centerY - scaledH / 2 + photoOffsetY,
+        w: scaledW,
+        h: scaledH,
       };
     }
 
