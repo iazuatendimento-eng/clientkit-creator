@@ -38,10 +38,12 @@ import {
   Pentagon,
   Octagon,
   History,
+  Scissors,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { removeBackground } from "@/lib/backgroundRemoval";
 
 interface CanvasElement {
   id: string;
@@ -122,7 +124,37 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [removeBgProgress, setRemoveBgProgress] = useState("");
   const { toast } = useToast();
+
+  // Handle background removal for selected image
+  const handleRemoveBackground = async () => {
+    const selectedEl = elements.find((el) => el.id === selectedElement);
+    if (!selectedEl || !selectedEl.imageUrl) return;
+
+    setIsRemovingBg(true);
+    setRemoveBgProgress("Iniciando...");
+    
+    try {
+      const newImageUrl = await removeBackground(selectedEl.imageUrl, setRemoveBgProgress);
+      updateSelectedElement({ imageUrl: newImageUrl });
+      toast({
+        title: "Fundo removido!",
+        description: "A imagem foi processada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error removing background:', error);
+      toast({
+        title: "Erro ao remover fundo",
+        description: "Não foi possível processar a imagem. Tente outra imagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRemovingBg(false);
+      setRemoveBgProgress("");
+    }
+  };
 
   // Load saved templates on mount
   useEffect(() => {
@@ -1185,7 +1217,37 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                   </div>
                 )}
 
-                {/* Border Radius for rect - MOVED UP for visibility */}
+                {/* Remove Background for images */}
+                {(selectedEl.type === "image" || ["logo", "mascot"].includes(selectedEl.type)) && selectedEl.imageUrl && (
+                  <div className="p-3 bg-primary/10 rounded-md space-y-2">
+                    <Label className="text-xs font-medium flex items-center gap-2">
+                      <Scissors className="h-4 w-4" />
+                      Remover Fundo
+                    </Label>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={handleRemoveBackground}
+                      disabled={isRemovingBg}
+                    >
+                      {isRemovingBg ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {removeBgProgress || "Processando..."}
+                        </>
+                      ) : (
+                        <>
+                          <Scissors className="h-4 w-4 mr-2" />
+                          Recortar Fundo
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground">
+                      Remove o fundo da imagem automaticamente usando IA
+                    </p>
+                  </div>
+                )}
+
                 {selectedEl.type === "rect" && (
                   <div className="p-2 bg-primary/10 rounded-md">
                     <Label className="text-xs font-medium">Arredondamento: {selectedEl.borderRadius || 0}px</Label>
