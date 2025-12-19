@@ -19,6 +19,7 @@ import {
   Link,
   ZoomIn,
   ZoomOut,
+  Scissors,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,7 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
-
+import { removeBackground } from "@/lib/backgroundRemoval";
 
 interface CanvasElement {
   id: string;
@@ -173,9 +174,67 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [shapeOverrides, setShapeOverrides] = useState<Record<string, ShapeOverride>>({});
   const [livePreviewUrl, setLivePreviewUrl] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [removeBgProgress, setRemoveBgProgress] = useState("");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
+
+  // Handle background removal for current photo
+  const handleRemoveBackground = async () => {
+    if (!selectedArt || !selectedArt.photoImage) {
+      toast({
+        title: "Nenhuma foto selecionada",
+        description: "Primeiro selecione ou adicione uma foto à arte.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRemovingBg(true);
+    setRemoveBgProgress("Iniciando...");
+    
+    try {
+      const newImageUrl = await removeBackground(selectedArt.photoImage, setRemoveBgProgress);
+      
+      // Apply the new image without background
+      const index = clientArts.findIndex((a) => 
+        a.clientId === selectedArt.clientId && 
+        a.cardId === selectedArt.cardId &&
+        a.pageIndex === selectedArt.pageIndex
+      );
+      if (index === -1) return;
+
+      const updatedArt = { ...clientArts[index], photoImage: newImageUrl, photoOffset: { x: 0, y: 0 } };
+      const updatedArts = [...clientArts];
+      updatedArts[index] = updatedArt;
+      setClientArts(updatedArts);
+      setSelectedArt(updatedArt);
+
+      // Regenerate the art with new photo
+      const artImageUrl = await generateArtForClient(updatedArt);
+      const finalArts = [...updatedArts];
+      finalArts[index] = { ...updatedArt, imageUrl: artImageUrl };
+      setClientArts(finalArts);
+      setSelectedArt({ ...updatedArt, imageUrl: artImageUrl });
+      setLivePreviewUrl(artImageUrl);
+      
+      toast({
+        title: "Fundo removido!",
+        description: "A imagem foi processada e a arte regenerada.",
+      });
+    } catch (error) {
+      console.error('Error removing background:', error);
+      toast({
+        title: "Erro ao remover fundo",
+        description: "Não foi possível processar a imagem. Tente outra imagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRemovingBg(false);
+      setRemoveBgProgress("");
+    }
+  };
 
   useEffect(() => {
     loadTaggedCards();
@@ -1391,6 +1450,33 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
                   </div>
                 </div>
               )}
+
+              {/* Remove Background Option */}
+              {selectedArt?.photoImage && (
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleRemoveBackground}
+                    disabled={isRemovingBg}
+                  >
+                    {isRemovingBg ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {removeBgProgress || "Processando..."}
+                      </>
+                    ) : (
+                      <>
+                        <Scissors className="h-4 w-4 mr-2" />
+                        Remover Fundo da Foto Atual
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Remove o fundo da foto atual usando IA
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </DialogContent>
@@ -1456,6 +1542,33 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
             <p className="text-xs text-muted-foreground text-center pt-2">
               Clique no elemento para selecionar, arraste os cantos azuis para redimensionar.
             </p>
+
+            {/* Remove Background Button */}
+            {selectedArt?.photoImage && (
+              <div className="pt-4 border-t">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleRemoveBackground}
+                  disabled={isRemovingBg || isRegenerating}
+                >
+                  {isRemovingBg ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {removeBgProgress || "Processando..."}
+                    </>
+                  ) : (
+                    <>
+                      <Scissors className="h-4 w-4 mr-2" />
+                      Remover Fundo da Foto
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Remove o fundo da foto automaticamente usando IA
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 justify-end pt-4 border-t">
