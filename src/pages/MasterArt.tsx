@@ -15,14 +15,18 @@ interface MasterTemplate {
   backgroundColor: string;
 }
 
+type TeamFilter = "2" | "3" | "weekdays" | undefined;
+
 const MasterArt = () => {
   const navigate = useNavigate();
   const [view, setView] = useState<"editor" | "batch" | "history" | "history-edit">("editor");
   const [template, setTemplate] = useState<MasterTemplate | null>(null);
+  const [teamFilter, setTeamFilter] = useState<TeamFilter>(undefined);
   const [editingBatch, setEditingBatch] = useState<BatchGeneration | null>(null);
 
-  const handleGenerateBatch = (newTemplate: MasterTemplate) => {
+  const handleGenerateBatch = (newTemplate: MasterTemplate, filter: TeamFilter) => {
     setTemplate(newTemplate);
+    setTeamFilter(filter);
     setView("batch");
   };
 
@@ -67,6 +71,7 @@ const MasterArt = () => {
     return (
       <BatchArtGenerator
         template={template}
+        initialTeamFilter={teamFilter}
         onBack={handleBackToEditor}
         onComplete={handleComplete}
       />

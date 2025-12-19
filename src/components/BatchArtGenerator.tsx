@@ -141,11 +141,12 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
 
 interface BatchArtGeneratorProps {
   template: MasterTemplate;
+  initialTeamFilter?: "2" | "3" | "weekdays";
   onBack: () => void;
   onComplete: () => void;
 }
 
-export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGeneratorProps) => {
+export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onComplete }: BatchArtGeneratorProps) => {
   const [clientArts, setClientArts] = useState<ClientArt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -160,7 +161,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [searchImages_results, setSearchImagesResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
-  const [teamFilter, setTeamFilter] = useState<"2" | "3" | "weekdays" | undefined>(undefined);
+  const [teamFilter, setTeamFilter] = useState<"2" | "3" | "weekdays" | undefined>(initialTeamFilter);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Element override states
