@@ -592,14 +592,15 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       } else if (el.type === "image" && el.placeholder && art.photoImage) {
         // Draw photo with pan (offset) + zoom (photoScale)
         const img = await loadImage(art.photoImage);
+        const frameOv = art.elementOverrides?.photoFrame;
+        const frameW = frameOv?.width ?? el.width;
+        const frameH = frameOv?.height ?? el.height;
+        const frameX = frameOv?.x ?? el.x;
+        const frameY = frameOv?.y ?? el.y;
+
         if (img) {
           const offset = art.photoOffset || { x: 0, y: 0 };
           const zoom = (art.elementOverrides?.photoScale || 100) / 100; // < 1 = zoom out, > 1 = zoom in
-
-          const frameW = el.width;
-          const frameH = el.height;
-          const frameX = el.x;
-          const frameY = el.y;
 
           const imgAspect = img.width / img.height;
           const frameAspect = frameW / frameH;
@@ -645,7 +646,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
           ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
         } else {
           ctx.fillStyle = "#e5e7eb";
-          ctx.fillRect(el.x, el.y, el.width, el.height);
+          ctx.fillRect(frameX, frameY, frameW, frameH);
         }
       } else if (el.type === "logo") {
         // Logo uses PNG[0] from brand kit with optional overrides
