@@ -50,9 +50,11 @@ export function ArtAdjustOverlay({
   photoOffsetX,
   photoOffsetY,
   photoScale,
+  photoFrame,
   setPhotoOffsetX,
   setPhotoOffsetY,
   setPhotoScale,
+  setPhotoFrame,
   logoX,
   logoY,
   logoScaleX,
@@ -85,9 +87,11 @@ export function ArtAdjustOverlay({
   photoOffsetX: number;
   photoOffsetY: number;
   photoScale: number;
+  photoFrame?: ShapeOverride | null;
   setPhotoOffsetX: (v: number) => void;
   setPhotoOffsetY: (v: number) => void;
   setPhotoScale: (v: number) => void;
+  setPhotoFrame?: (v: ShapeOverride | null) => void;
 
   logoX: number;
   logoY: number;
@@ -152,10 +156,20 @@ export function ArtAdjustOverlay({
   const getRect = (part: Part) => {
     if (part === "photo") {
       if (!els.photoFrame) return null;
-      // Photo box visually scales with photoScale so user can see the resize effect
+
+      // If caller provides a resized frame, use it (this is "resize photo" without zoom).
+      if (photoFrame) {
+        return {
+          x: photoFrame.x,
+          y: photoFrame.y,
+          w: photoFrame.width,
+          h: photoFrame.height,
+        };
+      }
+
+      // Backwards-compat fallback: represent zoom as a scaled box.
       const scaledW = els.photoFrame.width * (photoScale / 100);
       const scaledH = els.photoFrame.height * (photoScale / 100);
-      // Center the scaled box around the original center, then apply offset
       const centerX = els.photoFrame.x + els.photoFrame.width / 2;
       const centerY = els.photoFrame.y + els.photoFrame.height / 2;
       return {
@@ -226,6 +240,7 @@ export function ArtAdjustOverlay({
           photoScale: number;
           photoW: number;
           photoH: number;
+          photoRect?: ShapeOverride;
           logoX: number;
           logoY: number;
           logoScaleX: number;
@@ -266,8 +281,11 @@ export function ArtAdjustOverlay({
     const contactW = els.contactEl ? els.contactEl.width * (contactScaleX / 100) : 0;
     const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
     const textW = els.textEl ? els.textEl.width * (textFontSize / 100) : 0;
-    const photoW = els.photoFrame ? els.photoFrame.width * (photoScale / 100) : 0;
-    const photoH = els.photoFrame ? els.photoFrame.height * (photoScale / 100) : 0;
+
+    const photoR = getRect("photo");
+    const photoW = photoR ? photoR.w : 0;
+    const photoH = photoR ? photoR.h : 0;
+    const photoRect = photoR ? { x: photoR.x, y: photoR.y, width: photoR.w, height: photoR.h } : undefined;
 
     let shapeRect: ShapeOverride | undefined;
     if (isShapePart(part)) {
@@ -288,6 +306,7 @@ export function ArtAdjustOverlay({
         photoScale,
         photoW,
         photoH,
+        photoRect,
         logoX,
         logoY,
         logoScaleX,
@@ -320,17 +339,63 @@ export function ArtAdjustOverlay({
       const dy = (dyClient / r.height) * template.height;
 
       if (s.part === "photo") {
+        const base = els.photoFrame;
+        if (!base) return;
+
+        // New behavior: resize/move the photo frame (no zoom) when photoFrame is enabled.
+        if (setPhotoFrame) {
+          const startRect = s.start.photoRect || { x: base.x, y: base.y, width: base.width, height: base.height };
+          const minSize = 20;
+
+          if (s.mode === "move") {
+            const next: ShapeOverride = {
+              x: clamp(startRect.x + dx, 0, template.width - minSize),
+              y: clamp(startRect.y + dy, 0, template.height - minSize),
+              width: startRect.width,
+              height: startRect.height,
+            };
+            setPhotoFrame(next);
+            return;
+          }
+
+          const h = s.handle || "se";
+          let newX = startRect.x;
+          let newY = startRect.y;
+          let newW = startRect.width;
+          let newH = startRect.height;
+
+          if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+          if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+          if (handleHasW(h)) {
+            newW = Math.max(minSize, startRect.width - dx);
+            newX = startRect.x + (startRect.width - newW);
+          }
+          if (handleHasN(h)) {
+            newH = Math.max(minSize, startRect.height - dy);
+            newY = startRect.y + (startRect.height - newH);
+          }
+
+          // Soft clamp to canvas bounds
+          newX = clamp(newX, 0, template.width - minSize);
+          newY = clamp(newY, 0, template.height - minSize);
+          newW = clamp(newW, minSize, template.width);
+          newH = clamp(newH, minSize, template.height);
+
+          setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
+          return;
+        }
+
+        // Legacy behavior: move = pan, resize = zoom
         if (s.mode === "move") {
           setPhotoOffsetX(clamp(s.start.photoOffsetX + dx, -100, 100));
           setPhotoOffsetY(clamp(s.start.photoOffsetY + dy, -100, 100));
           return;
         }
 
-        // Resize photo - use height for vertical handles, width for horizontal
         const h = s.handle as Handle;
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
-        
+
         const baseW = els.photoFrame?.width || 1;
         const baseH = els.photoFrame?.height || 1;
 
@@ -339,17 +404,14 @@ export function ArtAdjustOverlay({
         let startDimension: number;
 
         if (isVerticalHandle) {
-          // For N/S handles, use height-based calculation
           signedDelta = handleSignY(h) * dy;
           baseDimension = baseH;
           startDimension = s.start.photoH;
         } else if (isHorizontalHandle) {
-          // For E/W handles, use width-based calculation
           signedDelta = handleSignX(h) * dx;
           baseDimension = baseW;
           startDimension = s.start.photoW;
         } else {
-          // For corner handles, use the dominant direction
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           if (Math.abs(signedDx) > Math.abs(signedDy)) {

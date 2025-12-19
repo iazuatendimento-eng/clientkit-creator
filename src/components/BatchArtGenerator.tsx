@@ -95,6 +95,8 @@ interface ElementOverrides {
   contactScaleX?: number;
   contactScaleY?: number;
   photoScale?: number;
+  // When set, resizes/moves the photo placeholder frame (instead of zooming the crop)
+  photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
 }
 
@@ -151,6 +153,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [photoOffsetX, setPhotoOffsetX] = useState(0);
   const [photoOffsetY, setPhotoOffsetY] = useState(0);
   const [photoScale, setPhotoScale] = useState(100);
+  const [photoFrame, setPhotoFrame] = useState<ShapeOverride | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchImages_results, setSearchImagesResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -890,6 +893,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     setPhotoOffsetX(art.photoOffset?.x || 0);
     setPhotoOffsetY(art.photoOffset?.y || 0);
     setPhotoScale(art.elementOverrides?.photoScale || 100);
+    setPhotoFrame(art.elementOverrides?.photoFrame || null);
     // Load element overrides
     setLogoX(art.elementOverrides?.logoX || 0);
     setLogoY(art.elementOverrides?.logoY || 0);
@@ -915,6 +919,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
       photoOffsetX: number;
       photoOffsetY: number;
       photoScale: number;
+      photoFrame: ShapeOverride | null;
       logoX: number;
       logoY: number;
       logoScale: number;
@@ -949,6 +954,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         contactScaleX: overrides.contactScaleX,
         contactScaleY: overrides.contactScaleY,
         photoScale: overrides.photoScale,
+        photoFrame: overrides.photoFrame || undefined,
         shapes: overrides.shapeOverrides,
       }
     };
@@ -979,6 +985,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         photoOffsetX,
         photoOffsetY,
         photoScale,
+        photoFrame,
         logoX,
         logoY,
         logoScale,
@@ -1001,7 +1008,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, photoScale, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, shapeOverrides, regenerateLivePreview]);
+  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, photoScale, photoFrame, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, shapeOverrides, regenerateLivePreview]);
 
   const handleApplyElementOverrides = async () => {
     if (!selectedArt) return;
@@ -1031,6 +1038,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         contactScaleX,
         contactScaleY,
         photoScale,
+        photoFrame: photoFrame || undefined,
         shapes: shapeOverrides,
       }
     };
@@ -1510,9 +1518,11 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
               photoOffsetX={photoOffsetX}
               photoOffsetY={photoOffsetY}
               photoScale={photoScale}
+              photoFrame={photoFrame}
               setPhotoOffsetX={setPhotoOffsetX}
               setPhotoOffsetY={setPhotoOffsetY}
               setPhotoScale={setPhotoScale}
+              setPhotoFrame={setPhotoFrame}
               logoX={logoX}
               logoY={logoY}
               logoScaleX={logoScaleX}
