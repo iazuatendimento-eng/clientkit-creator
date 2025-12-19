@@ -527,20 +527,20 @@ export function ArtAdjustOverlay({
     const HandleDot = ({ h }: { h: Handle }) => {
       const pos =
         h === "nw"
-          ? "-left-1.5 -top-1.5"
+          ? "-left-2 -top-2"
           : h === "ne"
-            ? "-right-1.5 -top-1.5"
+            ? "-right-2 -top-2"
             : h === "sw"
-              ? "-left-1.5 -bottom-1.5"
+              ? "-left-2 -bottom-2"
               : h === "se"
-                ? "-right-1.5 -bottom-1.5"
+                ? "-right-2 -bottom-2"
                 : h === "n"
-                  ? "left-1/2 -top-1.5 -translate-x-1/2"
+                  ? "left-1/2 -top-2 -translate-x-1/2"
                   : h === "s"
-                    ? "left-1/2 -bottom-1.5 -translate-x-1/2"
+                    ? "left-1/2 -bottom-2 -translate-x-1/2"
                     : h === "w"
-                      ? "-left-1.5 top-1/2 -translate-y-1/2"
-                      : "-right-1.5 top-1/2 -translate-y-1/2";
+                      ? "-left-2 top-1/2 -translate-y-1/2"
+                      : "-right-2 top-1/2 -translate-y-1/2";
 
       const cursor =
         h === "n" || h === "s"
@@ -552,16 +552,21 @@ export function ArtAdjustOverlay({
               : "cursor-nesw-resize";
 
       return (
-        <button
-          type="button"
-          aria-label={`Redimensionar ${label}`}
+        <div
           className={cn(
-            "absolute z-20 h-3.5 w-3.5 rounded-sm border-2 border-background bg-primary",
+            "absolute z-30",
             pos,
-            cursor
+            cursor,
+            "h-6 w-6 flex items-center justify-center"
           )}
-          onPointerDown={(e) => begin(e, part, "resize", h)}
-        />
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            begin(e, part, "resize", h);
+          }}
+        >
+          <div className="h-4 w-4 rounded-sm border-2 border-background bg-primary shadow-md" />
+        </div>
       );
     };
 
