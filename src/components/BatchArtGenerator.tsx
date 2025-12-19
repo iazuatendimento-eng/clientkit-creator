@@ -160,6 +160,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   const [searchImages_results, setSearchImagesResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
+  const [teamFilter, setTeamFilter] = useState<"2" | "3" | "weekdays" | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Element override states
@@ -274,8 +275,8 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   };
 
   useEffect(() => {
-    loadTaggedCards();
-  }, []);
+    loadTaggedCards(teamFilter);
+  }, [teamFilter]);
 
   // Auto-generate arts when cards are loaded
   useEffect(() => {
@@ -284,12 +285,13 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
     }
   }, [clientArts, isLoading]);
 
-  const loadTaggedCards = async () => {
+  const loadTaggedCards = async (filter?: "2" | "3" | "weekdays") => {
     try {
       setIsLoading(true);
+      setClientArts([]); // Clear existing arts when filter changes
       
-      // Auto-tag first cards of all active clients
-      await autoTagFirstCardsForAllActiveClients();
+      // Auto-tag first cards of all active clients (with optional team filter)
+      await autoTagFirstCardsForAllActiveClients(filter);
       
       const taggedCards = await getTaggedCardsForArtGeneration();
 
@@ -1363,7 +1365,7 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="border-b bg-card px-4 py-3 flex items-center justify-between">
+      <div className="border-b bg-card px-4 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
@@ -1375,6 +1377,43 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
             </p>
           </div>
         </div>
+        
+        {/* Team Filter Buttons */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant={teamFilter === undefined ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTeamFilter(undefined)}
+            disabled={isGenerating}
+          >
+            Todos
+          </Button>
+          <Button
+            variant={teamFilter === "2" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTeamFilter("2")}
+            disabled={isGenerating}
+          >
+            SEG, QUA E SEX
+          </Button>
+          <Button
+            variant={teamFilter === "3" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTeamFilter("3")}
+            disabled={isGenerating}
+          >
+            TER, QUI E SÁB
+          </Button>
+          <Button
+            variant={teamFilter === "weekdays" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTeamFilter("weekdays")}
+            disabled={isGenerating}
+          >
+            SEG A SEX
+          </Button>
+        </div>
+        
         <div className="flex items-center gap-4">
           <div className="flex gap-2">
             <Badge variant="outline">{pendingCount} pendentes</Badge>
