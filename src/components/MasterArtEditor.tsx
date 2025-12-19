@@ -39,11 +39,13 @@ import {
   Octagon,
   History,
   Scissors,
+  Pencil,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { removeBackground } from "@/lib/backgroundRemoval";
+import { ImageEraserModal } from "./ImageEraserModal";
 
 interface CanvasElement {
   id: string;
@@ -52,6 +54,7 @@ interface CanvasElement {
   y: number;
   width: number;
   height: number;
+  name?: string; // Custom layer name
   color?: string;
   text?: string;
   fontSize?: number;
@@ -126,7 +129,49 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const [isLoading, setIsLoading] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [removeBgProgress, setRemoveBgProgress] = useState("");
+  const [eraserModalOpen, setEraserModalOpen] = useState(false);
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const [editingLayerName, setEditingLayerName] = useState("");
   const { toast } = useToast();
+
+  const getDefaultLayerName = (el: CanvasElement) => {
+    const typeNames: Record<string, string> = {
+      rect: "Retângulo",
+      circle: "Círculo",
+      text: el.text?.substring(0, 20) || "Texto",
+      image: "Imagem",
+      logo: "Logo",
+      contact: "Contato",
+      mascot: "Mascote",
+      triangle: "Triângulo",
+      line: "Linha",
+      star: "Estrela",
+      diamond: "Losango",
+      hexagon: "Hexágono",
+      pentagon: "Pentágono",
+      wave: "Onda",
+      blob: "Blob",
+      arch: "Arco",
+      arrow: "Seta",
+      badge: "Badge",
+      ribbon: "Fita",
+    };
+    return el.name || typeNames[el.type] || el.type;
+  };
+
+  const startEditingLayerName = (el: CanvasElement) => {
+    setEditingLayerId(el.id);
+    setEditingLayerName(el.name || getDefaultLayerName(el));
+  };
+
+  const saveLayerName = () => {
+    if (!editingLayerId) return;
+    setElements(elements.map(el => 
+      el.id === editingLayerId ? { ...el, name: editingLayerName.trim() || undefined } : el
+    ));
+    setEditingLayerId(null);
+    setEditingLayerName("");
+  };
 
   // Handle background removal for selected image
   const handleRemoveBackground = async () => {
@@ -1222,28 +1267,43 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                   <div className="p-3 bg-primary/10 rounded-md space-y-2">
                     <Label className="text-xs font-medium flex items-center gap-2">
                       <Scissors className="h-4 w-4" />
-                      Remover Fundo
+                      Edição de Imagem
                     </Label>
-                    <Button
-                      size="sm"
-                      className="w-full"
-                      onClick={handleRemoveBackground}
-                      disabled={isRemovingBg}
-                    >
-                      {isRemovingBg ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          {removeBgProgress || "Processando..."}
-                        </>
-                      ) : (
-                        <>
-                          <Scissors className="h-4 w-4 mr-2" />
-                          Recortar Fundo
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleRemoveBackground}
+                        disabled={isRemovingBg}
+                      >
+                        {isRemovingBg ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {removeBgProgress || "..."}
+                          </>
+                        ) : (
+                          <>
+                            <Scissors className="h-4 w-4 mr-2" />
+                            Recortar
+                          </>
+                        )}
+                      </Button>
+                      <ImageEraserModal
+                        open={eraserModalOpen}
+                        onOpenChange={setEraserModalOpen}
+                        imageUrl={selectedEl.imageUrl}
+                        onSave={(newUrl) => updateSelectedElement({ imageUrl: newUrl })}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEraserModalOpen(true)}
+                      >
+                        Borracha
+                      </Button>
+                    </div>
                     <p className="text-[10px] text-muted-foreground">
-                      Remove o fundo da imagem automaticamente usando IA
+                      Recortar remove o fundo com IA. Borracha limpa artefatos manualmente.
                     </p>
                   </div>
                 )}
@@ -1650,6 +1710,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                     const actualIndex = elements.length - 1 - reversedIndex;
                     const isFirst = actualIndex === elements.length - 1;
                     const isLast = actualIndex === 0;
+                    const isEditing = editingLayerId === el.id;
                     
                     return (
                       <div
@@ -1661,28 +1722,57 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                         }`}
                         onClick={() => setSelectedElement(el.id)}
                       >
-                        {el.type === "rect" && <Square className="h-4 w-4" />}
-                        {el.type === "circle" && <Circle className="h-4 w-4" />}
-                        {el.type === "text" && <Type className="h-4 w-4" />}
-                        {el.type === "image" && <ImageIcon className="h-4 w-4" />}
+                        {el.type === "rect" && <Square className="h-4 w-4 shrink-0" />}
+                        {el.type === "circle" && <Circle className="h-4 w-4 shrink-0" />}
+                        {el.type === "text" && <Type className="h-4 w-4 shrink-0" />}
+                        {el.type === "image" && <ImageIcon className="h-4 w-4 shrink-0" />}
+                        {el.type === "triangle" && <Triangle className="h-4 w-4 shrink-0" />}
+                        {el.type === "star" && <Star className="h-4 w-4 shrink-0" />}
+                        {el.type === "diamond" && <Diamond className="h-4 w-4 shrink-0" />}
+                        {el.type === "hexagon" && <Hexagon className="h-4 w-4 shrink-0" />}
+                        {el.type === "pentagon" && <Pentagon className="h-4 w-4 shrink-0" />}
+                        {el.type === "line" && <Minus className="h-4 w-4 shrink-0" />}
                         {["logo", "contact", "mascot"].includes(el.type) && (
                           <div
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded shrink-0"
                             style={{ backgroundColor: el.color }}
                           />
                         )}
-                        <span className="text-sm truncate flex-1">
-                          {el.type === "text"
-                            ? el.text?.substring(0, 20) || "Texto"
-                            : el.type === "logo"
-                            ? "Logo"
-                            : el.type === "contact"
-                            ? "Contato"
-                            : el.type === "mascot"
-                            ? "Mascote"
-                            : el.type.charAt(0).toUpperCase() + el.type.slice(1)}
-                        </span>
-                        <div className="flex gap-1">
+                        {isEditing ? (
+                          <Input
+                            value={editingLayerName}
+                            onChange={(e) => setEditingLayerName(e.target.value)}
+                            onBlur={saveLayerName}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveLayerName();
+                              if (e.key === "Escape") {
+                                setEditingLayerId(null);
+                                setEditingLayerName("");
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-6 text-xs flex-1 bg-background text-foreground"
+                            autoFocus
+                          />
+                        ) : (
+                          <span className="text-sm truncate flex-1">
+                            {getDefaultLayerName(el)}
+                          </span>
+                        )}
+                        <div className="flex gap-1 shrink-0">
+                          {!isEditing && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEditingLayerName(el);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"
