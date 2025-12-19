@@ -42,6 +42,7 @@ import {
   Move,
   History,
   Scissors,
+  Pencil,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { searchImages, SearchImage } from "@/lib/imageSearch";
@@ -55,6 +56,7 @@ interface CanvasElement {
   y: number;
   width: number;
   height: number;
+  name?: string; // Custom layer name
   color?: string;
   text?: string;
   fontSize?: number;
@@ -134,6 +136,10 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [removeBgProgress, setRemoveBgProgress] = useState("");
   
+  // Layer renaming state
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const [editingLayerName, setEditingLayerName] = useState("");
+  
   // Drag and resize state
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -141,6 +147,39 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, elX: 0, elY: 0 });
   const [cursorStyle, setCursorStyle] = useState("crosshair");
+
+  const getDefaultLayerName = (el: CanvasElement) => {
+    const typeNames: Record<string, string> = {
+      rect: "Retângulo",
+      circle: "Círculo",
+      text: el.text?.substring(0, 20) || "Texto",
+      image: "Imagem",
+      logo: "Logo",
+      contact: "Contato",
+      mascot: "Mascote",
+      triangle: "Triângulo",
+      line: "Linha",
+      star: "Estrela",
+      diamond: "Losango",
+      hexagon: "Hexágono",
+      pentagon: "Pentágono",
+    };
+    return el.name || typeNames[el.type] || el.type;
+  };
+
+  const startEditingLayerName = (el: CanvasElement) => {
+    setEditingLayerId(el.id);
+    setEditingLayerName(el.name || getDefaultLayerName(el));
+  };
+
+  const saveLayerName = () => {
+    if (!editingLayerId) return;
+    setElements(elements.map(el => 
+      el.id === editingLayerId ? { ...el, name: editingLayerName.trim() || undefined } : el
+    ));
+    setEditingLayerId(null);
+    setEditingLayerName("");
+  };
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
@@ -1589,68 +1628,114 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
           <TabsContent value="layers" className="flex-1 p-4">
             <ScrollArea className="h-[500px]">
               <div className="space-y-2">
-                {[...elements].reverse().map((el, index) => (
-                  <div
-                    key={el.id}
-                    className={`p-2 rounded border cursor-pointer flex items-center justify-between ${
-                      selectedElement === el.id ? "border-primary bg-primary/10" : "border-border"
-                    }`}
-                    onClick={() => setSelectedElement(el.id)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {el.type === "rect" && <Square className="h-4 w-4" />}
-                      {el.type === "circle" && <Circle className="h-4 w-4" />}
-                      {el.type === "text" && <Type className="h-4 w-4" />}
-                      {el.type === "image" && <ImageIcon className="h-4 w-4" />}
-                      {el.type === "logo" && <User className="h-4 w-4" />}
-                      {el.type === "contact" && <Phone className="h-4 w-4" />}
-                      {el.type === "mascot" && <Sparkles className="h-4 w-4" />}
-                      <span className="text-sm capitalize truncate max-w-[100px]">
-                        {el.type === "text" ? el.text?.substring(0, 15) : el.type}
-                      </span>
+                {[...elements].reverse().map((el, reversedIndex) => {
+                  const actualIndex = elements.length - 1 - reversedIndex;
+                  const isFirst = actualIndex === elements.length - 1;
+                  const isLast = actualIndex === 0;
+                  const isEditing = editingLayerId === el.id;
+
+                  return (
+                    <div
+                      key={el.id}
+                      className={`p-2 rounded border cursor-pointer flex items-center gap-2 ${
+                        selectedElement === el.id ? "border-primary bg-primary/10" : "border-border"
+                      }`}
+                      onClick={() => setSelectedElement(el.id)}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {el.type === "rect" && <Square className="h-4 w-4 shrink-0" />}
+                        {el.type === "circle" && <Circle className="h-4 w-4 shrink-0" />}
+                        {el.type === "text" && <Type className="h-4 w-4 shrink-0" />}
+                        {el.type === "image" && <ImageIcon className="h-4 w-4 shrink-0" />}
+                        {el.type === "logo" && <User className="h-4 w-4 shrink-0" />}
+                        {el.type === "contact" && <Phone className="h-4 w-4 shrink-0" />}
+                        {el.type === "mascot" && <Sparkles className="h-4 w-4 shrink-0" />}
+                        {el.type === "triangle" && <Triangle className="h-4 w-4 shrink-0" />}
+                        {el.type === "star" && <Star className="h-4 w-4 shrink-0" />}
+                        {el.type === "diamond" && <Diamond className="h-4 w-4 shrink-0" />}
+                        {el.type === "hexagon" && <Hexagon className="h-4 w-4 shrink-0" />}
+                        {el.type === "pentagon" && <Pentagon className="h-4 w-4 shrink-0" />}
+                        {el.type === "line" && <Minus className="h-4 w-4 shrink-0" />}
+                        {isEditing ? (
+                          <Input
+                            value={editingLayerName}
+                            onChange={(e) => setEditingLayerName(e.target.value)}
+                            onBlur={saveLayerName}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveLayerName();
+                              if (e.key === "Escape") {
+                                setEditingLayerId(null);
+                                setEditingLayerName("");
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-6 text-xs flex-1 bg-background text-foreground"
+                            autoFocus
+                          />
+                        ) : (
+                          <span className="text-sm truncate flex-1">
+                            {getDefaultLayerName(el)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        {!isEditing && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEditingLayerName(el);
+                            }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          disabled={isFirst}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const idx = elements.findIndex((e) => e.id === el.id);
+                            if (idx < elements.length - 1) {
+                              const newElements = [...elements];
+                              [newElements[idx], newElements[idx + 1]] = [
+                                newElements[idx + 1],
+                                newElements[idx],
+                              ];
+                              setElements(newElements);
+                            }
+                          }}
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          disabled={isLast}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const idx = elements.findIndex((e) => e.id === el.id);
+                            if (idx > 0) {
+                              const newElements = [...elements];
+                              [newElements[idx], newElements[idx - 1]] = [
+                                newElements[idx - 1],
+                                newElements[idx],
+                              ];
+                              setElements(newElements);
+                            }
+                          }}
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const idx = elements.findIndex((e) => e.id === el.id);
-                          if (idx < elements.length - 1) {
-                            const newElements = [...elements];
-                            [newElements[idx], newElements[idx + 1]] = [
-                              newElements[idx + 1],
-                              newElements[idx],
-                            ];
-                            setElements(newElements);
-                          }
-                        }}
-                      >
-                        <ChevronUp className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const idx = elements.findIndex((e) => e.id === el.id);
-                          if (idx > 0) {
-                            const newElements = [...elements];
-                            [newElements[idx], newElements[idx - 1]] = [
-                              newElements[idx - 1],
-                              newElements[idx],
-                            ];
-                            setElements(newElements);
-                          }
-                        }}
-                      >
-                        <ChevronDown className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </TabsContent>
