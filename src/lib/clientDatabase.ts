@@ -283,7 +283,7 @@ export async function tagFirstCardsForArtGeneration(clientIds: string[]) {
 }
 
 // Auto-tag first cards of all active clients
-// teamFilter: undefined = all, "2" = Seg/Qua/Sex, "3" = Ter/Qui/Sáb, "weekdays" = teams 2 and 3 (seg a sex)
+// teamFilter: undefined = all, "2" = Seg/Qua/Sex, "3" = Ter/Qui/Sáb, "weekdays" = Seg a Sex (team 1)
 export async function autoTagFirstCardsForAllActiveClients(teamFilter?: "2" | "3" | "weekdays") {
   // Get all active clients, optionally filtered by team
   let query = supabase
@@ -296,7 +296,7 @@ export async function autoTagFirstCardsForAllActiveClients(teamFilter?: "2" | "3
   } else if (teamFilter === "3") {
     query = query.eq("team", "3");
   } else if (teamFilter === "weekdays") {
-    query = query.in("team", ["2", "3"]);
+    query = query.eq("team", "1");
   }
 
   const { data: clients, error: clientError } = await query;
