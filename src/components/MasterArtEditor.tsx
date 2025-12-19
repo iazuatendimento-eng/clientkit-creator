@@ -1584,39 +1584,83 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
             <TabsContent value="layers" className="flex-1 p-4 m-0">
               <ScrollArea className="h-[calc(100vh-200px)]">
                 <div className="space-y-1">
-                  {[...elements].reverse().map((el, i) => (
-                    <div
-                      key={el.id}
-                      className={`p-2 rounded cursor-pointer flex items-center gap-2 ${
-                        selectedElement === el.id
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted"
-                      }`}
-                      onClick={() => setSelectedElement(el.id)}
-                    >
-                      {el.type === "rect" && <Square className="h-4 w-4" />}
-                      {el.type === "circle" && <Circle className="h-4 w-4" />}
-                      {el.type === "text" && <Type className="h-4 w-4" />}
-                      {el.type === "image" && <ImageIcon className="h-4 w-4" />}
-                      {["logo", "contact", "mascot"].includes(el.type) && (
-                        <div
-                          className="w-4 h-4 rounded"
-                          style={{ backgroundColor: el.color }}
-                        />
-                      )}
-                      <span className="text-sm truncate">
-                        {el.type === "text"
-                          ? el.text?.substring(0, 20) || "Texto"
-                          : el.type === "logo"
-                          ? "Logo"
-                          : el.type === "contact"
-                          ? "Contato"
-                          : el.type === "mascot"
-                          ? "Mascote"
-                          : el.type.charAt(0).toUpperCase() + el.type.slice(1)}
-                      </span>
-                    </div>
-                  ))}
+                  {[...elements].reverse().map((el, reversedIndex) => {
+                    const actualIndex = elements.length - 1 - reversedIndex;
+                    const isFirst = actualIndex === elements.length - 1;
+                    const isLast = actualIndex === 0;
+                    
+                    return (
+                      <div
+                        key={el.id}
+                        className={`p-2 rounded cursor-pointer flex items-center gap-2 ${
+                          selectedElement === el.id
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-muted"
+                        }`}
+                        onClick={() => setSelectedElement(el.id)}
+                      >
+                        {el.type === "rect" && <Square className="h-4 w-4" />}
+                        {el.type === "circle" && <Circle className="h-4 w-4" />}
+                        {el.type === "text" && <Type className="h-4 w-4" />}
+                        {el.type === "image" && <ImageIcon className="h-4 w-4" />}
+                        {["logo", "contact", "mascot"].includes(el.type) && (
+                          <div
+                            className="w-4 h-4 rounded"
+                            style={{ backgroundColor: el.color }}
+                          />
+                        )}
+                        <span className="text-sm truncate flex-1">
+                          {el.type === "text"
+                            ? el.text?.substring(0, 20) || "Texto"
+                            : el.type === "logo"
+                            ? "Logo"
+                            : el.type === "contact"
+                            ? "Contato"
+                            : el.type === "mascot"
+                            ? "Mascote"
+                            : el.type.charAt(0).toUpperCase() + el.type.slice(1)}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            disabled={isFirst}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedElement(el.id);
+                              const idx = elements.findIndex((e) => e.id === el.id);
+                              if (idx < elements.length - 1) {
+                                const newElements = [...elements];
+                                [newElements[idx], newElements[idx + 1]] = [newElements[idx + 1], newElements[idx]];
+                                setElements(newElements);
+                              }
+                            }}
+                          >
+                            <ChevronUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            disabled={isLast}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedElement(el.id);
+                              const idx = elements.findIndex((e) => e.id === el.id);
+                              if (idx > 0) {
+                                const newElements = [...elements];
+                                [newElements[idx], newElements[idx - 1]] = [newElements[idx - 1], newElements[idx]];
+                                setElements(newElements);
+                              }
+                            }}
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </TabsContent>
