@@ -228,6 +228,13 @@ export function ArtAdjustOverlay({
     e.preventDefault();
     e.stopPropagation();
 
+    // Important for touch devices: ensure we can prevent scrolling/zooming during drag/resize
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch {
+      // ignore
+    }
+
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
@@ -554,7 +561,7 @@ export function ArtAdjustOverlay({
       return (
         <div
           className={cn(
-            "absolute z-30",
+            "absolute z-30 touch-none",
             pos,
             cursor,
             "h-6 w-6 flex items-center justify-center"
