@@ -581,12 +581,12 @@ export function ArtAdjustOverlay({
       <div
         className={cn(
           "absolute rounded-md border-2 border-dashed bg-background/0 touch-none",
-          isActive ? "border-primary bg-primary/5" : "border-border/70 hover:border-primary/70"
+          isActive ? "border-primary bg-primary/5 z-20" : "border-border/70 hover:border-primary/70 z-10"
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
         onPointerDown={(e) => begin(e, part, "move")}
       >
-        <div className="absolute -top-6 left-0 rounded border bg-background/80 px-1.5 py-0.5 text-[10px] text-foreground shadow-sm">
+        <div className="absolute -top-6 left-0 rounded border bg-background/80 px-1.5 py-0.5 text-[10px] text-foreground shadow-sm z-30">
           {label}
         </div>
 
