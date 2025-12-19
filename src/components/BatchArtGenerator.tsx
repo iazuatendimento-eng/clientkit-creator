@@ -141,7 +141,7 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
 
 interface BatchArtGeneratorProps {
   template: MasterTemplate;
-  initialTeamFilter?: "2" | "3" | "weekdays";
+  initialTeamFilter?: "2" | "3";
   onBack: () => void;
   onComplete: () => void;
 }
@@ -161,7 +161,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
   const [searchImages_results, setSearchImagesResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
-  const [teamFilter, setTeamFilter] = useState<"2" | "3" | "weekdays" | undefined>(initialTeamFilter);
+  const [teamFilter, setTeamFilter] = useState<"2" | "3" | undefined>(initialTeamFilter);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Element override states
@@ -1395,20 +1395,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
             onClick={() => setTeamFilter("2")}
             disabled={isGenerating}
           >
-            SEG, QUA E SEX
+            TER, QUI E SÁB
           </Button>
           <Button
             variant={teamFilter === "3" ? "default" : "outline"}
             size="sm"
             onClick={() => setTeamFilter("3")}
-            disabled={isGenerating}
-          >
-            TER, QUI E SÁB
-          </Button>
-          <Button
-            variant={teamFilter === "weekdays" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTeamFilter("weekdays")}
             disabled={isGenerating}
           >
             SEG A SEX
