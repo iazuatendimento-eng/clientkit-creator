@@ -41,7 +41,7 @@ import { ImageEraserModal } from "./ImageEraserModal";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
   x: number;
   y: number;
   width: number;
@@ -584,6 +584,182 @@ export const BatchArtGenerator = ({ template, onBack, onComplete }: BatchArtGene
         ctx.beginPath();
         ctx.moveTo(x, y + h / 2);
         ctx.lineTo(x + w, y + h / 2);
+        ctx.stroke();
+      } else if (el.type === "polkaDots") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+
+        const color = getElementColor(el, accessoryColor1);
+        const dotRadius = Math.min(w, h) * 0.08;
+        const spacing = dotRadius * 3;
+        const cols = Math.max(1, Math.floor(w / spacing));
+        const rows = Math.max(1, Math.floor(h / spacing));
+        const offsetX = (w - (cols - 1) * spacing) / 2;
+        const offsetY = (h - (rows - 1) * spacing) / 2;
+
+        ctx.fillStyle = color;
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cx = x + offsetX + col * spacing;
+            const cy = y + offsetY + row * spacing;
+            ctx.beginPath();
+            ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (el.type === "dotsGrid") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+
+        const color = getElementColor(el, accessoryColor2);
+        const dotCount = 25;
+        ctx.fillStyle = color;
+
+        const seed = x + y + w + h;
+        const random = (i: number) => {
+          const n = Math.sin(seed + i * 9.999) * 10000;
+          return n - Math.floor(n);
+        };
+
+        for (let i = 0; i < dotCount; i++) {
+          const cx = x + random(i * 2) * w;
+          const cy = y + random(i * 2 + 1) * h;
+          const radius = 3 + random(i * 3) * 12;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (el.type === "confetti") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+
+        const base = getElementColor(el, accessoryColor1);
+        const palette = [base, accessoryColor1, accessoryColor2, textColor];
+        const shapeCount = 30;
+
+        const seed = x + y + w + h;
+        const random = (i: number) => {
+          const n = Math.sin(seed + i * 9.999) * 10000;
+          return n - Math.floor(n);
+        };
+
+        for (let i = 0; i < shapeCount; i++) {
+          const cx = x + random(i * 2) * w;
+          const cy = y + random(i * 2 + 1) * h;
+          const size = 5 + random(i * 3) * 15;
+          const rot = random(i * 4) * Math.PI * 2;
+          ctx.fillStyle = palette[Math.floor(random(i * 5) * palette.length)];
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(rot);
+
+          const shapeType = Math.floor(random(i * 6) * 3);
+          if (shapeType === 0) {
+            ctx.fillRect(-size / 2, -size / 4, size, size / 2);
+          } else if (shapeType === 1) {
+            ctx.beginPath();
+            ctx.arc(0, 0, size / 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.moveTo(0, -size / 2);
+            ctx.lineTo(size / 2, size / 2);
+            ctx.lineTo(-size / 2, size / 2);
+            ctx.closePath();
+            ctx.fill();
+          }
+
+          ctx.restore();
+        }
+      } else if (el.type === "splatter") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+
+        const color = getElementColor(el, accessoryColor2);
+        ctx.fillStyle = color;
+
+        const seed = x + y + w + h;
+        const random = (i: number) => {
+          const n = Math.sin(seed + i * 9.999) * 10000;
+          return n - Math.floor(n);
+        };
+
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const mainRadius = Math.min(w, h) * 0.28;
+        ctx.beginPath();
+        ctx.arc(cx, cy, mainRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let i = 0; i < 20; i++) {
+          const angle = random(i) * Math.PI * 2;
+          const dist = mainRadius * (0.8 + random(i + 10) * 1.5);
+          const r = 2 + random(i + 20) * 10;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (el.type === "zigzag") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+
+        const color = getElementColor(el, accessoryColor1);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, h * 0.08);
+        ctx.lineCap = "round";
+
+        const zigzags = 8;
+        const stepX = w / zigzags;
+        ctx.beginPath();
+        ctx.moveTo(x, y + h / 2);
+        for (let i = 1; i <= zigzags; i++) {
+          const px = x + i * stepX;
+          const py = y + (i % 2 === 0 ? h * 0.2 : h * 0.8);
+          ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      } else if (el.type === "spiral") {
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const x = ov?.x ?? el.x;
+        const y = ov?.y ?? el.y;
+        const w = ov?.width ?? el.width;
+        const h = ov?.height ?? el.height;
+
+        const color = getElementColor(el, accessoryColor2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, Math.min(w, h) * 0.03);
+        ctx.lineCap = "round";
+
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const maxR = Math.min(w, h) * 0.45;
+        const turns = 3;
+
+        ctx.beginPath();
+        for (let t = 0; t <= 1; t += 0.02) {
+          const angle = t * turns * Math.PI * 2;
+          const r = t * maxR;
+          const px = cx + Math.cos(angle) * r;
+          const py = cy + Math.sin(angle) * r;
+          if (t === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
         ctx.stroke();
       } else if (el.type === "text") {
         // Text uses color 2 and client's font

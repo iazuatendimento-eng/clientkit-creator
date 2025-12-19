@@ -36,7 +36,7 @@ import {
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
   x: number;
   y: number;
   width: number;
@@ -452,6 +452,146 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
         ctx.beginPath();
         ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
         ctx.fill();
+      } else if (el.type === "polkaDots") {
+        const color = getElementColor(el, accessoryColor1);
+        const dotRadius = Math.min(el.width, el.height) * 0.08;
+        const spacing = dotRadius * 3;
+        const cols = Math.max(1, Math.floor(el.width / spacing));
+        const rows = Math.max(1, Math.floor(el.height / spacing));
+        const offsetX = (el.width - (cols - 1) * spacing) / 2;
+        const offsetY = (el.height - (rows - 1) * spacing) / 2;
+
+        ctx.fillStyle = color;
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cx = el.x + offsetX + col * spacing;
+            const cy = el.y + offsetY + row * spacing;
+            ctx.beginPath();
+            ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (el.type === "dotsGrid") {
+        const color = getElementColor(el, accessoryColor2);
+        const dotCount = 25;
+        ctx.fillStyle = color;
+
+        const seed = el.x + el.y + el.width + el.height;
+        const random = (i: number) => {
+          const n = Math.sin(seed + i * 9.999) * 10000;
+          return n - Math.floor(n);
+        };
+
+        for (let i = 0; i < dotCount; i++) {
+          const cx = el.x + random(i * 2) * el.width;
+          const cy = el.y + random(i * 2 + 1) * el.height;
+          const radius = 3 + random(i * 3) * 12;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (el.type === "confetti") {
+        const base = getElementColor(el, accessoryColor1);
+        const palette = [base, accessoryColor1, accessoryColor2, textColor];
+        const shapeCount = 30;
+
+        const seed = el.x + el.y + el.width + el.height;
+        const random = (i: number) => {
+          const n = Math.sin(seed + i * 9.999) * 10000;
+          return n - Math.floor(n);
+        };
+
+        for (let i = 0; i < shapeCount; i++) {
+          const cx = el.x + random(i * 2) * el.width;
+          const cy = el.y + random(i * 2 + 1) * el.height;
+          const size = 5 + random(i * 3) * 15;
+          const rot = random(i * 4) * Math.PI * 2;
+          ctx.fillStyle = palette[Math.floor(random(i * 5) * palette.length)];
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(rot);
+
+          const shapeType = Math.floor(random(i * 6) * 3);
+          if (shapeType === 0) {
+            ctx.fillRect(-size / 2, -size / 4, size, size / 2);
+          } else if (shapeType === 1) {
+            ctx.beginPath();
+            ctx.arc(0, 0, size / 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.moveTo(0, -size / 2);
+            ctx.lineTo(size / 2, size / 2);
+            ctx.lineTo(-size / 2, size / 2);
+            ctx.closePath();
+            ctx.fill();
+          }
+
+          ctx.restore();
+        }
+      } else if (el.type === "splatter") {
+        const color = getElementColor(el, accessoryColor2);
+        ctx.fillStyle = color;
+
+        const seed = el.x + el.y + el.width + el.height;
+        const random = (i: number) => {
+          const n = Math.sin(seed + i * 9.999) * 10000;
+          return n - Math.floor(n);
+        };
+
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const mainRadius = Math.min(el.width, el.height) * 0.28;
+        ctx.beginPath();
+        ctx.arc(cx, cy, mainRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let i = 0; i < 20; i++) {
+          const angle = random(i) * Math.PI * 2;
+          const dist = mainRadius * (0.8 + random(i + 10) * 1.5);
+          const r = 2 + random(i + 20) * 10;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (el.type === "zigzag") {
+        const color = getElementColor(el, accessoryColor1);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, el.height * 0.08);
+        ctx.lineCap = "round";
+
+        const zigzags = 8;
+        const stepX = el.width / zigzags;
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height / 2);
+        for (let i = 1; i <= zigzags; i++) {
+          const px = el.x + i * stepX;
+          const py = el.y + (i % 2 === 0 ? el.height * 0.2 : el.height * 0.8);
+          ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      } else if (el.type === "spiral") {
+        const color = getElementColor(el, accessoryColor2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, Math.min(el.width, el.height) * 0.03);
+        ctx.lineCap = "round";
+
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const maxR = Math.min(el.width, el.height) * 0.45;
+        const turns = 3;
+
+        ctx.beginPath();
+        for (let t = 0; t <= 1; t += 0.02) {
+          const angle = t * turns * Math.PI * 2;
+          const r = t * maxR;
+          const px = cx + Math.cos(angle) * r;
+          const py = cy + Math.sin(angle) * r;
+          if (t === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
       } else if (el.type === "text") {
         ctx.fillStyle = textColor;
         const baseFontSize = el.fontSize || 48;
