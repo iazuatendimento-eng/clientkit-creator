@@ -131,6 +131,24 @@ export function ArtAdjustOverlay({
     return { photoFrame, logoEl, contactEl, textEl, shapes };
   }, [template.elements]);
 
+  const partOptions = useMemo(() => {
+    const opts: { value: Part; label: string }[] = [];
+
+    if (els.photoFrame) opts.push({ value: "photo", label: "Foto" });
+    if (els.logoEl) opts.push({ value: "logo", label: "Logo" });
+    if (els.textEl) opts.push({ value: "text", label: "Texto" });
+    if (els.contactEl) opts.push({ value: "contact", label: "Contato" });
+
+    els.shapes.forEach((s, idx) => {
+      opts.push({
+        value: `shape:${s.id}`,
+        label: s.type === "circle" ? `Círculo ${idx + 1}` : `Retângulo ${idx + 1}`,
+      });
+    });
+
+    return opts;
+  }, [els]);
+
   const getRect = (part: Part) => {
     if (part === "photo") {
       if (!els.photoFrame) return null;
@@ -616,7 +634,7 @@ export function ArtAdjustOverlay({
           src={previewUrl}
           alt="Prévia da arte gerada"
           className={cn(
-            "absolute inset-0 h-full w-full object-cover",
+            "absolute inset-0 h-full w-full object-cover pointer-events-none select-none",
             isBusy ? "opacity-80" : "opacity-100"
           )}
           draggable={false}
@@ -626,6 +644,21 @@ export function ArtAdjustOverlay({
           Sem prévia
         </div>
       )}
+
+      <div className="absolute left-3 bottom-3 z-40 rounded-md border bg-background/80 backdrop-blur px-2 py-1">
+        <label className="mr-2 text-[10px] text-muted-foreground">Camada</label>
+        <select
+          className="bg-transparent text-xs text-foreground outline-none"
+          value={active}
+          onChange={(e) => setActive(e.target.value as Part)}
+        >
+          {partOptions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="absolute inset-0">
         <Box part="photo" label="Foto" resizable />
