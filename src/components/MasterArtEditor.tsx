@@ -138,6 +138,33 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<TeamFilter>(undefined);
   const { toast } = useToast();
 
+  // Rounded-rect path helper (with fallback for browsers without ctx.roundRect)
+  const roundedRectPath = (
+    c: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number
+  ) => {
+    const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+    if (radius <= 0) {
+      c.rect(x, y, w, h);
+      return;
+    }
+    const anyCtx = c as unknown as { roundRect?: (x: number, y: number, w: number, h: number, r: number) => void };
+    if (typeof anyCtx.roundRect === "function") {
+      anyCtx.roundRect(x, y, w, h, radius);
+      return;
+    }
+    c.moveTo(x + radius, y);
+    c.arcTo(x + w, y, x + w, y + h, radius);
+    c.arcTo(x + w, y + h, x, y + h, radius);
+    c.arcTo(x, y + h, x, y, radius);
+    c.arcTo(x, y, x + w, y, radius);
+    c.closePath();
+  };
+
   const getDefaultLayerName = (el: CanvasElement) => {
     const typeNames: Record<string, string> = {
       rect: "Retângulo",
@@ -401,6 +428,33 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    // Rounded-rect path helper (with fallback for browsers without ctx.roundRect)
+    const roundedRectPath = (
+      c: CanvasRenderingContext2D,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      r: number
+    ) => {
+      const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+      if (radius <= 0) {
+        c.rect(x, y, w, h);
+        return;
+      }
+      const anyCtx = c as unknown as { roundRect?: (x: number, y: number, w: number, h: number, r: number) => void };
+      if (typeof anyCtx.roundRect === "function") {
+        anyCtx.roundRect(x, y, w, h, radius);
+        return;
+      }
+      c.moveTo(x + radius, y);
+      c.arcTo(x + w, y, x + w, y + h, radius);
+      c.arcTo(x + w, y + h, x, y + h, radius);
+      c.arcTo(x, y + h, x, y, radius);
+      c.arcTo(x, y, x + w, y, radius);
+      c.closePath();
+    };
+
     // Helper to apply common styles
     const applyStyles = (el: CanvasElement) => {
       // Opacity
@@ -461,7 +515,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         const radius = el.borderRadius || 0;
         if (radius > 0) {
           ctx.beginPath();
-          ctx.roundRect(el.x, el.y, el.width, el.height, radius);
+          roundedRectPath(ctx, el.x, el.y, el.width, el.height, radius);
           ctx.fill();
           drawBorder(el);
         } else {
@@ -830,7 +884,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
           if (radius > 0) {
             ctx.save();
             ctx.beginPath();
-            ctx.roundRect(el.x, el.y, el.width, el.height, radius);
+            roundedRectPath(ctx, el.x, el.y, el.width, el.height, radius);
             ctx.clip();
             ctx.drawImage(img, el.x, el.y, el.width, el.height);
             ctx.restore();
@@ -846,13 +900,28 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         // Draw placeholder
         ctx.globalAlpha = (el.opacity ?? 100) / 100;
         ctx.fillStyle = el.color || "#e5e7eb";
-        ctx.fillRect(el.x, el.y, el.width, el.height);
-        ctx.strokeStyle = el.type === "image" ? "#8b5cf6" : "#9ca3af";
-        ctx.lineWidth = el.type === "image" ? 3 : 1;
-        ctx.setLineDash([10, 5]);
-        ctx.strokeRect(el.x, el.y, el.width, el.height);
-        ctx.setLineDash([]);
-        ctx.lineWidth = 1;
+
+        const radius = el.borderRadius || 0;
+        if (radius > 0) {
+          ctx.beginPath();
+          roundedRectPath(ctx, el.x, el.y, el.width, el.height, radius);
+          ctx.fill();
+
+          ctx.strokeStyle = el.type === "image" ? "#8b5cf6" : "#9ca3af";
+          ctx.lineWidth = el.type === "image" ? 3 : 1;
+          ctx.setLineDash([10, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.lineWidth = 1;
+        } else {
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+          ctx.strokeStyle = el.type === "image" ? "#8b5cf6" : "#9ca3af";
+          ctx.lineWidth = el.type === "image" ? 3 : 1;
+          ctx.setLineDash([10, 5]);
+          ctx.strokeRect(el.x, el.y, el.width, el.height);
+          ctx.setLineDash([]);
+          ctx.lineWidth = 1;
+        }
         
         // Label
         ctx.fillStyle = el.type === "image" ? "#8b5cf6" : "#6b7280";
@@ -881,7 +950,16 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const drawSelection = (ctx: CanvasRenderingContext2D, el: CanvasElement) => {
     ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = 4;
-    ctx.strokeRect(el.x - 3, el.y - 3, el.width + 6, el.height + 6);
+
+    const radius = (el.type === "rect" || el.type === "image") ? (el.borderRadius || 0) : 0;
+    if (radius > 0) {
+      ctx.beginPath();
+      // a bit larger than the element so the selection sits outside
+      roundedRectPath(ctx, el.x - 3, el.y - 3, el.width + 6, el.height + 6, radius + 3);
+      ctx.stroke();
+    } else {
+      ctx.strokeRect(el.x - 3, el.y - 3, el.width + 6, el.height + 6);
+    }
 
     // Draw handles - larger for better visibility at 40% scale
     const handleSize = 24; // Larger handles (24 * 0.4 = ~10px on screen)
