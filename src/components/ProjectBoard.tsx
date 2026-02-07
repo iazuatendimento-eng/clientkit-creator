@@ -347,17 +347,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
-              {brief.generatedCaption && (
+              {(brief.generatedCaption || brief.description) && (
                 <>
                   <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted/50 rounded p-2 max-h-24 overflow-y-auto">
-                    {brief.generatedCaption}
+                    {brief.generatedCaption || brief.description}
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleCopyCaption();
+                      navigator.clipboard.writeText(brief.generatedCaption || brief.description || "");
+                      toast.success("Legenda copiada!");
                     }}
                     className="text-xs px-2 py-1 h-auto w-full"
                   >
