@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, Image as ImageIcon, FileVideo, X, Download, Loader2 } from "lucide-react";
+import { Image as ImageIcon, FileVideo, X, Download, Loader2, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { createCardUpload, getCardUploads, deleteCardUpload } from "@/lib/clientDatabase";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +44,8 @@ interface CardDetailModalProps {
 
 export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpdate }: CardDetailModalProps) => {
   const [uploads, setUploads] = useState<UploadedFile[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingMaterial, setUploadingMaterial] = useState(false);
+  const [uploadingFinal, setUploadingFinal] = useState(false);
 
   useEffect(() => {
     const loadUploads = async () => {
@@ -59,7 +60,6 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
           uploadedAt: upload.uploaded_at || new Date().toISOString(),
         }));
         setUploads(mappedUploads);
-        // Sync cover with first final upload
         const finals = mappedUploads.filter(u => u.type === "final");
         if (finals.length > 0) {
           const first = finals[0];
@@ -78,14 +78,12 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
   const updateCover = (newUploads: UploadedFile[]) => {
     const finalUploads = newUploads.filter(u => u.type === "final");
     if (finalUploads.length === 0) return;
-    
-    // Use the first final upload as cover, regardless of type
     const firstFinal = finalUploads[0];
     const isVideo = firstFinal.fileType === "video";
     onCoverUpdate(firstFinal.url, isVideo);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, uploadType: "material" | "final") => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -98,10 +96,10 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
       return;
     }
 
-    setUploading(true);
+    const setLoading = uploadType === "material" ? setUploadingMaterial : setUploadingFinal;
+    setLoading(true);
 
     try {
-      // Upload file to storage bucket
       const fileExt = file.name.split('.').pop();
       const filePath = `${cardId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -112,46 +110,46 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
       if (storageError) {
         console.error("Storage upload error:", storageError);
         toast.error("Erro ao fazer upload do arquivo");
-        setUploading(false);
+        setLoading(false);
         return;
       }
 
-      // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from("card-uploads")
         .getPublicUrl(filePath);
 
       const publicUrl = publicUrlData.publicUrl;
 
-      // Save record to database
       const uploadData = {
         card_id: cardId,
         file_url: publicUrl,
         file_name: file.name,
         file_type: file.type,
-        upload_type: "final" as const,
+        upload_type: uploadType,
       };
 
       const savedUpload = await createCardUpload(uploadData);
-      
+
       const newFile: UploadedFile = {
         id: savedUpload.id,
         name: savedUpload.file_name,
         url: savedUpload.file_url,
-        type: "final",
+        type: uploadType,
         fileType: isVideo ? "video" : "image",
         uploadedAt: savedUpload.uploaded_at || new Date().toISOString(),
       };
 
       const newUploads = [...uploads, newFile];
       setUploads(newUploads);
-      updateCover(newUploads);
-      toast.success("Arte adicionada!");
+      if (uploadType === "final") {
+        updateCover(newUploads);
+      }
+      toast.success(uploadType === "material" ? "Material adicionado!" : "Arte finalizada adicionada!");
     } catch (error) {
       console.error("Error uploading file:", error);
       toast.error("Erro ao fazer upload");
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
@@ -168,6 +166,7 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
     }
   };
 
+  const materialUploads = uploads.filter(u => u.type === "material");
   const finalUploads = uploads.filter(u => u.type === "final");
 
   return (
@@ -177,26 +176,80 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
           <DialogTitle>{cardTitle}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="final-upload" className={`cursor-pointer ${uploading ? 'pointer-events-none opacity-50' : ''}`}>
-              <div className="border-2 border-dashed border-primary/40 rounded-lg p-8 text-center hover:border-primary/60 transition-colors">
-                {uploading ? (
+        <div className="space-y-6">
+          {/* Materiais Section */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Materiais
+            </h3>
+            <label htmlFor="material-upload" className={`cursor-pointer block ${uploadingMaterial ? 'pointer-events-none opacity-50' : ''}`}>
+              <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors">
+                {uploadingMaterial ? (
                   <>
-                    <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Enviando arquivo...
-                    </p>
+                    <Loader2 className="mx-auto h-8 w-8 text-muted-foreground animate-spin mb-2" />
+                    <p className="text-sm text-muted-foreground">Enviando material...</p>
                   </>
                 ) : (
                   <>
-                    <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Clique para fazer upload de artes prontas
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Primeira imagem será a capa do card
-                    </p>
+                    <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Clique para fazer upload de materiais de referência</p>
+                    <p className="text-xs text-muted-foreground mt-1">Esses arquivos não aparecerão na miniatura do card</p>
+                  </>
+                )}
+              </div>
+              <input
+                id="material-upload"
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={(e) => handleFileUpload(e, "material")}
+                disabled={uploadingMaterial}
+              />
+            </label>
+
+            {materialUploads.length > 0 && (
+              <div className="grid grid-cols-3 gap-3">
+                {materialUploads.map((file) => (
+                  <div key={file.id} className="relative group">
+                    {file.fileType === "image" ? (
+                      <img src={file.url} alt={file.name} className="w-full h-28 object-cover rounded-lg opacity-80" />
+                    ) : (
+                      <video src={file.url} className="w-full h-28 object-cover rounded-lg opacity-80" muted />
+                    )}
+                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => downloadFile(file.url, file.name)} title="Baixar">
+                        <Download className="h-3 w-3" />
+                      </Button>
+                      <Button variant="destructive" size="icon" className="h-6 w-6" onClick={() => handleRemoveFile(file.id)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Finalizados Section */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+              <ImageIcon className="h-4 w-4" />
+              Finalizados
+            </h3>
+            <label htmlFor="final-upload" className={`cursor-pointer block ${uploadingFinal ? 'pointer-events-none opacity-50' : ''}`}>
+              <div className="border-2 border-dashed border-primary/40 rounded-lg p-6 text-center hover:border-primary/60 transition-colors">
+                {uploadingFinal ? (
+                  <>
+                    <Loader2 className="mx-auto h-8 w-8 text-primary animate-spin mb-2" />
+                    <p className="text-sm text-muted-foreground">Enviando arte finalizada...</p>
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Clique para fazer upload de artes finalizadas</p>
+                    <p className="text-xs text-muted-foreground mt-1">Primeira imagem será a capa do card</p>
                   </>
                 )}
               </div>
@@ -205,55 +258,38 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                 type="file"
                 accept="image/*,video/*"
                 className="hidden"
-                onChange={handleFileUpload}
-                disabled={uploading}
+                onChange={(e) => handleFileUpload(e, "final")}
+                disabled={uploadingFinal}
               />
             </label>
-          </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            {finalUploads.map((file, index) => (
-              <div key={file.id} className="relative group">
-                {file.fileType === "image" ? (
-                  <img
-                    src={file.url}
-                    alt={file.name}
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
-                ) : (
-                  <video
-                    src={file.url}
-                    className="w-full h-32 object-cover rounded-lg"
-                    muted
-                  />
-                )}
-                {index === 0 && (
-                  <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                    Capa
+            {finalUploads.length > 0 && (
+              <div className="grid grid-cols-3 gap-3">
+                {finalUploads.map((file, index) => (
+                  <div key={file.id} className="relative group">
+                    {file.fileType === "image" ? (
+                      <img src={file.url} alt={file.name} className="w-full h-28 object-cover rounded-lg" />
+                    ) : (
+                      <video src={file.url} className="w-full h-28 object-cover rounded-lg" muted />
+                    )}
+                    {index === 0 && (
+                      <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded">
+                        Capa
+                      </div>
+                    )}
+                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => downloadFile(file.url, file.name)} title="Baixar">
+                        <Download className="h-3 w-3" />
+                      </Button>
+                      <Button variant="destructive" size="icon" className="h-6 w-6" onClick={() => handleRemoveFile(file.id)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>
                   </div>
-                )}
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => downloadFile(file.url, file.name)}
-                    title="Baixar"
-                  >
-                    <Download className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => handleRemoveFile(file.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </div>
       </DialogContent>
