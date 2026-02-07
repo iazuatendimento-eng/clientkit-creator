@@ -348,18 +348,23 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           {isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
               {brief.generatedCaption && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCopyCaption();
-                  }}
-                  className="text-xs px-2 py-1 h-auto w-full"
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copiar Legenda
-                </Button>
+                <>
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted/50 rounded p-2 max-h-24 overflow-y-auto">
+                    {brief.generatedCaption}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopyCaption();
+                    }}
+                    className="text-xs px-2 py-1 h-auto w-full"
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copiar Legenda
+                  </Button>
+                </>
               )}
               {finalArtworks.length > 0 && (
                 <>
