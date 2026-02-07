@@ -385,9 +385,7 @@ const Index = () => {
       const splitRows: any[] = []; // Rows with ";" splits go here (to be added last)
 
       const filteredClients = (selectedTeam 
-        ? (selectedTeam === "__sem_equipe__" 
-          ? clients.filter(c => (!c.team || c.team.trim() === "") && c.active)
-          : clients.filter(c => c.team === selectedTeam && c.active))
+        ? clients.filter(c => c.team === selectedTeam && c.active)
         : clients.filter(c => c.active));
 
       for (const client of filteredClients) {
