@@ -51,6 +51,9 @@ interface Client {
   payment_method?: "pix" | "credit_card";
   payment_due_day?: number;
   monthly_amount?: number;
+  narration_type?: string;
+  image_type?: string;
+  particularity_type?: string;
 }
 
 const Index = () => {
@@ -136,10 +139,13 @@ const Index = () => {
         brand_kit: c.brand_kit,
         projectCount: 0,
         created_at: c.created_at || new Date().toISOString(),
-        active: c.active !== false, // Default to true if not set
+        active: c.active !== false,
         payment_method: c.payment_method,
         payment_due_day: c.payment_due_day,
         monthly_amount: c.monthly_amount,
+        narration_type: c.narration_type || "",
+        image_type: c.image_type || "",
+        particularity_type: c.particularity_type || "",
       }));
 
       // Sort: active clients first, then by creation date
@@ -184,6 +190,9 @@ const Index = () => {
           payment_method: clientData.payment_method,
           payment_due_day: clientData.payment_due_day,
           monthly_amount: clientData.monthly_amount,
+          narration_type: clientData.narration_type,
+          image_type: clientData.image_type,
+          particularity_type: clientData.particularity_type,
         });
         toast({
           title: "Cliente atualizado!",
@@ -202,6 +211,9 @@ const Index = () => {
           payment_method: clientData.payment_method,
           payment_due_day: clientData.payment_due_day,
           monthly_amount: clientData.monthly_amount,
+          narration_type: clientData.narration_type,
+          image_type: clientData.image_type,
+          particularity_type: clientData.particularity_type,
         });
         toast({
           title: "Cliente cadastrado!",
@@ -370,6 +382,7 @@ const Index = () => {
   const handleExportToExcel = async (selectedTeam?: string) => {
     try {
       const excelData: any[] = [];
+      const splitRows: any[] = []; // Rows with ";" splits go here (to be added last)
 
       const filteredClients = (selectedTeam 
         ? clients.filter(c => c.team === selectedTeam && c.active)
@@ -388,27 +401,31 @@ const Index = () => {
             
             const cardText = firstTodoCard.description || firstTodoCard.title;
             
-            // Se o texto contém ";", dividir em múltiplas linhas
+            const baseRow = {
+              "Cliente": client.name,
+              "Empresa": client.company || "",
+              "Equipe": teamName,
+              "Tipo Narração": client.narration_type || "",
+              "Tipo Imagem": client.image_type || "",
+              "Particularidade": client.particularity_type || "",
+              "Texto do Card": "",
+              "Link do Card": cardUrl,
+              "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
+            };
+            
+            // Se o texto contém ";", dividir em múltiplas linhas e adicionar ao final
             if (cardText.includes(";")) {
               const textParts = cardText.split(";").map(part => part.trim()).filter(part => part.length > 0);
               textParts.forEach((part) => {
-                excelData.push({
-                  "Cliente": client.name,
-                  "Empresa": client.company || "",
-                  "Equipe": teamName,
+                splitRows.push({
+                  ...baseRow,
                   "Texto do Card": part,
-                  "Link do Card": cardUrl,
-                  "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
                 });
               });
             } else {
               excelData.push({
-                "Cliente": client.name,
-                "Empresa": client.company || "",
-                "Equipe": teamName,
+                ...baseRow,
                 "Texto do Card": cardText,
-                "Link do Card": cardUrl,
-                "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
               });
             }
           }
@@ -417,7 +434,10 @@ const Index = () => {
         }
       }
 
-      if (excelData.length === 0) {
+      // Adicionar os cards com ";" por último na planilha
+      const finalData = [...excelData, ...splitRows];
+
+      if (finalData.length === 0) {
         toast({
           title: "Nenhum card encontrado",
           description: "Não há cards 'A Fazer' para exportar.",
@@ -426,17 +446,20 @@ const Index = () => {
         return;
       }
 
-      const ws = XLSX.utils.json_to_sheet(excelData);
+      const ws = XLSX.utils.json_to_sheet(finalData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Primeiros Cards A Fazer");
 
       const colWidths = [
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 18 },
-        { wch: 50 },
-        { wch: 40 },
-        { wch: 12 }
+        { wch: 20 },  // Cliente
+        { wch: 20 },  // Empresa
+        { wch: 18 },  // Equipe
+        { wch: 18 },  // Tipo Narração
+        { wch: 18 },  // Tipo Imagem
+        { wch: 20 },  // Particularidade
+        { wch: 50 },  // Texto do Card
+        { wch: 40 },  // Link do Card
+        { wch: 12 }   // Prazo
       ];
       ws['!cols'] = colWidths;
 
@@ -446,7 +469,7 @@ const Index = () => {
 
       toast({
         title: "Exportado com sucesso!",
-        description: `${excelData.length} linhas foram exportadas para Excel.`,
+        description: `${finalData.length} linhas foram exportadas para Excel.`,
       });
     } catch (error) {
       console.error("Error exporting to Excel:", error);

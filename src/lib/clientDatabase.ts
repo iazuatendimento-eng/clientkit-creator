@@ -15,6 +15,9 @@ export interface ClientData {
   payment_method?: "pix" | "credit_card";
   payment_due_day?: number;
   monthly_amount?: number;
+  narration_type?: string;
+  image_type?: string;
+  particularity_type?: string;
 }
 
 export interface ProjectBrief {
