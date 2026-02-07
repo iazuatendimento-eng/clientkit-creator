@@ -34,6 +34,9 @@ interface Client {
   payment_method?: "pix" | "credit_card";
   payment_due_day?: number;
   monthly_amount?: number;
+  narration_type?: string;
+  image_type?: string;
+  particularity_type?: string;
 }
 
 interface ClientEditorProps {
@@ -58,6 +61,9 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     payment_method: undefined,
     payment_due_day: undefined,
     monthly_amount: undefined,
+    narration_type: "",
+    image_type: "",
+    particularity_type: "",
   });
 
   useEffect(() => {
@@ -120,6 +126,9 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       payment_method: formData.payment_method,
       payment_due_day: formData.payment_due_day,
       monthly_amount: formData.monthly_amount,
+      narration_type: formData.narration_type,
+      image_type: formData.image_type,
+      particularity_type: formData.particularity_type,
     };
 
     onSave(clientData);
@@ -336,6 +345,39 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                     value={formData.monthly_amount || ""}
                     onChange={(e) => setFormData(prev => ({ ...prev, monthly_amount: parseFloat(e.target.value) || undefined }))}
                     placeholder="0,00"
+                  />
+                </div>
+              </div>
+
+              {/* Tipos de Produção */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="narration_type">Tipo de Narração</Label>
+                  <Input
+                    id="narration_type"
+                    value={formData.narration_type || ""}
+                    onChange={(e) => handleChange("narration_type", e.target.value)}
+                    placeholder="Ex: Masculina, Feminina, IA..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="image_type">Tipo de Imagem</Label>
+                  <Input
+                    id="image_type"
+                    value={formData.image_type || ""}
+                    onChange={(e) => handleChange("image_type", e.target.value)}
+                    placeholder="Ex: Foto real, Ilustração, IA..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="particularity_type">Particularidade</Label>
+                  <Input
+                    id="particularity_type"
+                    value={formData.particularity_type || ""}
+                    onChange={(e) => handleChange("particularity_type", e.target.value)}
+                    placeholder="Ex: Foco em promoção, institucional..."
                   />
                 </div>
               </div>
