@@ -6,6 +6,7 @@ import { BrandKitEditor } from "@/components/BrandKitEditor";
 import { CanvasEditor } from "@/components/CanvasEditor";
 import { AIArtGenerator } from "@/components/AIArtGenerator";
 import ProjectBoard from "@/components/ProjectBoard";
+import { LinkableText } from "@/components/LinkableText";
 
 interface Client {
   id: string;
@@ -122,22 +123,22 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               {client.narration_type && (
                 <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
-                  🎙️ {client.narration_type}
+                  🎙️ <LinkableText text={client.narration_type} />
                 </span>
               )}
               {client.image_type && (
                 <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
-                  🖼️ {client.image_type}
+                  🖼️ <LinkableText text={client.image_type} />
                 </span>
               )}
               {client.particularity_type && (
                 <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
-                  ⚡ {client.particularity_type}
+                  ⚡ <LinkableText text={client.particularity_type} />
                 </span>
               )}
               {client.notes && (
                 <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
-                  📝 {client.notes}
+                  📝 <LinkableText text={client.notes} />
                 </span>
               )}
             </div>
