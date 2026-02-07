@@ -658,7 +658,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
   const handleBulkAdd = () => {
     const paragraphs = multiTextInput
-      .split("\n\n")
+      .split("\n")
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
 
@@ -774,7 +774,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
     try {
       const paragraphs = multiTextInput
-        .split("\n\n")
+        .split("\n")
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
 
@@ -1040,10 +1040,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                   <div className="border-t pt-4">
                     <label className="text-sm font-medium mb-2 block">Adicionar Múltiplos Cards</label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Cole vários textos separados por linha dupla (Enter duas vezes)
+                      Cole vários textos, um por linha (cada linha vira um card)
                     </p>
                     <Textarea
-                      placeholder="Texto 1&#10;&#10;Texto 2&#10;&#10;Texto 3..."
+                      placeholder="Texto 1&#10;Texto 2&#10;Texto 3..."
                       rows={4}
                       value={multiTextInput}
                       onChange={(e) => setMultiTextInput(e.target.value)}
