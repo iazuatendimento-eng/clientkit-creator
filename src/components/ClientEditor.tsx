@@ -112,6 +112,10 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.team || formData.team.trim() === "") {
+      return; // Equipe é obrigatória
+    }
+    
     const clientData: Client = {
       id: client?.id,
       name: formData.name || "",
@@ -222,8 +226,9 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   <Select
                     value={formData.team || ""}
                     onValueChange={(value) => handleChange("team", value)}
+                    required
                   >
-                    <SelectTrigger className="flex-1">
+                    <SelectTrigger className={`flex-1 ${!formData.team?.trim() ? 'border-destructive' : ''}`}>
                       <SelectValue placeholder="Selecione uma equipe" />
                     </SelectTrigger>
                     <SelectContent>
