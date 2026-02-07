@@ -39,15 +39,12 @@ import { CSS } from "@dnd-kit/utilities";
 
 // Helper component to detect URLs and render them as clickable links
 const LinkifyText = ({ text }: { text: string }) => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
   
   return (
     <>
       {parts.map((part, index) => {
-        if (urlRegex.test(part)) {
-          // Reset regex lastIndex since we're reusing it
-          urlRegex.lastIndex = 0;
+        if (/^https?:\/\//.test(part)) {
           return (
             <a
               key={index}
@@ -377,14 +374,17 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
-              {/* Observação / Descrição - sempre visível */}
-              {brief.description && (
-                <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted/50 rounded p-2 max-h-24 overflow-y-auto">
-                  <LinkifyText text={brief.description} />
-                </div>
-              )}
+              {/* Observação / Descrição - sempre visível, fallback para title */}
+              {(() => {
+                const displayText = brief.description?.trim() || brief.title?.trim() || "";
+                return displayText ? (
+                  <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted/50 rounded p-2 max-h-24 overflow-y-auto">
+                    <LinkifyText text={displayText} />
+                  </div>
+                ) : null;
+              })()}
               {/* Legenda gerada */}
-              {brief.generatedCaption && (
+              {brief.generatedCaption && brief.generatedCaption.trim() && (
                 <>
                   <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-primary/5 border border-primary/10 rounded p-2 max-h-24 overflow-y-auto">
                     <LinkifyText text={brief.generatedCaption} />
