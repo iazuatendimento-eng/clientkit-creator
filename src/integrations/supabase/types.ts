@@ -127,6 +127,7 @@ export type Database = {
         Row: {
           active: boolean
           brand_kit: Json | null
+          briefing: string | null
           company: string | null
           created_at: string | null
           created_by: string | null
@@ -147,6 +148,7 @@ export type Database = {
         Insert: {
           active?: boolean
           brand_kit?: Json | null
+          briefing?: string | null
           company?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -167,6 +169,7 @@ export type Database = {
         Update: {
           active?: boolean
           brand_kit?: Json | null
+          briefing?: string | null
           company?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -226,6 +229,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "client_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_data"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_uploads: {
+        Row: {
+          client_id: string
+          file_name: string
+          file_type: string
+          file_url: string
+          id: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          client_id: string
+          file_name: string
+          file_type: string
+          file_url: string
+          id?: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_uploads_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "client_data"
