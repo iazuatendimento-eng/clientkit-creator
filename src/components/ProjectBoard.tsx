@@ -167,6 +167,13 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   const handleDownload = async (url: string, filename: string) => {
     try {
+      // On mobile, open the file directly in a new tab for viewing/downloading
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        window.open(url, '_blank');
+        toast.success("Abrindo arquivo...");
+        return;
+      }
       const res = await fetch(url);
       const blob = await res.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
@@ -176,7 +183,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
+      // Delay revocation to allow the browser to process the download
+      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
       toast.success("Download iniciado!");
     } catch (error) {
       console.error("Error downloading file:", error);

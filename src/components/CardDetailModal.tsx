@@ -8,6 +8,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 const downloadFile = async (url: string, fileName: string) => {
   try {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.open(url, '_blank');
+      toast.success("Abrindo arquivo...");
+      return;
+    }
     const response = await fetch(url);
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
@@ -17,7 +23,7 @@ const downloadFile = async (url: string, fileName: string) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    window.URL.revokeObjectURL(downloadUrl);
+    setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
     toast.success("Download iniciado!");
   } catch (error) {
     console.error("Error downloading file:", error);
