@@ -570,9 +570,6 @@ const Index = () => {
                 <DropdownMenuItem onClick={() => handleExportToExcel()}>
                   Todas as Equipes
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportToExcel("__sem_equipe__")}>
-                  Sem Equipe
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {availableTeams.map((team) => (
                   <DropdownMenuItem key={team.id} onClick={() => handleExportToExcel(team.name)}>
