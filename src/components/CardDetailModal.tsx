@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, Image as ImageIcon, FileVideo, X, Download } from "lucide-react";
+import { Upload, Image as ImageIcon, FileVideo, X, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createCardUpload, getCardUploads, deleteCardUpload } from "@/lib/clientDatabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const downloadFile = async (url: string, fileName: string) => {
   try {
@@ -43,6 +44,7 @@ interface CardDetailModalProps {
 
 export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpdate }: CardDetailModalProps) => {
   const [uploads, setUploads] = useState<UploadedFile[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const loadUploads = async () => {
@@ -92,37 +94,60 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
       return;
     }
 
+    setUploading(true);
+
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const uploadData = {
-          card_id: cardId,
-          file_url: reader.result as string,
-          file_name: file.name,
-          file_type: file.type,
-          upload_type: "final" as const,
-        };
+      // Upload file to storage bucket
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${cardId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-        const savedUpload = await createCardUpload(uploadData);
-        
-        const newFile: UploadedFile = {
-          id: savedUpload.id,
-          name: savedUpload.file_name,
-          url: savedUpload.file_url,
-          type: "final",
-          fileType: isVideo ? "video" : "image",
-          uploadedAt: savedUpload.uploaded_at || new Date().toISOString(),
-        };
+      const { error: storageError } = await supabase.storage
+        .from("card-uploads")
+        .upload(filePath, file);
 
-        const newUploads = [...uploads, newFile];
-        setUploads(newUploads);
-        updateCover(newUploads);
-        toast.success("Arte adicionada!");
+      if (storageError) {
+        console.error("Storage upload error:", storageError);
+        toast.error("Erro ao fazer upload do arquivo");
+        setUploading(false);
+        return;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("card-uploads")
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // Save record to database
+      const uploadData = {
+        card_id: cardId,
+        file_url: publicUrl,
+        file_name: file.name,
+        file_type: file.type,
+        upload_type: "final" as const,
       };
-      reader.readAsDataURL(file);
+
+      const savedUpload = await createCardUpload(uploadData);
+      
+      const newFile: UploadedFile = {
+        id: savedUpload.id,
+        name: savedUpload.file_name,
+        url: savedUpload.file_url,
+        type: "final",
+        fileType: isVideo ? "video" : "image",
+        uploadedAt: savedUpload.uploaded_at || new Date().toISOString(),
+      };
+
+      const newUploads = [...uploads, newFile];
+      setUploads(newUploads);
+      updateCover(newUploads);
+      toast.success("Arte adicionada!");
     } catch (error) {
       console.error("Error uploading file:", error);
       toast.error("Erro ao fazer upload");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -150,15 +175,26 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="final-upload" className="cursor-pointer">
+            <label htmlFor="final-upload" className={`cursor-pointer ${uploading ? 'pointer-events-none opacity-50' : ''}`}>
               <div className="border-2 border-dashed border-primary/40 rounded-lg p-8 text-center hover:border-primary/60 transition-colors">
-                <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Clique para fazer upload de artes prontas
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Primeira imagem será a capa do card
-                </p>
+                {uploading ? (
+                  <>
+                    <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Enviando arquivo...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Clique para fazer upload de artes prontas
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Primeira imagem será a capa do card
+                    </p>
+                  </>
+                )}
               </div>
               <input
                 id="final-upload"
@@ -166,6 +202,7 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                 accept="image/*,video/*"
                 className="hidden"
                 onChange={handleFileUpload}
+                disabled={uploading}
               />
             </label>
           </div>
