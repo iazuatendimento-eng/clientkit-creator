@@ -169,6 +169,21 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     try {
       const res = await fetch(url);
       const blob = await res.blob();
+
+      // On mobile, try Web Share API first — on iOS this shows "Save Image/Video" option
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile && navigator.share) {
+        const file = new File([blob], filename, { type: blob.type });
+        try {
+          await navigator.share({ files: [file] });
+          toast.success("Compartilhado!");
+          return;
+        } catch (shareError: any) {
+          // User cancelled share or share not supported for this file type — fall through to normal download
+          if (shareError?.name === 'AbortError') return;
+        }
+      }
+
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
