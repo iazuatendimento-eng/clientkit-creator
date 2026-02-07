@@ -54,6 +54,7 @@ interface Client {
   narration_type?: string;
   image_type?: string;
   particularity_type?: string;
+  briefing?: string;
 }
 
 const Index = () => {
@@ -146,6 +147,7 @@ const Index = () => {
         narration_type: c.narration_type || "",
         image_type: c.image_type || "",
         particularity_type: c.particularity_type || "",
+        briefing: c.briefing || "",
       }));
 
       // Sort: active clients first, then by creation date
@@ -193,6 +195,7 @@ const Index = () => {
           narration_type: clientData.narration_type,
           image_type: clientData.image_type,
           particularity_type: clientData.particularity_type,
+          briefing: clientData.briefing,
         });
         toast({
           title: "Cliente atualizado!",
@@ -214,6 +217,7 @@ const Index = () => {
           narration_type: clientData.narration_type,
           image_type: clientData.image_type,
           particularity_type: clientData.particularity_type,
+          briefing: clientData.briefing,
         });
         toast({
           title: "Cliente cadastrado!",

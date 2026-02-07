@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, User, CreditCard, QrCode, Calendar, DollarSign, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, User, CreditCard, QrCode, Calendar, DollarSign, Plus, Trash2, Upload, Download, Eye, X, FileText, FileImage, File } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { createClientUpload, getClientUploads, deleteClientUpload, type ClientUpload } from "@/lib/clientDatabase";
 import {
   Select,
   SelectContent,
@@ -13,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Team {
   id: string;
@@ -38,6 +39,7 @@ interface Client {
   narration_type?: string;
   image_type?: string;
   particularity_type?: string;
+  briefing?: string;
 }
 
 interface ClientEditorProps {
@@ -65,7 +67,10 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     narration_type: "",
     image_type: "",
     particularity_type: "",
+    briefing: "",
   });
+  const [clientUploads, setClientUploads] = useState<ClientUpload[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     loadTeams();
@@ -74,8 +79,100 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
   useEffect(() => {
     if (client) {
       setFormData({ ...client });
+      if (client.id) {
+        loadClientUploads(client.id);
+      }
     }
   }, [client]);
+
+  const loadClientUploads = async (clientId: string) => {
+    try {
+      const uploads = await getClientUploads(clientId);
+      setClientUploads(uploads as ClientUpload[]);
+    } catch (error) {
+      console.error("Error loading client uploads:", error);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!client?.id) {
+      toast.error("Salve o cliente antes de fazer uploads.");
+      return;
+    }
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `client-files/${client.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("card-uploads")
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("card-uploads")
+          .getPublicUrl(filePath);
+
+        await createClientUpload({
+          client_id: client.id,
+          file_url: publicUrl,
+          file_name: file.name,
+          file_type: file.type,
+        });
+      }
+
+      await loadClientUploads(client.id);
+      toast.success(`${files.length} arquivo(s) enviado(s)!`);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Erro ao enviar arquivo.");
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleDeleteUpload = async (uploadId: string) => {
+    try {
+      await deleteClientUpload(uploadId);
+      setClientUploads(prev => prev.filter(u => u.id !== uploadId));
+      toast.success("Arquivo removido!");
+    } catch (error) {
+      console.error("Error deleting upload:", error);
+      toast.error("Erro ao remover arquivo.");
+    }
+  };
+
+  const handleViewUpload = (url: string) => {
+    window.open(url, '_blank');
+  };
+
+  const handleDownloadUpload = async (url: string, filename: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
+    } catch {
+      window.open(url, '_blank');
+    }
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith("image/")) return <FileImage className="h-4 w-4" />;
+    return <File className="h-4 w-4" />;
+  };
 
   const loadTeams = async () => {
     const { data, error } = await supabase
@@ -135,6 +232,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       narration_type: formData.narration_type,
       image_type: formData.image_type,
       particularity_type: formData.particularity_type,
+      briefing: formData.briefing,
     };
 
     onSave(clientData);
@@ -399,8 +497,100 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   placeholder="Adicione observações sobre o cliente (opcional)"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="briefing" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Briefing
+                </Label>
+                <Textarea
+                  id="briefing"
+                  rows={5}
+                  value={formData.briefing || ""}
+                  onChange={(e) => handleChange("briefing", e.target.value)}
+                  placeholder="Descreva o briefing do cliente (diretrizes, tom de voz, público-alvo, etc.)"
+                />
+              </div>
             </CardContent>
           </Card>
+
+          {/* Uploads Section */}
+          {client?.id && (
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Uploads do Cliente
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button type="button" asChild variant="outline" className="w-full" disabled={isUploading}>
+                  <label className="cursor-pointer">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {isUploading ? "Enviando..." : "Adicionar Arquivos"}
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                </Button>
+
+                {clientUploads.length > 0 ? (
+                  <div className="space-y-2">
+                    {clientUploads.map((upload) => (
+                      <div
+                        key={upload.id}
+                        className="flex items-center justify-between p-3 rounded-lg border border-border bg-background/50"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          {getFileIcon(upload.file_type)}
+                          <span className="text-sm truncate">{upload.file_name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleViewUpload(upload.file_url)}
+                            title="Ver"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDownloadUpload(upload.file_url, upload.file_name)}
+                            title="Baixar"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteUpload(upload.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum arquivo enviado ainda.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
 
 

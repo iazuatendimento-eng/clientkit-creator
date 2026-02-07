@@ -18,6 +18,16 @@ export interface ClientData {
   narration_type?: string;
   image_type?: string;
   particularity_type?: string;
+  briefing?: string;
+}
+
+export interface ClientUpload {
+  id: string;
+  client_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  uploaded_at?: string;
 }
 
 export interface ProjectBrief {
@@ -337,6 +347,38 @@ export async function clearArtGenerationTags() {
     .update({ art_generation_selected: false })
     .eq("art_generation_selected", true);
 
+  if (error) throw error;
+}
+
+// Client Uploads functions
+export async function createClientUpload(upload: Omit<ClientUpload, "id" | "uploaded_at">) {
+  const { data, error } = await supabase
+    .from("client_uploads")
+    .insert([upload])
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getClientUploads(clientId: string) {
+  const { data, error } = await supabase
+    .from("client_uploads")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("uploaded_at", { ascending: false });
+  
+  if (error) throw error;
+  return data || [];
+}
+
+export async function deleteClientUpload(id: string) {
+  const { error } = await supabase
+    .from("client_uploads")
+    .delete()
+    .eq("id", id);
+  
   if (error) throw error;
 }
 
