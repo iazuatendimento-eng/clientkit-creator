@@ -1,0 +1,1 @@
+ALTER TABLE public.client_data DROP CONSTRAINT IF EXISTS client_data_team_check;
