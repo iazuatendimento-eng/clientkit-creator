@@ -142,7 +142,7 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
 
 interface BatchArtGeneratorProps {
   template: MasterTemplate;
-  initialTeamFilter?: "2" | "3";
+  initialTeamFilter?: string;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -288,7 +288,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
     }
   }, [clientArts, isLoading]);
 
-  const loadTaggedCards = async (filter?: "2" | "3" | "weekdays") => {
+  const loadTaggedCards = async (filter?: string) => {
     try {
       setIsLoading(true);
       setClientArts([]); // Clear existing arts when filter changes
@@ -1441,7 +1441,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
         {/* Show which team is being generated */}
         {teamFilter && (
           <Badge variant="secondary" className="text-sm">
-            {teamFilter === "2" ? "TER, QUI E SÁB" : "SEG A SEX"}
+            {teamFilter}
           </Badge>
         )}
         

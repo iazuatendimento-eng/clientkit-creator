@@ -11,7 +11,7 @@ interface Client {
   name: string;
   email: string;
   company?: string;
-  team?: "1" | "2" | "3";
+  team?: string;
   brand_kit?: Json;
   projectCount: number;
   created_at: string;
@@ -38,7 +38,7 @@ const ClientPublicView = () => {
           
           setClient({
             ...clientData,
-            team: clientData.team as "1" | "2" | "3",
+            team: clientData.team || undefined,
             projectCount: briefs.length
           });
         } else {
@@ -101,7 +101,7 @@ const ClientPublicView = () => {
               )}
               {client.team && (
                 <span className="px-2 sm:px-3 py-1 bg-secondary/10 text-secondary-foreground rounded-full text-xs sm:text-sm whitespace-nowrap">
-                  {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "SEG A SEX"}
+                  {client.team}
                 </span>
               )}
             </div>

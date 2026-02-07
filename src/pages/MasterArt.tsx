@@ -15,7 +15,7 @@ interface MasterTemplate {
   backgroundColor: string;
 }
 
-type TeamFilter = "2" | "3" | undefined;
+type TeamFilter = string | undefined;
 
 const MasterArt = () => {
   const navigate = useNavigate();

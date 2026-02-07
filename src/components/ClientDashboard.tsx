@@ -12,7 +12,7 @@ interface Client {
   name: string;
   email: string;
   company?: string;
-  team?: "1" | "2" | "3";
+  team?: string;
   slug: string;
   brand_kit?: {
     id: string;
@@ -108,7 +108,7 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
               )}
               {client.team && (
                 <span className="px-3 py-1 bg-secondary/10 text-secondary-foreground rounded-full text-sm">
-                  {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "SEG A SEX"}
+                  {client.team}
                 </span>
               )}
             </div>
