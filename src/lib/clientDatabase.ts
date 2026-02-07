@@ -7,7 +7,7 @@ export interface ClientData {
   company?: string;
   phone?: string;
   notes?: string;
-  team?: "1" | "2" | "3";
+  team?: string;
   slug: string;
   brand_kit?: any;
   created_at?: string;
