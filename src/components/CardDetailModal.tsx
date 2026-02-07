@@ -59,6 +59,12 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
           uploadedAt: upload.uploaded_at || new Date().toISOString(),
         }));
         setUploads(mappedUploads);
+        // Sync cover with first final upload
+        const finals = mappedUploads.filter(u => u.type === "final");
+        if (finals.length > 0) {
+          const first = finals[0];
+          onCoverUpdate(first.url, first.fileType === "video");
+        }
       } catch (error) {
         console.error("Error loading uploads:", error);
       }
@@ -71,14 +77,12 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
 
   const updateCover = (newUploads: UploadedFile[]) => {
     const finalUploads = newUploads.filter(u => u.type === "final");
-    const firstFinalImage = finalUploads.find(u => u.fileType === "image");
-    const firstFinalVideo = finalUploads.find(u => u.fileType === "video");
+    if (finalUploads.length === 0) return;
     
-    if (firstFinalImage) {
-      onCoverUpdate(firstFinalImage.url, false);
-    } else if (firstFinalVideo) {
-      onCoverUpdate(firstFinalVideo.url, true);
-    }
+    // Use the first final upload as cover, regardless of type
+    const firstFinal = finalUploads[0];
+    const isVideo = firstFinal.fileType === "video";
+    onCoverUpdate(firstFinal.url, isVideo);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
