@@ -118,29 +118,12 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
               )}
             </div>
           </div>
-          {/* Observações e detalhes do cliente */}
-          {(client.notes || client.narration_type || client.image_type || client.particularity_type) && (
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              {client.narration_type && (
-                <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
-                  🎙️ <LinkableText text={client.narration_type} />
-                </span>
-              )}
-              {client.image_type && (
-                <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
-                  🖼️ <LinkableText text={client.image_type} />
-                </span>
-              )}
-              {client.particularity_type && (
-                <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
-                  ⚡ <LinkableText text={client.particularity_type} />
-                </span>
-              )}
-              {client.notes && (
-                <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
-                  📝 <LinkableText text={client.notes} />
-                </span>
-              )}
+          {/* Observações do cliente */}
+          {client.notes && (
+            <div className="mt-3">
+              <span className="px-2 py-1 bg-muted rounded text-muted-foreground text-xs">
+                📝 <LinkableText text={client.notes} />
+              </span>
             </div>
           )}
         </div>
