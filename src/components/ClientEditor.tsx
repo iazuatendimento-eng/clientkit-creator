@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save, User, CreditCard, QrCode, Calendar, DollarSign, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -113,7 +114,8 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     e.preventDefault();
     
     if (!formData.team || formData.team.trim() === "") {
-      return; // Equipe é obrigatória
+      toast.error("Selecione uma equipe antes de salvar.");
+      return;
     }
     
     const clientData: Client = {
