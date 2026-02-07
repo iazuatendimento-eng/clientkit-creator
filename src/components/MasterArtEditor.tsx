@@ -102,7 +102,7 @@ interface SavedTemplate {
   updated_at: string;
 }
 
-type TeamFilter = "2" | "3" | undefined;
+type TeamFilter = string | undefined;
 
 interface MasterArtEditorProps {
   onBack: () => void;
@@ -136,7 +136,14 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingLayerName, setEditingLayerName] = useState("");
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<TeamFilter>(undefined);
+  const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
+      if (data) setAvailableTeams(data);
+    });
+  }, []);
 
   // Rounded-rect path helper (with fallback for browsers without ctx.roundRect)
   const roundedRectPath = (
@@ -1449,15 +1456,16 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
           {/* Team Filter Selector */}
           <Select 
             value={selectedTeamFilter || "all"} 
-            onValueChange={(value) => setSelectedTeamFilter(value === "all" ? undefined : value as TeamFilter)}
+            onValueChange={(value) => setSelectedTeamFilter(value === "all" ? undefined : value)}
           >
             <SelectTrigger className="w-44">
               <SelectValue placeholder="Equipe..." />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Clientes</SelectItem>
-              <SelectItem value="2">TER, QUI E SÁB</SelectItem>
-              <SelectItem value="3">SEG A SEX</SelectItem>
+              {availableTeams.map((team) => (
+                <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           

@@ -8,6 +8,7 @@ import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import * as XLSX from 'xlsx';
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,7 @@ interface Client {
   company?: string;
   phone?: string;
   notes?: string;
-  team?: "1" | "2" | "3";
+  team?: string;
   slug: string;
   brand_kit?: any;
   projectCount: number;
@@ -65,12 +66,16 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyWithoutText, setShowOnlyWithoutText] = useState(false);
   const [clientsWithoutText, setClientsWithoutText] = useState<Set<string>>(new Set());
+  const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     loadClients();
+    supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
+      if (data) setAvailableTeams(data);
+    });
   }, []);
 
   // Load clients without text in first todo card
@@ -379,9 +384,7 @@ const Index = () => {
             const slug = client.slug || generateSlug(client.company || client.name);
             const cardUrl = `${window.location.origin}/${slug}#card-${firstTodoCard.id}`;
             
-            const teamName = client.team === "1" ? "SEG, QUA E SEX" : 
-                           client.team === "2" ? "TER, QUI E SÁB" : 
-                           client.team === "3" ? "SEG A SEX" : "SEG, QUA E SEX";
+            const teamName = client.team || "Sem equipe";
             
             const cardText = firstTodoCard.description || firstTodoCard.title;
             
@@ -437,8 +440,7 @@ const Index = () => {
       ];
       ws['!cols'] = colWidths;
 
-      const teamNames = { "1": "SEG_QUA_SEX", "2": "TER_QUI_SAB", "3": "SEG_A_SEX" };
-      const teamSuffix = selectedTeam ? `_${teamNames[selectedTeam as keyof typeof teamNames]}` : '';
+      const teamSuffix = selectedTeam ? `_${selectedTeam.replace(/[^a-zA-Z0-9]/g, '_')}` : '';
       const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
       XLSX.writeFile(wb, fileName);
 
@@ -486,10 +488,17 @@ const Index = () => {
             <h1 className="text-2xl font-bold text-white">
               Total: {clients.filter(c => c.active).length} {clients.filter(c => c.active).length === 1 ? 'empresa ativa' : 'empresas ativas'}
             </h1>
-            <div className="flex justify-center gap-6 text-sm text-white/90">
-              <span>SEG, QUA E SEX: {clients.filter(c => c.active && c.team === "1").length}</span>
-              <span>TER, QUI E SÁB: {clients.filter(c => c.active && c.team === "2").length}</span>
-              <span>SEG A SEX: {clients.filter(c => c.active && c.team === "3").length}</span>
+            <div className="flex justify-center gap-6 text-sm text-white/90 flex-wrap">
+              {(() => {
+                const teamCounts = new Map<string, number>();
+                clients.filter(c => c.active).forEach(c => {
+                  const t = c.team || "Sem equipe";
+                  teamCounts.set(t, (teamCounts.get(t) || 0) + 1);
+                });
+                return Array.from(teamCounts.entries()).map(([team, count]) => (
+                  <span key={team}>{team}: {count}</span>
+                ));
+              })()}
             </div>
           </div>
         </div>
@@ -517,15 +526,11 @@ const Index = () => {
                 <DropdownMenuItem onClick={() => handleBulkMoveToCompleted()}>
                   Todas as Equipes
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkMoveToCompleted("1")}>
-                  SEG, QUA E SEX
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkMoveToCompleted("2")}>
-                  TER, QUI E SÁB
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkMoveToCompleted("3")}>
-                  SEG A SEX
-                </DropdownMenuItem>
+                {availableTeams.map((team) => (
+                  <DropdownMenuItem key={team.id} onClick={() => handleBulkMoveToCompleted(team.name)}>
+                    {team.name}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -540,15 +545,11 @@ const Index = () => {
                 <DropdownMenuItem onClick={() => handleExportToExcel()}>
                   Todas as Equipes
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportToExcel("1")}>
-                  SEG, QUA E SEX
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportToExcel("2")}>
-                  TER, QUI E SÁB
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportToExcel("3")}>
-                  SEG A SEX
-                </DropdownMenuItem>
+                {availableTeams.map((team) => (
+                  <DropdownMenuItem key={team.id} onClick={() => handleExportToExcel(team.name)}>
+                    {team.name}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
             
@@ -580,9 +581,9 @@ const Index = () => {
                       onChange={(e) => setSelectedTeamForDeadline(e.target.value || undefined)}
                     >
                       <option value="">Todas as Equipes</option>
-                      <option value="1">SEG, QUA E SEX</option>
-                      <option value="2">TER, QUI E SÁB</option>
-                      <option value="3">SEG A SEX</option>
+                      {availableTeams.map((team) => (
+                        <option key={team.id} value={team.name}>{team.name}</option>
+                      ))}
                     </select>
                   </div>
                   <Button onClick={handleBulkUpdateDeadline} className="w-full">
@@ -750,7 +751,7 @@ const Index = () => {
                         ? 'text-primary-foreground/60'
                         : 'text-muted-foreground'
                     }`}>
-                      {client.team === "1" ? "SEG, QUA E SEX" : client.team === "2" ? "TER, QUI E SÁB" : "SEG A SEX"}
+                      {client.team || "Sem equipe"}
                     </div>
                   )}
                 </button>
