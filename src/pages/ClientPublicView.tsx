@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import ProjectBoard from "@/components/ProjectBoard";
 import { getClientBySlug, getProjectBriefsByClient } from "@/lib/clientDatabase";
 import { Json } from "@/integrations/supabase/types";
+import { LinkableText } from "@/components/LinkableText";
 
 interface Client {
   id: string;
@@ -12,6 +13,10 @@ interface Client {
   email: string;
   company?: string;
   team?: string;
+  notes?: string;
+  narration_type?: string;
+  image_type?: string;
+  particularity_type?: string;
   brand_kit?: Json;
   projectCount: number;
   created_at: string;
@@ -39,6 +44,10 @@ const ClientPublicView = () => {
           setClient({
             ...clientData,
             team: clientData.team || undefined,
+            notes: clientData.notes || undefined,
+            narration_type: clientData.narration_type || undefined,
+            image_type: clientData.image_type || undefined,
+            particularity_type: clientData.particularity_type || undefined,
             projectCount: briefs.length
           });
         } else {
@@ -106,6 +115,31 @@ const ClientPublicView = () => {
               )}
             </div>
           </div>
+          {/* Observações e detalhes do cliente */}
+          {(client.notes || client.narration_type || client.image_type || client.particularity_type) && (
+            <div className="mt-2 sm:mt-3 flex flex-wrap gap-1.5 sm:gap-2 text-xs">
+              {client.narration_type && (
+                <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
+                  🎙️ <LinkableText text={client.narration_type} />
+                </span>
+              )}
+              {client.image_type && (
+                <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
+                  🖼️ <LinkableText text={client.image_type} />
+                </span>
+              )}
+              {client.particularity_type && (
+                <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
+                  ⚡ <LinkableText text={client.particularity_type} />
+                </span>
+              )}
+              {client.notes && (
+                <span className="px-2 py-1 bg-muted rounded text-muted-foreground">
+                  📝 <LinkableText text={client.notes} />
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
