@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2 } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
-import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads } from "@/lib/clientDatabase";
+import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder } from "@/lib/clientDatabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
   DndContext,
@@ -543,16 +543,31 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       return;
     }
 
-    // If same column, allow reordering (DnD Kit handles it automatically)
+    // If same column, allow reordering and persist
     if (activeId !== overId) {
-      const oldIndex = briefs.findIndex(b => b.id === activeId);
-      const newIndex = briefs.findIndex(b => b.id === overId);
+      const sameStatusBriefs = briefs.filter(b => b.status === activeBrief.status);
+      const oldIndex = sameStatusBriefs.findIndex(b => b.id === activeId);
+      const newIndex = sameStatusBriefs.findIndex(b => b.id === overId);
       
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newBriefs = [...briefs];
-        const [movedBrief] = newBriefs.splice(oldIndex, 1);
-        newBriefs.splice(newIndex, 0, movedBrief);
+        // Reorder within same status group
+        const reordered = [...sameStatusBriefs];
+        const [movedBrief] = reordered.splice(oldIndex, 1);
+        reordered.splice(newIndex, 0, movedBrief);
+        
+        // Rebuild full briefs array maintaining other status groups
+        const otherBriefs = briefs.filter(b => b.status !== activeBrief.status);
+        const newBriefs = [...otherBriefs, ...reordered];
         setBriefs(newBriefs);
+        
+        // Persist sort order to database
+        try {
+          const reorderedIds = reordered.map(b => b.id);
+          await updateBriefsSortOrder(reorderedIds);
+        } catch (error) {
+          console.error("Error saving sort order:", error);
+          toast.error("Erro ao salvar a nova ordem dos cards");
+        }
       }
     }
   };

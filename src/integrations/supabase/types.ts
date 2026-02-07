@@ -379,6 +379,7 @@ export type Database = {
           generated_caption: string | null
           id: string
           published: boolean
+          sort_order: number
           status: string | null
           title: string
         }
@@ -395,6 +396,7 @@ export type Database = {
           generated_caption?: string | null
           id?: string
           published?: boolean
+          sort_order?: number
           status?: string | null
           title: string
         }
@@ -411,6 +413,7 @@ export type Database = {
           generated_caption?: string | null
           id?: string
           published?: boolean
+          sort_order?: number
           status?: string | null
           title?: string
         }

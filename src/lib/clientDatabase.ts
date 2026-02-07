@@ -128,10 +128,23 @@ export async function getProjectBriefsByClient(clientId: string) {
     .from("project_briefs")
     .select("*")
     .eq("client_id", clientId)
-    .order("created_at", { ascending: true }); // Mais antigo primeiro (topo), mais novo no final
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
   
   if (error) throw error;
   return data || [];
+}
+
+export async function updateBriefsSortOrder(briefIds: string[]) {
+  // Update sort_order for each brief based on its position in the array
+  const updates = briefIds.map((id, index) =>
+    supabase
+      .from("project_briefs")
+      .update({ sort_order: index + 1 })
+      .eq("id", id)
+  );
+  
+  await Promise.all(updates);
 }
 
 export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "todo" | "completed") {
