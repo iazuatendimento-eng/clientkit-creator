@@ -385,7 +385,9 @@ const Index = () => {
       const splitRows: any[] = []; // Rows with ";" splits go here (to be added last)
 
       const filteredClients = (selectedTeam 
-        ? clients.filter(c => c.team === selectedTeam && c.active)
+        ? (selectedTeam === "__sem_equipe__" 
+          ? clients.filter(c => (!c.team || c.team.trim() === "") && c.active)
+          : clients.filter(c => c.team === selectedTeam && c.active))
         : clients.filter(c => c.active));
 
       for (const client of filteredClients) {
@@ -568,6 +570,10 @@ const Index = () => {
                 <DropdownMenuItem onClick={() => handleExportToExcel()}>
                   Todas as Equipes
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportToExcel("__sem_equipe__")}>
+                  Sem Equipe
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {availableTeams.map((team) => (
                   <DropdownMenuItem key={team.id} onClick={() => handleExportToExcel(team.name)}>
                     {team.name}
