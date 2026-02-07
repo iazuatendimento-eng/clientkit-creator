@@ -37,6 +37,36 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+// Helper component to detect URLs and render them as clickable links
+const LinkifyText = ({ text }: { text: string }) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (urlRegex.test(part)) {
+          // Reset regex lastIndex since we're reusing it
+          urlRegex.lastIndex = 0;
+          return (
+            <a
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline hover:text-primary/80 break-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
+};
+
 interface ProjectBrief {
   id: string;
   clientName: string;
@@ -347,17 +377,24 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
-              {(brief.generatedCaption || brief.description) && (
+              {/* Observação / Descrição - sempre visível */}
+              {brief.description && (
+                <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted/50 rounded p-2 max-h-24 overflow-y-auto">
+                  <LinkifyText text={brief.description} />
+                </div>
+              )}
+              {/* Legenda gerada */}
+              {brief.generatedCaption && (
                 <>
-                  <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted/50 rounded p-2 max-h-24 overflow-y-auto">
-                    {brief.generatedCaption || brief.description}
-                  </p>
+                  <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-primary/5 border border-primary/10 rounded p-2 max-h-24 overflow-y-auto">
+                    <LinkifyText text={brief.generatedCaption} />
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigator.clipboard.writeText(brief.generatedCaption || brief.description || "");
+                      navigator.clipboard.writeText(brief.generatedCaption || "");
                       toast.success("Legenda copiada!");
                     }}
                     className="text-xs px-2 py-1 h-auto w-full"
