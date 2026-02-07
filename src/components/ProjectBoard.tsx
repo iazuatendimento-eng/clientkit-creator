@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2 } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder } from "@/lib/clientDatabase";
@@ -167,13 +167,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   const handleDownload = async (url: string, filename: string) => {
     try {
-      // On mobile, open the file directly in a new tab for viewing/downloading
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        window.open(url, '_blank');
-        toast.success("Abrindo arquivo...");
-        return;
-      }
       const res = await fetch(url);
       const blob = await res.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
@@ -183,13 +176,16 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      // Delay revocation to allow the browser to process the download
       setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
       toast.success("Download iniciado!");
     } catch (error) {
       console.error("Error downloading file:", error);
       toast.error("Erro ao baixar arquivo");
     }
+  };
+
+  const handleView = (url: string) => {
+    window.open(url, '_blank');
   };
 
   const handleCopyCardLink = () => {
@@ -415,37 +411,61 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               {finalArtworks.length > 0 && (
                 <>
                   {finalArtworks.length === 1 ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const artwork = finalArtworks[0];
-                        const isVideo = artwork.fileType.startsWith("video");
-                        handleDownload(artwork.url, artwork.name);
-                      }}
-                      className="text-xs px-2 py-1 h-auto w-full"
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Baixar {finalArtworks[0].fileType.startsWith("video") ? 'Vídeo' : 'Arte'}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(finalArtworks[0].url, finalArtworks[0].name);
+                        }}
+                        className="text-xs px-2 py-1 h-auto flex-1"
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Baixar {finalArtworks[0].fileType.startsWith("video") ? 'Vídeo' : 'Arte'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleView(finalArtworks[0].url);
+                        }}
+                        className="text-xs px-2 py-1 h-auto flex-1"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        Ver
+                      </Button>
+                    </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground font-medium">Baixar Artes:</p>
+                      <p className="text-xs text-muted-foreground font-medium">Arquivos:</p>
                       {finalArtworks.map((artwork, index) => (
-                        <Button
-                          key={artwork.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(artwork.url, artwork.name);
-                          }}
-                          className="text-xs px-2 py-1 h-auto w-full"
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          {artwork.fileType.startsWith("video") ? 'Vídeo' : 'Arte'} {index + 1}
-                        </Button>
+                        <div key={artwork.id} className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(artwork.url, artwork.name);
+                            }}
+                            className="text-xs px-2 py-1 h-auto flex-1"
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Baixar {artwork.fileType.startsWith("video") ? 'Vídeo' : 'Arte'} {index + 1}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleView(artwork.url);
+                            }}
+                            className="text-xs px-2 py-1 h-auto"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </div>
                       ))}
                     </div>
                   )}
