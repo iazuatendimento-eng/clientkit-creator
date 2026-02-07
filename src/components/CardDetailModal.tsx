@@ -60,11 +60,7 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
           uploadedAt: upload.uploaded_at || new Date().toISOString(),
         }));
         setUploads(mappedUploads);
-        const finals = mappedUploads.filter(u => u.type === "final");
-        if (finals.length > 0) {
-          const first = finals[0];
-          onCoverUpdate(first.url, first.fileType === "video");
-        }
+        // Don't call onCoverUpdate here - it causes the parent to re-render and close the modal
       } catch (error) {
         console.error("Error loading uploads:", error);
       }
