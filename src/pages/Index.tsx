@@ -439,13 +439,14 @@ const Index = () => {
       let page = 0;
       const pageSize = 1000;
       let hasMore = true;
+      let fetchError: any = null;
 
       while (hasMore) {
         const from = page * pageSize;
         const to = from + pageSize - 1;
         const { data, error } = await supabase
           .from("project_briefs")
-          .select("id, client_id, title, description, status, deadline, sort_order")
+          .select("id, client_id, title, description, status, deadline, sort_order, created_at")
           .eq("status", "todo")
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true })
@@ -453,6 +454,7 @@ const Index = () => {
 
         if (error) {
           console.error("Error fetching todo briefs for export:", error);
+          fetchError = error;
           break;
         }
 
@@ -463,10 +465,21 @@ const Index = () => {
         page++;
       }
 
+      console.log("Export: fetched", allTodoBriefs.length, "todo briefs, filteredClients:", filteredClients.length, "fetchError:", fetchError);
+
+      if (fetchError) {
+        toast({
+          title: "Erro ao buscar cards",
+          description: `Erro: ${fetchError.message || JSON.stringify(fetchError)}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Agrupar por client_id e pegar o primeiro card todo de cada cliente
       const firstTodoByClient = new Map<string, any>();
       for (const brief of allTodoBriefs) {
-        if (!firstTodoByClient.has(brief.client_id)) {
+        if (brief.client_id && !firstTodoByClient.has(brief.client_id)) {
           firstTodoByClient.set(brief.client_id, brief);
         }
       }
