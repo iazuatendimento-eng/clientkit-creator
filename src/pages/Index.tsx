@@ -428,59 +428,89 @@ const Index = () => {
   const handleExportToExcel = async (selectedTeam?: string) => {
     try {
       const excelData: any[] = [];
-      const splitRows: any[] = []; // Rows with ";" splits go here (to be added last)
+      const splitRows: any[] = [];
 
       const filteredClients = (selectedTeam 
         ? clients.filter(c => c.team === selectedTeam && c.active)
         : clients.filter(c => c.active));
 
-      for (const client of filteredClients) {
-        try {
-          const briefs = await getProjectBriefsByClient(client.id);
-          const firstTodoCard = briefs.find((b: any) => b.status === "todo");
-          
-          if (firstTodoCard) {
-            const slug = client.slug || generateSlug(client.company || client.name);
-            const cardUrl = `${window.location.origin}/${slug}#card-${firstTodoCard.id}`;
-            
-            const teamName = client.team || "Sem equipe";
-            
-            const cardText = firstTodoCard.description || firstTodoCard.title;
-            
-            const baseRow = {
-              "Cliente": client.name,
-              "Empresa": client.company || "",
-              "Equipe": teamName,
-              "Tipo Narração": client.narration_type || "",
-              "Tipo Imagem": client.image_type || "",
-              "Particularidade": client.particularity_type || "",
-              "Texto do Card": "",
-              "Link do Card": cardUrl,
-              "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
-            };
-            
-            // Se o texto contém ";", dividir em múltiplas linhas e adicionar ao final
-            if (cardText.includes(";")) {
-              const textParts = cardText.split(";").map(part => part.trim()).filter(part => part.length > 0);
-              textParts.forEach((part) => {
-                splitRows.push({
-                  ...baseRow,
-                  "Texto do Card": part,
-                });
-              });
-            } else {
-              excelData.push({
-                ...baseRow,
-                "Texto do Card": cardText,
-              });
-            }
-          }
-        } catch (error) {
-          console.error(`Error processing client ${client.name}:`, error);
+      // Buscar TODOS os briefs "todo" de uma vez com paginação
+      let allTodoBriefs: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from("project_briefs")
+          .select("id, client_id, title, description, status, deadline, sort_order")
+          .eq("status", "todo")
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true })
+          .range(from, to);
+
+        if (error) {
+          console.error("Error fetching todo briefs for export:", error);
+          break;
+        }
+
+        if (data && data.length > 0) {
+          allTodoBriefs = allTodoBriefs.concat(data);
+        }
+        hasMore = (data?.length || 0) === pageSize;
+        page++;
+      }
+
+      // Agrupar por client_id e pegar o primeiro card todo de cada cliente
+      const firstTodoByClient = new Map<string, any>();
+      for (const brief of allTodoBriefs) {
+        if (!firstTodoByClient.has(brief.client_id)) {
+          firstTodoByClient.set(brief.client_id, brief);
         }
       }
 
-      // Adicionar os cards com ";" por último na planilha
+      for (const client of filteredClients) {
+        const firstTodoCard = firstTodoByClient.get(client.id);
+        
+        if (firstTodoCard) {
+          const slug = client.slug || generateSlug(client.company || client.name);
+          const cardUrl = `${window.location.origin}/${slug}#card-${firstTodoCard.id}`;
+          
+          const teamName = client.team || "Sem equipe";
+          
+          const cardText = firstTodoCard.description || firstTodoCard.title;
+          
+          const baseRow = {
+            "Cliente": client.name,
+            "Empresa": client.company || "",
+            "Equipe": teamName,
+            "Tipo Narração": client.narration_type || "",
+            "Tipo Imagem": client.image_type || "",
+            "Particularidade": client.particularity_type || "",
+            "Texto do Card": "",
+            "Link do Card": cardUrl,
+            "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
+          };
+          
+          if (cardText.includes(";")) {
+            const textParts = cardText.split(";").map(part => part.trim()).filter(part => part.length > 0);
+            textParts.forEach((part) => {
+              splitRows.push({
+                ...baseRow,
+                "Texto do Card": part,
+              });
+            });
+          } else {
+            excelData.push({
+              ...baseRow,
+              "Texto do Card": cardText,
+            });
+          }
+        }
+      }
+
       const finalData = [...excelData, ...splitRows];
 
       if (finalData.length === 0) {
