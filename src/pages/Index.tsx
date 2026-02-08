@@ -82,24 +82,40 @@ const Index = () => {
     });
   }, []);
 
-  // Load clients without text in todo cards (optimized single query)
+  // Load clients without text in todo cards (optimized - handles 1000+ row limit)
   useEffect(() => {
     const checkClientsWithoutText = async () => {
       try {
-        // Buscar todos os briefs todo de uma vez
-        const { data: allTodoBriefs, error } = await supabase
-          .from("project_briefs")
-          .select("client_id, description")
-          .eq("status", "todo");
+        // Buscar TODOS os briefs todo paginando para evitar limite de 1000 linhas
+        let allTodoBriefs: any[] = [];
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
 
-        if (error) {
-          console.error("Error fetching briefs for filter:", error);
-          return;
+        while (hasMore) {
+          const from = page * pageSize;
+          const to = from + pageSize - 1;
+          const { data, error } = await supabase
+            .from("project_briefs")
+            .select("client_id, description")
+            .eq("status", "todo")
+            .range(from, to);
+
+          if (error) {
+            console.error("Error fetching briefs for filter:", error);
+            return;
+          }
+
+          if (data && data.length > 0) {
+            allTodoBriefs = allTodoBriefs.concat(data);
+          }
+          hasMore = (data?.length || 0) === pageSize;
+          page++;
         }
 
         // Agrupar por client_id
         const briefsByClient = new Map<string, { hasText: boolean }>();
-        (allTodoBriefs || []).forEach((brief: any) => {
+        allTodoBriefs.forEach((brief: any) => {
           const existing = briefsByClient.get(brief.client_id);
           const thisHasText = brief.description && brief.description.trim() !== "";
           if (existing) {
