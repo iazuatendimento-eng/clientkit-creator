@@ -82,15 +82,16 @@ const Index = () => {
     });
   }, []);
 
-  // Load clients without text in first todo card
+  // Load clients without text in any todo card
   useEffect(() => {
     const checkClientsWithoutText = async () => {
       const clientsNoText = new Set<string>();
       for (const client of clients) {
         try {
           const briefs = await getProjectBriefsByClient(client.id);
-          const firstTodoCard = briefs.find((b: any) => b.status === "todo");
-          if (firstTodoCard && (!firstTodoCard.description || firstTodoCard.description.trim() === "")) {
+          const todoCards = briefs.filter((b: any) => b.status === "todo");
+          // Cliente entra no filtro se tem cards "a fazer" e NENHUM deles tem texto
+          if (todoCards.length > 0 && todoCards.every((card: any) => !card.description || card.description.trim() === "")) {
             clientsNoText.add(client.id);
           }
         } catch (error) {
