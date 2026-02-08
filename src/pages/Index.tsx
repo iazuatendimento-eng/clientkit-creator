@@ -31,8 +31,7 @@ import {
   deleteClient, 
   generateSlug,
   bulkUpdateBriefStatus,
-  bulkUpdateBriefDeadline,
-  getProjectBriefsByClient
+  bulkUpdateBriefDeadline
 } from "@/lib/clientDatabase";
 
 interface Client {
@@ -430,36 +429,95 @@ const Index = () => {
       const excelData: any[] = [];
       const splitRows: any[] = [];
 
-      const filteredClients = (selectedTeam 
-        ? clients.filter(c => c.team === selectedTeam && c.active)
-        : clients.filter(c => c.active));
-
-      console.log("Export: starting for", filteredClients.length, "clients");
-
-      // Buscar briefs em lotes paralelos de 10 clientes por vez
-      const batchSize = 10;
-      const clientResults: { client: typeof filteredClients[0]; firstTodoCard: any }[] = [];
-
-      for (let i = 0; i < filteredClients.length; i += batchSize) {
-        const batch = filteredClients.slice(i, i + batchSize);
-        const batchResults = await Promise.all(
-          batch.map(async (client) => {
-            try {
-              const briefs = await getProjectBriefsByClient(client.id);
-              const firstTodoCard = briefs.find((b: any) => b.status === "todo");
-              return { client, firstTodoCard: firstTodoCard || null };
-            } catch (error) {
-              console.error(`Export error for client ${client.name}:`, error);
-              return { client, firstTodoCard: null };
-            }
-          })
-        );
-        clientResults.push(...batchResults);
+      // 1) Buscar clientes ativos diretamente do banco (não depender do estado)
+      let clientQuery = supabase
+        .from("client_data")
+        .select("id, name, email, company, phone, team, slug, narration_type, image_type, particularity_type")
+        .eq("active", true);
+      
+      if (selectedTeam) {
+        clientQuery = clientQuery.eq("team", selectedTeam);
       }
 
-      console.log("Export: fetched briefs for", clientResults.length, "clients, with todo cards:", clientResults.filter(r => r.firstTodoCard).length);
+      const { data: dbClients, error: clientError } = await clientQuery;
 
-      for (const { client, firstTodoCard } of clientResults) {
+      if (clientError) {
+        console.error("Export: error fetching clients:", clientError);
+        toast({
+          title: "Erro ao buscar clientes",
+          description: clientError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!dbClients || dbClients.length === 0) {
+        toast({
+          title: "Nenhum cliente encontrado",
+          description: "Não há clientes ativos para exportar.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log("Export: found", dbClients.length, "active clients");
+
+      // 2) Buscar TODOS os briefs "todo" de uma vez com paginação (mesma lógica do filtro que funciona)
+      let allTodoBriefs: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from("project_briefs")
+          .select("id, client_id, title, description, status, deadline, sort_order, created_at")
+          .eq("status", "todo")
+          .range(from, to);
+
+        if (error) {
+          console.error("Export: error fetching briefs page", page, error);
+          toast({
+            title: "Erro ao buscar cards",
+            description: error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (data && data.length > 0) {
+          allTodoBriefs = allTodoBriefs.concat(data);
+        }
+        hasMore = (data?.length || 0) === pageSize;
+        page++;
+      }
+
+      console.log("Export: found", allTodoBriefs.length, "todo briefs total");
+
+      // 3) Agrupar por client_id e pegar o primeiro card (menor sort_order, depois created_at)
+      // Ordenar os briefs por sort_order e created_at
+      allTodoBriefs.sort((a: any, b: any) => {
+        const sortA = a.sort_order || 0;
+        const sortB = b.sort_order || 0;
+        if (sortA !== sortB) return sortA - sortB;
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      });
+
+      const firstTodoByClient = new Map<string, any>();
+      for (const brief of allTodoBriefs) {
+        if (brief.client_id && !firstTodoByClient.has(brief.client_id)) {
+          firstTodoByClient.set(brief.client_id, brief);
+        }
+      }
+
+      console.log("Export: first todo by client count:", firstTodoByClient.size);
+
+      // 4) Montar as linhas do Excel
+      for (const client of dbClients) {
+        const firstTodoCard = firstTodoByClient.get(client.id);
+        
         if (firstTodoCard) {
           const slug = client.slug || generateSlug(client.company || client.name);
           const cardUrl = `${window.location.origin}/${slug}#card-${firstTodoCard.id}`;
@@ -480,9 +538,9 @@ const Index = () => {
             "Prazo": firstTodoCard.deadline ? new Date(firstTodoCard.deadline).toLocaleDateString('pt-BR') : ""
           };
           
-          if (cardText.includes(";")) {
-            const textParts = cardText.split(";").map(part => part.trim()).filter(part => part.length > 0);
-            textParts.forEach((part) => {
+          if (cardText && cardText.includes(";")) {
+            const textParts = cardText.split(";").map((part: string) => part.trim()).filter((part: string) => part.length > 0);
+            textParts.forEach((part: string) => {
               splitRows.push({
                 ...baseRow,
                 "Texto do Card": part,
@@ -491,7 +549,7 @@ const Index = () => {
           } else {
             excelData.push({
               ...baseRow,
-              "Texto do Card": cardText,
+              "Texto do Card": cardText || "",
             });
           }
         }
@@ -499,10 +557,12 @@ const Index = () => {
 
       const finalData = [...excelData, ...splitRows];
 
+      console.log("Export: finalData rows:", finalData.length, "(normal:", excelData.length, "split:", splitRows.length, ")");
+
       if (finalData.length === 0) {
         toast({
           title: "Nenhum card encontrado",
-          description: "Não há cards 'A Fazer' para exportar.",
+          description: `Clientes: ${dbClients.length}, Briefs todo: ${allTodoBriefs.length}, Matches: ${firstTodoByClient.size}. Verifique os logs do console (F12).`,
           variant: "destructive"
         });
         return;
