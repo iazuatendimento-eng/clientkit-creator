@@ -429,18 +429,29 @@ const Index = () => {
       const excelData: any[] = [];
       const splitRows: any[] = [];
 
-      // 1) Usar getAllClients() que já funciona no carregamento do quadro
+      // 1) Usar mesma lógica do loadClients - getAllClients retorna todos, filtramos aqui
       const allDbClients = await getAllClients();
-      const dbClients = selectedTeam
-        ? allDbClients.filter((c: any) => c.team === selectedTeam && c.active !== false)
-        : allDbClients.filter((c: any) => c.active !== false);
+      
+      console.log("Export: getAllClients returned", allDbClients.length, "total. selectedTeam:", selectedTeam);
+      if (allDbClients.length > 0) {
+        console.log("Export: sample client active values:", allDbClients.slice(0, 3).map((c: any) => ({ name: c.name, active: c.active, typeOfActive: typeof c.active })));
+      }
 
-      console.log("Export: getAllClients returned", allDbClients.length, "total,", dbClients.length, "filtered active");
+      // Filtrar clientes ativos (active é boolean true no banco)
+      const dbClients = allDbClients.filter((c: any) => {
+        const isActive = c.active === true || c.active === "true" || c.active === undefined || c.active === null;
+        if (selectedTeam) {
+          return isActive && c.team === selectedTeam;
+        }
+        return isActive;
+      });
+
+      console.log("Export: filtered to", dbClients.length, "active clients");
 
       if (dbClients.length === 0) {
         toast({
           title: "Nenhum cliente encontrado",
-          description: `Total de clientes no banco: ${allDbClients.length}. Nenhum ativo encontrado.`,
+          description: `Total no banco: ${allDbClients.length}. Filtro equipe: ${selectedTeam || 'todas'}. Verifique o console (F12) para detalhes.`,
           variant: "destructive"
         });
         return;
