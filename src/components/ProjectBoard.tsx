@@ -1260,8 +1260,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className={`grid gap-4 sm:gap-6 ${isPublicView ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
-            {columns.map(column => {
+          <div className={`grid gap-4 sm:gap-6 ${isPublicView ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+            {(isPublicView ? [...columns].reverse() : columns).map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
               // Sort completed column by deadline descending (most recent deadline first)
