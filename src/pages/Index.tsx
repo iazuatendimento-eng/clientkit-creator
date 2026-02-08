@@ -429,32 +429,18 @@ const Index = () => {
       const excelData: any[] = [];
       const splitRows: any[] = [];
 
-      // 1) Buscar clientes ativos diretamente do banco (não depender do estado)
-      let clientQuery = supabase
-        .from("client_data")
-        .select("id, name, email, company, phone, team, slug, narration_type, image_type, particularity_type")
-        .eq("active", true);
-      
-      if (selectedTeam) {
-        clientQuery = clientQuery.eq("team", selectedTeam);
-      }
+      // 1) Usar getAllClients() que já funciona no carregamento do quadro
+      const allDbClients = await getAllClients();
+      const dbClients = selectedTeam
+        ? allDbClients.filter((c: any) => c.team === selectedTeam && c.active !== false)
+        : allDbClients.filter((c: any) => c.active !== false);
 
-      const { data: dbClients, error: clientError } = await clientQuery;
+      console.log("Export: getAllClients returned", allDbClients.length, "total,", dbClients.length, "filtered active");
 
-      if (clientError) {
-        console.error("Export: error fetching clients:", clientError);
-        toast({
-          title: "Erro ao buscar clientes",
-          description: clientError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!dbClients || dbClients.length === 0) {
+      if (dbClients.length === 0) {
         toast({
           title: "Nenhum cliente encontrado",
-          description: "Não há clientes ativos para exportar.",
+          description: `Total de clientes no banco: ${allDbClients.length}. Nenhum ativo encontrado.`,
           variant: "destructive"
         });
         return;
