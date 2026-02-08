@@ -432,26 +432,21 @@ const Index = () => {
       // 1) Usar mesma lógica do loadClients - getAllClients retorna todos, filtramos aqui
       const allDbClients = await getAllClients();
       
-      console.log("Export: getAllClients returned", allDbClients.length, "total. selectedTeam:", selectedTeam);
-      if (allDbClients.length > 0) {
-        console.log("Export: sample client active values:", allDbClients.slice(0, 3).map((c: any) => ({ name: c.name, active: c.active, typeOfActive: typeof c.active })));
-      }
-
-      // Filtrar clientes ativos (active é boolean true no banco)
+      // Filtrar clientes ativos (comparação case-insensitive para equipe)
       const dbClients = allDbClients.filter((c: any) => {
-        const isActive = c.active === true || c.active === "true" || c.active === undefined || c.active === null;
+        const isActive = c.active !== false;
         if (selectedTeam) {
-          return isActive && c.team === selectedTeam;
+          return isActive && (c.team || "").toLowerCase() === selectedTeam.toLowerCase();
         }
         return isActive;
       });
 
-      console.log("Export: filtered to", dbClients.length, "active clients");
+      console.log("Export:", allDbClients.length, "total,", dbClients.length, "filtered");
 
       if (dbClients.length === 0) {
         toast({
           title: "Nenhum cliente encontrado",
-          description: `Total no banco: ${allDbClients.length}. Filtro equipe: ${selectedTeam || 'todas'}. Verifique o console (F12) para detalhes.`,
+          description: "Não há clientes ativos para exportar.",
           variant: "destructive"
         });
         return;
