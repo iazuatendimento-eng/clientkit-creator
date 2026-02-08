@@ -32,6 +32,7 @@ interface Payment {
   client_id: string;
   client_name: string;
   client_company: string;
+  client_phone: string;
   amount: number;
   due_date: string;
   payment_method: "pix" | "credit_card" | null;
@@ -66,7 +67,8 @@ const Receivables = () => {
           *,
           client_data:client_id (
             name,
-            company
+            company,
+            phone
           )
         `)
         .gte("due_date", format(monthStart, "yyyy-MM-dd"))
@@ -80,6 +82,7 @@ const Receivables = () => {
         client_id: p.client_id,
         client_name: p.client_data?.name || "Cliente desconhecido",
         client_company: p.client_data?.company || "",
+        client_phone: p.client_data?.phone || "",
         amount: p.amount,
         due_date: p.due_date,
         payment_method: p.payment_method,
@@ -403,6 +406,7 @@ const Receivables = () => {
                   <TableRow>
                     <TableHead className="w-12">Pago</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Telefone</TableHead>
                     <TableHead>Empresa</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead>Vencimento</TableHead>
@@ -420,6 +424,7 @@ const Receivables = () => {
                         />
                       </TableCell>
                       <TableCell className="font-medium">{payment.client_name}</TableCell>
+                      <TableCell className="text-muted-foreground">{payment.client_phone || "-"}</TableCell>
                       <TableCell className="text-muted-foreground">{payment.client_company}</TableCell>
                       <TableCell className="text-right font-mono">
                         R$ {Number(payment.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
