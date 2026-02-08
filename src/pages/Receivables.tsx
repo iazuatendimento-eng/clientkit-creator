@@ -231,6 +231,7 @@ const Receivables = () => {
   const handleExport = () => {
     const exportData = filteredPayments.map(p => ({
       Cliente: p.client_name,
+      Telefone: p.client_phone || "-",
       Empresa: p.client_company,
       Valor: p.amount,
       Vencimento: format(parseISO(p.due_date), "dd/MM/yyyy"),
