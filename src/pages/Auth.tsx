@@ -243,15 +243,6 @@ export default function Auth() {
               )}
             </Button>
 
-            <Button
-              type="button"
-              className="w-full"
-              variant="outline"
-              onClick={handleSignUp}
-              disabled={loading}
-            >
-              Criar conta
-            </Button>
           </form>
         </CardContent>
       </Card>
