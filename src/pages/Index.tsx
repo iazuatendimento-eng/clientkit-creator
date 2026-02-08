@@ -82,26 +82,48 @@ const Index = () => {
     });
   }, []);
 
-  // Load clients without text in todo cards
+  // Load clients without text in todo cards (optimized single query)
   useEffect(() => {
     const checkClientsWithoutText = async () => {
-      const clientsNoText = new Set<string>();
-      for (const client of clients) {
-        if (!client.active) continue;
-        try {
-          const briefs = await getProjectBriefsByClient(client.id);
-          const todoCards = briefs.filter((b: any) => b.status === "todo");
+      try {
+        // Buscar todos os briefs todo de uma vez
+        const { data: allTodoBriefs, error } = await supabase
+          .from("project_briefs")
+          .select("client_id, description")
+          .eq("status", "todo");
+
+        if (error) {
+          console.error("Error fetching briefs for filter:", error);
+          return;
+        }
+
+        // Agrupar por client_id
+        const briefsByClient = new Map<string, { hasText: boolean }>();
+        (allTodoBriefs || []).forEach((brief: any) => {
+          const existing = briefsByClient.get(brief.client_id);
+          const thisHasText = brief.description && brief.description.trim() !== "";
+          if (existing) {
+            if (thisHasText) existing.hasText = true;
+          } else {
+            briefsByClient.set(brief.client_id, { hasText: !!thisHasText });
+          }
+        });
+
+        const clientsNoText = new Set<string>();
+        for (const client of clients) {
+          if (!client.active) continue;
+          const clientBriefs = briefsByClient.get(client.id);
           // Cliente entra no filtro se:
           // 1. Não tem nenhum card "a fazer", OU
           // 2. Tem cards "a fazer" mas NENHUM deles tem texto na descrição
-          if (todoCards.length === 0 || todoCards.every((card: any) => !card.description || card.description.trim() === "")) {
+          if (!clientBriefs || !clientBriefs.hasText) {
             clientsNoText.add(client.id);
           }
-        } catch (error) {
-          console.error(`Error checking client ${client.id}:`, error);
         }
+        setClientsWithoutText(clientsNoText);
+      } catch (error) {
+        console.error("Error checking clients without text:", error);
       }
-      setClientsWithoutText(clientsNoText);
     };
 
     if (clients.length > 0) {
