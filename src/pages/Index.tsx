@@ -434,59 +434,32 @@ const Index = () => {
         ? clients.filter(c => c.team === selectedTeam && c.active)
         : clients.filter(c => c.active));
 
-      // Buscar TODOS os briefs "todo" de uma vez com paginação
-      let allTodoBriefs: any[] = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
-      let fetchError: any = null;
+      console.log("Export: starting for", filteredClients.length, "clients");
 
-      while (hasMore) {
-        const from = page * pageSize;
-        const to = from + pageSize - 1;
-        const { data, error } = await supabase
-          .from("project_briefs")
-          .select("id, client_id, title, description, status, deadline, sort_order, created_at")
-          .eq("status", "todo")
-          .order("sort_order", { ascending: true })
-          .order("created_at", { ascending: true })
-          .range(from, to);
+      // Buscar briefs em lotes paralelos de 10 clientes por vez
+      const batchSize = 10;
+      const clientResults: { client: typeof filteredClients[0]; firstTodoCard: any }[] = [];
 
-        if (error) {
-          console.error("Error fetching todo briefs for export:", error);
-          fetchError = error;
-          break;
-        }
-
-        if (data && data.length > 0) {
-          allTodoBriefs = allTodoBriefs.concat(data);
-        }
-        hasMore = (data?.length || 0) === pageSize;
-        page++;
+      for (let i = 0; i < filteredClients.length; i += batchSize) {
+        const batch = filteredClients.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(async (client) => {
+            try {
+              const briefs = await getProjectBriefsByClient(client.id);
+              const firstTodoCard = briefs.find((b: any) => b.status === "todo");
+              return { client, firstTodoCard: firstTodoCard || null };
+            } catch (error) {
+              console.error(`Export error for client ${client.name}:`, error);
+              return { client, firstTodoCard: null };
+            }
+          })
+        );
+        clientResults.push(...batchResults);
       }
 
-      console.log("Export: fetched", allTodoBriefs.length, "todo briefs, filteredClients:", filteredClients.length, "fetchError:", fetchError);
+      console.log("Export: fetched briefs for", clientResults.length, "clients, with todo cards:", clientResults.filter(r => r.firstTodoCard).length);
 
-      if (fetchError) {
-        toast({
-          title: "Erro ao buscar cards",
-          description: `Erro: ${fetchError.message || JSON.stringify(fetchError)}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Agrupar por client_id e pegar o primeiro card todo de cada cliente
-      const firstTodoByClient = new Map<string, any>();
-      for (const brief of allTodoBriefs) {
-        if (brief.client_id && !firstTodoByClient.has(brief.client_id)) {
-          firstTodoByClient.set(brief.client_id, brief);
-        }
-      }
-
-      for (const client of filteredClients) {
-        const firstTodoCard = firstTodoByClient.get(client.id);
-        
+      for (const { client, firstTodoCard } of clientResults) {
         if (firstTodoCard) {
           const slug = client.slug || generateSlug(client.company || client.name);
           const cardUrl = `${window.location.origin}/${slug}#card-${firstTodoCard.id}`;
