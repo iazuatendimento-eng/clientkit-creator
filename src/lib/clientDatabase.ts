@@ -161,13 +161,14 @@ export async function updateBriefsSortOrder(briefIds: string[]) {
 }
 
 export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "todo" | "completed") {
-  // Get all todo briefs for these clients (ordered by creation date ascending to get the first/oldest which is at the top)
+  // Get all todo briefs for these clients (ordered by sort_order then created_at to match visual order)
   const { data: briefs, error: fetchError } = await supabase
     .from("project_briefs")
     .select("*")
     .in("client_id", clientIds)
     .eq("status", "todo")
-    .order("created_at", { ascending: true }); // Mais antigo primeiro (topo da lista)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (fetchError) throw fetchError;
   if (!briefs || briefs.length === 0) return [];
@@ -194,13 +195,14 @@ export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "tod
 }
 
 export async function bulkUpdateBriefDeadline(clientIds: string[], deadline: string) {
-  // Get all todo briefs for these clients (ordered by creation date ascending to get the first/oldest which is at the top)
+  // Get all todo briefs for these clients (ordered by sort_order then created_at to match visual order)
   const { data: briefs, error: fetchError } = await supabase
     .from("project_briefs")
     .select("*")
     .in("client_id", clientIds)
     .eq("status", "todo")
-    .order("created_at", { ascending: true }); // Mais antigo primeiro (topo da lista)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (fetchError) throw fetchError;
   if (!briefs || briefs.length === 0) return [];
@@ -276,12 +278,13 @@ export async function tagFirstCardsForArtGeneration(clientIds: string[]) {
     .update({ art_generation_selected: false })
     .eq("art_generation_selected", true);
 
-  // Get all todo briefs for these clients (ordered by creation date ascending to get the first/oldest)
+  // Get all todo briefs for these clients (ordered by sort_order then created_at to match visual order)
   const { data: briefs, error: fetchError } = await supabase
     .from("project_briefs")
     .select("*")
     .in("client_id", clientIds)
     .eq("status", "todo")
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
   if (fetchError) throw fetchError;
