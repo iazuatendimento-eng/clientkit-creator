@@ -220,27 +220,38 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       {...(!isPublicView && !isInactive ? attributes : {})}
       {...(!isPublicView && !isInactive ? listeners : {})}
     >
-      {/* Cover Media */}
-      {brief.coverVideo ? (
-        <div className="w-full h-48 relative bg-muted flex items-center justify-center">
-          <video 
-            src={brief.coverVideo} 
-            className="max-w-full max-h-full object-contain"
-            autoPlay
-            muted
-            loop
-            playsInline
-          />
-        </div>
-      ) : brief.coverImage ? (
-        <div className="w-full h-48 relative bg-muted flex items-center justify-center">
-          <img 
-            src={brief.coverImage} 
-            alt="Cover" 
-            className="max-w-full max-h-full object-contain"
-          />
-        </div>
-      ) : null}
+      {/* Cover Media - use brief cover fields, fallback to first final upload */}
+      {(() => {
+        const coverVideo = brief.coverVideo || (finalArtworks.length > 0 && finalArtworks[0].fileType.startsWith("video") ? finalArtworks[0].url : null);
+        const coverImage = !coverVideo ? (brief.coverImage || (finalArtworks.length > 0 && !finalArtworks[0].fileType.startsWith("video") ? finalArtworks[0].url : null)) : null;
+        
+        if (coverVideo) {
+          return (
+            <div className="w-full h-48 relative bg-muted flex items-center justify-center">
+              <video 
+                src={coverVideo} 
+                className="max-w-full max-h-full object-contain"
+                autoPlay
+                muted
+                loop
+                playsInline
+              />
+            </div>
+          );
+        }
+        if (coverImage) {
+          return (
+            <div className="w-full h-48 relative bg-muted flex items-center justify-center">
+              <img 
+                src={coverImage} 
+                alt="Cover" 
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
