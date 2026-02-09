@@ -343,7 +343,7 @@ const Index = () => {
   const handleBulkMoveToCompleted = async (team?: string) => {
     try {
       const filteredClients = (team 
-        ? clients.filter(c => c.team === team && c.active)
+        ? clients.filter(c => (c.team || "").toLowerCase() === team.toLowerCase() && c.active)
         : clients.filter(c => c.active));
       
       const clientIds = filteredClients.map(c => c.id);
@@ -388,7 +388,7 @@ const Index = () => {
 
     try {
       const filteredClients = (selectedTeamForDeadline 
-        ? clients.filter(c => c.team === selectedTeamForDeadline && c.active)
+        ? clients.filter(c => (c.team || "").toLowerCase() === selectedTeamForDeadline.toLowerCase() && c.active)
         : clients.filter(c => c.active));
       
       const clientIds = filteredClients.map(c => c.id);
