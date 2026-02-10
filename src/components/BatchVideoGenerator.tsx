@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -211,7 +211,7 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   });
 };
 // Card cover with auto page cycling
-const CardCoverPreview = ({
+const CardCoverPreview = memo(({
   video,
   motionEffect,
   transitionEffect,
@@ -263,10 +263,9 @@ const CardCoverPreview = ({
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
         {/* Layer 1: Background - wrapped to prevent edge trembling */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden" style={{ contain: 'strict' }}>
           <div
             className={`absolute inset-[-5%] ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
-            style={{ willChange: 'transform', backfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
           >
             {hasVideo ? (
               <video
@@ -355,7 +354,7 @@ const CardCoverPreview = ({
       )}
     </div>
   );
-};
+});
 
 export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchVideoGeneratorProps) => {
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
@@ -2390,6 +2389,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         [class*="card-animate-"] {
           -webkit-backface-visibility: hidden;
           backface-visibility: hidden;
+          will-change: transform;
+          contain: layout style;
         }
 
         .card-animate-ken-burns { animation: kb 8s ease-in-out infinite; }
