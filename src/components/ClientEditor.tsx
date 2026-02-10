@@ -608,11 +608,31 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
               {/* Font */}
               <div className="space-y-3">
                 <Label>Fonte</Label>
-                <Input
-                  value={brandFont}
-                  onChange={(e) => setBrandFont(e.target.value)}
-                  placeholder="Ex: Montserrat, Roboto, Open Sans..."
-                />
+                <Select
+                  value={brandFont || ""}
+                  onValueChange={(value) => setBrandFont(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma fonte" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      "Arial", "Arial Black", "Bebas Neue", "Calibri", "Cambria",
+                      "Comic Sans MS", "Courier New", "Dancing Script", "Franklin Gothic",
+                      "Futura", "Georgia", "Gill Sans", "Gotham", "Helvetica",
+                      "Impact", "Inter", "Lato", "Lobster", "Lucida Console",
+                      "Merriweather", "Montserrat", "Nunito", "Open Sans", "Oswald",
+                      "Pacifico", "Palatino", "Playfair Display", "Poppins", "PT Sans",
+                      "Quicksand", "Raleway", "Roboto", "Roboto Condensed", "Roboto Slab",
+                      "Segoe UI", "Source Sans Pro", "Tahoma", "Times New Roman",
+                      "Trebuchet MS", "Ubuntu", "Verdana", "Work Sans"
+                    ].map((font) => (
+                      <SelectItem key={font} value={font}>
+                        {font}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {brandFont && (
                   <p className="text-xs text-muted-foreground">
                     Fonte selecionada: <span className="font-semibold">{brandFont}</span>
