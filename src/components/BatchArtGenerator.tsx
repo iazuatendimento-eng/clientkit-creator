@@ -154,6 +154,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedArt, setSelectedArt] = useState<ClientArt | null>(null);
+  const [selectedArtIndex, setSelectedArtIndex] = useState<number>(-1);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [photoOffsetX, setPhotoOffsetX] = useState(0);
@@ -1061,13 +1062,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   };
 
   const handleSelectPhotoImage = async (image: SearchImage) => {
-    if (!selectedArt) return;
-    const index = clientArts.findIndex((a) => 
-      a.clientId === selectedArt.clientId && 
-      a.cardId === selectedArt.cardId &&
-      a.pageIndex === selectedArt.pageIndex
-    );
-    if (index === -1) return;
+    if (!selectedArt || selectedArtIndex < 0) return;
+    const index = selectedArtIndex;
+    if (index >= clientArts.length) return;
 
     const updatedArt = { ...clientArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
     const updatedArts = [...clientArts];
@@ -1108,13 +1105,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   };
 
   const applyCustomImage = async (imageUrl: string) => {
-    if (!selectedArt) return;
-    const index = clientArts.findIndex((a) => 
-      a.clientId === selectedArt.clientId && 
-      a.cardId === selectedArt.cardId &&
-      a.pageIndex === selectedArt.pageIndex
-    );
-    if (index === -1) return;
+    if (!selectedArt || selectedArtIndex < 0) return;
+    const index = selectedArtIndex;
+    if (index >= clientArts.length) return;
 
     const updatedArt = { ...clientArts[index], photoImage: imageUrl, photoOffset: { x: 0, y: 0 } };
     const updatedArts = [...clientArts];
@@ -1138,7 +1131,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   };
 
   const openAdjustDialog = (art: ClientArt) => {
+    const idx = clientArts.indexOf(art);
     setSelectedArt(art);
+    setSelectedArtIndex(idx);
     setLivePreviewUrl(art.imageUrl); // Start with current image
     setPhotoOffsetX(art.photoOffset?.x || 0);
     setPhotoOffsetY(art.photoOffset?.y || 0);
@@ -1615,7 +1610,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                       variant="outline"
                       title="Trocar foto"
                       onClick={() => {
+                        const idx = clientArts.indexOf(art);
                         setSelectedArt(art);
+                        setSelectedArtIndex(idx);
                         setSearchQuery(art.cardText.split(" ").slice(0, 3).join(" "));
                         setIsImageDialogOpen(true);
                       }}
