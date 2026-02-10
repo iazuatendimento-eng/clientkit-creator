@@ -263,38 +263,41 @@ const CardCoverPreview = ({
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
         {/* Layer 1: Background - wrapped to prevent edge trembling */}
-        <div className="absolute inset-[-4%] overflow-hidden" style={{ transform: 'translateZ(0)', isolation: 'isolate' }}>
-          {hasVideo ? (
-            <video
-              key={`card-vid-${video.cardId}-${currentPage}`}
-              ref={(el) => {
-                if (el) {
-                  el.muted = true;
-                  el.playsInline = true;
-                  el.play().catch(() => {});
-                }
-              }}
-              src={activeVideoUrl!}
-              className={`w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
-              style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
-              muted
-              loop
-              autoPlay
-              playsInline
-            />
-          ) : video.pages[currentPage] ? (
-            <img
-              key={`card-img-${video.cardId}-${currentPage}`}
-              src={video.pages[currentPage]}
-              alt={video.clientName}
-              className={`w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
-              style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
+        <div className="absolute inset-0 overflow-hidden">
+          <div
+            className={`absolute inset-[-5%] ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+            style={{ willChange: 'transform', backfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
+          >
+            {hasVideo ? (
+              <video
+                key={`card-vid-${video.cardId}-${currentPage}`}
+                ref={(el) => {
+                  if (el) {
+                    el.muted = true;
+                    el.playsInline = true;
+                    el.play().catch(() => {});
+                  }
+                }}
+                src={activeVideoUrl!}
+                className="w-full h-full object-cover"
+                muted
+                loop
+                autoPlay
+                playsInline
+              />
+            ) : video.pages[currentPage] ? (
+              <img
+                key={`card-img-${video.cardId}-${currentPage}`}
+                src={video.pages[currentPage]}
+                alt={video.clientName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Layer 2: Frame overlay (static shapes - no animation) */}
