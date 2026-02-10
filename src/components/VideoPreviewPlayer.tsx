@@ -49,20 +49,7 @@ export function VideoPreviewPlayer({
         setIsTransitioning(true);
         
         transitionTimeoutRef.current = window.setTimeout(() => {
-          setCurrentPage((p) => {
-            const next = (p + 1) % pages.length;
-            // Play next video if available
-            if (hasVideoForPage(next)) {
-              const vid = videoRefs.current[next];
-              if (vid) { vid.currentTime = 0; vid.play().catch(() => {}); }
-            }
-            // Pause current video
-            if (hasVideoForPage(p)) {
-              const vid = videoRefs.current[p];
-              if (vid) vid.pause();
-            }
-            return next;
-          });
+          setCurrentPage((p) => (p + 1) % pages.length);
           
           transitionTimeoutRef.current = window.setTimeout(() => {
             setIsTransitioning(false);
@@ -84,24 +71,17 @@ export function VideoPreviewPlayer({
 
   // Handle play/pause for current video
   useEffect(() => {
-    if (hasVideoForPage(currentPage)) {
-      const vid = videoRefs.current[currentPage];
-      if (vid) {
-        if (isPlaying) {
-          vid.play().catch(() => {});
-        } else {
-          vid.pause();
-        }
+    const vid = videoRefs.current[0]; // Only one video element rendered at a time
+    if (vid) {
+      if (isPlaying) {
+        vid.play().catch(() => {});
+      } else {
+        vid.pause();
       }
     }
   }, [isPlaying, currentPage]);
 
   const goToPage = (page: number) => {
-    // Pause current video
-    if (hasVideoForPage(currentPage)) {
-      const vid = videoRefs.current[currentPage];
-      if (vid) vid.pause();
-    }
     setIsPlaying(false);
     setIsTransitioning(true);
     setTimeout(() => {
@@ -190,14 +170,13 @@ export function VideoPreviewPlayer({
           {showVideoBackground ? (
             <video
               key={`video-bg-${currentPage}`}
-              ref={(el) => { videoRefs.current[currentPage] = el; }}
+              ref={(el) => { videoRefs.current[0] = el; if (el) { el.play().catch(() => {}); } }}
               src={videoUrls![currentPage]!}
               className={cn("w-full h-full object-cover", getMotionClass())}
               muted
               loop
               playsInline
               crossOrigin="anonymous"
-              autoPlay
             />
           ) : (
             <img
