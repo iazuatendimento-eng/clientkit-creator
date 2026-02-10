@@ -2355,13 +2355,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         @keyframes tsc { from { opacity:0; transform: scale(0.5); } to { opacity:1; transform: scale(1); } }
         @keyframes tbi { 0% { opacity:0; transform: scale(0.3) translateY(10%); } 50% { opacity:1; transform: scale(1.05); } 100% { opacity:1; transform: scale(1); } }
 
-        .card-animate-text-fade-in { animation: tfi 0.8s ease-out forwards; }
-        .card-animate-text-slide-up { animation: tsu 0.8s ease-out forwards; }
-        .card-animate-text-slide-down { animation: tsd 0.8s ease-out forwards; }
-        .card-animate-text-slide-left { animation: tsl 0.8s ease-out forwards; }
-        .card-animate-text-slide-right { animation: tsr 0.8s ease-out forwards; }
-        .card-animate-text-scale-in { animation: tsc 0.8s ease-out forwards; }
-        .card-animate-text-bounce-in { animation: tbi 0.8s ease-out forwards; }
+        .card-animate-text-fade-in { animation: tfi 2s ease-in-out infinite alternate; }
+        .card-animate-text-slide-up { animation: tsu 2s ease-in-out infinite alternate; }
+        .card-animate-text-slide-down { animation: tsd 2s ease-in-out infinite alternate; }
+        .card-animate-text-slide-left { animation: tsl 2s ease-in-out infinite alternate; }
+        .card-animate-text-slide-right { animation: tsr 2s ease-in-out infinite alternate; }
+        .card-animate-text-scale-in { animation: tsc 2s ease-in-out infinite alternate; }
+        .card-animate-text-bounce-in { animation: tbi 2s ease-in-out infinite alternate; }
 
         @keyframes lfi { from { opacity:0; } to { opacity:1; } }
         @keyframes lsu { from { opacity:0; transform: translateY(20%); } to { opacity:1; transform: translateY(0); } }
