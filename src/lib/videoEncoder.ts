@@ -116,9 +116,9 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       "-c:v",
       "libx264",
       "-preset",
-      "fast",
+      "slow",
       "-crf",
-      "23",
+      "18",
       "-pix_fmt",
       "yuv420p",
       "-movflags",
@@ -441,7 +441,7 @@ export async function encodeVideoSimple(
     width, 
     height, 
     pageDuration, 
-    fps = 24, 
+    fps = 30, 
     motionEffect = "ken-burns",
     transitionEffect = "fade",
     textAnimation = "none",
@@ -576,7 +576,7 @@ export async function encodeVideoSimple(
   const stream = canvas.captureStream(fps);
   const mediaRecorder = new MediaRecorder(stream, {
     mimeType: chosenMime,
-    videoBitsPerSecond: 4_000_000,
+    videoBitsPerSecond: 12_000_000,
   });
 
   const chunks: Blob[] = [];
