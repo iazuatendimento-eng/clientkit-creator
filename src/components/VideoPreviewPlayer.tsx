@@ -186,44 +186,46 @@ export function VideoPreviewPlayer({
             getTransitionClass()
           )}
         >
+        {/* Background: video or static image */}
           {showVideoBackground ? (
-            <>
-              {/* Video background */}
-              <video
-                ref={(el) => { videoRefs.current[currentPage] = el; }}
-                src={videoUrls![currentPage]!}
-                className={cn("w-full h-full object-cover", getMotionClass())}
-                muted
-                loop
-                playsInline
-                crossOrigin="anonymous"
-              />
-              {/* Text overlay on top of video */}
-              {hasOverlay && (
-                <img
-                  key={`overlay-${currentPage}-${pageStartTime}`}
-                  src={currentOverlay}
-                  alt=""
-                  className={cn("absolute inset-0 w-full h-full object-contain", getTextAnimClass())}
-                  draggable={false}
-                />
-              )}
-              {/* Logo overlay on top */}
-              {hasLogoOverlay && (
-                <img
-                  key={`logo-${currentPage}-${pageStartTime}`}
-                  src={currentLogoOverlay}
-                  alt=""
-                  className={cn("absolute inset-0 w-full h-full object-contain", getLogoAnimClass())}
-                  draggable={false}
-                />
-              )}
-            </>
+            <video
+              key={`video-bg-${currentPage}`}
+              ref={(el) => { videoRefs.current[currentPage] = el; }}
+              src={videoUrls![currentPage]!}
+              className={cn("w-full h-full object-cover", getMotionClass())}
+              muted
+              loop
+              playsInline
+              crossOrigin="anonymous"
+              autoPlay
+            />
           ) : (
             <img
               src={pages[currentPage]}
               alt={`Página ${currentPage + 1}`}
               className={cn("w-full h-full object-contain", getMotionClass())}
+              draggable={false}
+            />
+          )}
+
+          {/* Text overlay - always render on top when available */}
+          {hasOverlay && (
+            <img
+              key={`overlay-${currentPage}-${pageStartTime}`}
+              src={currentOverlay}
+              alt=""
+              className={cn("absolute inset-0 w-full h-full object-contain z-[1]", getTextAnimClass())}
+              draggable={false}
+            />
+          )}
+
+          {/* Logo overlay - always render on top when available */}
+          {hasLogoOverlay && (
+            <img
+              key={`logo-${currentPage}-${pageStartTime}`}
+              src={currentLogoOverlay}
+              alt=""
+              className={cn("absolute inset-0 w-full h-full object-contain z-[2]", getLogoAnimClass())}
               draggable={false}
             />
           )}
