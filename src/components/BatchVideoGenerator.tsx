@@ -263,10 +263,10 @@ const CardCoverPreview = ({
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
         {/* Layer 1: Background - wrapped to prevent edge trembling */}
-        <div className="absolute inset-0 overflow-hidden" style={{ transform: 'translateZ(0)' }}>
+        <div className="absolute inset-[-4%] overflow-hidden" style={{ transform: 'translateZ(0)', isolation: 'isolate' }}>
           {hasVideo ? (
             <video
-              key={`card-vid-${video.cardId}-${currentPage}-${motionEffect}`}
+              key={`card-vid-${video.cardId}-${currentPage}`}
               ref={(el) => {
                 if (el) {
                   el.muted = true;
@@ -276,6 +276,7 @@ const CardCoverPreview = ({
               }}
               src={activeVideoUrl!}
               className={`w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+              style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
               muted
               loop
               autoPlay
@@ -283,10 +284,11 @@ const CardCoverPreview = ({
             />
           ) : video.pages[currentPage] ? (
             <img
-              key={`card-img-${video.cardId}-${currentPage}-${motionEffect}`}
+              key={`card-img-${video.cardId}-${currentPage}`}
               src={video.pages[currentPage]}
               alt={video.clientName}
               className={`w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+              style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -2383,9 +2385,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         @keyframes skst { 0%,100% { transform: translateX(0); } 10%,30%,50%,70%,90% { transform: translateX(-5px); } 20%,40%,60%,80% { transform: translateX(5px); } }
 
         [class*="card-animate-"] {
-          will-change: transform;
           -webkit-backface-visibility: hidden;
           backface-visibility: hidden;
+          -webkit-transform-style: preserve-3d;
+          transform-style: preserve-3d;
+          image-rendering: auto;
         }
 
         .card-animate-ken-burns { animation: kb 8s ease-in-out infinite; }
