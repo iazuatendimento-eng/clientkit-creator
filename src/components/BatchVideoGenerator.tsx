@@ -364,6 +364,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           title: "Nenhum card marcado",
           description: "Marque os cards pelo botão 'Criar Artes' no dashboard.",
         });
+      } else {
+        // Auto-fetch Pexels videos for card covers
+        autoFetchPexelsCovers(videos);
       }
     } catch (error) {
       console.error("Error loading tagged cards:", error);
@@ -373,6 +376,39 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Automatically fetch Pexels video thumbnails for all cards on load
+  const autoFetchPexelsCovers = async (videos: ClientVideo[]) => {
+    const updatedVideos = [...videos];
+    for (let i = 0; i < updatedVideos.length; i++) {
+      const video = updatedVideos[i];
+      const firstText = video.pageTexts[0] || video.cardTitle || "";
+      if (!firstText) continue;
+      try {
+        let searchTerms = firstText.split(" ").slice(0, 5).join(" ");
+        try {
+          const { data, error } = await Promise.race([
+            supabase.functions.invoke("translate-text", { body: { text: firstText } }),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
+          ]);
+          if (!error && data?.translatedText) searchTerms = data.translatedText;
+        } catch {}
+        const results = await searchPexelsVideos(searchTerms, 1);
+        if (results.length > 0) {
+          const pexelsVideoUrls = video.pageTexts.map(() => null as string | null);
+          pexelsVideoUrls[0] = results[0].videoUrl;
+          updatedVideos[i] = {
+            ...updatedVideos[i],
+            searchedImages: [results[0].image, ...(updatedVideos[i].searchedImages?.slice(1) || [])],
+            previewVideoUrls: pexelsVideoUrls,
+          };
+          setClientVideos([...updatedVideos]);
+        }
+      } catch (err) {
+        console.error("Auto-fetch Pexels cover error:", err);
+      }
     }
   };
 
