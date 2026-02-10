@@ -210,6 +210,30 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
     img.src = url;
   });
 };
+
+// System fonts that don't need Google Fonts loading
+const SYSTEM_FONTS = new Set([
+  "Arial", "Verdana", "Helvetica", "Tahoma", "Trebuchet MS",
+  "Times New Roman", "Georgia", "Garamond", "Courier New",
+  "Impact", "Comic Sans MS", "Segoe UI", "Lucida Sans",
+]);
+
+// Load Google Font dynamically for canvas rendering
+const loadGoogleFont = async (fontFamily: string): Promise<void> => {
+  if (!fontFamily || SYSTEM_FONTS.has(fontFamily)) return;
+  const id = `google-font-${fontFamily.replace(/\s+/g, "-")}`;
+  if (document.getElementById(id)) return;
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;700&display=swap`;
+  document.head.appendChild(link);
+  // Wait for font to be available
+  try {
+    await document.fonts.load(`16px "${fontFamily}"`);
+  } catch { /* font may still work */ }
+};
+
 // Card cover with auto page cycling
 const CardCoverPreview = memo(({
   video,
@@ -872,7 +896,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         ctx.fillStyle = textColor;
         const baseFontSize = el.fontSize || 48;
         const fontSize = Math.round(baseFontSize * (textAdjustment.textScale / 100));
-        const fontFamily = brandKit?.fontFamily || "Arial";
+        const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
         ctx.font = `${fontSize}px ${fontFamily}`;
         
         // Use card text for content pages, placeholder for signature
@@ -1212,6 +1236,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     try {
       const updatedVideos = [...clientVideos];
+
+      // Preload all unique fonts from brand kits
+      const uniqueFonts = new Set(updatedVideos.map(v => v.brandKit?.font || v.brandKit?.fontFamily).filter(Boolean));
+      await Promise.all([...uniqueFonts].map(f => loadGoogleFont(f)));
 
       for (let i = 0; i < updatedVideos.length; i++) {
         const video = updatedVideos[i];
