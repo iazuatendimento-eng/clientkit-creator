@@ -143,11 +143,12 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
 interface BatchArtGeneratorProps {
   template: MasterTemplate;
   initialTeamFilter?: string;
+  initialBatch?: import("@/lib/batchHistory").BatchGeneration;
   onBack: () => void;
   onComplete: () => void;
 }
 
-export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onComplete }: BatchArtGeneratorProps) => {
+export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchArtGeneratorProps) => {
   const [clientArts, setClientArts] = useState<ClientArt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -278,15 +279,36 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, onBack, onCompl
   };
 
   useEffect(() => {
-    loadTaggedCards(teamFilter);
+    if (initialBatch) {
+      loadFromExistingBatch(initialBatch);
+    } else {
+      loadTaggedCards(teamFilter);
+    }
   }, []);
 
-  // Auto-generate arts when cards are loaded
+  // Auto-generate arts when cards are loaded (only for new batches, not existing ones)
   useEffect(() => {
-    if (clientArts.length > 0 && !isLoading && !isGenerating && !clientArts.some(a => a.imageUrl)) {
+    if (clientArts.length > 0 && !isLoading && !isGenerating && !clientArts.some(a => a.imageUrl) && !initialBatch) {
       generateAllArts();
     }
   }, [clientArts, isLoading]);
+
+  const loadFromExistingBatch = (batch: import("@/lib/batchHistory").BatchGeneration) => {
+    const arts: ClientArt[] = batch.items.map((item, index) => ({
+      clientId: item.clientId,
+      clientName: item.clientName,
+      company: item.company,
+      cardId: item.cardId,
+      cardTitle: item.cardTitle,
+      cardText: item.cardText,
+      brandKit: item.brandKit,
+      imageUrl: item.files?.[0] || null,
+      backgroundImage: item.backgroundImages?.[0],
+      status: "pending" as const,
+    }));
+    setClientArts(arts);
+    setIsLoading(false);
+  };
 
   const loadTaggedCards = async (filter?: string) => {
     try {
