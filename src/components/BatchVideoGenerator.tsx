@@ -174,7 +174,8 @@ interface ClientVideo {
   cardText: string;
   brandKit: any;
   pages: string[]; // Array of page images (base64) - with background
-  overlayPages?: string[]; // Array of page images (base64) - transparent background for video compositing
+  overlayPages?: string[]; // Array of page images (base64) - text only on transparent background
+  frameOverlayPages?: string[]; // Array of page images (base64) - decorative shapes only (static frame)
   logoOverlayPages?: string[]; // Array of page images (base64) - logo only for separate animation
   videoUrl: string | null;
   status: "pending" | "approved" | "rejected";
@@ -250,6 +251,7 @@ const CardCoverPreview = ({
   const activeVideoUrl = currentVideoUrl || fallbackVideoUrl;
   const hasVideo = !!activeVideoUrl;
   const overlayPage = video.overlayPages?.[currentPage];
+  const frameOverlay = video.frameOverlayPages?.[currentPage];
   const logoOverlay = video.logoOverlayPages?.[currentPage];
 
   const transitionClass = isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100";
@@ -291,24 +293,35 @@ const CardCoverPreview = ({
           </div>
         )}
 
-        {/* Layer 2: Text overlay */}
+        {/* Layer 2: Frame overlay (static shapes - no animation) */}
+        {frameOverlay && frameOverlay !== "" && (
+          <img
+            key={`frame-${video.cardId}-${currentPage}`}
+            src={frameOverlay}
+            alt=""
+            className="absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none"
+            draggable={false}
+          />
+        )}
+
+        {/* Layer 3: Text overlay (animated) */}
         {overlayPage && overlayPage !== "" && (
           <img
             key={`overlay-${video.cardId}-${currentPage}-${textAnimation}`}
             src={overlayPage}
             alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
+            className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
             draggable={false}
           />
         )}
 
-        {/* Layer 3: Logo overlay */}
+        {/* Layer 4: Logo overlay (animated) */}
         {logoOverlay && logoOverlay !== "" && (
           <img
             key={`logo-${video.cardId}-${currentPage}-${logoAnimation}`}
             src={logoOverlay}
             alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
+            className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
             draggable={false}
           />
         )}
@@ -560,7 +573,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     textAdjustment: PageTextAdjustment = defaultPageTextAdjustment,
     imageAdjustment: PageImageAdjustment = defaultPageImageAdjustment,
     transparentBackground: boolean = false,
-    excludeLogo: boolean = false
+    excludeLogo: boolean = false,
+    excludeText: boolean = false
   ): Promise<string> => {
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -683,8 +697,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     for (const el of elements) {
       // Skip logo if generating overlay without logo (logo has its own layer)
       if (excludeLogo && el.type === "logo") continue;
-      // For transparent text overlay, skip image elements (background images are handled separately)
-      if (transparentBackground && excludeLogo && el.type === "image") continue;
+      // For text-only overlay: skip everything except text and contact
+      if (transparentBackground && excludeLogo && !excludeText) {
+        if (!["text", "contact"].includes(el.type)) continue;
+      }
+      // For frame-only overlay: skip text, contact, logo, image
+      if (transparentBackground && excludeText) {
+        if (["text", "contact", "logo", "image"].includes(el.type)) continue;
+      }
+      // For transparent overlays, skip background images
+      if (transparentBackground && el.type === "image") continue;
       ctx.save();
       applyElementStyles(el);
       
@@ -969,111 +991,87 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     return canvas.toDataURL("image/png");
   };
 
-  const generateVideoForClient = async (video: ClientVideo, searchedImages: string[], videoUrls?: (string | null)[]): Promise<{ pages: string[]; overlayPages: string[]; logoOverlayPages: string[] }> => {
+  const generateVideoForClient = async (video: ClientVideo, searchedImages: string[], videoUrls?: (string | null)[]): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; logoOverlayPages: string[] }> => {
     const pages: string[] = [];
     const overlayPages: string[] = [];
+    const frameOverlayPages: string[] = [];
     const logoOverlayPages: string[] = [];
 
-    // Generate content pages (one per text segment)
     for (let i = 0; i < video.pageTexts.length; i++) {
       const text = video.pageTexts[i];
       const bgImage = searchedImages[i] || undefined;
       const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
       const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
-      const hasVideo = videoUrls?.[i];
 
-      // Normal page (with background)
       const pageImage = await generatePageImage(
-        template.contentElements,
-        text,
-        video.brandKit,
-        false,
-        bgImage,
-        video.adjustments,
-        textAdj,
-        imageAdj
+        template.contentElements, text, video.brandKit, false, bgImage,
+        video.adjustments, textAdj, imageAdj
       );
       pages.push(pageImage);
 
-      // Always generate transparent overlays for text and logo layers
+      // Text-only overlay (animated)
       const overlayImage = await generatePageImage(
-        template.contentElements,
-        text,
-        video.brandKit,
-        false,
-        undefined, // no background image
-        video.adjustments,
-        textAdj,
-        imageAdj,
-        true, // transparent background
-        true  // excludeLogo - logo rendered separately
+        template.contentElements, text, video.brandKit, false, undefined,
+        video.adjustments, textAdj, imageAdj, true, true, false
       );
       overlayPages.push(overlayImage);
 
-      // Generate logo-only overlay for separate animation
+      // Frame-only overlay (static shapes, no text/logo)
+      const frameOverlay = await generatePageImage(
+        template.contentElements, "", video.brandKit, false, undefined,
+        video.adjustments, textAdj, imageAdj, true, true, true
+      );
+      frameOverlayPages.push(frameOverlay);
+
       const logoOverlay = await generateLogoOverlay(
         template.contentElements, video.brandKit, false, video.adjustments
       );
       logoOverlayPages.push(logoOverlay);
     }
 
-    // Always add signature page at the end (no text adjustment needed for signature)
     const signaturePage = await generatePageImage(
-      template.signatureElements,
-      "",
-      video.brandKit,
-      true,
-      undefined,
-      video.adjustments,
-      defaultPageTextAdjustment,
-      defaultPageImageAdjustment
+      template.signatureElements, "", video.brandKit, true, undefined,
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment
     );
     pages.push(signaturePage);
-    overlayPages.push(""); // signature has no video
+    overlayPages.push("");
+    frameOverlayPages.push("");
     logoOverlayPages.push("");
 
-    return { pages, overlayPages, logoOverlayPages };
+    return { pages, overlayPages, frameOverlayPages, logoOverlayPages };
   };
 
-  const regenerateSingleVideo = async (video: ClientVideo): Promise<{ pages: string[]; overlayPages: string[]; logoOverlayPages: string[] }> => {
+  const regenerateSingleVideo = async (video: ClientVideo): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; logoOverlayPages: string[] }> => {
     const pages: string[] = [];
     const overlayPages: string[] = [];
+    const frameOverlayPages: string[] = [];
     const logoOverlayPages: string[] = [];
 
-    // Generate content pages with current searchedImages
     for (let i = 0; i < video.pageTexts.length; i++) {
       const text = video.pageTexts[i];
       const bgImage = video.searchedImages?.[i] || undefined;
       const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
       const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
-      const hasVideo = video.previewVideoUrls?.[i];
 
       const pageImage = await generatePageImage(
-        template.contentElements,
-        text,
-        video.brandKit,
-        false,
-        bgImage,
-        video.adjustments,
-        textAdj,
-        imageAdj
+        template.contentElements, text, video.brandKit, false, bgImage,
+        video.adjustments, textAdj, imageAdj
       );
       pages.push(pageImage);
 
-      // Always generate overlays for text and logo layers
+      // Text-only overlay
       const overlayImage = await generatePageImage(
-        template.contentElements,
-        text,
-        video.brandKit,
-        false,
-        undefined,
-        video.adjustments,
-        textAdj,
-        imageAdj,
-        true, // transparent
-        true  // excludeLogo
+        template.contentElements, text, video.brandKit, false, undefined,
+        video.adjustments, textAdj, imageAdj, true, true, false
       );
       overlayPages.push(overlayImage);
+
+      // Frame-only overlay
+      const frameOverlay = await generatePageImage(
+        template.contentElements, "", video.brandKit, false, undefined,
+        video.adjustments, textAdj, imageAdj, true, true, true
+      );
+      frameOverlayPages.push(frameOverlay);
 
       const logoOverlay = await generateLogoOverlay(
         template.contentElements, video.brandKit, false, video.adjustments
@@ -1081,22 +1079,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       logoOverlayPages.push(logoOverlay);
     }
 
-    // Add signature page
     const signaturePage = await generatePageImage(
-      template.signatureElements,
-      "",
-      video.brandKit,
-      true,
-      undefined,
-      video.adjustments,
-      defaultPageTextAdjustment,
-      defaultPageImageAdjustment
+      template.signatureElements, "", video.brandKit, true, undefined,
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment
     );
     pages.push(signaturePage);
     overlayPages.push("");
+    frameOverlayPages.push("");
     logoOverlayPages.push("");
 
-    return { pages, overlayPages, logoOverlayPages };
+    return { pages, overlayPages, frameOverlayPages, logoOverlayPages };
   };
 
   const updateAdjustmentLocal = useCallback((key: keyof ElementAdjustments, value: number) => {
@@ -1194,7 +1186,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       setIsApplyingAdjustments(true);
       try {
         const result = await regenerateSingleVideo(base);
-        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages };
+        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, logoOverlayPages: result.logoOverlayPages };
 
         selectedVideoRef.current = updatedVideo;
 
@@ -1278,7 +1270,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         }
 
         const result = await generateVideoForClient(video, searchedImages, pexelsVideoUrls);
-        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
+        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, logoOverlayPages: result.logoOverlayPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
         setClientVideos([...updatedVideos]);
       }
 
@@ -1319,7 +1311,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       const updatedVideo: ClientVideo = { ...video, brandKit: clientData.brand_kit };
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, logoOverlayPages: result.logoOverlayPages };
 
       setClientVideos((prev) =>
         prev.map((v, i) => (i === index ? finalVideo : v))
@@ -1430,7 +1422,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsApplyingAdjustments(true);
     try {
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, logoOverlayPages: result.logoOverlayPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -1529,7 +1521,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsApplyingAdjustments(true);
     try {
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, logoOverlayPages: result.logoOverlayPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
