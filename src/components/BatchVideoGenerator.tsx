@@ -263,7 +263,7 @@ const CardCoverPreview = ({
     >
       <div className={`absolute inset-0 transition-all duration-300 ease-out ${transitionClass}`}>
         {/* Layer 1: Background - wrapped to prevent edge trembling */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden" style={{ transform: 'translateZ(0)' }}>
           {hasVideo ? (
             <video
               key={`card-vid-${video.cardId}-${currentPage}-${motionEffect}`}
@@ -2386,7 +2386,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           will-change: transform;
           -webkit-backface-visibility: hidden;
           backface-visibility: hidden;
-          transform: translateZ(0);
         }
 
         .card-animate-ken-burns { animation: kb 8s ease-in-out infinite; }
