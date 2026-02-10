@@ -2371,28 +2371,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       </Dialog>
       {/* Card cover animation styles */}
       <style>{`
-        @keyframes kb { 0% { transform: scale(1) translate(0,0); } 25% { transform: scale(1.05) translate(-1%,-1%); } 50% { transform: scale(1.08) translate(1%,1%); } 75% { transform: scale(1.05) translate(-1%,1%); } 100% { transform: scale(1) translate(0,0); } }
-        @keyframes kb-r { 0% { transform: scale(1.08) translate(1%,1%); } 50% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.08) translate(1%,1%); } }
-        @keyframes ps { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-        @keyframes pst { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-        @keyframes fl { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        @keyframes fld { 0%,100% { transform: translate(0,0); } 25% { transform: translate(5px,-5px); } 50% { transform: translate(0,-10px); } 75% { transform: translate(-5px,-5px); } }
-        @keyframes sw { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
-        @keyframes br { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(1.03); opacity:0.95; } }
-        @keyframes dr { 0%,100% { transform: translate(0,0); } 25% { transform: translate(3px,-3px); } 50% { transform: translate(0,-5px); } 75% { transform: translate(-3px,-3px); } }
-        @keyframes wb { 0%,100% { transform: rotate(0) scale(1); } 15% { transform: rotate(-3deg) scale(1.02); } 45% { transform: rotate(-2deg) scale(1.01); } 75% { transform: rotate(-1deg); } }
-        @keyframes zp { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        @keyframes pl { 0% { transform: translateX(3%); } 100% { transform: translateX(-3%); } }
-        @keyframes pr { 0% { transform: translateX(-3%); } 100% { transform: translateX(3%); } }
-        @keyframes sks { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
-        @keyframes skst { 0%,100% { transform: translateX(0); } 10%,30%,50%,70%,90% { transform: translateX(-5px); } 20%,40%,60%,80% { transform: translateX(5px); } }
+        @keyframes kb { 0% { transform: translate3d(0,0,0) scale(1); } 25% { transform: translate3d(-1%,-1%,0) scale(1.05); } 50% { transform: translate3d(1%,1%,0) scale(1.08); } 75% { transform: translate3d(-1%,1%,0) scale(1.05); } 100% { transform: translate3d(0,0,0) scale(1); } }
+        @keyframes kb-r { 0% { transform: translate3d(1%,1%,0) scale(1.08); } 50% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(1%,1%,0) scale(1.08); } }
+        @keyframes ps { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(0,0,0) scale(1.02); } }
+        @keyframes pst { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(0,0,0) scale(1.08); } }
+        @keyframes fl { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,-8px,0); } }
+        @keyframes fld { 0%,100% { transform: translate3d(0,0,0); } 25% { transform: translate3d(5px,-5px,0); } 50% { transform: translate3d(0,-10px,0); } 75% { transform: translate3d(-5px,-5px,0); } }
+        @keyframes sw { 0%,100% { transform: translate3d(0,0,0) rotate(-2deg); } 50% { transform: translate3d(0,0,0) rotate(2deg); } }
+        @keyframes br { 0%,100% { transform: translate3d(0,0,0) scale(1); opacity:1; } 50% { transform: translate3d(0,0,0) scale(1.03); opacity:0.95; } }
+        @keyframes dr { 0%,100% { transform: translate3d(0,0,0); } 25% { transform: translate3d(3px,-3px,0); } 50% { transform: translate3d(0,-5px,0); } 75% { transform: translate3d(-3px,-3px,0); } }
+        @keyframes wb { 0%,100% { transform: translate3d(0,0,0) rotate(0) scale(1); } 15% { transform: translate3d(0,0,0) rotate(-3deg) scale(1.02); } 45% { transform: translate3d(0,0,0) rotate(-2deg) scale(1.01); } 75% { transform: translate3d(0,0,0) rotate(-1deg); } }
+        @keyframes zp { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(0,0,0) scale(1.05); } }
+        @keyframes pl { 0% { transform: translate3d(3%,0,0); } 100% { transform: translate3d(-3%,0,0); } }
+        @keyframes pr { 0% { transform: translate3d(-3%,0,0); } 100% { transform: translate3d(3%,0,0); } }
+        @keyframes sks { 0%,100% { transform: translate3d(0,0,0); } 25% { transform: translate3d(-2px,0,0); } 75% { transform: translate3d(2px,0,0); } }
+        @keyframes skst { 0%,100% { transform: translate3d(0,0,0); } 10%,30%,50%,70%,90% { transform: translate3d(-5px,0,0); } 20%,40%,60%,80% { transform: translate3d(5px,0,0); } }
 
         [class*="card-animate-"] {
           -webkit-backface-visibility: hidden;
           backface-visibility: hidden;
-          -webkit-transform-style: preserve-3d;
-          transform-style: preserve-3d;
-          image-rendering: auto;
         }
 
         .card-animate-ken-burns { animation: kb 8s ease-in-out infinite; }
