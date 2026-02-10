@@ -120,6 +120,7 @@ interface ClientArt {
   elementOverrides?: ElementOverrides;
   pageIndex?: number; // For carousel - which page this is (0-based)
   totalPages?: number; // For carousel - total pages in this card
+  imageType?: string; // Tipo de imagem do cadastro do cliente
 }
 
 // Helper to load image - handles both base64 data URLs and HTTP URLs
@@ -306,6 +307,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       brandKit: item.brandKit,
       imageUrl: item.files?.[0] || null,
       backgroundImage: item.backgroundImages?.[0],
+      imageType: (item as any).imageType,
       status: "pending" as const,
     }));
     setClientArts(arts);
@@ -341,6 +343,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               cardTitle: card.title,
               cardText: text,
               brandKit: card.client?.brand_kit,
+              imageType: card.client?.image_type || undefined,
               imageUrl: null,
               status: "pending",
               pageIndex,
@@ -357,6 +360,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             cardTitle: card.title,
             cardText: fullText,
             brandKit: card.client?.brand_kit,
+            imageType: card.client?.image_type || undefined,
             imageUrl: null,
             status: "pending",
           });
@@ -1601,6 +1605,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               <div className="p-3">
                 <h3 className="font-semibold truncate">{art.company}</h3>
                 <p className="text-sm text-muted-foreground truncate">{art.cardText}</p>
+                {art.imageType && (
+                  <p className="text-xs text-primary/70 truncate mt-0.5">{art.imageType}</p>
+                )}
 
                 {/* Actions */}
                 {art.imageUrl && art.status === "pending" && (
