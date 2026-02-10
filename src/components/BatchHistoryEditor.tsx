@@ -63,7 +63,7 @@ export const BatchHistoryEditor = ({
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
   const [textAnimation, setTextAnimation] = useState<TextAnimation>("fade-in");
   const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>("fade-in");
-  const [textAnimDuration, setTextAnimDuration] = useState(1.5);
+  const [textAnimDuration, setTextAnimDuration] = useState(2.5);
   const [isExportingVideo, setIsExportingVideo] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
 

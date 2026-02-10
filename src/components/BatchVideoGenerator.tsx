@@ -400,7 +400,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
   const [textAnimation, setTextAnimation] = useState<TextAnimation>("fade-in");
   const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>("fade-in");
-  const [textAnimDuration, setTextAnimDuration] = useState(1.5); // seconds
+  const [textAnimDuration, setTextAnimDuration] = useState(2.5); // seconds
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1873,18 +1873,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             <option value="slide-right">Deslizar Direita</option>
             <option value="scale-in">Zoom In</option>
             <option value="bounce-in">Quicar</option>
+            <option value="rotate-in">Rotacionar</option>
+            <option value="blur-in">Desfocar</option>
+            <option value="drop-in">Cair</option>
+            <option value="swing-in">Balançar</option>
+            <option value="elastic-in">Elástico</option>
+            <option value="flip-in">Virar</option>
           </select>
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-sm whitespace-nowrap">Duração:</Label>
           <input
             type="range"
-            min={0.3}
-            max={4}
+            min={0.5}
+            max={8}
             step={0.1}
             value={textAnimDuration}
             onChange={(e) => setTextAnimDuration(parseFloat(e.target.value))}
-            className="w-20 h-2 accent-primary"
+            className="w-24 h-2 accent-primary"
           />
           <span className="text-xs text-muted-foreground w-8">{textAnimDuration}s</span>
         </div>
@@ -2457,20 +2463,32 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         .card-animate-pan-right { animation: pr 8s linear infinite alternate; }
 
         @keyframes tfi { from { opacity:0; } to { opacity:1; } }
-        @keyframes tsu { from { opacity:0; transform: translateY(15%); } to { opacity:1; transform: translateY(0); } }
-        @keyframes tsd { from { opacity:0; transform: translateY(-15%); } to { opacity:1; transform: translateY(0); } }
-        @keyframes tsl { from { opacity:0; transform: translateX(15%); } to { opacity:1; transform: translateX(0); } }
-        @keyframes tsr { from { opacity:0; transform: translateX(-15%); } to { opacity:1; transform: translateX(0); } }
-        @keyframes tsc { from { opacity:0; transform: scale(0.5); } to { opacity:1; transform: scale(1); } }
-        @keyframes tbi { 0% { opacity:0; transform: scale(0.3) translateY(10%); } 50% { opacity:1; transform: scale(1.05); } 100% { opacity:1; transform: scale(1); } }
+        @keyframes tsu { from { opacity:0; transform: translateY(30%); } to { opacity:1; transform: translateY(0); } }
+        @keyframes tsd { from { opacity:0; transform: translateY(-30%); } to { opacity:1; transform: translateY(0); } }
+        @keyframes tsl { from { opacity:0; transform: translateX(30%); } to { opacity:1; transform: translateX(0); } }
+        @keyframes tsr { from { opacity:0; transform: translateX(-30%); } to { opacity:1; transform: translateX(0); } }
+        @keyframes tsc { from { opacity:0; transform: scale(0.3); } to { opacity:1; transform: scale(1); } }
+        @keyframes tbi { 0% { opacity:0; transform: scale(0.2) translateY(20%); } 40% { opacity:1; transform: scale(1.15); } 55% { transform: scale(0.9); } 70% { transform: scale(1.05); } 100% { opacity:1; transform: scale(1); } }
+        @keyframes tri { from { opacity:0; transform: rotate(15deg) scale(0.7); } to { opacity:1; transform: rotate(0) scale(1); } }
+        @keyframes tbli { from { opacity:0; filter: blur(20px); transform: scale(1.05); } to { opacity:1; filter: blur(0); transform: scale(1); } }
+        @keyframes tdi { 0% { opacity:0; transform: translateY(-50%); } 40% { opacity:1; transform: translateY(0); } 55% { transform: translateY(-8%); } 70% { transform: translateY(0); } 80% { transform: translateY(-3%); } 100% { transform: translateY(0); } }
+        @keyframes tswi { 0% { opacity:0; transform: translateX(-20%); } 20% { transform: translateX(15%); } 40% { transform: translateX(-10%); } 60% { transform: translateX(5%); } 80% { transform: translateX(-2%); } 100% { opacity:1; transform: translateX(0); } }
+        @keyframes teli { 0% { opacity:0; transform: scale(0.3); } 30% { transform: scale(1.15); } 45% { transform: scale(0.85); } 60% { opacity:1; transform: scale(1.08); } 75% { transform: scale(0.95); } 100% { transform: scale(1); } }
+        @keyframes tfli { 0% { opacity:0; transform: perspective(400px) rotateX(90deg) translateY(15%); } 40% { transform: perspective(400px) rotateX(-15deg); } 60% { opacity:1; transform: perspective(400px) rotateX(8deg); } 100% { transform: perspective(400px) rotateX(0) translateY(0); } }
 
-        .card-animate-text-fade-in { animation: tfi 0.8s ease-out forwards; }
-        .card-animate-text-slide-up { animation: tsu 0.8s ease-out forwards; }
-        .card-animate-text-slide-down { animation: tsd 0.8s ease-out forwards; }
-        .card-animate-text-slide-left { animation: tsl 0.8s ease-out forwards; }
-        .card-animate-text-slide-right { animation: tsr 0.8s ease-out forwards; }
-        .card-animate-text-scale-in { animation: tsc 0.8s ease-out forwards; }
-        .card-animate-text-bounce-in { animation: tbi 0.8s ease-out forwards; }
+        .card-animate-text-fade-in { animation: tfi ease-out forwards; }
+        .card-animate-text-slide-up { animation: tsu ease-out forwards; }
+        .card-animate-text-slide-down { animation: tsd ease-out forwards; }
+        .card-animate-text-slide-left { animation: tsl ease-out forwards; }
+        .card-animate-text-slide-right { animation: tsr ease-out forwards; }
+        .card-animate-text-scale-in { animation: tsc ease-out forwards; }
+        .card-animate-text-bounce-in { animation: tbi ease-out forwards; }
+        .card-animate-text-rotate-in { animation: tri ease-out forwards; }
+        .card-animate-text-blur-in { animation: tbli ease-out forwards; }
+        .card-animate-text-drop-in { animation: tdi ease-out forwards; }
+        .card-animate-text-swing-in { animation: tswi ease-out forwards; }
+        .card-animate-text-elastic-in { animation: teli ease-out forwards; }
+        .card-animate-text-flip-in { animation: tfli ease-out forwards; }
 
         @keyframes lfi { from { opacity:0; } to { opacity:1; } }
         @keyframes lsu { from { opacity:0; transform: translateY(20%); } to { opacity:1; transform: translateY(0); } }
