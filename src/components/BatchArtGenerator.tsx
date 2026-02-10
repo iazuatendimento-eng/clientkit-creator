@@ -1305,6 +1305,39 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     });
   };
 
+  // Refresh brand kit from database and regenerate art
+  const refreshBrandKitAndRegenerate = async (index: number) => {
+    const art = clientArts[index];
+    try {
+      // Fetch fresh client data from database
+      const { data: clientData, error } = await supabase
+        .from("client_data")
+        .select("brand_kit")
+        .eq("id", art.clientId)
+        .single();
+
+      if (error || !clientData) {
+        toast({ title: "Erro ao buscar dados do cliente", variant: "destructive" });
+        return;
+      }
+
+      // Update the brand kit in state
+      const updatedArts = [...clientArts];
+      updatedArts[index] = { ...updatedArts[index], brandKit: clientData.brand_kit, imageUrl: null };
+      setClientArts(updatedArts);
+
+      // Regenerate art with new brand kit
+      const newImageUrl = await generateArtForClient({ ...updatedArts[index] });
+      updatedArts[index] = { ...updatedArts[index], imageUrl: newImageUrl };
+      setClientArts([...updatedArts]);
+
+      toast({ title: "Kit de marca atualizado!", description: `Cores de ${art.clientName} recarregadas.` });
+    } catch (error) {
+      console.error("Error refreshing brand kit:", error);
+      toast({ title: "Erro ao atualizar kit de marca", variant: "destructive" });
+    }
+  };
+
   // Save current state as draft to history (without finalizing)
   const handleSaveDraft = async () => {
     const artsWithImages = clientArts.filter((a) => a.imageUrl);
@@ -1601,7 +1634,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => regenerateArt(index)}
+                      title="Atualizar cores do cadastro e regenerar"
+                      onClick={() => refreshBrandKitAndRegenerate(index)}
                     >
                       <RefreshCw className="h-4 w-4" />
                     </Button>
