@@ -228,7 +228,10 @@ function getTextAnimationTransform(effect: TextAnimation, progress: number, cust
   // Text animation happens in a configurable fraction of the page duration
   const animDuration = customDuration ?? 0.3;
   const t = Math.min(1, progress / animDuration); // 0 to 1 within animation window
-  const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+  // Use a slower easing that keeps the movement visible longer
+  const eased = t < 0.5 
+    ? 2 * t * t  // ease-in for first half
+    : 1 - Math.pow(-2 * t + 2, 2) / 2; // ease-out for second half
 
   switch (effect) {
     case "fade-in":
