@@ -136,6 +136,63 @@ export const searchImages = async (query: string, perPage: number = 15): Promise
   return getPicsumFallback(query, Math.min(perPage, 12));
 };
 
+// Pexels Video search
+export interface SearchVideo {
+  id: string;
+  url: string;
+  image: string; // thumbnail/preview image
+  duration: number;
+  videoUrl: string; // direct video file URL (SD quality for background use)
+  photographer: string;
+  description: string;
+}
+
+export const searchPexelsVideos = async (query: string, perPage: number = 5): Promise<SearchVideo[]> => {
+  const apiKey = import.meta.env.VITE_PEXELS_API_KEY || 'Ogmbd5yQ7EvLxAyzUKA7o9JqFsQj28loZrZKNoPzzQflzmBjCl28EUuk';
+  
+  if (!apiKey) {
+    console.log('Pexels API key not configured');
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=portrait`,
+      {
+        headers: {
+          'Authorization': apiKey
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Pexels Video API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    
+    return (data.videos || []).map((video: any) => {
+      // Get the best quality video file (prefer HD or SD)
+      const videoFiles = video.video_files || [];
+      const sdFile = videoFiles.find((f: any) => f.quality === 'sd') || videoFiles[0];
+      
+      return {
+        id: `pexels-video-${video.id}`,
+        url: video.url,
+        image: video.image, // Pexels provides a thumbnail image
+        duration: video.duration,
+        videoUrl: sdFile?.link || '',
+        photographer: video.user?.name || 'Pexels',
+        description: query,
+      };
+    }).filter((v: SearchVideo) => v.image && v.videoUrl);
+  } catch (error) {
+    console.error('Error fetching Pexels videos:', error);
+    return [];
+  }
+};
+
 // Check which APIs are configured
 export const getConfiguredApis = (): { pexels: boolean; unsplash: boolean } => {
   return {

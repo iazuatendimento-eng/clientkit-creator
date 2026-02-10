@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
-import { searchImages, SearchImage } from "@/lib/imageSearch";
+import { searchImages, SearchImage, searchPexelsVideos } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
 import { encodeVideoToMP4, MotionEffect, TransitionEffect } from "@/lib/videoEncoder";
@@ -888,13 +888,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
         const video = updatedVideos[i];
         setGenerationStatus(`Gerando páginas (${i + 1}/${updatedVideos.length}) • ${video.clientName}`);
 
-        // Search for images for each content page with translation
+        // Search for videos from Pexels for each content page with translation
         const searchedImages: string[] = [];
         for (const text of video.pageTexts) {
           try {
             let searchTerms = text.split(" ").slice(0, 5).join(" ");
 
-            // Translate to English for better image search results (with timeout)
+            // Translate to English for better search results (with timeout)
             try {
               const translatePromise = supabase.functions.invoke("translate-text", {
                 body: { text },
@@ -913,14 +913,21 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
               console.error("Translation failed, using original text:", translateError);
             }
 
-            const images = await searchImages(searchTerms, 1);
-            if (images.length > 0) {
-              searchedImages.push(images[0].urls.regular);
+            // Search Pexels videos and use their thumbnail as background
+            const videos = await searchPexelsVideos(searchTerms, 1);
+            if (videos.length > 0) {
+              searchedImages.push(videos[0].image);
             } else {
-              searchedImages.push("");
+              // Fallback to image search if no videos found
+              const images = await searchImages(searchTerms, 1);
+              if (images.length > 0) {
+                searchedImages.push(images[0].urls.regular);
+              } else {
+                searchedImages.push("");
+              }
             }
           } catch (error) {
-            console.error("Error searching image for video:", error);
+            console.error("Error searching video for page:", error);
             searchedImages.push("");
           }
         }
