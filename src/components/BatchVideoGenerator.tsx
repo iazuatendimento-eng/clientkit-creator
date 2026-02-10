@@ -2382,6 +2382,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         @keyframes sks { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
         @keyframes skst { 0%,100% { transform: translateX(0); } 10%,30%,50%,70%,90% { transform: translateX(-5px); } 20%,40%,60%,80% { transform: translateX(5px); } }
 
+        [class*="card-animate-"] {
+          will-change: transform;
+          -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+          transform: translateZ(0);
+        }
+
         .card-animate-ken-burns { animation: kb 8s ease-in-out infinite; }
         .card-animate-ken-burns-reverse { animation: kb-r 8s ease-in-out infinite; }
         .card-animate-pulse { animation: ps 2s ease-in-out infinite; }
