@@ -12,6 +12,7 @@ import MasterArt from "./pages/MasterArt";
 import MasterVideo from "./pages/MasterVideo";
 import Receivables from "./pages/Receivables";
 import BatchHistoryPage from "./pages/BatchHistoryPage";
+import ExportDatabase from "./pages/ExportDatabase";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/master-video" element={<ProtectedRoute><MasterVideo /></ProtectedRoute>} />
           <Route path="/batch-history" element={<ProtectedRoute><BatchHistoryPage /></ProtectedRoute>} />
           <Route path="/receivables" element={<ProtectedRoute><Receivables /></ProtectedRoute>} />
+          <Route path="/export-db" element={<ProtectedRoute><ExportDatabase /></ProtectedRoute>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/client/:clientId" element={<ClientPublicView />} />
           <Route path="/:clientSlug" element={<ClientPublicView />} />
