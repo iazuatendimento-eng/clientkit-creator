@@ -1753,7 +1753,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               >
                 {/* Video Preview */}
                 <div
-                  className="aspect-[9/16] bg-muted relative group cursor-pointer"
+                  className="aspect-[9/16] bg-muted relative group cursor-pointer overflow-hidden"
                   onClick={() => {
                     setSelectedVideo(video);
                     setCurrentPreviewPage(0);
