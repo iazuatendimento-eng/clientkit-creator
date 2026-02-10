@@ -1693,7 +1693,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
               </TabsTrigger>
               <TabsTrigger value="custom">
                 <Upload className="h-4 w-4 mr-2" />
-                Minha Imagem
+                Meu Arquivo
               </TabsTrigger>
             </TabsList>
 
@@ -1765,7 +1765,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
             }}>
               {/* Paste from clipboard */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Colar Imagem</Label>
+                <Label className="text-sm font-medium">Colar Imagem/Vídeo</Label>
                 <Button
                   variant="outline"
                   className="w-full h-16 border-dashed"
@@ -1804,7 +1804,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/*"
                   className="hidden"
                   onChange={handleCustomImageUpload}
                 />
@@ -1815,7 +1815,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
                 >
                   <div className="flex flex-col items-center gap-1">
                     <Upload className="h-5 w-5" />
-                    <span className="text-xs">Clique para selecionar uma imagem</span>
+                    <span className="text-xs">Clique para selecionar imagem ou vídeo</span>
                   </div>
                 </Button>
               </div>
@@ -1825,7 +1825,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
                 <Label className="text-sm font-medium">Ou cole uma URL</Label>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="https://exemplo.com/imagem.jpg"
+                    placeholder="https://exemplo.com/video.mp4"
                     value={customImageUrl}
                     onChange={(e) => setCustomImageUrl(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleCustomImageUrl()}
