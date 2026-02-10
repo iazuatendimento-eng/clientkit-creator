@@ -1065,6 +1065,42 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
+  // Refresh brand kit from database and regenerate video
+  const refreshBrandKitAndRegenerate = async (index: number) => {
+    const video = clientVideos[index];
+    try {
+      const { data: clientData, error } = await supabase
+        .from("client_data")
+        .select("brand_kit")
+        .eq("id", video.clientId)
+        .single();
+
+      if (error || !clientData) {
+        toast({ title: "Erro ao buscar dados do cliente", variant: "destructive" });
+        return;
+      }
+
+      setIsGenerating(true);
+      setGenerationStatus(`Atualizando ${video.clientName}...`);
+
+      const updatedVideo: ClientVideo = { ...video, brandKit: clientData.brand_kit };
+      const result = await regenerateSingleVideo(updatedVideo);
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages };
+
+      setClientVideos((prev) =>
+        prev.map((v, i) => (i === index ? finalVideo : v))
+      );
+
+      toast({ title: "Kit de marca atualizado!", description: `Cores de ${video.clientName} recarregadas.` });
+    } catch (error) {
+      console.error("Error refreshing brand kit:", error);
+      toast({ title: "Erro ao atualizar kit de marca", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+      setGenerationStatus("");
+    }
+  };
+
   const handleApprove = (index: number) => {
     const updatedVideos = [...clientVideos];
     updatedVideos[index] = { ...updatedVideos[index], status: "approved" };
@@ -1657,6 +1693,18 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      title="Atualizar cores do cadastro e regenerar"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        refreshBrandKitAndRegenerate(index);
+                      }}
+                      disabled={isGenerating}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant={video.status === "approved" ? "default" : "outline"}
                       size="sm"
