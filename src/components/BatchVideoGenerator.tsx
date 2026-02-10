@@ -1727,6 +1727,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   {video.pages[0] ? (
                     video.previewVideoUrls?.[0] ? (
                       <video
+                        key={`card-vid-${video.clientName}-${video.previewVideoUrls[0]}`}
+                        ref={(el) => { if (el) { el.muted = true; el.play().catch(() => {}); } }}
                         src={video.previewVideoUrls[0]}
                         className="w-full h-full object-cover"
                         muted
