@@ -142,6 +142,28 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   });
 };
 
+// System fonts that don't need Google Fonts loading
+const SYSTEM_FONTS = new Set([
+  "Arial", "Verdana", "Helvetica", "Tahoma", "Trebuchet MS",
+  "Times New Roman", "Georgia", "Garamond", "Courier New",
+  "Impact", "Comic Sans MS", "Segoe UI", "Lucida Sans",
+]);
+
+// Load Google Font dynamically for canvas rendering
+const loadGoogleFont = async (fontFamily: string): Promise<void> => {
+  if (!fontFamily || SYSTEM_FONTS.has(fontFamily)) return;
+  const id = `google-font-${fontFamily.replace(/\s+/g, "-")}`;
+  if (document.getElementById(id)) return;
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;700&display=swap`;
+  document.head.appendChild(link);
+  try {
+    await document.fonts.load(`16px "${fontFamily}"`);
+  } catch { /* font may still work */ }
+};
+
 interface BatchArtGeneratorProps {
   template: MasterTemplate;
   initialTeamFilter?: string;
@@ -809,7 +831,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         const baseFontSize = el.fontSize || 32;
         const fontSizeMultiplier = (art.elementOverrides?.textFontSize || 100) / 100;
         const fontSize = Math.round(baseFontSize * fontSizeMultiplier);
-        const fontFamily = art.brandKit?.fontFamily || "Arial";
+        const fontFamily = art.brandKit?.font || art.brandKit?.fontFamily || "Arial";
         ctx.font = `${fontSize}px ${fontFamily}`;
         
         // Use card text for text elements
@@ -966,6 +988,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setIsGenerating(true);
     try {
       const updatedArts = [...clientArts];
+
+      // Preload all unique fonts from brand kits
+      const uniqueFonts = new Set(updatedArts.map(a => a.brandKit?.font || a.brandKit?.fontFamily).filter(Boolean));
+      await Promise.all([...uniqueFonts].map(f => loadGoogleFont(f)));
       
       // Check if template has image placeholders
       const hasImagePlaceholder = template.elements.some(el => el.type === "image" && el.placeholder);
