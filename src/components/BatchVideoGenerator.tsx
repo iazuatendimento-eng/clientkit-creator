@@ -1771,6 +1771,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     setIsPlayingPreview(true);
                   }}
                 >
+                  {/* Layer 1: Background - Pexels video or static image */}
                   {video.previewVideoUrls?.[0] ? (
                     <video
                       key={`card-vid-${video.cardId}-${video.previewVideoUrls[0]}`}
@@ -1796,12 +1797,32 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     <img
                       src={video.pages[0]}
                       alt={video.clientName}
-                      className="absolute inset-0 w-full h-full object-contain"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
                     <div className="absolute inset-0 w-full h-full flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
+                  )}
+
+                  {/* Layer 2: Text overlay */}
+                  {video.overlayPages?.[0] && (
+                    <img
+                      src={video.overlayPages[0]}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none"
+                      draggable={false}
+                    />
+                  )}
+
+                  {/* Layer 3: Logo overlay */}
+                  {video.logoOverlayPages?.[0] && (
+                    <img
+                      src={video.logoOverlayPages[0]}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none"
+                      draggable={false}
+                    />
                   )}
                   
                   {/* Page indicator */}
