@@ -262,36 +262,38 @@ const CardCoverPreview = ({
       onClick={onClick}
     >
       <div className={`absolute inset-0 transition-all duration-300 ease-out ${transitionClass}`}>
-        {/* Layer 1: Background */}
-        {hasVideo ? (
-          <video
-            key={`card-vid-${video.cardId}-${currentPage}-${motionEffect}`}
-            ref={(el) => {
-              if (el) {
-                el.muted = true;
-                el.playsInline = true;
-                el.play().catch(() => {});
-              }
-            }}
-            src={activeVideoUrl!}
-            className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
-            muted
-            loop
-            autoPlay
-            playsInline
-          />
-        ) : video.pages[currentPage] ? (
-          <img
-            key={`card-img-${video.cardId}-${currentPage}-${motionEffect}`}
-            src={video.pages[currentPage]}
-            alt={video.clientName}
-            className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
-          />
-        ) : (
-          <div className="absolute inset-0 w-full h-full flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
+        {/* Layer 1: Background - wrapped to prevent edge trembling */}
+        <div className="absolute inset-0 overflow-hidden">
+          {hasVideo ? (
+            <video
+              key={`card-vid-${video.cardId}-${currentPage}-${motionEffect}`}
+              ref={(el) => {
+                if (el) {
+                  el.muted = true;
+                  el.playsInline = true;
+                  el.play().catch(() => {});
+                }
+              }}
+              src={activeVideoUrl!}
+              className={`w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+              muted
+              loop
+              autoPlay
+              playsInline
+            />
+          ) : video.pages[currentPage] ? (
+            <img
+              key={`card-img-${video.cardId}-${currentPage}-${motionEffect}`}
+              src={video.pages[currentPage]}
+              alt={video.clientName}
+              className={`w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
 
         {/* Layer 2: Frame overlay (static shapes - no animation) */}
         {frameOverlay && frameOverlay !== "" && (
@@ -548,8 +550,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         }
 
         if (results.length > 0) {
-          const pexelsVideoUrls = video.pageTexts.map(() => null as string | null);
-          pexelsVideoUrls[0] = results[0].videoUrl;
+          // Set the same video URL for ALL content pages (not just page 0)
+          const pexelsVideoUrls = video.pageTexts.map(() => results[0].videoUrl as string | null);
           updatedVideos[i] = {
             ...updatedVideos[i],
             searchedImages: [results[0].image, ...(updatedVideos[i].searchedImages?.slice(1) || [])],
