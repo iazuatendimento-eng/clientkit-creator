@@ -1770,7 +1770,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     setIsPlayingPreview(true);
                   }}
                 >
-                  {/* Layer 1: Background - Pexels video or static image */}
+                  {/* Layer 1: Background - Pexels video or static image with motion effect */}
                   {video.previewVideoUrls?.[0] ? (
                     <video
                       key={`card-vid-${video.cardId}-${video.previewVideoUrls[0]}`}
@@ -1785,7 +1785,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         }
                       }}
                       src={video.previewVideoUrls[0]}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
                       muted
                       loop
                       autoPlay
@@ -1796,7 +1796,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     <img
                       src={video.pages[0]}
                       alt={video.clientName}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
                     />
                   ) : (
                     <div className="absolute inset-0 w-full h-full flex items-center justify-center">
@@ -1804,22 +1804,22 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     </div>
                   )}
 
-                  {/* Layer 2: Text overlay */}
+                  {/* Layer 2: Text overlay with text animation */}
                   {video.overlayPages?.[0] && (
                     <img
                       src={video.overlayPages[0]}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none"
+                      className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
                       draggable={false}
                     />
                   )}
 
-                  {/* Layer 3: Logo overlay */}
+                  {/* Layer 3: Logo overlay with logo animation */}
                   {video.logoOverlayPages?.[0] && (
                     <img
                       src={video.logoOverlayPages[0]}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none"
+                      className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
                       draggable={false}
                     />
                   )}
@@ -2310,6 +2310,78 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           </Tabs>
         </DialogContent>
       </Dialog>
+      {/* Card cover animation styles */}
+      <style>{`
+        @keyframes kb { 0% { transform: scale(1) translate(0,0); } 25% { transform: scale(1.05) translate(-1%,-1%); } 50% { transform: scale(1.08) translate(1%,1%); } 75% { transform: scale(1.05) translate(-1%,1%); } 100% { transform: scale(1) translate(0,0); } }
+        @keyframes kb-r { 0% { transform: scale(1.08) translate(1%,1%); } 50% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.08) translate(1%,1%); } }
+        @keyframes ps { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+        @keyframes pst { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        @keyframes fl { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes fld { 0%,100% { transform: translate(0,0); } 25% { transform: translate(5px,-5px); } 50% { transform: translate(0,-10px); } 75% { transform: translate(-5px,-5px); } }
+        @keyframes sw { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+        @keyframes br { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(1.03); opacity:0.95; } }
+        @keyframes dr { 0%,100% { transform: translate(0,0); } 25% { transform: translate(3px,-3px); } 50% { transform: translate(0,-5px); } 75% { transform: translate(-3px,-3px); } }
+        @keyframes wb { 0%,100% { transform: rotate(0) scale(1); } 15% { transform: rotate(-3deg) scale(1.02); } 45% { transform: rotate(-2deg) scale(1.01); } 75% { transform: rotate(-1deg); } }
+        @keyframes zp { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes pl { 0% { transform: translateX(3%); } 100% { transform: translateX(-3%); } }
+        @keyframes pr { 0% { transform: translateX(-3%); } 100% { transform: translateX(3%); } }
+        @keyframes sks { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+        @keyframes skst { 0%,100% { transform: translateX(0); } 10%,30%,50%,70%,90% { transform: translateX(-5px); } 20%,40%,60%,80% { transform: translateX(5px); } }
+
+        .card-animate-ken-burns { animation: kb 8s ease-in-out infinite; }
+        .card-animate-ken-burns-reverse { animation: kb-r 8s ease-in-out infinite; }
+        .card-animate-pulse { animation: ps 2s ease-in-out infinite; }
+        .card-animate-pulse-strong { animation: pst 1.5s ease-in-out infinite; }
+        .card-animate-float { animation: fl 3s ease-in-out infinite; }
+        .card-animate-float-diagonal { animation: fld 4s ease-in-out infinite; }
+        .card-animate-shake { animation: sks 0.5s ease-in-out infinite; }
+        .card-animate-shake-strong { animation: skst 0.8s ease-in-out infinite; }
+        .card-animate-sway { animation: sw 3s ease-in-out infinite; }
+        .card-animate-breathe { animation: br 4s ease-in-out infinite; }
+        .card-animate-drift { animation: dr 6s ease-in-out infinite; }
+        .card-animate-wobble { animation: wb 2s ease-in-out infinite; }
+        .card-animate-zoom-pulse { animation: zp 2s ease-in-out infinite; }
+        .card-animate-pan-left { animation: pl 8s linear infinite alternate; }
+        .card-animate-pan-right { animation: pr 8s linear infinite alternate; }
+
+        @keyframes tfi { from { opacity:0; } to { opacity:1; } }
+        @keyframes tsu { from { opacity:0; transform: translateY(15%); } to { opacity:1; transform: translateY(0); } }
+        @keyframes tsd { from { opacity:0; transform: translateY(-15%); } to { opacity:1; transform: translateY(0); } }
+        @keyframes tsl { from { opacity:0; transform: translateX(15%); } to { opacity:1; transform: translateX(0); } }
+        @keyframes tsr { from { opacity:0; transform: translateX(-15%); } to { opacity:1; transform: translateX(0); } }
+        @keyframes tsc { from { opacity:0; transform: scale(0.5); } to { opacity:1; transform: scale(1); } }
+        @keyframes tbi { 0% { opacity:0; transform: scale(0.3) translateY(10%); } 50% { opacity:1; transform: scale(1.05); } 100% { opacity:1; transform: scale(1); } }
+
+        .card-animate-text-fade-in { animation: tfi 0.8s ease-out forwards; }
+        .card-animate-text-slide-up { animation: tsu 0.8s ease-out forwards; }
+        .card-animate-text-slide-down { animation: tsd 0.8s ease-out forwards; }
+        .card-animate-text-slide-left { animation: tsl 0.8s ease-out forwards; }
+        .card-animate-text-slide-right { animation: tsr 0.8s ease-out forwards; }
+        .card-animate-text-scale-in { animation: tsc 0.8s ease-out forwards; }
+        .card-animate-text-bounce-in { animation: tbi 0.8s ease-out forwards; }
+
+        @keyframes lfi { from { opacity:0; } to { opacity:1; } }
+        @keyframes lsu { from { opacity:0; transform: translateY(20%); } to { opacity:1; transform: translateY(0); } }
+        @keyframes lsd { from { opacity:0; transform: translateY(-20%); } to { opacity:1; transform: translateY(0); } }
+        @keyframes lsl { from { opacity:0; transform: translateX(20%); } to { opacity:1; transform: translateX(0); } }
+        @keyframes lsr { from { opacity:0; transform: translateX(-20%); } to { opacity:1; transform: translateX(0); } }
+        @keyframes lsc { from { opacity:0; transform: scale(0.3); } to { opacity:1; transform: scale(1); } }
+        @keyframes lbi { 0% { opacity:0; transform: scale(0.2); } 50% { opacity:1; transform: scale(1.15); } 100% { opacity:1; transform: scale(1); } }
+        @keyframes lsi { from { opacity:0; transform: scale(0.3) rotate(360deg); } to { opacity:1; transform: scale(1) rotate(0); } }
+        @keyframes lfli { 0% { opacity:0; transform: perspective(400px) rotateY(90deg); } 60% { opacity:1; transform: perspective(400px) rotateY(10deg); } 100% { opacity:1; transform: perspective(400px) rotateY(0); } }
+        @keyframes lsw { 0% { opacity:0; transform: rotate(15deg); } 50% { opacity:1; transform: rotate(5deg); } 100% { opacity:1; transform: rotate(0); } }
+
+        .card-animate-logo-fade-in { animation: lfi 0.9s ease-out forwards; }
+        .card-animate-logo-slide-up { animation: lsu 0.9s ease-out forwards; }
+        .card-animate-logo-slide-down { animation: lsd 0.9s ease-out forwards; }
+        .card-animate-logo-slide-left { animation: lsl 0.9s ease-out forwards; }
+        .card-animate-logo-slide-right { animation: lsr 0.9s ease-out forwards; }
+        .card-animate-logo-scale-in { animation: lsc 0.9s ease-out forwards; }
+        .card-animate-logo-bounce-in { animation: lbi 0.9s ease-out forwards; }
+        .card-animate-logo-spin-in { animation: lsi 1s ease-out forwards; }
+        .card-animate-logo-flip-in { animation: lfli 1s ease forwards; }
+        .card-animate-logo-swing { animation: lsw 1s ease-out forwards; }
+      `}</style>
     </div>
   );
 };
