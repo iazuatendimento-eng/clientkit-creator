@@ -1725,11 +1725,22 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   }}
                 >
                   {video.pages[0] ? (
-                    <img
-                      src={video.pages[0]}
-                      alt={video.clientName}
-                      className="w-full h-full object-contain"
-                    />
+                    video.previewVideoUrls?.[0] ? (
+                      <video
+                        src={video.previewVideoUrls[0]}
+                        className="w-full h-full object-cover"
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        src={video.pages[0]}
+                        alt={video.clientName}
+                        className="w-full h-full object-contain"
+                      />
+                    )
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
