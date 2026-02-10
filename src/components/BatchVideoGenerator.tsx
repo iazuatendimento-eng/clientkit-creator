@@ -190,6 +190,7 @@ interface ClientVideo {
 interface BatchVideoGeneratorProps {
   template: VideoTemplate;
   initialTeamFilter?: string;
+  initialBatch?: import("@/lib/batchHistory").BatchGeneration;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -207,7 +208,7 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   });
 };
 
-export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onComplete }: BatchVideoGeneratorProps) => {
+export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchVideoGeneratorProps) => {
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -235,7 +236,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
   }, [selectedVideo]);
 
   useEffect(() => {
-    loadTaggedCards();
+    if (initialBatch) {
+      loadFromExistingBatch(initialBatch);
+    } else {
+      loadTaggedCards();
+    }
   }, []);
 
   useEffect(() => {
@@ -243,7 +248,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
       clientVideos.length > 0 &&
       !isLoading &&
       !isGenerating &&
-      !clientVideos.some((v) => v.pages.length > 0)
+      !clientVideos.some((v) => v.pages.length > 0) &&
+      !initialBatch
     ) {
       generateAllVideos();
     }
@@ -259,6 +265,55 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
 
     return () => window.clearInterval(interval);
   }, [selectedVideo, isPlayingPreview]);
+
+  const loadFromExistingBatch = async (batch: import("@/lib/batchHistory").BatchGeneration) => {
+    try {
+      setIsLoading(true);
+      
+      const clientIds = [...new Set(batch.items.map(item => item.clientId))];
+      const { data: clientsData } = await supabase
+        .from("client_data")
+        .select("id, image_type")
+        .in("id", clientIds);
+      const imageTypeMap: Record<string, string> = {};
+      clientsData?.forEach(c => { if (c.image_type) imageTypeMap[c.id] = c.image_type; });
+
+      const videos: ClientVideo[] = batch.items.map((item) => {
+        const pageTexts = item.files.length > 1
+          ? item.files.slice(0, -1).map((_, i) => item.cardText?.split(";")[i]?.trim() || item.cardTitle)
+          : [item.cardText || item.cardTitle];
+
+        return {
+          clientId: item.clientId,
+          clientName: item.clientName,
+          company: item.company,
+          cardId: item.cardId,
+          cardTitle: item.cardTitle,
+          cardText: item.cardText,
+          brandKit: item.brandKit,
+          pages: item.files || [],
+          videoUrl: null,
+          status: "pending" as const,
+          pageTexts,
+          searchedImages: item.backgroundImages,
+          adjustments: { ...defaultAdjustments },
+          pageTextAdjustments: pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
+          pageImageAdjustments: pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
+          imageType: imageTypeMap[item.clientId] || undefined,
+        };
+      });
+
+      setClientVideos(videos);
+    } catch (error) {
+      console.error("Error loading batch:", error);
+      toast({
+        title: "Erro ao carregar lote",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadTaggedCards = async () => {
     try {
