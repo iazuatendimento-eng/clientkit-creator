@@ -1,24 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, SkipBack, SkipForward, Settings } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type TransitionEffect = "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "zoom-out" | "flip" | "flip-vertical" | "rotate" | "rotate-reverse" | "blur" | "bounce" | "swing" | "spiral";
-type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
+import type { MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 
 interface VideoPreviewPlayerProps {
   pages: string[];
   pageDuration?: number;
   onPageChange?: (page: number) => void;
   className?: string;
+  motionEffect?: MotionEffect;
+  transitionEffect?: TransitionEffect;
+  textAnimation?: TextAnimation;
+  logoAnimation?: LogoAnimation;
+  videoUrls?: (string | null)[];
+  overlayPages?: string[];
+  logoOverlayPages?: string[];
 }
 
 export function VideoPreviewPlayer({
@@ -26,26 +23,47 @@ export function VideoPreviewPlayer({
   pageDuration = 3,
   onPageChange,
   className,
+  motionEffect = "ken-burns",
+  transitionEffect = "fade",
+  textAnimation = "none",
+  logoAnimation = "none",
+  videoUrls,
+  overlayPages,
+  logoOverlayPages,
 }: VideoPreviewPlayerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [transition, setTransition] = useState<TransitionEffect>("fade");
-  const [motion, setMotion] = useState<MotionEffect>("ken-burns");
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [pageStartTime, setPageStartTime] = useState(0);
   const intervalRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  const hasVideoForPage = (idx: number) => {
+    return videoUrls?.[idx] && videoUrls[idx] !== null && videoUrls[idx] !== "";
+  };
 
   useEffect(() => {
     if (isPlaying && pages.length > 1) {
       intervalRef.current = window.setInterval(() => {
         setIsTransitioning(true);
         
-        // Wait for exit animation
         transitionTimeoutRef.current = window.setTimeout(() => {
-          setCurrentPage((p) => (p + 1) % pages.length);
+          setCurrentPage((p) => {
+            const next = (p + 1) % pages.length;
+            // Play next video if available
+            if (hasVideoForPage(next)) {
+              const vid = videoRefs.current[next];
+              if (vid) { vid.currentTime = 0; vid.play().catch(() => {}); }
+            }
+            // Pause current video
+            if (hasVideoForPage(p)) {
+              const vid = videoRefs.current[p];
+              if (vid) vid.pause();
+            }
+            return next;
+          });
           
-          // Reset transitioning after enter animation
           transitionTimeoutRef.current = window.setTimeout(() => {
             setIsTransitioning(false);
           }, 300);
@@ -61,9 +79,29 @@ export function VideoPreviewPlayer({
 
   useEffect(() => {
     onPageChange?.(currentPage);
+    setPageStartTime(Date.now());
   }, [currentPage, onPageChange]);
 
+  // Handle play/pause for current video
+  useEffect(() => {
+    if (hasVideoForPage(currentPage)) {
+      const vid = videoRefs.current[currentPage];
+      if (vid) {
+        if (isPlaying) {
+          vid.play().catch(() => {});
+        } else {
+          vid.pause();
+        }
+      }
+    }
+  }, [isPlaying, currentPage]);
+
   const goToPage = (page: number) => {
+    // Pause current video
+    if (hasVideoForPage(currentPage)) {
+      const vid = videoRefs.current[currentPage];
+      if (vid) vid.pause();
+    }
     setIsPlaying(false);
     setIsTransitioning(true);
     setTimeout(() => {
@@ -74,7 +112,7 @@ export function VideoPreviewPlayer({
 
   const getTransitionClass = () => {
     if (!isTransitioning) {
-      switch (transition) {
+      switch (transitionEffect) {
         case "fade": return "opacity-100 scale-100";
         case "slide-left": return "translate-x-0 opacity-100";
         case "slide-right": return "translate-x-0 opacity-100";
@@ -82,18 +120,10 @@ export function VideoPreviewPlayer({
         case "slide-down": return "translate-y-0 opacity-100";
         case "zoom": return "scale-100 opacity-100";
         case "zoom-out": return "scale-100 opacity-100";
-        case "flip": return "rotate-y-0 opacity-100";
-        case "flip-vertical": return "rotate-x-0 opacity-100";
-        case "rotate": return "rotate-0 scale-100 opacity-100";
-        case "rotate-reverse": return "rotate-0 scale-100 opacity-100";
-        case "blur": return "opacity-100 blur-0";
-        case "bounce": return "translate-y-0 opacity-100 scale-100";
-        case "swing": return "rotate-0 opacity-100";
-        case "spiral": return "rotate-0 scale-100 opacity-100";
-        default: return "";
+        default: return "opacity-100";
       }
     } else {
-      switch (transition) {
+      switch (transitionEffect) {
         case "fade": return "opacity-0 scale-95";
         case "slide-left": return "-translate-x-full opacity-0";
         case "slide-right": return "translate-x-full opacity-0";
@@ -101,14 +131,6 @@ export function VideoPreviewPlayer({
         case "slide-down": return "translate-y-full opacity-0";
         case "zoom": return "scale-50 opacity-0";
         case "zoom-out": return "scale-150 opacity-0";
-        case "flip": return "rotate-y-90 opacity-0";
-        case "flip-vertical": return "rotate-x-90 opacity-0";
-        case "rotate": return "rotate-12 scale-75 opacity-0";
-        case "rotate-reverse": return "-rotate-12 scale-75 opacity-0";
-        case "blur": return "opacity-0 blur-lg";
-        case "bounce": return "-translate-y-8 opacity-0 scale-90";
-        case "swing": return "rotate-6 opacity-0";
-        case "spiral": return "rotate-45 scale-50 opacity-0";
         default: return "opacity-0";
       }
     }
@@ -117,7 +139,7 @@ export function VideoPreviewPlayer({
   const getMotionClass = () => {
     if (isTransitioning) return "";
     
-    switch (motion) {
+    switch (motionEffect) {
       case "ken-burns": return "animate-ken-burns";
       case "ken-burns-reverse": return "animate-ken-burns-reverse";
       case "pulse": return "animate-pulse-subtle";
@@ -137,37 +159,84 @@ export function VideoPreviewPlayer({
     }
   };
 
+  const getTextAnimClass = () => {
+    if (isTransitioning || textAnimation === "none") return "opacity-100";
+    return `animate-text-${textAnimation}`;
+  };
+
+  const getLogoAnimClass = () => {
+    if (isTransitioning || logoAnimation === "none") return "opacity-100";
+    return `animate-logo-${logoAnimation}`;
+  };
+
+  const showVideoBackground = hasVideoForPage(currentPage);
+  const currentOverlay = overlayPages?.[currentPage];
+  const currentLogoOverlay = logoOverlayPages?.[currentPage];
+  const hasOverlay = currentOverlay && currentOverlay !== "";
+  const hasLogoOverlay = currentLogoOverlay && currentLogoOverlay !== "";
+
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Video Preview */}
       <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden">
-        {pages[currentPage] && (
-          <div
-            className={cn(
-              "absolute inset-0 transition-all duration-300 ease-out",
-              getTransitionClass()
-            )}
-          >
+        {/* Background layer: video or static image */}
+        <div
+          className={cn(
+            "absolute inset-0 transition-all duration-300 ease-out",
+            getTransitionClass()
+          )}
+        >
+          {showVideoBackground ? (
+            <>
+              {/* Video background */}
+              <video
+                ref={(el) => { videoRefs.current[currentPage] = el; }}
+                src={videoUrls![currentPage]!}
+                className={cn("w-full h-full object-cover", getMotionClass())}
+                muted
+                loop
+                playsInline
+                crossOrigin="anonymous"
+              />
+              {/* Text overlay on top of video */}
+              {hasOverlay && (
+                <img
+                  key={`overlay-${currentPage}-${pageStartTime}`}
+                  src={currentOverlay}
+                  alt=""
+                  className={cn("absolute inset-0 w-full h-full object-contain", getTextAnimClass())}
+                  draggable={false}
+                />
+              )}
+              {/* Logo overlay on top */}
+              {hasLogoOverlay && (
+                <img
+                  key={`logo-${currentPage}-${pageStartTime}`}
+                  src={currentLogoOverlay}
+                  alt=""
+                  className={cn("absolute inset-0 w-full h-full object-contain", getLogoAnimClass())}
+                  draggable={false}
+                />
+              )}
+            </>
+          ) : (
             <img
               src={pages[currentPage]}
               alt={`Página ${currentPage + 1}`}
-              className={cn(
-                "w-full h-full object-contain",
-                getMotionClass()
-              )}
+              className={cn("w-full h-full object-contain", getMotionClass())}
               draggable={false}
             />
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Page indicator */}
-        <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+        <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full z-10">
           {currentPage + 1} / {pages.length}
         </div>
 
         {/* Progress bar */}
         {isPlaying && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30 z-10">
             <div
               className="h-full bg-primary transition-all ease-linear"
               style={{
@@ -207,73 +276,7 @@ export function VideoPreviewPlayer({
         >
           <SkipForward className="h-4 w-4" />
         </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setShowSettings(!showSettings)}
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
       </div>
-
-      {/* Effect Settings */}
-      {showSettings && (
-        <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg animate-fade-in">
-          <div className="space-y-2">
-            <Label className="text-xs">Transição</Label>
-            <Select value={transition} onValueChange={(v) => setTransition(v as TransitionEffect)}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fade">Fade</SelectItem>
-                <SelectItem value="slide-left">Deslizar Esquerda</SelectItem>
-                <SelectItem value="slide-right">Deslizar Direita</SelectItem>
-                <SelectItem value="slide-up">Deslizar Cima</SelectItem>
-                <SelectItem value="slide-down">Deslizar Baixo</SelectItem>
-                <SelectItem value="zoom">Zoom In</SelectItem>
-                <SelectItem value="zoom-out">Zoom Out</SelectItem>
-                <SelectItem value="flip">Virar Horizontal</SelectItem>
-                <SelectItem value="flip-vertical">Virar Vertical</SelectItem>
-                <SelectItem value="rotate">Rotacionar</SelectItem>
-                <SelectItem value="rotate-reverse">Rotacionar Inverso</SelectItem>
-                <SelectItem value="blur">Blur</SelectItem>
-                <SelectItem value="bounce">Bounce</SelectItem>
-                <SelectItem value="swing">Swing</SelectItem>
-                <SelectItem value="spiral">Espiral</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label className="text-xs">Movimento</Label>
-            <Select value={motion} onValueChange={(v) => setMotion(v as MotionEffect)}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhum</SelectItem>
-                <SelectItem value="ken-burns">Ken Burns</SelectItem>
-                <SelectItem value="ken-burns-reverse">Ken Burns Reverso</SelectItem>
-                <SelectItem value="pulse">Pulsar Suave</SelectItem>
-                <SelectItem value="pulse-strong">Pulsar Forte</SelectItem>
-                <SelectItem value="float">Flutuar</SelectItem>
-                <SelectItem value="float-diagonal">Flutuar Diagonal</SelectItem>
-                <SelectItem value="shake">Tremer Suave</SelectItem>
-                <SelectItem value="shake-strong">Tremer Forte</SelectItem>
-                <SelectItem value="sway">Balançar</SelectItem>
-                <SelectItem value="breathe">Respirar</SelectItem>
-                <SelectItem value="drift">Deriva</SelectItem>
-                <SelectItem value="wobble">Bambolear</SelectItem>
-                <SelectItem value="zoom-pulse">Zoom Pulsar</SelectItem>
-                <SelectItem value="pan-left">Pan Esquerda</SelectItem>
-                <SelectItem value="pan-right">Pan Direita</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
 
       {/* Thumbnails */}
       <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
@@ -332,7 +335,7 @@ export function VideoPreviewPlayer({
           50% { transform: scale(1.08); }
         }
         
-        @keyframes float {
+        @keyframes float-anim {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-8px); }
         }
@@ -401,7 +404,7 @@ export function VideoPreviewPlayer({
         .animate-ken-burns-reverse { animation: ken-burns-reverse 8s ease-in-out infinite; }
         .animate-pulse-subtle { animation: pulse-subtle 2s ease-in-out infinite; }
         .animate-pulse-strong { animation: pulse-strong 1.5s ease-in-out infinite; }
-        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-float { animation: float-anim 3s ease-in-out infinite; }
         .animate-float-diagonal { animation: float-diagonal 4s ease-in-out infinite; }
         .animate-shake-subtle { animation: shake-subtle 0.5s ease-in-out infinite; }
         .animate-shake-strong { animation: shake-strong 0.8s ease-in-out infinite; }
@@ -412,13 +415,71 @@ export function VideoPreviewPlayer({
         .animate-zoom-pulse { animation: zoom-pulse 2s ease-in-out infinite; }
         .animate-pan-left { animation: pan-left 8s linear infinite alternate; }
         .animate-pan-right { animation: pan-right 8s linear infinite alternate; }
-        
-        .rotate-y-0 { transform: perspective(1000px) rotateY(0deg); }
-        .rotate-y-90 { transform: perspective(1000px) rotateY(90deg); }
-        .rotate-x-0 { transform: perspective(1000px) rotateX(0deg); }
-        .rotate-x-90 { transform: perspective(1000px) rotateX(90deg); }
-        .blur-lg { filter: blur(10px); }
-        .blur-0 { filter: blur(0); }
+
+        /* Text animations */
+        @keyframes text-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes text-slide-up { from { opacity: 0; transform: translateY(15%); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes text-slide-down { from { opacity: 0; transform: translateY(-15%); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes text-slide-left { from { opacity: 0; transform: translateX(15%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes text-slide-right { from { opacity: 0; transform: translateX(-15%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes text-scale-in { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+        @keyframes text-bounce-in { 
+          0% { opacity: 0; transform: scale(0.3) translateY(10%); }
+          50% { opacity: 1; transform: scale(1.05); }
+          70% { transform: scale(0.95); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .animate-text-fade-in { animation: text-fade-in 0.8s ease-out forwards; }
+        .animate-text-slide-up { animation: text-slide-up 0.8s ease-out forwards; }
+        .animate-text-slide-down { animation: text-slide-down 0.8s ease-out forwards; }
+        .animate-text-slide-left { animation: text-slide-left 0.8s ease-out forwards; }
+        .animate-text-slide-right { animation: text-slide-right 0.8s ease-out forwards; }
+        .animate-text-scale-in { animation: text-scale-in 0.8s ease-out forwards; }
+        .animate-text-bounce-in { animation: text-bounce-in 0.8s ease-out forwards; }
+
+        /* Logo animations */
+        @keyframes logo-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes logo-slide-up { from { opacity: 0; transform: translateY(20%); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes logo-slide-down { from { opacity: 0; transform: translateY(-20%); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes logo-slide-left { from { opacity: 0; transform: translateX(20%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes logo-slide-right { from { opacity: 0; transform: translateX(-20%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes logo-scale-in { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+        @keyframes logo-bounce-in { 
+          0% { opacity: 0; transform: scale(0.2); }
+          50% { opacity: 1; transform: scale(1.15); }
+          70% { transform: scale(0.9); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes logo-spin-in { 
+          from { opacity: 0; transform: scale(0.3) rotate(360deg); } 
+          to { opacity: 1; transform: scale(1) rotate(0deg); } 
+        }
+        @keyframes logo-flip-in { 
+          0% { opacity: 0; transform: perspective(400px) rotateY(90deg); }
+          40% { transform: perspective(400px) rotateY(-20deg); }
+          60% { opacity: 1; transform: perspective(400px) rotateY(10deg); }
+          80% { transform: perspective(400px) rotateY(-5deg); }
+          100% { opacity: 1; transform: perspective(400px) rotateY(0deg); }
+        }
+        @keyframes logo-swing { 
+          0% { opacity: 0; transform: rotate(15deg); }
+          30% { transform: rotate(-10deg); }
+          50% { opacity: 1; transform: rotate(5deg); }
+          70% { transform: rotate(-3deg); }
+          100% { opacity: 1; transform: rotate(0deg); }
+        }
+
+        .animate-logo-fade-in { animation: logo-fade-in 0.9s ease-out forwards; }
+        .animate-logo-slide-up { animation: logo-slide-up 0.9s ease-out forwards; }
+        .animate-logo-slide-down { animation: logo-slide-down 0.9s ease-out forwards; }
+        .animate-logo-slide-left { animation: logo-slide-left 0.9s ease-out forwards; }
+        .animate-logo-slide-right { animation: logo-slide-right 0.9s ease-out forwards; }
+        .animate-logo-scale-in { animation: logo-scale-in 0.9s ease-out forwards; }
+        .animate-logo-bounce-in { animation: logo-bounce-in 0.9s ease-out forwards; }
+        .animate-logo-spin-in { animation: logo-spin-in 1s ease-out forwards; }
+        .animate-logo-flip-in { animation: logo-flip-in 1s ease forwards; }
+        .animate-logo-swing { animation: logo-swing 1s ease-out forwards; }
       `}</style>
     </div>
   );
