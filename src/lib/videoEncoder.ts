@@ -18,6 +18,7 @@ export interface VideoEncoderOptions {
   textAnimation?: TextAnimation;
   logoAnimation?: LogoAnimation;
   backgroundVideoUrls?: (string | null)[]; // Actual video URLs per page to use as animated background
+  frameOverlayPages?: string[]; // Transparent frame overlay pages (decorative shapes - static)
   overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
   logoOverlayPages?: string[]; // Transparent logo-only overlay pages
   onProgress?: (progress: number) => void;
@@ -408,6 +409,7 @@ export async function encodeVideoSimple(
     textAnimation = "none",
     logoAnimation = "none",
     backgroundVideoUrls,
+    frameOverlayPages,
     overlayPages,
     logoOverlayPages,
     onProgress 
@@ -488,6 +490,24 @@ export async function encodeVideoSimple(
     })
   );
 
+  // Load frame overlay images (decorative shapes - drawn statically)
+  const frameOverlayImages: (HTMLImageElement | null)[] = await Promise.all(
+    (frameOverlayPages || []).map(async (pageUrl) => {
+      if (!pageUrl) return null;
+      try {
+        return await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = pageUrl;
+        });
+      } catch {
+        return null;
+      }
+    })
+  );
+
   // Load logo overlay images (transparent PNGs with logo only)
   const logoOverlayImages: (HTMLImageElement | null)[] = await Promise.all(
     (logoOverlayPages || []).map(async (pageUrl) => {
@@ -534,6 +554,7 @@ export async function encodeVideoSimple(
     framesPerPage, transitionFrames, totalFrames,
     motionEffect, transitionEffect, textAnimation, logoAnimation, chosenMime,
     bgVideoCount: bgVideos.filter(Boolean).length,
+    frameOverlayCount: frameOverlayImages.filter(Boolean).length,
     overlayCount: overlayImages.filter(Boolean).length,
     logoOverlayCount: logoOverlayImages.filter(Boolean).length,
   });
@@ -690,6 +711,12 @@ export async function encodeVideoSimple(
           }
 
           ctx.drawImage(bgVideo, sx, sy, sw, sh, 0, 0, width, height);
+
+          // Draw frame overlay (decorative shapes - static, no animation)
+          const frameOverlay = frameOverlayImages[pageIdx];
+          if (frameOverlay) {
+            ctx.drawImage(frameOverlay, 0, 0, width, height);
+          }
 
           // Draw overlay (transparent PNG with text/elements) on top with animation
           const overlay = overlayImages[pageIdx];
