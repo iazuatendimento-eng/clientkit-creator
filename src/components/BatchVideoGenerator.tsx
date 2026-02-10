@@ -187,6 +187,7 @@ interface ClientVideo {
 
 interface BatchVideoGeneratorProps {
   template: VideoTemplate;
+  initialTeamFilter?: string;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -204,7 +205,7 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   });
 };
 
-export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideoGeneratorProps) => {
+export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onComplete }: BatchVideoGeneratorProps) => {
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -260,7 +261,7 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
     try {
       setIsLoading(true);
       
-      await autoTagFirstCardsForAllActiveClients();
+      await autoTagFirstCardsForAllActiveClients(initialTeamFilter);
       const taggedCards = await getTaggedCardsForArtGeneration();
 
       const videos: ClientVideo[] = taggedCards.map((card: any) => {
