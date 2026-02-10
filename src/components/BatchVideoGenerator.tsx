@@ -866,31 +866,26 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       );
       pages.push(pageImage);
 
-      // If this page has a video background, also generate transparent overlay
-      if (hasVideo) {
-        const overlayImage = await generatePageImage(
-          template.contentElements,
-          text,
-          video.brandKit,
-          false,
-          undefined, // no background image
-          video.adjustments,
-          textAdj,
-          imageAdj,
-          true, // transparent background
-          true  // excludeLogo - logo rendered separately
-        );
-        overlayPages.push(overlayImage);
+      // Always generate transparent overlays for text and logo layers
+      const overlayImage = await generatePageImage(
+        template.contentElements,
+        text,
+        video.brandKit,
+        false,
+        undefined, // no background image
+        video.adjustments,
+        textAdj,
+        imageAdj,
+        true, // transparent background
+        true  // excludeLogo - logo rendered separately
+      );
+      overlayPages.push(overlayImage);
 
-        // Generate logo-only overlay for separate animation
-        const logoOverlay = await generateLogoOverlay(
-          template.contentElements, video.brandKit, false, video.adjustments
-        );
-        logoOverlayPages.push(logoOverlay);
-      } else {
-        overlayPages.push(""); // no overlay needed
-        logoOverlayPages.push("");
-      }
+      // Generate logo-only overlay for separate animation
+      const logoOverlay = await generateLogoOverlay(
+        template.contentElements, video.brandKit, false, video.adjustments
+      );
+      logoOverlayPages.push(logoOverlay);
     }
 
     // Always add signature page at the end (no text adjustment needed for signature)
@@ -936,29 +931,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       );
       pages.push(pageImage);
 
-      if (hasVideo) {
-        const overlayImage = await generatePageImage(
-          template.contentElements,
-          text,
-          video.brandKit,
-          false,
-          undefined,
-          video.adjustments,
-          textAdj,
-          imageAdj,
-          true, // transparent
-          true  // excludeLogo
-        );
-        overlayPages.push(overlayImage);
+      // Always generate overlays for text and logo layers
+      const overlayImage = await generatePageImage(
+        template.contentElements,
+        text,
+        video.brandKit,
+        false,
+        undefined,
+        video.adjustments,
+        textAdj,
+        imageAdj,
+        true, // transparent
+        true  // excludeLogo
+      );
+      overlayPages.push(overlayImage);
 
-        const logoOverlay = await generateLogoOverlay(
-          template.contentElements, video.brandKit, false, video.adjustments
-        );
-        logoOverlayPages.push(logoOverlay);
-      } else {
-        overlayPages.push("");
-        logoOverlayPages.push("");
-      }
+      const logoOverlay = await generateLogoOverlay(
+        template.contentElements, video.brandKit, false, video.adjustments
+      );
+      logoOverlayPages.push(logoOverlay);
     }
 
     // Add signature page
@@ -1127,19 +1118,27 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               console.error("Translation failed, using original text:", translateError);
             }
 
-            // Search Pexels videos and use their thumbnail as background
-            const videos = await searchPexelsVideos(searchTerms, 1);
+            // Search Pexels videos with multiple fallback strategies
+            let foundVideo = false;
+            let videos = await searchPexelsVideos(searchTerms, 3);
+            if (videos.length === 0) {
+              // Retry with simpler terms
+              const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
+              videos = await searchPexelsVideos(simpleTerms, 3);
+            }
+            if (videos.length === 0) {
+              // Generic fallback
+              videos = await searchPexelsVideos("business technology", 3);
+            }
             if (videos.length > 0) {
               searchedImages.push(videos[0].image);
-              pexelsVideoUrls.push(videos[0].videoUrl); // Store actual video URL
-            } else {
-              // Fallback to image search if no videos found
+              pexelsVideoUrls.push(videos[0].videoUrl);
+              foundVideo = true;
+            }
+            if (!foundVideo) {
+              // Last resort: still try to get an image
               const images = await searchImages(searchTerms, 1);
-              if (images.length > 0) {
-                searchedImages.push(images[0].urls.regular);
-              } else {
-                searchedImages.push("");
-              }
+              searchedImages.push(images.length > 0 ? images[0].urls.regular : "");
               pexelsVideoUrls.push(null);
             }
           } catch (error) {
