@@ -173,16 +173,19 @@ export const searchPexelsVideos = async (query: string, perPage: number = 5): Pr
     const data = await response.json();
     
     return (data.videos || []).map((video: any) => {
-      // Get the best quality video file (prefer HD or SD)
+      // Get the best quality video file (prefer HD, then SD)
       const videoFiles = video.video_files || [];
-      const sdFile = videoFiles.find((f: any) => f.quality === 'sd') || videoFiles[0];
+      const hdFile = videoFiles.find((f: any) => f.quality === 'hd' && f.width >= 1080) 
+        || videoFiles.find((f: any) => f.quality === 'hd')
+        || videoFiles.find((f: any) => f.quality === 'sd')
+        || videoFiles[0];
       
       return {
         id: `pexels-video-${video.id}`,
         url: video.url,
         image: video.image, // Pexels provides a thumbnail image
         duration: video.duration,
-        videoUrl: sdFile?.link || '',
+        videoUrl: hdFile?.link || '',
         photographer: video.user?.name || 'Pexels',
         description: query,
       };
