@@ -379,7 +379,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
-  // Automatically fetch Pexels video thumbnails for all cards on load
+  // Automatically fetch Pexels video for all cards on load
   const autoFetchPexelsCovers = async (videos: ClientVideo[]) => {
     const updatedVideos = [...videos];
     for (let i = 0; i < updatedVideos.length; i++) {
@@ -395,7 +395,18 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           ]);
           if (!error && data?.translatedText) searchTerms = data.translatedText;
         } catch {}
-        const results = await searchPexelsVideos(searchTerms, 1);
+
+        // Try search, retry with simpler terms if needed
+        let results = await searchPexelsVideos(searchTerms, 3);
+        if (results.length === 0) {
+          const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
+          results = await searchPexelsVideos(simpleTerms, 3);
+        }
+        if (results.length === 0) {
+          // Generic fallback
+          results = await searchPexelsVideos("business technology", 3);
+        }
+
         if (results.length > 0) {
           const pexelsVideoUrls = video.pageTexts.map(() => null as string | null);
           pexelsVideoUrls[0] = results[0].videoUrl;
@@ -1763,22 +1774,32 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   {video.previewVideoUrls?.[0] ? (
                     <video
                       key={`card-vid-${video.cardId}-${video.previewVideoUrls[0]}`}
-                      ref={(el) => { if (el) { el.muted = true; el.play().catch(() => {}); } }}
+                      ref={(el) => {
+                        if (el) {
+                          el.muted = true;
+                          el.playsInline = true;
+                          const tryPlay = () => el.play().catch(() => {});
+                          tryPlay();
+                          el.onloadeddata = tryPlay;
+                          el.oncanplay = tryPlay;
+                        }
+                      }}
                       src={video.previewVideoUrls[0]}
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                       muted
                       loop
                       autoPlay
                       playsInline
+                      preload="auto"
                     />
                   ) : video.pages[0] ? (
                     <img
                       src={video.pages[0]}
                       alt={video.clientName}
-                      className="w-full h-full object-contain"
+                      className="absolute inset-0 w-full h-full object-contain"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 w-full h-full flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   )}
