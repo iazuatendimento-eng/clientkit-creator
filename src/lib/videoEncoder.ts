@@ -5,6 +5,7 @@ import { fetchFile, toBlobURL } from "@ffmpeg/util";
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
 export type TransitionEffect = "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "zoom-out";
 export type TextAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "typewriter" | "bounce-in";
+export type LogoAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "bounce-in" | "spin-in" | "flip-in" | "swing";
 
 export interface VideoEncoderOptions {
   width: number;
@@ -15,8 +16,10 @@ export interface VideoEncoderOptions {
   motionEffect?: MotionEffect;
   transitionEffect?: TransitionEffect;
   textAnimation?: TextAnimation;
+  logoAnimation?: LogoAnimation;
   backgroundVideoUrls?: (string | null)[]; // Actual video URLs per page to use as animated background
   overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
+  logoOverlayPages?: string[]; // Transparent logo-only overlay pages
   onProgress?: (progress: number) => void;
 }
 
@@ -261,6 +264,54 @@ function getTextAnimationTransform(effect: TextAnimation, progress: number): { o
   }
 }
 
+// Calculate logo animation transform
+function getLogoAnimationTransform(effect: LogoAnimation, progress: number): { opacity: number; translateX: number; translateY: number; scale: number; rotate: number } {
+  const animDuration = 0.35;
+  const t = Math.min(1, progress / animDuration);
+  const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+
+  switch (effect) {
+    case "fade-in":
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1, rotate: 0 };
+    case "slide-up":
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 20, scale: 1, rotate: 0 };
+    case "slide-down":
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * -20, scale: 1, rotate: 0 };
+    case "slide-left":
+      return { opacity: eased, translateX: (1 - eased) * 20, translateY: 0, scale: 1, rotate: 0 };
+    case "slide-right":
+      return { opacity: eased, translateX: (1 - eased) * -20, translateY: 0, scale: 1, rotate: 0 };
+    case "scale-in": {
+      const s = 0.3 + eased * 0.7;
+      return { opacity: eased, translateX: 0, translateY: 0, scale: s, rotate: 0 };
+    }
+    case "bounce-in": {
+      let bounce: number;
+      if (t < 0.5) bounce = t / 0.5;
+      else if (t < 0.75) bounce = 1 + Math.sin((t - 0.5) / 0.25 * Math.PI) * 0.2;
+      else bounce = 1;
+      const s = 0.2 + bounce * 0.8;
+      return { opacity: Math.min(1, t * 2.5), translateX: 0, translateY: 0, scale: s, rotate: 0 };
+    }
+    case "spin-in": {
+      const s = 0.3 + eased * 0.7;
+      const rotate = (1 - eased) * 360;
+      return { opacity: eased, translateX: 0, translateY: 0, scale: s, rotate };
+    }
+    case "flip-in": {
+      const s = eased < 0.5 ? eased * 2 * 0.01 : (eased - 0.5) * 2;
+      return { opacity: eased, translateX: 0, translateY: 0, scale: Math.max(0.01, s), rotate: 0 };
+    }
+    case "swing": {
+      const angle = Math.sin(t * Math.PI * 3) * (1 - eased) * 25;
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1, rotate: angle };
+    }
+    default:
+      return { opacity: 1, translateX: 0, translateY: 0, scale: 1, rotate: 0 };
+  }
+}
+
+
 // Apply transition effect
 function applyTransition(
   ctx: CanvasRenderingContext2D,
@@ -355,8 +406,10 @@ export async function encodeVideoSimple(
     motionEffect = "ken-burns",
     transitionEffect = "fade",
     textAnimation = "none",
+    logoAnimation = "none",
     backgroundVideoUrls,
     overlayPages,
+    logoOverlayPages,
     onProgress 
   } = options;
 
@@ -435,6 +488,24 @@ export async function encodeVideoSimple(
     })
   );
 
+  // Load logo overlay images (transparent PNGs with logo only)
+  const logoOverlayImages: (HTMLImageElement | null)[] = await Promise.all(
+    (logoOverlayPages || []).map(async (pageUrl) => {
+      if (!pageUrl) return null;
+      try {
+        return await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = pageUrl;
+        });
+      } catch {
+        return null;
+      }
+    })
+  );
+
   // Pick mime
   const chosenMime =
     (extra?.mimeType && MediaRecorder.isTypeSupported(extra.mimeType) ? extra.mimeType : null) ||
@@ -461,9 +532,10 @@ export async function encodeVideoSimple(
   console.log("[VideoEncoder] Config:", { 
     pages: images.length, width, height, pageDuration, fps, 
     framesPerPage, transitionFrames, totalFrames,
-    motionEffect, transitionEffect, textAnimation, chosenMime,
+    motionEffect, transitionEffect, textAnimation, logoAnimation, chosenMime,
     bgVideoCount: bgVideos.filter(Boolean).length,
     overlayCount: overlayImages.filter(Boolean).length,
+    logoOverlayCount: logoOverlayImages.filter(Boolean).length,
   });
 
   return new Promise((resolve, reject) => {
@@ -513,6 +585,29 @@ export async function encodeVideoSimple(
         -height / 2 + (anim.translateY * height) / 100
       );
       ctx.drawImage(overlay, 0, 0, width, height);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    };
+
+    // Draw logo overlay with logo animation
+    const drawLogoOverlay = (logoImg: HTMLImageElement, progress: number) => {
+      if (logoAnimation === "none") {
+        ctx.globalAlpha = 1;
+        ctx.drawImage(logoImg, 0, 0, width, height);
+        return;
+      }
+
+      const anim = getLogoAnimationTransform(logoAnimation, progress);
+      ctx.save();
+      ctx.globalAlpha = anim.opacity;
+      ctx.translate(width / 2, height / 2);
+      ctx.rotate((anim.rotate * Math.PI) / 180);
+      ctx.scale(anim.scale, anim.scale);
+      ctx.translate(
+        -width / 2 + (anim.translateX * width) / 100,
+        -height / 2 + (anim.translateY * height) / 100
+      );
+      ctx.drawImage(logoImg, 0, 0, width, height);
       ctx.restore();
       ctx.globalAlpha = 1;
     };
@@ -600,6 +695,11 @@ export async function encodeVideoSimple(
           const overlay = overlayImages[pageIdx];
           if (overlay) {
             drawOverlay(overlay, pageProgress);
+          }
+          // Draw logo overlay on top with its own animation
+          const logoOverlay = logoOverlayImages[pageIdx];
+          if (logoOverlay) {
+            drawLogoOverlay(logoOverlay, pageProgress);
           }
         } catch (e) {
           console.warn("[VideoEncoder] Video frame draw failed, using static:", e);
