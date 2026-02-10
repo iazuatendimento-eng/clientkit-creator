@@ -1760,25 +1760,23 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     setIsPlayingPreview(true);
                   }}
                 >
-                  {video.pages[0] ? (
-                    video.previewVideoUrls?.[0] ? (
-                      <video
-                        key={`card-vid-${video.clientName}-${video.previewVideoUrls[0]}`}
-                        ref={(el) => { if (el) { el.muted = true; el.play().catch(() => {}); } }}
-                        src={video.previewVideoUrls[0]}
-                        className="w-full h-full object-cover"
-                        muted
-                        loop
-                        autoPlay
-                        playsInline
-                      />
-                    ) : (
-                      <img
-                        src={video.pages[0]}
-                        alt={video.clientName}
-                        className="w-full h-full object-contain"
-                      />
-                    )
+                  {video.previewVideoUrls?.[0] ? (
+                    <video
+                      key={`card-vid-${video.cardId}-${video.previewVideoUrls[0]}`}
+                      ref={(el) => { if (el) { el.muted = true; el.play().catch(() => {}); } }}
+                      src={video.previewVideoUrls[0]}
+                      className="w-full h-full object-cover"
+                      muted
+                      loop
+                      autoPlay
+                      playsInline
+                    />
+                  ) : video.pages[0] ? (
+                    <img
+                      src={video.pages[0]}
+                      alt={video.clientName}
+                      className="w-full h-full object-contain"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
