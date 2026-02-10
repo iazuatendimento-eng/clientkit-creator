@@ -181,6 +181,8 @@ interface ClientVideo {
   adjustments: ElementAdjustments;
   pageTextAdjustments: PageTextAdjustment[]; // Per-page text adjustments
   pageImageAdjustments: PageImageAdjustment[]; // Per-page image adjustments
+  team?: string;
+  imageType?: string;
 }
 
 interface BatchVideoGeneratorProps {
@@ -287,6 +289,8 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
           adjustments: { ...defaultAdjustments },
           pageTextAdjustments: pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
           pageImageAdjustments: pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
+          team: card.client?.team || undefined,
+          imageType: card.client?.image_type || undefined,
         };
       });
 
@@ -1385,9 +1389,15 @@ export const BatchVideoGenerator = ({ template, onBack, onComplete }: BatchVideo
                   <div>
                     <h3 className="font-medium truncate">{video.clientName}</h3>
                     <p className="text-xs text-muted-foreground truncate">{video.company}</p>
+                    {video.team && (
+                      <p className="text-xs text-primary/70 truncate">{video.team}</p>
+                    )}
                   </div>
 
                   <p className="text-xs line-clamp-2">{video.cardTitle}</p>
+                  {video.imageType && (
+                    <p className="text-xs text-primary/70 truncate">{video.imageType}</p>
+                  )}
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
