@@ -173,7 +173,8 @@ interface ClientVideo {
   cardTitle: string;
   cardText: string;
   brandKit: any;
-  pages: string[]; // Array of page images (base64)
+  pages: string[]; // Array of page images (base64) - with background
+  overlayPages?: string[]; // Array of page images (base64) - transparent background for video compositing
   videoUrl: string | null;
   status: "pending" | "approved" | "rejected";
   backgroundImages?: string[];
@@ -380,7 +381,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     backgroundImage?: string,
     adjustments: ElementAdjustments = defaultAdjustments,
     textAdjustment: PageTextAdjustment = defaultPageTextAdjustment,
-    imageAdjustment: PageImageAdjustment = defaultPageImageAdjustment
+    imageAdjustment: PageImageAdjustment = defaultPageImageAdjustment,
+    transparentBackground: boolean = false
   ): Promise<string> => {
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -463,12 +465,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
     };
 
-    // Draw background
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, w, h);
+    // Draw background (skip if transparent for video overlay)
+    if (!transparentBackground) {
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, w, h);
+    }
 
-    // Draw background image if provided
-    if (backgroundImage) {
+    // Draw background image if provided (skip if transparent for video overlay)
+    if (backgroundImage && !transparentBackground) {
       const bgImg = await loadImage(backgroundImage);
       if (bgImg) {
         // Cover the canvas with the image, applying adjustments
@@ -748,8 +752,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     return canvas.toDataURL("image/png");
   };
 
-  const generateVideoForClient = async (video: ClientVideo, searchedImages: string[]): Promise<string[]> => {
+  const generateVideoForClient = async (video: ClientVideo, searchedImages: string[], videoUrls?: (string | null)[]): Promise<{ pages: string[]; overlayPages: string[] }> => {
     const pages: string[] = [];
+    const overlayPages: string[] = [];
 
     // Generate content pages (one per text segment)
     for (let i = 0; i < video.pageTexts.length; i++) {
@@ -757,6 +762,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const bgImage = searchedImages[i] || undefined;
       const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
       const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
+      const hasVideo = videoUrls?.[i];
+
+      // Normal page (with background)
       const pageImage = await generatePageImage(
         template.contentElements,
         text,
@@ -768,6 +776,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         imageAdj
       );
       pages.push(pageImage);
+
+      // If this page has a video background, also generate transparent overlay
+      if (hasVideo) {
+        const overlayImage = await generatePageImage(
+          template.contentElements,
+          text,
+          video.brandKit,
+          false,
+          undefined, // no background image
+          video.adjustments,
+          textAdj,
+          imageAdj,
+          true // transparent background
+        );
+        overlayPages.push(overlayImage);
+      } else {
+        overlayPages.push(""); // no overlay needed
+      }
     }
 
     // Always add signature page at the end (no text adjustment needed for signature)
@@ -782,12 +808,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       defaultPageImageAdjustment
     );
     pages.push(signaturePage);
+    overlayPages.push(""); // signature has no video
 
-    return pages;
+    return { pages, overlayPages };
   };
 
-  const regenerateSingleVideo = async (video: ClientVideo): Promise<string[]> => {
+  const regenerateSingleVideo = async (video: ClientVideo): Promise<{ pages: string[]; overlayPages: string[] }> => {
     const pages: string[] = [];
+    const overlayPages: string[] = [];
 
     // Generate content pages with current searchedImages
     for (let i = 0; i < video.pageTexts.length; i++) {
@@ -795,6 +823,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const bgImage = video.searchedImages?.[i] || undefined;
       const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
       const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
+      const hasVideo = video.previewVideoUrls?.[i];
+
       const pageImage = await generatePageImage(
         template.contentElements,
         text,
@@ -806,6 +836,23 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         imageAdj
       );
       pages.push(pageImage);
+
+      if (hasVideo) {
+        const overlayImage = await generatePageImage(
+          template.contentElements,
+          text,
+          video.brandKit,
+          false,
+          undefined,
+          video.adjustments,
+          textAdj,
+          imageAdj,
+          true
+        );
+        overlayPages.push(overlayImage);
+      } else {
+        overlayPages.push("");
+      }
     }
 
     // Add signature page
@@ -820,8 +867,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       defaultPageImageAdjustment
     );
     pages.push(signaturePage);
+    overlayPages.push("");
 
-    return pages;
+    return { pages, overlayPages };
   };
 
   const updateAdjustmentLocal = useCallback((key: keyof ElementAdjustments, value: number) => {
@@ -918,8 +966,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       setIsApplyingAdjustments(true);
       try {
-        const newPages = await regenerateSingleVideo(base);
-        const updatedVideo = { ...base, pages: newPages };
+        const result = await regenerateSingleVideo(base);
+        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages };
 
         selectedVideoRef.current = updatedVideo;
 
@@ -948,6 +996,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
         // Search for videos from Pexels for each content page with translation
         const searchedImages: string[] = [];
+        const pexelsVideoUrls: (string | null)[] = [];
         for (const text of video.pageTexts) {
           try {
             let searchTerms = text.split(" ").slice(0, 5).join(" ");
@@ -975,6 +1024,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             const videos = await searchPexelsVideos(searchTerms, 1);
             if (videos.length > 0) {
               searchedImages.push(videos[0].image);
+              pexelsVideoUrls.push(videos[0].videoUrl); // Store actual video URL
             } else {
               // Fallback to image search if no videos found
               const images = await searchImages(searchTerms, 1);
@@ -983,15 +1033,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               } else {
                 searchedImages.push("");
               }
+              pexelsVideoUrls.push(null);
             }
           } catch (error) {
             console.error("Error searching video for page:", error);
             searchedImages.push("");
+            pexelsVideoUrls.push(null);
           }
         }
 
-        const pages = await generateVideoForClient(video, searchedImages);
-        updatedVideos[i] = { ...video, pages, searchedImages };
+        const result = await generateVideoForClient(video, searchedImages, pexelsVideoUrls);
+        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
         setClientVideos([...updatedVideos]);
       }
 
@@ -1106,8 +1158,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     // Regenerate video with new image
     setIsApplyingAdjustments(true);
     try {
-      const newPages = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: newPages };
+      const result = await regenerateSingleVideo(updatedVideo);
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -1205,8 +1257,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     // Regenerate video
     setIsApplyingAdjustments(true);
     try {
-      const newPages = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: newPages };
+      const result = await regenerateSingleVideo(updatedVideo);
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -1255,6 +1307,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           fps: 24,
           motionEffect,
           transitionEffect,
+          backgroundVideoUrls: video.previewVideoUrls || undefined,
+          overlayPages: video.overlayPages || undefined,
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
 
