@@ -26,7 +26,7 @@ import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTag
 import { searchImages, SearchImage, searchPexelsVideos } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
-import { encodeVideoToMP4, MotionEffect, TransitionEffect } from "@/lib/videoEncoder";
+import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
@@ -226,6 +226,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [customImageUrl, setCustomImageUrl] = useState("");
   const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
+  const [textAnimation, setTextAnimation] = useState<TextAnimation>("fade-in");
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1307,6 +1308,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           fps: 24,
           motionEffect,
           transitionEffect,
+          textAnimation,
           backgroundVideoUrls: video.previewVideoUrls || undefined,
           overlayPages: video.overlayPages || undefined,
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
@@ -1554,8 +1556,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             <option value="zoom-out">Zoom Out</option>
           </select>
         </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-sm whitespace-nowrap">Texto:</Label>
+          <select
+            value={textAnimation}
+            onChange={(e) => setTextAnimation(e.target.value as TextAnimation)}
+            className="h-8 px-2 text-sm border rounded-md bg-background"
+          >
+            <option value="none">Nenhum</option>
+            <option value="fade-in">Fade In</option>
+            <option value="slide-up">Subir</option>
+            <option value="slide-down">Descer</option>
+            <option value="slide-left">Deslizar Esquerda</option>
+            <option value="slide-right">Deslizar Direita</option>
+            <option value="scale-in">Zoom In</option>
+            <option value="bounce-in">Quicar</option>
+          </select>
+        </div>
         <span className="text-xs text-muted-foreground">
-          Estes efeitos serão aplicados no vídeo final MP4
+          Efeitos aplicados no vídeo final MP4
         </span>
       </div>
 
