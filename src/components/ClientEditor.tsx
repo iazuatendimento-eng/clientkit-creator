@@ -79,6 +79,9 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
   const [brandPngs, setBrandPngs] = useState<string[]>(
     client?.brand_kit?.pngs || ["", "", ""]
   );
+  const [brandFont, setBrandFont] = useState<string>(
+    client?.brand_kit?.font || ""
+  );
 
   useEffect(() => {
     if (client?.brand_kit) {
@@ -88,6 +91,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
         client.brand_kit.contactInfo || "",
         client.brand_kit.mascot || "",
       ]);
+      setBrandFont(client.brand_kit.font || "");
     }
   }, [client?.brand_kit]);
 
@@ -237,6 +241,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     const brandKit = {
       colors: brandColors,
       pngs: brandPngs,
+      font: brandFont || undefined,
       logo: brandPngs[0] || undefined,
       contactInfo: brandPngs[1] || undefined,
       mascot: brandPngs[2] || undefined,
@@ -598,6 +603,21 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Font */}
+              <div className="space-y-3">
+                <Label>Fonte</Label>
+                <Input
+                  value={brandFont}
+                  onChange={(e) => setBrandFont(e.target.value)}
+                  placeholder="Ex: Montserrat, Roboto, Open Sans..."
+                />
+                {brandFont && (
+                  <p className="text-xs text-muted-foreground">
+                    Fonte selecionada: <span className="font-semibold">{brandFont}</span>
+                  </p>
+                )}
               </div>
 
               {/* PNGs */}
