@@ -209,6 +209,128 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
     img.src = url;
   });
 };
+// Card cover with auto page cycling
+const CardCoverPreview = ({
+  video,
+  motionEffect,
+  transitionEffect,
+  textAnimation,
+  logoAnimation,
+  pageDuration,
+  onClick,
+}: {
+  video: ClientVideo;
+  motionEffect: MotionEffect;
+  transitionEffect: TransitionEffect;
+  textAnimation: TextAnimation;
+  logoAnimation: LogoAnimation;
+  pageDuration: number;
+  onClick: () => void;
+}) => {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const totalPages = video.pages.length;
+
+  useEffect(() => {
+    if (totalPages <= 1) return;
+    const interval = window.setInterval(() => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentPage((p) => (p + 1) % totalPages);
+        setTimeout(() => setIsTransitioning(false), 300);
+      }, 300);
+    }, pageDuration * 1000);
+    return () => window.clearInterval(interval);
+  }, [totalPages, pageDuration]);
+
+  const hasVideo = video.previewVideoUrls?.[currentPage] && video.previewVideoUrls[currentPage] !== null;
+  const overlayPage = video.overlayPages?.[currentPage];
+  const logoOverlay = video.logoOverlayPages?.[currentPage];
+
+  const transitionClass = isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100";
+
+  return (
+    <div
+      className="aspect-[9/16] bg-muted relative group cursor-pointer overflow-hidden"
+      onClick={onClick}
+    >
+      <div className={`absolute inset-0 transition-all duration-300 ease-out ${transitionClass}`}>
+        {/* Layer 1: Background */}
+        {hasVideo ? (
+          <video
+            key={`card-vid-${video.cardId}-${currentPage}-${motionEffect}`}
+            ref={(el) => {
+              if (el) {
+                el.muted = true;
+                el.playsInline = true;
+                el.play().catch(() => {});
+              }
+            }}
+            src={video.previewVideoUrls![currentPage]!}
+            className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+            muted
+            loop
+            autoPlay
+            playsInline
+          />
+        ) : video.pages[currentPage] ? (
+          <img
+            key={`card-img-${video.cardId}-${currentPage}-${motionEffect}`}
+            src={video.pages[currentPage]}
+            alt={video.clientName}
+            className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+          />
+        ) : (
+          <div className="absolute inset-0 w-full h-full flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {/* Layer 2: Text overlay */}
+        {overlayPage && overlayPage !== "" && (
+          <img
+            key={`overlay-${video.cardId}-${currentPage}-${textAnimation}`}
+            src={overlayPage}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
+            draggable={false}
+          />
+        )}
+
+        {/* Layer 3: Logo overlay */}
+        {logoOverlay && logoOverlay !== "" && (
+          <img
+            key={`logo-${video.cardId}-${currentPage}-${logoAnimation}`}
+            src={logoOverlay}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
+            draggable={false}
+          />
+        )}
+      </div>
+
+      {/* Page indicator */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 px-2 py-1 rounded text-xs text-white z-10">
+        {currentPage + 1} / {totalPages}
+      </div>
+
+      {/* Status overlay */}
+      {video.status !== "pending" && (
+        <div
+          className={`absolute inset-0 flex items-center justify-center z-10 ${
+            video.status === "approved" ? "bg-green-500/20" : "bg-red-500/20"
+          }`}
+        >
+          {video.status === "approved" ? (
+            <Check className="h-16 w-16 text-green-500" />
+          ) : (
+            <X className="h-16 w-16 text-red-500" />
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchVideoGeneratorProps) => {
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
@@ -1766,92 +1888,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     : "border-border"
                 }`}
               >
-                {/* Video Preview */}
-                <div
-                  className="aspect-[9/16] bg-muted relative group cursor-pointer overflow-hidden"
+                {/* Video Preview with page cycling */}
+                <CardCoverPreview
+                  video={video}
+                  motionEffect={motionEffect}
+                  transitionEffect={transitionEffect}
+                  textAnimation={textAnimation}
+                  logoAnimation={logoAnimation}
+                  pageDuration={template.pageDuration || 3}
                   onClick={() => {
                     setSelectedVideo(video);
                     setCurrentPreviewPage(0);
                     setIsPlayingPreview(true);
                   }}
-                >
-                  {/* Layer 1: Background - Pexels video or static image with motion effect */}
-                  {video.previewVideoUrls?.[0] ? (
-                    <video
-                      key={`card-vid-${video.cardId}-${video.previewVideoUrls[0]}-${motionEffect}`}
-                      ref={(el) => {
-                        if (el) {
-                          el.muted = true;
-                          el.playsInline = true;
-                          const tryPlay = () => el.play().catch(() => {});
-                          tryPlay();
-                          el.onloadeddata = tryPlay;
-                          el.oncanplay = tryPlay;
-                        }
-                      }}
-                      src={video.previewVideoUrls[0]}
-                      className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
-                      muted
-                      loop
-                      autoPlay
-                      playsInline
-                      preload="auto"
-                    />
-                  ) : video.pages[0] ? (
-                    <img
-                      key={`card-img-${video.cardId}-${motionEffect}`}
-                      src={video.pages[0]}
-                      alt={video.clientName}
-                      className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 w-full h-full flex items-center justify-center">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  )}
-
-                  {/* Layer 2: Text overlay with text animation */}
-                  {video.overlayPages?.[0] && (
-                    <img
-                      key={`overlay-${video.cardId}-${textAnimation}`}
-                      src={video.overlayPages[0]}
-                      alt=""
-                      className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
-                      draggable={false}
-                    />
-                  )}
-
-                  {/* Layer 3: Logo overlay with logo animation */}
-                  {video.logoOverlayPages?.[0] && (
-                    <img
-                      key={`logo-${video.cardId}-${logoAnimation}`}
-                      src={video.logoOverlayPages[0]}
-                      alt=""
-                      className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
-                      draggable={false}
-                    />
-                  )}
-                  
-                  {/* Page indicator */}
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 px-2 py-1 rounded text-xs text-white">
-                    {video.pages.length} páginas
-                  </div>
-
-                  {/* Status overlay */}
-                  {video.status !== "pending" && (
-                    <div
-                      className={`absolute inset-0 flex items-center justify-center ${
-                        video.status === "approved" ? "bg-green-500/20" : "bg-red-500/20"
-                      }`}
-                    >
-                      {video.status === "approved" ? (
-                        <Check className="h-16 w-16 text-green-500" />
-                      ) : (
-                        <X className="h-16 w-16 text-red-500" />
-                      )}
-                    </div>
-                  )}
-                </div>
+                />
 
                 {/* Info */}
                 <div className="p-3 space-y-2">
