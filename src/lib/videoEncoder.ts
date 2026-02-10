@@ -13,6 +13,8 @@ export interface VideoEncoderOptions {
   fps?: number;
   motionEffect?: MotionEffect;
   transitionEffect?: TransitionEffect;
+  backgroundVideoUrls?: (string | null)[]; // Actual video URLs per page to use as animated background
+  overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
   onProgress?: (progress: number) => void;
 }
 
@@ -297,6 +299,8 @@ export async function encodeVideoSimple(
     fps = 24, 
     motionEffect = "ken-burns",
     transitionEffect = "fade",
+    backgroundVideoUrls,
+    overlayPages,
     onProgress 
   } = options;
 
@@ -305,7 +309,7 @@ export async function encodeVideoSimple(
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
-  // Load all images
+  // Load all images (static fallback for each page)
   const images: HTMLImageElement[] = await Promise.all(
     pages.map(
       (pageUrl, idx) =>
@@ -323,6 +327,59 @@ export async function encodeVideoSimple(
           img.src = pageUrl;
         })
     )
+  );
+
+  // Load background videos for pages that have them
+  const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
+    (backgroundVideoUrls || []).map(async (videoUrl, idx) => {
+      if (!videoUrl) return null;
+      try {
+        const video = document.createElement("video");
+        video.crossOrigin = "anonymous";
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.src = videoUrl;
+        
+        await new Promise<void>((resolve, reject) => {
+          video.onloadeddata = () => {
+            console.log(`[VideoEncoder] Video ${idx} loaded: ${video.videoWidth}x${video.videoHeight}, duration: ${video.duration}s`);
+            resolve();
+          };
+          video.onerror = () => {
+            console.error(`[VideoEncoder] Video ${idx} failed to load`);
+            reject(new Error(`Video ${idx} failed`));
+          };
+        });
+        
+        // Start playing (muted) so we can draw frames
+        video.currentTime = 0;
+        await video.play();
+        
+        return video;
+      } catch (err) {
+        console.error(`[VideoEncoder] Could not load video ${idx}:`, err);
+        return null;
+      }
+    })
+  );
+
+  // Load overlay images (transparent PNGs for compositing on top of video)
+  const overlayImages: (HTMLImageElement | null)[] = await Promise.all(
+    (overlayPages || []).map(async (pageUrl) => {
+      if (!pageUrl) return null;
+      try {
+        return await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = pageUrl;
+        });
+      } catch {
+        return null;
+      }
+    })
   );
 
   // Pick mime
@@ -346,6 +403,8 @@ export async function encodeVideoSimple(
 
   return new Promise((resolve, reject) => {
     mediaRecorder.onstop = () => {
+      // Cleanup: pause all background videos
+      bgVideos.forEach(v => { if (v) { v.pause(); v.src = ""; } });
       resolve(new Blob(chunks, { type: outType }));
     };
     mediaRecorder.onerror = reject;
@@ -357,11 +416,33 @@ export async function encodeVideoSimple(
     const transitionFrames = Math.max(1, Math.floor(fps * 0.5)); // 0.5s transition
     const totalFrames = framesPerPage * images.length;
 
+    // Track video start time per page to sync playback
+    let pageVideoStartTime: number | null = null;
+
     console.log("[VideoEncoder] Config:", { 
       pages: images.length, width, height, pageDuration, fps, 
       framesPerPage, transitionFrames, totalFrames,
-      motionEffect, transitionEffect, chosenMime 
+      motionEffect, transitionEffect, chosenMime,
+      bgVideoCount: bgVideos.filter(Boolean).length,
     });
+
+    const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
+      if (applyMotion) {
+        const motion = getMotionTransform(motionEffect, progress);
+        ctx.save();
+        ctx.translate(width / 2, height / 2);
+        ctx.rotate((motion.rotate * Math.PI) / 180);
+        ctx.scale(motion.scale, motion.scale);
+        ctx.translate(
+          -width / 2 + (motion.translateX * width) / 100,
+          -height / 2 + (motion.translateY * height) / 100
+        );
+        ctx.drawImage(source, 0, 0, width, height);
+        ctx.restore();
+      } else {
+        ctx.drawImage(source, 0, 0, width, height);
+      }
+    };
 
     const tick = () => {
       if (pageIdx >= images.length) {
@@ -371,37 +452,84 @@ export async function encodeVideoSimple(
 
       const img = images[pageIdx];
       const nextImg = images[pageIdx + 1];
+      const bgVideo = bgVideos[pageIdx] || null;
 
       const frameInPage = frameCount % framesPerPage;
       const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
       const pageProgress = frameInPage / framesPerPage; // 0 to 1
+
+      // Sync background video time to page progress
+      if (bgVideo && frameInPage === 0) {
+        bgVideo.currentTime = 0;
+        pageVideoStartTime = performance.now();
+      }
 
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, width, height);
 
       if (isTransitionPhase && nextImg) {
         const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
+        // For transition, use static images (video frame would be complex)
         applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
+      } else if (bgVideo && bgVideo.readyState >= 2) {
+        // Draw the actual video frame as background (covers the full canvas)
+        try {
+          // Draw video frame covering the canvas
+          const vw = bgVideo.videoWidth;
+          const vh = bgVideo.videoHeight;
+          const canvasRatio = width / height;
+          const videoRatio = vw / vh;
+          let sx = 0, sy = 0, sw = vw, sh = vh;
+          if (videoRatio > canvasRatio) {
+            // Video is wider - crop sides
+            sw = vh * canvasRatio;
+            sx = (vw - sw) / 2;
+          } else {
+            // Video is taller - crop top/bottom
+            sh = vw / canvasRatio;
+            sy = (vh - sh) / 2;
+          }
+
+          const motion = getMotionTransform(motionEffect, pageProgress);
+          ctx.save();
+          ctx.translate(width / 2, height / 2);
+          ctx.rotate((motion.rotate * Math.PI) / 180);
+          ctx.scale(motion.scale, motion.scale);
+          ctx.translate(
+            -width / 2 + (motion.translateX * width) / 100,
+            -height / 2 + (motion.translateY * height) / 100
+          );
+          ctx.drawImage(bgVideo, sx, sy, sw, sh, 0, 0, width, height);
+          ctx.restore();
+
+          // Draw overlay (transparent PNG with just text/elements) on top of video
+          const overlay = overlayImages[pageIdx];
+          if (overlay) {
+            ctx.globalAlpha = 1;
+            ctx.drawImage(overlay, 0, 0, width, height);
+          }
+        } catch (e) {
+          // Fallback to static image if video frame fails
+          drawSource(img, true, pageProgress);
+        }
       } else {
-        // Apply motion effect
-        const motion = getMotionTransform(motionEffect, pageProgress);
-        
-        ctx.save();
-        ctx.translate(width / 2, height / 2);
-        ctx.rotate((motion.rotate * Math.PI) / 180);
-        ctx.scale(motion.scale, motion.scale);
-        ctx.translate(
-          -width / 2 + (motion.translateX * width) / 100,
-          -height / 2 + (motion.translateY * height) / 100
-        );
-        ctx.drawImage(img, 0, 0, width, height);
-        ctx.restore();
+        // No background video — use static image with motion
+        drawSource(img, true, pageProgress);
       }
 
       frameCount++;
       if (frameCount >= framesPerPage) {
+        // Pause current video, prepare next
+        if (bgVideo) bgVideo.pause();
         pageIdx++;
         frameCount = 0;
+        pageVideoStartTime = null;
+        // Start next page's video
+        const nextBgVideo = bgVideos[pageIdx];
+        if (nextBgVideo) {
+          nextBgVideo.currentTime = 0;
+          nextBgVideo.play().catch(() => {});
+        }
       }
 
       onProgress?.(Math.min(0.95, Math.max(0.05, (pageIdx * framesPerPage + frameInPage) / totalFrames)));
