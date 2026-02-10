@@ -157,7 +157,10 @@ const Index = () => {
     return matchesSearch && matchesTextFilter;
   });
 
-  const loadClients = async () => {
+  const loadClients = async (retryCount = 0) => {
+    const maxRetries = 2;
+    const timeoutMs = 30000; // 30s timeout
+
     const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
       Promise.race([
         promise,
@@ -168,7 +171,7 @@ const Index = () => {
 
     try {
       setIsLoadingClients(true);
-      const data = await withTimeout(getAllClients(), 15000);
+      const data = await withTimeout(getAllClients(), timeoutMs);
       const mappedClients: Client[] = (data as any[]).map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -202,6 +205,11 @@ const Index = () => {
       setClients(mappedClients);
     } catch (error: any) {
       console.error("Error loading clients:", error);
+      // Auto-retry on timeout
+      if (retryCount < maxRetries) {
+        console.log(`Retrying loadClients (${retryCount + 1}/${maxRetries})...`);
+        return loadClients(retryCount + 1);
+      }
       toast({
         title: "Erro ao carregar clientes",
         description:
@@ -210,7 +218,6 @@ const Index = () => {
             : "Não foi possível carregar a lista de clientes.",
         variant: "destructive",
       });
-      setClients([]);
     } finally {
       setIsLoadingClients(false);
     }
