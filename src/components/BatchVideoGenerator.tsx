@@ -682,11 +682,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     for (const el of elements) {
       // Skip logo if generating overlay without logo (logo has its own layer)
       if (excludeLogo && el.type === "logo") continue;
-      // For transparent text overlay, only render text and contact elements (skip decorative shapes)
-      if (transparentBackground && excludeLogo) {
-        const allowedTypes = ["text", "contact"];
-        if (!allowedTypes.includes(el.type)) continue;
-      }
+      // For transparent text overlay, skip image elements (background images are handled separately)
+      if (transparentBackground && excludeLogo && el.type === "image") continue;
       ctx.save();
       applyElementStyles(el);
       
