@@ -32,7 +32,7 @@ import {
 import { searchImages, SearchImage } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { createCardUpload, updateProjectBrief } from "@/lib/clientDatabase";
-import { encodeVideoToMP4, MotionEffect, TransitionEffect } from "@/lib/videoEncoder";
+import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 
 interface BatchHistoryEditorProps {
   batch: BatchGeneration;
@@ -61,6 +61,9 @@ export const BatchHistoryEditor = ({
   // Video effects
   const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
+  const [textAnimation, setTextAnimation] = useState<TextAnimation>("fade-in");
+  const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>("fade-in");
+  const [textAnimDuration, setTextAnimDuration] = useState(1.5);
   const [isExportingVideo, setIsExportingVideo] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
 
@@ -310,13 +313,20 @@ export const BatchHistoryEditor = ({
         description: "Aplicando efeitos de movimento e transição",
       });
 
+      const pageDuration = template.pageDuration || template.page_duration || 3;
       const videoBlob = await encodeVideoToMP4(selectedItem.files, {
         width: template.width || 1080,
         height: template.height || 1920,
-        pageDuration: template.pageDuration || 3,
+        pageDuration,
         fps: 24,
         motionEffect,
         transitionEffect,
+        textAnimation,
+        logoAnimation,
+        textAnimDuration: textAnimDuration / pageDuration,
+        overlayPages: (selectedItem as any).overlayPages || undefined,
+        logoOverlayPages: (selectedItem as any).logoOverlayPages || undefined,
+        frameOverlayPages: (selectedItem as any).frameOverlayPages || undefined,
         onProgress: (p) => setExportProgress(Math.round(p * 100)),
       });
 
