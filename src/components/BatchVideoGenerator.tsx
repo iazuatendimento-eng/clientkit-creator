@@ -19,6 +19,7 @@ import {
   Film,
   Upload,
   ClipboardPaste,
+  Save,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
@@ -1296,6 +1297,50 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
     }
   };
 
+  // Save current state as draft to history (without finalizing)
+  const handleSaveDraft = async () => {
+    const videosWithPages = clientVideos.filter((v) => v.pages.length > 0);
+    
+    if (videosWithPages.length === 0) {
+      toast({
+        title: "Nenhum vídeo gerado",
+        description: "Gere os vídeos antes de salvar o rascunho.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const batchItems: BatchItem[] = videosWithPages.map((video) => ({
+        cardId: video.cardId,
+        clientId: video.clientId,
+        clientName: video.clientName,
+        company: video.company,
+        cardTitle: video.cardTitle,
+        cardText: video.cardText,
+        brandKit: video.brandKit,
+        files: video.pages,
+        backgroundImages: video.searchedImages,
+      }));
+      await saveBatchGeneration("video", template, batchItems);
+
+      await clearArtGenerationTags();
+
+      toast({
+        title: "Rascunho salvo!",
+        description: `${videosWithPages.length} vídeos salvos no histórico. Você pode continuar editando depois.`,
+      });
+
+      onComplete();
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      toast({
+        title: "Erro ao salvar rascunho",
+        variant: "destructive",
+      });
+    }
+  };
+
   const approvedCount = clientVideos.filter((v) => v.status === "approved").length;
   const pendingCount = clientVideos.filter((v) => v.status === "pending").length;
 
@@ -1336,6 +1381,18 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
               Aprovados: {approvedCount}
             </Badge>
           </div>
+          
+          {/* Save Draft button */}
+          {clientVideos.some((v) => v.pages.length > 0) && (
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Salvar Rascunho
+            </Button>
+          )}
+          
           <Button
             onClick={handleApproveAll}
             disabled={approvedCount === 0}
