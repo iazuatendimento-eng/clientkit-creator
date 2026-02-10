@@ -22,6 +22,7 @@ import {
   Scissors,
   Eraser,
   Save,
+  ClipboardPaste,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1751,7 +1752,59 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="custom" className="space-y-6">
+            <TabsContent value="custom" className="space-y-6" onPaste={(e) => {
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              for (const item of Array.from(items)) {
+                if (item.type.startsWith("image/")) {
+                  e.preventDefault();
+                  const file = item.getAsFile();
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    const base64 = ev.target?.result as string;
+                    applyCustomImage(base64);
+                  };
+                  reader.readAsDataURL(file);
+                  return;
+                }
+              }
+            }}>
+              {/* Paste from clipboard */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Colar Imagem</Label>
+                <Button
+                  variant="outline"
+                  className="w-full h-16 border-dashed"
+                  onClick={async () => {
+                    try {
+                      const clipboardItems = await navigator.clipboard.read();
+                      for (const item of clipboardItems) {
+                        const imageType = item.types.find(t => t.startsWith("image/"));
+                        if (imageType) {
+                          const blob = await item.getType(imageType);
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const base64 = ev.target?.result as string;
+                            applyCustomImage(base64);
+                          };
+                          reader.readAsDataURL(blob);
+                          return;
+                        }
+                      }
+                      toast({ title: "Nenhuma imagem na área de transferência", variant: "destructive" });
+                    } catch {
+                      toast({ title: "Use Ctrl+V para colar a imagem aqui", description: "O navegador não permitiu acesso à área de transferência." });
+                    }
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <ClipboardPaste className="h-5 w-5" />
+                    <span className="text-xs">Clique ou pressione Ctrl+V para colar</span>
+                  </div>
+                </Button>
+              </div>
+
               {/* File Upload */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Fazer Upload</Label>
@@ -1764,12 +1817,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 />
                 <Button 
                   variant="outline" 
-                  className="w-full h-24 border-dashed"
+                  className="w-full h-16 border-dashed"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="h-6 w-6" />
-                    <span>Clique para selecionar uma imagem</span>
+                  <div className="flex flex-col items-center gap-1">
+                    <Upload className="h-5 w-5" />
+                    <span className="text-xs">Clique para selecionar uma imagem</span>
                   </div>
                 </Button>
               </div>
