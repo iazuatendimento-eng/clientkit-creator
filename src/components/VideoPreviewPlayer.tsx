@@ -13,6 +13,7 @@ interface VideoPreviewPlayerProps {
   transitionEffect?: TransitionEffect;
   textAnimation?: TextAnimation;
   logoAnimation?: LogoAnimation;
+  textAnimDuration?: number; // seconds for text animation (default 0.8)
   videoUrls?: (string | null)[];
   overlayPages?: string[];
   logoOverlayPages?: string[];
@@ -27,6 +28,7 @@ export function VideoPreviewPlayer({
   transitionEffect = "fade",
   textAnimation = "none",
   logoAnimation = "none",
+  textAnimDuration = 0.8,
   videoUrls,
   overlayPages,
   logoOverlayPages,
@@ -194,6 +196,7 @@ export function VideoPreviewPlayer({
               src={currentOverlay}
               alt=""
               className={cn("absolute inset-0 w-full h-full object-contain z-[1]", getTextAnimClass())}
+              style={{ animationDuration: `${textAnimDuration}s` }}
               draggable={false}
             />
           )}

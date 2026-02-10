@@ -17,6 +17,7 @@ export interface VideoEncoderOptions {
   transitionEffect?: TransitionEffect;
   textAnimation?: TextAnimation;
   logoAnimation?: LogoAnimation;
+  textAnimDuration?: number; // 0-1 fraction of page duration for text animation (default 0.3)
   backgroundVideoUrls?: (string | null)[]; // Actual video URLs per page to use as animated background
   frameOverlayPages?: string[]; // Transparent frame overlay pages (decorative shapes - static)
   overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
@@ -223,9 +224,9 @@ function getMotionTransform(effect: MotionEffect, progress: number): { scale: nu
 }
 
 // Calculate text animation transform
-function getTextAnimationTransform(effect: TextAnimation, progress: number): { opacity: number; translateX: number; translateY: number; scale: number } {
-  // Text animation happens in the first 30% of the page duration
-  const animDuration = 0.3;
+function getTextAnimationTransform(effect: TextAnimation, progress: number, customDuration?: number): { opacity: number; translateX: number; translateY: number; scale: number } {
+  // Text animation happens in a configurable fraction of the page duration
+  const animDuration = customDuration ?? 0.3;
   const t = Math.min(1, progress / animDuration); // 0 to 1 within animation window
   const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
 
@@ -408,6 +409,7 @@ export async function encodeVideoSimple(
     transitionEffect = "fade",
     textAnimation = "none",
     logoAnimation = "none",
+    textAnimDuration,
     backgroundVideoUrls,
     frameOverlayPages,
     overlayPages,
@@ -596,7 +598,7 @@ export async function encodeVideoSimple(
         return;
       }
 
-      const anim = getTextAnimationTransform(textAnimation, progress);
+      const anim = getTextAnimationTransform(textAnimation, progress, textAnimDuration);
       ctx.save();
       ctx.globalAlpha = anim.opacity;
       ctx.translate(width / 2, height / 2);
