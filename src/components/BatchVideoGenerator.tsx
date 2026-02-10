@@ -178,6 +178,7 @@ interface ClientVideo {
   backgroundImages?: string[];
   pageTexts: string[]; // Text for each content page
   searchedImages?: string[]; // Images found for each page
+  previewVideoUrls?: (string | null)[]; // Video URLs for preview playback per page
   adjustments: ElementAdjustments;
   pageTextAdjustments: PageTextAdjustment[]; // Per-page text adjustments
   pageImageAdjustments: PageImageAdjustment[]; // Per-page image adjustments
@@ -216,6 +217,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
+  const [searchVideoUrlMap, setSearchVideoUrlMap] = useState<Record<string, string>>({});
   const [isSearching, setIsSearching] = useState(false);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
@@ -974,18 +976,23 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
       const videos = await searchPexelsVideos(searchQuery, 12);
       if (videos.length > 0) {
         // Convert video results to SearchImage format using thumbnails
-        const videoAsImages: SearchImage[] = videos.map(v => ({
-          id: v.id,
-          urls: {
-            regular: v.image,
-            small: v.image,
-            thumb: v.image,
-          },
-          photographer: v.photographer,
-          photographerUrl: '',
-          description: v.description,
-          source: 'pexels' as const,
-        }));
+        const videoUrlMap: Record<string, string> = {};
+        const videoAsImages: SearchImage[] = videos.map(v => {
+          videoUrlMap[v.id] = v.videoUrl;
+          return {
+            id: v.id,
+            urls: {
+              regular: v.image,
+              small: v.image,
+              thumb: v.image,
+            },
+            photographer: v.photographer,
+            photographerUrl: '',
+            description: v.description,
+            source: 'pexels' as const,
+          };
+        });
+        setSearchVideoUrlMap(videoUrlMap);
         setSearchResults(videoAsImages);
       } else {
         const images = await searchImages(searchQuery, 12);
@@ -1020,9 +1027,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
     const newSearchedImages = [...(video.searchedImages || [])];
     newSearchedImages[currentPreviewPage] = image.urls.regular;
 
+    // Store Pexels video URL for preview playback
+    const pexelsVideoUrl = searchVideoUrlMap[image.id] || null;
+    const newPreviewVideoUrls = [...(video.previewVideoUrls || video.pageTexts.map(() => null))];
+    newPreviewVideoUrls[currentPreviewPage] = pexelsVideoUrl;
+
     const updatedVideo: ClientVideo = {
       ...video,
       searchedImages: newSearchedImages,
+      previewVideoUrls: newPreviewVideoUrls,
     };
 
     selectedVideoRef.current = updatedVideo;
@@ -1057,6 +1070,32 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.type.startsWith("video/")) {
+      // For video files, extract a frame as thumbnail and store video URL for preview
+      const videoUrl = URL.createObjectURL(file);
+      const videoEl = document.createElement("video");
+      videoEl.crossOrigin = "anonymous";
+      videoEl.muted = true;
+      videoEl.preload = "auto";
+      videoEl.src = videoUrl;
+      videoEl.onloadeddata = () => {
+        videoEl.currentTime = 0.5; // seek to 0.5s for a good frame
+      };
+      videoEl.onseeked = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = videoEl.videoWidth;
+        canvas.height = videoEl.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          const thumbnail = canvas.toDataURL("image/jpeg", 0.85);
+          // Store thumbnail as background and video URL for preview playback
+          applyCustomImage(thumbnail, videoUrl);
+        }
+      };
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const base64 = event.target?.result as string;
@@ -1070,7 +1109,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
     applyCustomImage(customImageUrl.trim());
   };
 
-  const applyCustomImage = async (imageUrl: string) => {
+  const applyCustomImage = async (imageUrl: string, videoUrl?: string) => {
     const video = selectedVideoRef.current;
     if (!video) return;
 
@@ -1088,9 +1127,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
     const newSearchedImages = [...(video.searchedImages || [])];
     newSearchedImages[currentPreviewPage] = imageUrl;
 
+    // Store video URL for preview playback
+    const newPreviewVideoUrls = [...(video.previewVideoUrls || video.pageTexts.map(() => null))];
+    newPreviewVideoUrls[currentPreviewPage] = videoUrl || null;
+
     const updatedVideo: ClientVideo = {
       ...video,
       searchedImages: newSearchedImages,
+      previewVideoUrls: newPreviewVideoUrls,
     };
 
     selectedVideoRef.current = updatedVideo;
@@ -1617,6 +1661,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
                     Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
                     {currentPreviewPage === selectedVideo.pages.length - 1 && " (Assinatura)"}
                   </p>
+
+                  {/* Video preview playback */}
+                  {selectedVideo.previewVideoUrls?.[currentPreviewPage] && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-center text-primary font-medium">Preview do Vídeo de Fundo:</p>
+                      <div className="relative aspect-[9/16] max-h-[300px] mx-auto rounded-lg overflow-hidden border border-primary/30 bg-black">
+                        <video
+                          src={selectedVideo.previewVideoUrls[currentPreviewPage]!}
+                          controls
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-2 justify-center">
                     {/* Only show change photo button for content pages */}
