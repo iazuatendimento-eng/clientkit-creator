@@ -4,7 +4,7 @@ import { fetchFile, toBlobURL } from "@ffmpeg/util";
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
 export type TransitionEffect = "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "zoom-out";
-export type TextAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "typewriter" | "bounce-in";
+export type TextAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "typewriter" | "bounce-in" | "rotate-in" | "blur-in" | "drop-in" | "swing-in" | "elastic-in" | "flip-in";
 export type LogoAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "bounce-in" | "spin-in" | "flip-in" | "swing";
 
 export interface VideoEncoderOptions {
@@ -234,32 +234,67 @@ function getTextAnimationTransform(effect: TextAnimation, progress: number, cust
     case "fade-in":
       return { opacity: eased, translateX: 0, translateY: 0, scale: 1 };
     case "slide-up":
-      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 15, scale: 1 };
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 30, scale: 1 };
     case "slide-down":
-      return { opacity: eased, translateX: 0, translateY: (1 - eased) * -15, scale: 1 };
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * -30, scale: 1 };
     case "slide-left":
-      return { opacity: eased, translateX: (1 - eased) * 15, translateY: 0, scale: 1 };
+      return { opacity: eased, translateX: (1 - eased) * 30, translateY: 0, scale: 1 };
     case "slide-right":
-      return { opacity: eased, translateX: (1 - eased) * -15, translateY: 0, scale: 1 };
+      return { opacity: eased, translateX: (1 - eased) * -30, translateY: 0, scale: 1 };
     case "scale-in": {
-      const s = 0.5 + eased * 0.5;
+      const s = 0.3 + eased * 0.7;
       return { opacity: eased, translateX: 0, translateY: 0, scale: s };
     }
     case "typewriter":
-      // For typewriter we use opacity as a "reveal" percentage
       return { opacity: eased, translateX: 0, translateY: 0, scale: 1 };
     case "bounce-in": {
-      // Overshoot then settle
       let bounce: number;
-      if (t < 0.6) {
-        bounce = (t / 0.6);
-      } else if (t < 0.8) {
-        bounce = 1 + Math.sin((t - 0.6) / 0.2 * Math.PI) * 0.15;
+      if (t < 0.5) {
+        bounce = (t / 0.5);
+      } else if (t < 0.7) {
+        bounce = 1 + Math.sin((t - 0.5) / 0.2 * Math.PI) * 0.25;
+      } else if (t < 0.85) {
+        bounce = 1 - Math.sin((t - 0.7) / 0.15 * Math.PI) * 0.1;
       } else {
         bounce = 1;
       }
-      const s = 0.3 + bounce * 0.7;
-      return { opacity: Math.min(1, t * 2), translateX: 0, translateY: (1 - bounce) * 10, scale: s };
+      const s = 0.2 + bounce * 0.8;
+      return { opacity: Math.min(1, t * 2.5), translateX: 0, translateY: (1 - bounce) * 20, scale: s };
+    }
+    case "rotate-in": {
+      const rotate = (1 - eased) * 15;
+      const s = 0.7 + eased * 0.3;
+      return { opacity: eased, translateX: (1 - eased) * -10, translateY: (1 - eased) * 10, scale: s };
+    }
+    case "blur-in":
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 + (1 - eased) * 0.05 };
+    case "drop-in": {
+      // Drop from top with bounce
+      const dropT = t;
+      let yOff: number;
+      if (dropT < 0.4) {
+        yOff = (1 - dropT / 0.4) * -50;
+      } else if (dropT < 0.6) {
+        yOff = Math.sin((dropT - 0.4) / 0.2 * Math.PI) * 10;
+      } else if (dropT < 0.8) {
+        yOff = Math.sin((dropT - 0.6) / 0.2 * Math.PI) * -4;
+      } else {
+        yOff = 0;
+      }
+      return { opacity: Math.min(1, t * 3), translateX: 0, translateY: yOff, scale: 1 };
+    }
+    case "swing-in": {
+      const angle = Math.sin(t * Math.PI * 2.5) * (1 - eased) * 20;
+      return { opacity: eased, translateX: angle * 0.5, translateY: 0, scale: 1 };
+    }
+    case "elastic-in": {
+      const elastic = t < 1 ? 1 - Math.pow(2, -10 * t) * Math.cos(t * Math.PI * 3) : 1;
+      const s = 0.3 + elastic * 0.7;
+      return { opacity: Math.min(1, t * 2), translateX: 0, translateY: 0, scale: s };
+    }
+    case "flip-in": {
+      const s = eased < 0.3 ? eased / 0.3 * 0.01 : 0.01 + (eased - 0.3) / 0.7;
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 15, scale: Math.max(0.01, s) };
     }
     default:
       return { opacity: 1, translateX: 0, translateY: 0, scale: 1 };
