@@ -296,7 +296,16 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   }, [clientArts, isLoading]);
 
-  const loadFromExistingBatch = (batch: import("@/lib/batchHistory").BatchGeneration) => {
+  const loadFromExistingBatch = async (batch: import("@/lib/batchHistory").BatchGeneration) => {
+    // Collect unique client IDs to fetch image_type
+    const clientIds = [...new Set(batch.items.map(item => item.clientId))];
+    const { data: clientsData } = await supabase
+      .from("client_data")
+      .select("id, image_type")
+      .in("id", clientIds);
+    const imageTypeMap: Record<string, string> = {};
+    clientsData?.forEach(c => { if (c.image_type) imageTypeMap[c.id] = c.image_type; });
+
     const arts: ClientArt[] = batch.items.map((item, index) => ({
       clientId: item.clientId,
       clientName: item.clientName,
@@ -307,7 +316,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       brandKit: item.brandKit,
       imageUrl: item.files?.[0] || null,
       backgroundImage: item.backgroundImages?.[0],
-      imageType: (item as any).imageType,
+      imageType: (item as any).imageType || imageTypeMap[item.clientId] || undefined,
       status: "pending" as const,
     }));
     setClientArts(arts);
