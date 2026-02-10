@@ -254,14 +254,14 @@ const CardCoverPreview = ({
   const frameOverlay = video.frameOverlayPages?.[currentPage];
   const logoOverlay = video.logoOverlayPages?.[currentPage];
 
-  const transitionClass = isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100";
+  const transitionClass = isTransitioning ? "opacity-0" : "opacity-100";
 
   return (
     <div
       className="aspect-[9/16] bg-muted relative group cursor-pointer overflow-hidden"
       onClick={onClick}
     >
-      <div className={`absolute inset-0 transition-all duration-300 ease-out ${transitionClass}`}>
+      <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
         {/* Layer 1: Background - wrapped to prevent edge trembling */}
         <div className="absolute inset-0 overflow-hidden" style={{ transform: 'translateZ(0)' }}>
           {hasVideo ? (
