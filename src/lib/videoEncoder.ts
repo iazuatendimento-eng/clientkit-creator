@@ -115,8 +115,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       "-crf",
       "23",
       "-pix_fmt",
-      "yuv predominantly",
-      "-pix_fmt",
       "yuv420p",
       "-movflags",
       "+faststart",
@@ -151,15 +149,15 @@ function getMotionTransform(effect: MotionEffect, progress: number): { scale: nu
   switch (effect) {
     case "ken-burns": {
       // Gradual zoom in and pan
-      const scale = 1 + t * 0.08;
-      const tx = Math.sin(t * Math.PI) * 1;
-      const ty = Math.sin(t * Math.PI * 0.5) * 1;
+      const scale = 1 + t * 0.15;
+      const tx = Math.sin(t * Math.PI) * 3;
+      const ty = Math.sin(t * Math.PI * 0.5) * 3;
       return { scale, translateX: tx, translateY: ty, rotate: 0 };
     }
     case "ken-burns-reverse": {
-      const scale = 1.08 - t * 0.08;
-      const tx = Math.sin(t * Math.PI) * -1;
-      const ty = Math.sin(t * Math.PI * 0.5) * -1;
+      const scale = 1.15 - t * 0.15;
+      const tx = Math.sin(t * Math.PI) * -3;
+      const ty = Math.sin(t * Math.PI * 0.5) * -3;
       return { scale, translateX: tx, translateY: ty, rotate: 0 };
     }
     case "pulse": {
@@ -310,12 +308,18 @@ export async function encodeVideoSimple(
   // Load all images
   const images: HTMLImageElement[] = await Promise.all(
     pages.map(
-      (pageUrl) =>
+      (pageUrl, idx) =>
         new Promise<HTMLImageElement>((resolve, reject) => {
           const img = new Image();
           img.crossOrigin = "anonymous";
-          img.onload = () => resolve(img);
-          img.onerror = reject;
+          img.onload = () => {
+            console.log(`[VideoEncoder] Image ${idx} loaded: ${img.naturalWidth}x${img.naturalHeight}`);
+            resolve(img);
+          };
+          img.onerror = (err) => {
+            console.error(`[VideoEncoder] Image ${idx} failed to load:`, err);
+            reject(err);
+          };
           img.src = pageUrl;
         })
     )
@@ -352,6 +356,12 @@ export async function encodeVideoSimple(
     const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
     const transitionFrames = Math.max(1, Math.floor(fps * 0.5)); // 0.5s transition
     const totalFrames = framesPerPage * images.length;
+
+    console.log("[VideoEncoder] Config:", { 
+      pages: images.length, width, height, pageDuration, fps, 
+      framesPerPage, transitionFrames, totalFrames,
+      motionEffect, transitionEffect, chosenMime 
+    });
 
     const tick = () => {
       if (pageIdx >= images.length) {
