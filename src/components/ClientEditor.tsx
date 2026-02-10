@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, User, CreditCard, QrCode, Calendar, DollarSign, Plus, Trash2, Upload, Download, Eye, X, FileText, FileImage, File } from "lucide-react";
+import { ArrowLeft, Save, User, CreditCard, QrCode, Calendar, DollarSign, Plus, Trash2, Upload, Download, Eye, X, FileText, FileImage, File, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createClientUpload, getClientUploads, deleteClientUpload, type ClientUpload } from "@/lib/clientDatabase";
@@ -71,6 +71,25 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
   });
   const [clientUploads, setClientUploads] = useState<ClientUpload[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Brand kit state
+  const [brandColors, setBrandColors] = useState<string[]>(
+    client?.brand_kit?.colors || ["#ffffff", "#000000", "#cccccc", "#aaaaaa"]
+  );
+  const [brandPngs, setBrandPngs] = useState<string[]>(
+    client?.brand_kit?.pngs || ["", "", ""]
+  );
+
+  useEffect(() => {
+    if (client?.brand_kit) {
+      setBrandColors(client.brand_kit.colors || ["#ffffff", "#000000", "#cccccc", "#aaaaaa"]);
+      setBrandPngs(client.brand_kit.pngs || [
+        client.brand_kit.logo || "",
+        client.brand_kit.contactInfo || "",
+        client.brand_kit.mascot || "",
+      ]);
+    }
+  }, [client?.brand_kit]);
 
   useEffect(() => {
     loadTeams();
@@ -215,6 +234,14 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       return;
     }
     
+    const brandKit = {
+      colors: brandColors,
+      pngs: brandPngs,
+      logo: brandPngs[0] || undefined,
+      contactInfo: brandPngs[1] || undefined,
+      mascot: brandPngs[2] || undefined,
+    };
+
     const clientData: Client = {
       id: client?.id,
       name: formData.name || "",
@@ -223,7 +250,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       phone: formData.phone,
       notes: formData.notes,
       team: formData.team || "",
-      brand_kit: formData.brand_kit,
+      brand_kit: brandKit,
       projectCount: client?.projectCount || 0,
       created_at: client?.created_at || new Date().toISOString().split('T')[0],
       payment_method: formData.payment_method,
@@ -236,6 +263,22 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     };
 
     onSave(clientData);
+  };
+
+  const handleBrandPngUpload = (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setBrandPngs(prev => {
+          const newPngs = [...prev];
+          newPngs[index] = result;
+          return newPngs;
+        });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleChange = (field: keyof Client, value: string) => {
@@ -514,7 +557,102 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
             </CardContent>
           </Card>
 
-          {/* Uploads Section */}
+          {/* Brand Kit Section */}
+          <Card className="bg-gradient-card border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Kit de Marca
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Colors */}
+              <div className="space-y-3">
+                <Label>Paleta de Cores</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {["Fundo", "Texto", "Acessório 1", "Acessório 2"].map((label, i) => (
+                    <div key={i} className="space-y-1">
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={brandColors[i] || "#000000"}
+                          onChange={(e) => {
+                            const newColors = [...brandColors];
+                            newColors[i] = e.target.value;
+                            setBrandColors(newColors);
+                          }}
+                          className="w-10 h-10 rounded border border-primary/20 cursor-pointer"
+                        />
+                        <Input
+                          value={brandColors[i] || ""}
+                          onChange={(e) => {
+                            const newColors = [...brandColors];
+                            newColors[i] = e.target.value;
+                            setBrandColors(newColors);
+                          }}
+                          className="flex-1 text-xs"
+                          placeholder="#000000"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* PNGs */}
+              <div className="space-y-3">
+                <Label>Imagens (PNGs)</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { label: "Logomarca", index: 0 },
+                    { label: "Dados de Contato", index: 1 },
+                    { label: "Mascote", index: 2 },
+                  ].map(({ label, index }) => (
+                    <div key={index} className="space-y-2">
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <div className="flex items-center justify-center h-24 bg-background/50 rounded-lg border-2 border-dashed border-primary/30 overflow-hidden">
+                        {brandPngs[index] ? (
+                          <div className="relative w-full h-full flex items-center justify-center">
+                            <img src={brandPngs[index]} alt={label} className="h-20 w-auto object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newPngs = [...brandPngs];
+                                newPngs[index] = "";
+                                setBrandPngs(newPngs);
+                              }}
+                              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <Upload className="h-4 w-4 mx-auto text-muted-foreground" />
+                            <p className="text-[10px] text-muted-foreground mt-1">{label}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleBrandPngUpload(e, index)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <Button type="button" variant="outline" size="sm" className="w-full text-xs">
+                          <Upload className="h-3 w-3 mr-1" />
+                          {brandPngs[index] ? "Alterar" : "Upload"}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {client?.id && (
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
