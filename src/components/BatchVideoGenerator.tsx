@@ -1611,8 +1611,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
                           setIsImageDialogOpen(true);
                         }}
                       >
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        Trocar Foto
+                        <Film className="mr-2 h-4 w-4" />
+                        Trocar Vídeo
                       </Button>
                     )}
                     <Button
@@ -1663,7 +1663,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
       }}>
         <DialogContent className="max-w-3xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Trocar Foto da Página {currentPreviewPage + 1}</DialogTitle>
+            <DialogTitle>Trocar Vídeo da Página {currentPreviewPage + 1}</DialogTitle>
           </DialogHeader>
 
           <Tabs defaultValue="bank" className="w-full">
