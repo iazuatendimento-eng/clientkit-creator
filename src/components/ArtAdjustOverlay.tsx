@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ZoomIn, ZoomOut, Move } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Slider } from "@/components/ui/slider";
 
 type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
 
@@ -712,19 +713,61 @@ export function ArtAdjustOverlay({
         </div>
       )}
 
-      <div className="absolute left-3 bottom-3 z-50 rounded-md border bg-background backdrop-blur px-2 py-1 shadow-lg">
-        <label className="mr-2 text-[10px] text-muted-foreground">Camada</label>
-        <select
-          className="bg-background text-xs text-foreground outline-none border-none cursor-pointer"
-          value={active}
-          onChange={(e) => setActive(e.target.value as Part)}
-        >
-          {partOptions.map((o) => (
-            <option key={o.value} value={o.value} className="bg-background text-foreground">
-              {o.label}
-            </option>
-          ))}
-        </select>
+      <div className="absolute left-3 bottom-3 z-50 flex flex-col gap-2">
+        <div className="rounded-md border bg-background backdrop-blur px-2 py-1 shadow-lg">
+          <label className="mr-2 text-[10px] text-muted-foreground">Camada</label>
+          <select
+            className="bg-background text-xs text-foreground outline-none border-none cursor-pointer"
+            value={active}
+            onChange={(e) => setActive(e.target.value as Part)}
+          >
+            {partOptions.map((o) => (
+              <option key={o.value} value={o.value} className="bg-background text-foreground">
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {active === "photo" && els.photoFrame && (
+          <div className="rounded-md border bg-background backdrop-blur px-2 py-1.5 shadow-lg flex items-center gap-2 min-w-[180px]">
+            <ZoomOut className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <Slider
+              min={10}
+              max={300}
+              step={5}
+              value={[photoScale]}
+              onValueChange={([v]) => setPhotoScale(v)}
+              className="flex-1"
+            />
+            <ZoomIn className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <span className="text-[10px] text-muted-foreground w-8 text-right">{photoScale}%</span>
+          </div>
+        )}
+
+        {active === "photo" && els.photoFrame && photoScale !== 100 && (
+          <div className="rounded-md border bg-background backdrop-blur px-2 py-1.5 shadow-lg flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Move className="h-3 w-3 flex-shrink-0" />
+            <span>X</span>
+            <input
+              type="range"
+              min={-200}
+              max={200}
+              value={photoOffsetX}
+              onChange={(e) => setPhotoOffsetX(Number(e.target.value))}
+              className="flex-1 h-1 accent-primary"
+            />
+            <span>Y</span>
+            <input
+              type="range"
+              min={-200}
+              max={200}
+              value={photoOffsetY}
+              onChange={(e) => setPhotoOffsetY(Number(e.target.value))}
+              className="flex-1 h-1 accent-primary"
+            />
+          </div>
+        )}
       </div>
 
       <div className="absolute inset-0">
