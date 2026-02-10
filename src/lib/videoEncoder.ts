@@ -224,7 +224,7 @@ function getMotionTransform(effect: MotionEffect, progress: number): { scale: nu
 }
 
 // Calculate text animation transform
-function getTextAnimationTransform(effect: TextAnimation, progress: number, customDuration?: number): { opacity: number; translateX: number; translateY: number; scale: number } {
+function getTextAnimationTransform(effect: TextAnimation, progress: number, customDuration?: number): { opacity: number; translateX: number; translateY: number; scale: number; rotate: number } {
   // Text animation happens in a configurable fraction of the page duration
   const animDuration = customDuration ?? 0.3;
   const t = Math.min(1, progress / animDuration); // 0 to 1 within animation window
@@ -235,21 +235,21 @@ function getTextAnimationTransform(effect: TextAnimation, progress: number, cust
 
   switch (effect) {
     case "fade-in":
-      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 };
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1, rotate: 0 };
     case "slide-up":
-      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 30, scale: 1 };
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 30, scale: 1, rotate: 0 };
     case "slide-down":
-      return { opacity: eased, translateX: 0, translateY: (1 - eased) * -30, scale: 1 };
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * -30, scale: 1, rotate: 0 };
     case "slide-left":
-      return { opacity: eased, translateX: (1 - eased) * 30, translateY: 0, scale: 1 };
+      return { opacity: eased, translateX: (1 - eased) * 30, translateY: 0, scale: 1, rotate: 0 };
     case "slide-right":
-      return { opacity: eased, translateX: (1 - eased) * -30, translateY: 0, scale: 1 };
+      return { opacity: eased, translateX: (1 - eased) * -30, translateY: 0, scale: 1, rotate: 0 };
     case "scale-in": {
       const s = 0.3 + eased * 0.7;
-      return { opacity: eased, translateX: 0, translateY: 0, scale: s };
+      return { opacity: eased, translateX: 0, translateY: 0, scale: s, rotate: 0 };
     }
     case "typewriter":
-      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 };
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1, rotate: 0 };
     case "bounce-in": {
       let bounce: number;
       if (t < 0.5) {
@@ -262,17 +262,16 @@ function getTextAnimationTransform(effect: TextAnimation, progress: number, cust
         bounce = 1;
       }
       const s = 0.2 + bounce * 0.8;
-      return { opacity: Math.min(1, t * 2.5), translateX: 0, translateY: (1 - bounce) * 20, scale: s };
+      return { opacity: Math.min(1, t * 2.5), translateX: 0, translateY: (1 - bounce) * 20, scale: s, rotate: 0 };
     }
     case "rotate-in": {
-      const rotate = (1 - eased) * 15;
+      const rot = (1 - eased) * 15;
       const s = 0.7 + eased * 0.3;
-      return { opacity: eased, translateX: (1 - eased) * -10, translateY: (1 - eased) * 10, scale: s };
+      return { opacity: eased, translateX: (1 - eased) * -10, translateY: (1 - eased) * 10, scale: s, rotate: rot };
     }
     case "blur-in":
-      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 + (1 - eased) * 0.05 };
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 + (1 - eased) * 0.05, rotate: 0 };
     case "drop-in": {
-      // Drop from top with bounce
       const dropT = t;
       let yOff: number;
       if (dropT < 0.4) {
@@ -284,23 +283,23 @@ function getTextAnimationTransform(effect: TextAnimation, progress: number, cust
       } else {
         yOff = 0;
       }
-      return { opacity: Math.min(1, t * 3), translateX: 0, translateY: yOff, scale: 1 };
+      return { opacity: Math.min(1, t * 3), translateX: 0, translateY: yOff, scale: 1, rotate: 0 };
     }
     case "swing-in": {
       const angle = Math.sin(t * Math.PI * 2.5) * (1 - eased) * 20;
-      return { opacity: eased, translateX: angle * 0.5, translateY: 0, scale: 1 };
+      return { opacity: eased, translateX: angle * 0.5, translateY: 0, scale: 1, rotate: angle };
     }
     case "elastic-in": {
       const elastic = t < 1 ? 1 - Math.pow(2, -10 * t) * Math.cos(t * Math.PI * 3) : 1;
       const s = 0.3 + elastic * 0.7;
-      return { opacity: Math.min(1, t * 2), translateX: 0, translateY: 0, scale: s };
+      return { opacity: Math.min(1, t * 2), translateX: 0, translateY: 0, scale: s, rotate: 0 };
     }
     case "flip-in": {
       const s = eased < 0.3 ? eased / 0.3 * 0.01 : 0.01 + (eased - 0.3) / 0.7;
-      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 15, scale: Math.max(0.01, s) };
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 15, scale: Math.max(0.01, s), rotate: 0 };
     }
     default:
-      return { opacity: 1, translateX: 0, translateY: 0, scale: 1 };
+      return { opacity: 1, translateX: 0, translateY: 0, scale: 1, rotate: 0 };
   }
 }
 
@@ -640,6 +639,7 @@ export async function encodeVideoSimple(
       ctx.save();
       ctx.globalAlpha = anim.opacity;
       ctx.translate(width / 2, height / 2);
+      ctx.rotate((anim.rotate * Math.PI) / 180);
       ctx.scale(anim.scale, anim.scale);
       ctx.translate(
         -width / 2 + (anim.translateX * width) / 100,
