@@ -241,6 +241,7 @@ const CardCoverPreview = memo(({
   transitionEffect,
   textAnimation,
   logoAnimation,
+  textAnimDuration = 1.5,
   pageDuration,
   onClick,
 }: {
@@ -249,6 +250,7 @@ const CardCoverPreview = memo(({
   transitionEffect: TransitionEffect;
   textAnimation: TextAnimation;
   logoAnimation: LogoAnimation;
+  textAnimDuration?: number;
   pageDuration: number;
   onClick: () => void;
 }) => {
@@ -339,6 +341,7 @@ const CardCoverPreview = memo(({
             src={overlayPage}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
+            style={{ animationDuration: `${textAnimDuration}s` }}
             draggable={false}
           />
         )}
@@ -397,6 +400,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
   const [textAnimation, setTextAnimation] = useState<TextAnimation>("fade-in");
   const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>("fade-in");
+  const [textAnimDuration, setTextAnimDuration] = useState(1.5); // seconds
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1604,6 +1608,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           transitionEffect,
           textAnimation,
           logoAnimation,
+          textAnimDuration: textAnimDuration / (template.pageDuration || 3), // convert seconds to fraction of page
           backgroundVideoUrls: video.previewVideoUrls || undefined,
           frameOverlayPages: video.frameOverlayPages || undefined,
           overlayPages: video.overlayPages || undefined,
@@ -1871,6 +1876,19 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           </select>
         </div>
         <div className="flex items-center gap-2">
+          <Label className="text-sm whitespace-nowrap">Duração:</Label>
+          <input
+            type="range"
+            min={0.3}
+            max={4}
+            step={0.1}
+            value={textAnimDuration}
+            onChange={(e) => setTextAnimDuration(parseFloat(e.target.value))}
+            className="w-20 h-2 accent-primary"
+          />
+          <span className="text-xs text-muted-foreground w-8">{textAnimDuration}s</span>
+        </div>
+        <div className="flex items-center gap-2">
           <Label className="text-sm whitespace-nowrap">Logo:</Label>
           <select
             value={logoAnimation}
@@ -1922,6 +1940,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   transitionEffect={transitionEffect}
                   textAnimation={textAnimation}
                   logoAnimation={logoAnimation}
+                  textAnimDuration={textAnimDuration}
                   pageDuration={template.pageDuration || 3}
                   onClick={() => {
                     setSelectedVideo(video);
@@ -2012,6 +2031,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   transitionEffect={transitionEffect}
                   textAnimation={textAnimation}
                   logoAnimation={logoAnimation}
+                  textAnimDuration={textAnimDuration}
                   videoUrls={selectedVideo.previewVideoUrls}
                   overlayPages={selectedVideo.overlayPages}
                   logoOverlayPages={selectedVideo.logoOverlayPages}
