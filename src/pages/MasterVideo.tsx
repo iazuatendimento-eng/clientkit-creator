@@ -22,9 +22,11 @@ const MasterVideo = () => {
   const [view, setView] = useState<"editor" | "batch" | "history" | "history-edit">("editor");
   const [template, setTemplate] = useState<VideoTemplate | null>(null);
   const [editingBatch, setEditingBatch] = useState<BatchGeneration | null>(null);
+  const [teamFilter, setTeamFilter] = useState<string | undefined>(undefined);
 
-  const handleGenerateBatch = (newTemplate: VideoTemplate) => {
+  const handleGenerateBatch = (newTemplate: VideoTemplate, newTeamFilter?: string) => {
     setTemplate(newTemplate);
+    setTeamFilter(newTeamFilter);
     setView("batch");
   };
 
@@ -69,6 +71,7 @@ const MasterVideo = () => {
     return (
       <BatchVideoGenerator
         template={template}
+        initialTeamFilter={teamFilter}
         onBack={handleBackToEditor}
         onComplete={handleComplete}
       />

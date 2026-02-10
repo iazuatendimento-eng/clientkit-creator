@@ -108,9 +108,11 @@ interface SavedVideoTemplate {
   updated_at: string;
 }
 
+type TeamFilter = string | undefined;
+
 interface MasterVideoEditorProps {
   onBack: () => void;
-  onGenerateBatch: (template: VideoTemplate) => void;
+  onGenerateBatch: (template: VideoTemplate, teamFilter: TeamFilter) => void;
   onOpenHistory?: () => void;
 }
 
@@ -140,6 +142,16 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   // Layer renaming state
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingLayerName, setEditingLayerName] = useState("");
+  
+  // Team filter state
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<TeamFilter>(undefined);
+  const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
+      if (data) setAvailableTeams(data);
+    });
+  }, []);
   
   // Drag and resize state
   const [isDragging, setIsDragging] = useState(false);
@@ -1054,7 +1066,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       pageDuration,
     };
 
-    onGenerateBatch(template);
+    onGenerateBatch(template, selectedTeamFilter);
   };
 
   const selectedEl = elements.find((el) => el.id === selectedElement);
@@ -1710,6 +1722,23 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
               Histórico de Vídeos
             </Button>
           )}
+          
+          {/* Team Filter Selector */}
+          <Select 
+            value={selectedTeamFilter || "all"} 
+            onValueChange={(value) => setSelectedTeamFilter(value === "all" ? undefined : value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Equipe..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Clientes</SelectItem>
+              {availableTeams.map((team) => (
+                <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
           <Button className="w-full bg-gradient-primary" onClick={handleGenerateBatch}>
             <Play className="mr-2 h-4 w-4" />
             Gerar Vídeos em Lote
