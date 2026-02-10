@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
@@ -646,6 +646,14 @@ const Index = () => {
         <div className="container mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => navigate("/master-art")}>
+              <Palette className="mr-1 h-4 w-4" />
+              Artes
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate("/master-video")}>
+              <Video className="mr-1 h-4 w-4" />
+              Vídeos
+            </Button>
             <Button size="sm" variant="outline" onClick={() => navigate("/receivables")}>
               <FileDown className="mr-1 h-4 w-4" />
               Recebimentos
