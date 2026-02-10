@@ -43,19 +43,20 @@ const MasterArt = () => {
   };
 
   const handleEditBatch = (batch: BatchGeneration) => {
+    // Extract template from batch snapshot and open in BatchArtGenerator
+    const snap = batch.template_snapshot as any;
+    const batchTemplate: MasterTemplate = {
+      id: snap.id || batch.id,
+      name: snap.name || "Template",
+      elements: snap.elements || [],
+      width: snap.width || 1080,
+      height: snap.height || 1080,
+      backgroundColor: snap.backgroundColor || snap.background_color || "#ffffff",
+    };
+    setTemplate(batchTemplate);
     setEditingBatch(batch);
-    setView("history-edit");
+    setView("batch");
   };
-
-  if (view === "history-edit" && editingBatch) {
-    return (
-      <BatchHistoryEditor
-        batch={editingBatch}
-        onBack={() => setView("history")}
-        onSaved={handleComplete}
-      />
-    );
-  }
 
   if (view === "history") {
     return (
@@ -72,6 +73,7 @@ const MasterArt = () => {
       <BatchArtGenerator
         template={template}
         initialTeamFilter={teamFilter}
+        initialBatch={editingBatch || undefined}
         onBack={handleBackToEditor}
         onComplete={handleComplete}
       />
