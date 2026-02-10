@@ -26,7 +26,7 @@ import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTag
 import { searchImages, SearchImage, searchPexelsVideos } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
-import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation } from "@/lib/videoEncoder";
+import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
@@ -175,6 +175,7 @@ interface ClientVideo {
   brandKit: any;
   pages: string[]; // Array of page images (base64) - with background
   overlayPages?: string[]; // Array of page images (base64) - transparent background for video compositing
+  logoOverlayPages?: string[]; // Array of page images (base64) - logo only for separate animation
   videoUrl: string | null;
   status: "pending" | "approved" | "rejected";
   backgroundImages?: string[];
@@ -227,6 +228,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
   const [textAnimation, setTextAnimation] = useState<TextAnimation>("fade-in");
+  const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>("fade-in");
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -383,7 +385,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     adjustments: ElementAdjustments = defaultAdjustments,
     textAdjustment: PageTextAdjustment = defaultPageTextAdjustment,
     imageAdjustment: PageImageAdjustment = defaultPageImageAdjustment,
-    transparentBackground: boolean = false
+    transparentBackground: boolean = false,
+    excludeLogo: boolean = false
   ): Promise<string> => {
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -504,6 +507,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Draw elements
     for (const el of elements) {
+      // Skip logo if generating overlay without logo (logo has its own layer)
+      if (excludeLogo && el.type === "logo") continue;
       ctx.save();
       applyElementStyles(el);
       
@@ -753,9 +758,45 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     return canvas.toDataURL("image/png");
   };
 
-  const generateVideoForClient = async (video: ClientVideo, searchedImages: string[], videoUrls?: (string | null)[]): Promise<{ pages: string[]; overlayPages: string[] }> => {
+  // Generate a logo-only overlay (transparent PNG with only logo element)
+  const generateLogoOverlay = async (
+    elements: CanvasElement[],
+    brandKit: any,
+    isSignature: boolean,
+    adjustments: ElementAdjustments = defaultAdjustments
+  ): Promise<string> => {
+    const logoEl = elements.find((e) => e.type === "logo");
+    if (!logoEl) return "";
+
+    const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
+    if (!logoUrl) return "";
+
+    const canvas = document.createElement("canvas");
+    canvas.width = template.width || 1080;
+    canvas.height = template.height || 1920;
+    const ctx = canvas.getContext("2d")!;
+    // transparent background
+
+    const img = await loadImage(logoUrl);
+    if (!img) return "";
+
+    const logoX = isSignature ? (adjustments.sigLogoX ?? adjustments.logoX) : adjustments.logoX;
+    const logoY = isSignature ? (adjustments.sigLogoY ?? adjustments.logoY) : adjustments.logoY;
+    const logoScaleX = isSignature ? (adjustments.sigLogoScaleX ?? adjustments.logoScaleX) : adjustments.logoScaleX;
+    const logoScaleY = isSignature ? (adjustments.sigLogoScaleY ?? adjustments.logoScaleY) : adjustments.logoScaleY;
+    const adjustedX = logoEl.x + logoX;
+    const adjustedY = logoEl.y + logoY;
+    const adjustedW = logoEl.width * (logoScaleX / 100);
+    const adjustedH = logoEl.height * (logoScaleY / 100);
+    ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
+
+    return canvas.toDataURL("image/png");
+  };
+
+  const generateVideoForClient = async (video: ClientVideo, searchedImages: string[], videoUrls?: (string | null)[]): Promise<{ pages: string[]; overlayPages: string[]; logoOverlayPages: string[] }> => {
     const pages: string[] = [];
     const overlayPages: string[] = [];
+    const logoOverlayPages: string[] = [];
 
     // Generate content pages (one per text segment)
     for (let i = 0; i < video.pageTexts.length; i++) {
@@ -789,11 +830,19 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           video.adjustments,
           textAdj,
           imageAdj,
-          true // transparent background
+          true, // transparent background
+          true  // excludeLogo - logo rendered separately
         );
         overlayPages.push(overlayImage);
+
+        // Generate logo-only overlay for separate animation
+        const logoOverlay = await generateLogoOverlay(
+          template.contentElements, video.brandKit, false, video.adjustments
+        );
+        logoOverlayPages.push(logoOverlay);
       } else {
         overlayPages.push(""); // no overlay needed
+        logoOverlayPages.push("");
       }
     }
 
@@ -810,13 +859,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     );
     pages.push(signaturePage);
     overlayPages.push(""); // signature has no video
+    logoOverlayPages.push("");
 
-    return { pages, overlayPages };
+    return { pages, overlayPages, logoOverlayPages };
   };
 
-  const regenerateSingleVideo = async (video: ClientVideo): Promise<{ pages: string[]; overlayPages: string[] }> => {
+  const regenerateSingleVideo = async (video: ClientVideo): Promise<{ pages: string[]; overlayPages: string[]; logoOverlayPages: string[] }> => {
     const pages: string[] = [];
     const overlayPages: string[] = [];
+    const logoOverlayPages: string[] = [];
 
     // Generate content pages with current searchedImages
     for (let i = 0; i < video.pageTexts.length; i++) {
@@ -848,11 +899,18 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           video.adjustments,
           textAdj,
           imageAdj,
-          true
+          true, // transparent
+          true  // excludeLogo
         );
         overlayPages.push(overlayImage);
+
+        const logoOverlay = await generateLogoOverlay(
+          template.contentElements, video.brandKit, false, video.adjustments
+        );
+        logoOverlayPages.push(logoOverlay);
       } else {
         overlayPages.push("");
+        logoOverlayPages.push("");
       }
     }
 
@@ -869,8 +927,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     );
     pages.push(signaturePage);
     overlayPages.push("");
+    logoOverlayPages.push("");
 
-    return { pages, overlayPages };
+    return { pages, overlayPages, logoOverlayPages };
   };
 
   const updateAdjustmentLocal = useCallback((key: keyof ElementAdjustments, value: number) => {
@@ -968,7 +1027,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       setIsApplyingAdjustments(true);
       try {
         const result = await regenerateSingleVideo(base);
-        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages };
+        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages };
 
         selectedVideoRef.current = updatedVideo;
 
@@ -1044,7 +1103,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         }
 
         const result = await generateVideoForClient(video, searchedImages, pexelsVideoUrls);
-        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
+        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
         setClientVideos([...updatedVideos]);
       }
 
@@ -1085,7 +1144,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       const updatedVideo: ClientVideo = { ...video, brandKit: clientData.brand_kit };
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages };
 
       setClientVideos((prev) =>
         prev.map((v, i) => (i === index ? finalVideo : v))
@@ -1196,7 +1255,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsApplyingAdjustments(true);
     try {
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -1295,7 +1354,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsApplyingAdjustments(true);
     try {
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, logoOverlayPages: result.logoOverlayPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -1345,8 +1404,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           motionEffect,
           transitionEffect,
           textAnimation,
+          logoAnimation,
           backgroundVideoUrls: video.previewVideoUrls || undefined,
           overlayPages: video.overlayPages || undefined,
+          logoOverlayPages: video.logoOverlayPages || undefined,
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
 
@@ -1607,6 +1668,26 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             <option value="slide-right">Deslizar Direita</option>
             <option value="scale-in">Zoom In</option>
             <option value="bounce-in">Quicar</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-sm whitespace-nowrap">Logo:</Label>
+          <select
+            value={logoAnimation}
+            onChange={(e) => setLogoAnimation(e.target.value as LogoAnimation)}
+            className="h-8 px-2 text-sm border rounded-md bg-background"
+          >
+            <option value="none">Nenhum</option>
+            <option value="fade-in">Fade In</option>
+            <option value="slide-up">Subir</option>
+            <option value="slide-down">Descer</option>
+            <option value="slide-left">Deslizar Esquerda</option>
+            <option value="slide-right">Deslizar Direita</option>
+            <option value="scale-in">Zoom In</option>
+            <option value="bounce-in">Quicar</option>
+            <option value="spin-in">Girar</option>
+            <option value="flip-in">Virar</option>
+            <option value="swing">Balançar</option>
           </select>
         </div>
         <span className="text-xs text-muted-foreground">
