@@ -4,6 +4,7 @@ import { fetchFile, toBlobURL } from "@ffmpeg/util";
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
 export type TransitionEffect = "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "zoom-out";
+export type TextAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "typewriter" | "bounce-in";
 
 export interface VideoEncoderOptions {
   width: number;
@@ -13,6 +14,7 @@ export interface VideoEncoderOptions {
   fps?: number;
   motionEffect?: MotionEffect;
   transitionEffect?: TransitionEffect;
+  textAnimation?: TextAnimation;
   backgroundVideoUrls?: (string | null)[]; // Actual video URLs per page to use as animated background
   overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
   onProgress?: (progress: number) => void;
@@ -36,7 +38,6 @@ async function loadFFmpeg(): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
 
   if (ffmpegLoading) {
-    // Wait for existing load
     while (ffmpegLoading) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -48,7 +49,6 @@ async function loadFFmpeg(): Promise<FFmpeg> {
   try {
     ffmpeg = new FFmpeg();
 
-    // Keep core version aligned with @ffmpeg/ffmpeg to reduce compatibility issues
     const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
 
     await withTimeout(
@@ -77,7 +77,6 @@ function pickSupportedMimeType(candidates: string[]): string | null {
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress } = options;
 
-  // Best path: some browsers support recording directly to MP4 via MediaRecorder
   const mp4Mime = pickSupportedMimeType([
     "video/mp4;codecs=avc1",
     "video/mp4",
@@ -105,7 +104,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   const webmData = await fetchFile(webmBlob);
   await ff.writeFile("input.webm", webmData);
 
-  // Convert WebM to MP4 with H.264 codec (Instagram compatible)
   await withTimeout(
     ff.exec([
       "-i",
@@ -133,7 +131,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     type: "video/mp4",
   });
 
-  // Cleanup
   await ff.deleteFile("input.webm");
   await ff.deleteFile("output.mp4");
 
@@ -144,13 +141,11 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
 
 // Calculate motion transform based on effect and progress (0-1)
 function getMotionTransform(effect: MotionEffect, progress: number): { scale: number; translateX: number; translateY: number; rotate: number } {
-  const t = progress; // 0 to 1 within the page duration
-  const cycle = Math.sin(t * Math.PI * 2); // Full cycle
-  const halfCycle = Math.sin(t * Math.PI); // Half cycle (0 to 1 to 0)
+  const t = progress;
+  const halfCycle = Math.sin(t * Math.PI);
   
   switch (effect) {
     case "ken-burns": {
-      // Gradual zoom in and pan
       const scale = 1 + t * 0.15;
       const tx = Math.sin(t * Math.PI) * 3;
       const ty = Math.sin(t * Math.PI * 0.5) * 3;
@@ -211,15 +206,58 @@ function getMotionTransform(effect: MotionEffect, progress: number): { scale: nu
       return { scale, translateX: 0, translateY: 0, rotate: 0 };
     }
     case "pan-left": {
-      const tx = (1 - t) * 3 - 1.5; // From right to left
+      const tx = (1 - t) * 3 - 1.5;
       return { scale: 1.05, translateX: tx, translateY: 0, rotate: 0 };
     }
     case "pan-right": {
-      const tx = t * 3 - 1.5; // From left to right
+      const tx = t * 3 - 1.5;
       return { scale: 1.05, translateX: tx, translateY: 0, rotate: 0 };
     }
     default:
       return { scale: 1, translateX: 0, translateY: 0, rotate: 0 };
+  }
+}
+
+// Calculate text animation transform
+function getTextAnimationTransform(effect: TextAnimation, progress: number): { opacity: number; translateX: number; translateY: number; scale: number } {
+  // Text animation happens in the first 30% of the page duration
+  const animDuration = 0.3;
+  const t = Math.min(1, progress / animDuration); // 0 to 1 within animation window
+  const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+
+  switch (effect) {
+    case "fade-in":
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 };
+    case "slide-up":
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 15, scale: 1 };
+    case "slide-down":
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * -15, scale: 1 };
+    case "slide-left":
+      return { opacity: eased, translateX: (1 - eased) * 15, translateY: 0, scale: 1 };
+    case "slide-right":
+      return { opacity: eased, translateX: (1 - eased) * -15, translateY: 0, scale: 1 };
+    case "scale-in": {
+      const s = 0.5 + eased * 0.5;
+      return { opacity: eased, translateX: 0, translateY: 0, scale: s };
+    }
+    case "typewriter":
+      // For typewriter we use opacity as a "reveal" percentage
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 };
+    case "bounce-in": {
+      // Overshoot then settle
+      let bounce: number;
+      if (t < 0.6) {
+        bounce = (t / 0.6);
+      } else if (t < 0.8) {
+        bounce = 1 + Math.sin((t - 0.6) / 0.2 * Math.PI) * 0.15;
+      } else {
+        bounce = 1;
+      }
+      const s = 0.3 + bounce * 0.7;
+      return { opacity: Math.min(1, t * 2), translateX: 0, translateY: (1 - bounce) * 10, scale: s };
+    }
+    default:
+      return { opacity: 1, translateX: 0, translateY: 0, scale: 1 };
   }
 }
 
@@ -279,6 +317,23 @@ function applyTransition(
   }
 }
 
+// Helper: seek video to a specific time and wait for the frame to be ready
+function seekVideoToTime(video: HTMLVideoElement, time: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    if (Math.abs(video.currentTime - time) < 0.05) {
+      // Already close enough
+      resolve();
+      return;
+    }
+    const onSeeked = () => {
+      video.removeEventListener("seeked", onSeeked);
+      resolve();
+    };
+    video.addEventListener("seeked", onSeeked);
+    video.currentTime = time;
+  });
+}
+
 export async function encodeVideoSimple(pages: string[], options: VideoEncoderOptions): Promise<Blob>;
 export async function encodeVideoSimple(
   pages: string[],
@@ -299,6 +354,7 @@ export async function encodeVideoSimple(
     fps = 24, 
     motionEffect = "ken-burns",
     transitionEffect = "fade",
+    textAnimation = "none",
     backgroundVideoUrls,
     overlayPages,
     onProgress 
@@ -352,9 +408,13 @@ export async function encodeVideoSimple(
           };
         });
         
-        // Start playing (muted) so we can draw frames
+        // Seek to start and wait
         video.currentTime = 0;
-        await video.play();
+        await new Promise<void>((r) => {
+          video.onseeked = () => r();
+          // If already at 0, resolve immediately
+          if (video.readyState >= 2) r();
+        });
         
         return video;
       } catch (err) {
@@ -401,6 +461,18 @@ export async function encodeVideoSimple(
     if (e.data.size > 0) chunks.push(e.data);
   };
 
+  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
+  const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
+  const totalFrames = framesPerPage * images.length;
+
+  console.log("[VideoEncoder] Config:", { 
+    pages: images.length, width, height, pageDuration, fps, 
+    framesPerPage, transitionFrames, totalFrames,
+    motionEffect, transitionEffect, textAnimation, chosenMime,
+    bgVideoCount: bgVideos.filter(Boolean).length,
+    overlayCount: overlayImages.filter(Boolean).length,
+  });
+
   return new Promise((resolve, reject) => {
     mediaRecorder.onstop = () => {
       // Cleanup: pause all background videos
@@ -408,26 +480,12 @@ export async function encodeVideoSimple(
       resolve(new Blob(chunks, { type: outType }));
     };
     mediaRecorder.onerror = reject;
-    mediaRecorder.start(250); // fewer callbacks = less overhead
+    mediaRecorder.start(250);
 
-    let pageIdx = 0;
-    let frameCount = 0;
-    const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
-    const transitionFrames = Math.max(1, Math.floor(fps * 0.5)); // 0.5s transition
-    const totalFrames = framesPerPage * images.length;
-
-    // Track video start time per page to sync playback
-    let pageVideoStartTime: number | null = null;
-
-    console.log("[VideoEncoder] Config:", { 
-      pages: images.length, width, height, pageDuration, fps, 
-      framesPerPage, transitionFrames, totalFrames,
-      motionEffect, transitionEffect, chosenMime,
-      bgVideoCount: bgVideos.filter(Boolean).length,
-    });
+    let globalFrame = 0;
 
     const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
-      if (applyMotion) {
+      if (applyMotion && motionEffect !== "none") {
         const motion = getMotionTransform(motionEffect, progress);
         ctx.save();
         ctx.translate(width / 2, height / 2);
@@ -444,17 +502,35 @@ export async function encodeVideoSimple(
       }
     };
 
-    // Use a global frame counter across all pages
-    let globalFrame = 0;
+    // Draw overlay with text animation
+    const drawOverlay = (overlay: HTMLImageElement, progress: number) => {
+      if (textAnimation === "none") {
+        ctx.globalAlpha = 1;
+        ctx.drawImage(overlay, 0, 0, width, height);
+        return;
+      }
 
-    const tick = () => {
+      const anim = getTextAnimationTransform(textAnimation, progress);
+      ctx.save();
+      ctx.globalAlpha = anim.opacity;
+      ctx.translate(width / 2, height / 2);
+      ctx.scale(anim.scale, anim.scale);
+      ctx.translate(
+        -width / 2 + (anim.translateX * width) / 100,
+        -height / 2 + (anim.translateY * height) / 100
+      );
+      ctx.drawImage(overlay, 0, 0, width, height);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    };
+
+    const tick = async () => {
       if (globalFrame >= totalFrames) {
         setTimeout(() => mediaRecorder.stop(), 200);
         return;
       }
 
-      // Determine current page and frame within it
-      pageIdx = Math.floor(globalFrame / framesPerPage);
+      const pageIdx = Math.floor(globalFrame / framesPerPage);
       const frameInPage = globalFrame - (pageIdx * framesPerPage);
 
       if (pageIdx >= images.length) {
@@ -467,14 +543,7 @@ export async function encodeVideoSimple(
       const bgVideo = bgVideos[pageIdx] || null;
 
       const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
-      const pageProgress = frameInPage / framesPerPage; // 0 to 1
-
-      // Sync background video currentTime directly (don't rely on play())
-      if (bgVideo && bgVideo.readyState >= 2) {
-        const videoDuration = bgVideo.duration || pageDuration;
-        // Map page progress to video time, looping if video is shorter
-        bgVideo.currentTime = (pageProgress * pageDuration) % videoDuration;
-      }
+      const pageProgress = frameInPage / framesPerPage;
 
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, width, height);
@@ -483,6 +552,16 @@ export async function encodeVideoSimple(
         const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
         applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
       } else if (bgVideo && bgVideo.readyState >= 2) {
+        // Seek to the correct time and WAIT for the frame to be ready
+        const videoDuration = bgVideo.duration || pageDuration;
+        const targetTime = (pageProgress * pageDuration) % videoDuration;
+        
+        try {
+          await seekVideoToTime(bgVideo, targetTime);
+        } catch {
+          // Ignore seek errors
+        }
+        
         // Draw the actual video frame as background
         try {
           const vw = bgVideo.videoWidth;
@@ -498,14 +577,12 @@ export async function encodeVideoSimple(
             sy = (vh - sh) / 2;
           }
 
-          // Draw video frame without extra motion (video itself is the motion)
           ctx.drawImage(bgVideo, sx, sy, sw, sh, 0, 0, width, height);
 
-          // Draw overlay (transparent PNG with text/elements) on top
+          // Draw overlay (transparent PNG with text/elements) on top with animation
           const overlay = overlayImages[pageIdx];
           if (overlay) {
-            ctx.globalAlpha = 1;
-            ctx.drawImage(overlay, 0, 0, width, height);
+            drawOverlay(overlay, pageProgress);
           }
         } catch (e) {
           console.warn("[VideoEncoder] Video frame draw failed, using static:", e);
@@ -523,9 +600,6 @@ export async function encodeVideoSimple(
       // Render at the requested fps
       setTimeout(tick, 1000 / fps);
     };
-
-    // Pause all videos initially; we'll seek manually per frame
-    bgVideos.forEach(v => { if (v) v.pause(); });
 
     tick();
   });
