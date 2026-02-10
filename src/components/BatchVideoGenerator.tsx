@@ -1773,7 +1773,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   {/* Layer 1: Background - Pexels video or static image with motion effect */}
                   {video.previewVideoUrls?.[0] ? (
                     <video
-                      key={`card-vid-${video.cardId}-${video.previewVideoUrls[0]}`}
+                      key={`card-vid-${video.cardId}-${video.previewVideoUrls[0]}-${motionEffect}`}
                       ref={(el) => {
                         if (el) {
                           el.muted = true;
@@ -1794,6 +1794,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     />
                   ) : video.pages[0] ? (
                     <img
+                      key={`card-img-${video.cardId}-${motionEffect}`}
                       src={video.pages[0]}
                       alt={video.clientName}
                       className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
@@ -1807,6 +1808,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   {/* Layer 2: Text overlay with text animation */}
                   {video.overlayPages?.[0] && (
                     <img
+                      key={`overlay-${video.cardId}-${textAnimation}`}
                       src={video.overlayPages[0]}
                       alt=""
                       className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
@@ -1817,6 +1819,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   {/* Layer 3: Logo overlay with logo animation */}
                   {video.logoOverlayPages?.[0] && (
                     <img
+                      key={`logo-${video.cardId}-${logoAnimation}`}
                       src={video.logoOverlayPages[0]}
                       alt=""
                       className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
