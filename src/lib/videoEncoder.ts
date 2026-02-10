@@ -395,6 +395,7 @@ export async function encodeVideoSimple(
         video.muted = true;
         video.playsInline = true;
         video.preload = "auto";
+        video.loop = true;
         video.src = videoUrl;
         
         await new Promise<void>((resolve, reject) => {
@@ -406,14 +407,6 @@ export async function encodeVideoSimple(
             console.error(`[VideoEncoder] Video ${idx} failed to load`);
             reject(new Error(`Video ${idx} failed`));
           };
-        });
-        
-        // Seek to start and wait
-        video.currentTime = 0;
-        await new Promise<void>((r) => {
-          video.onseeked = () => r();
-          // If already at 0, resolve immediately
-          if (video.readyState >= 2) r();
         });
         
         return video;
@@ -524,8 +517,35 @@ export async function encodeVideoSimple(
       ctx.globalAlpha = 1;
     };
 
-    const tick = async () => {
+    // Track which video is currently playing
+    let activeVideoIdx = -1;
+
+    const startVideoForPage = (pageIdx: number) => {
+      // Stop previous video
+      if (activeVideoIdx >= 0 && bgVideos[activeVideoIdx]) {
+        bgVideos[activeVideoIdx]!.pause();
+      }
+      activeVideoIdx = pageIdx;
+      const v = bgVideos[pageIdx];
+      if (v) {
+        v.currentTime = 0;
+        v.play().catch(() => {});
+      }
+    };
+
+    // Start the first page's video immediately
+    if (bgVideos[0]) {
+      startVideoForPage(0);
+    }
+
+    const frameInterval = 1000 / fps;
+    let lastFrameTime = performance.now();
+    let lastPageIdx = 0;
+
+    const tick = () => {
       if (globalFrame >= totalFrames) {
+        // Stop all videos
+        bgVideos.forEach(v => { if (v) v.pause(); });
         setTimeout(() => mediaRecorder.stop(), 200);
         return;
       }
@@ -534,8 +554,15 @@ export async function encodeVideoSimple(
       const frameInPage = globalFrame - (pageIdx * framesPerPage);
 
       if (pageIdx >= images.length) {
+        bgVideos.forEach(v => { if (v) v.pause(); });
         setTimeout(() => mediaRecorder.stop(), 200);
         return;
+      }
+
+      // Start video for new page
+      if (pageIdx !== lastPageIdx) {
+        startVideoForPage(pageIdx);
+        lastPageIdx = pageIdx;
       }
 
       const img = images[pageIdx];
@@ -552,17 +579,7 @@ export async function encodeVideoSimple(
         const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
         applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
       } else if (bgVideo && bgVideo.readyState >= 2) {
-        // Seek to the correct time and WAIT for the frame to be ready
-        const videoDuration = bgVideo.duration || pageDuration;
-        const targetTime = (pageProgress * pageDuration) % videoDuration;
-        
-        try {
-          await seekVideoToTime(bgVideo, targetTime);
-        } catch {
-          // Ignore seek errors
-        }
-        
-        // Draw the actual video frame as background
+        // Draw the current playing video frame — no seeking needed!
         try {
           const vw = bgVideo.videoWidth;
           const vh = bgVideo.videoHeight;
@@ -597,10 +614,11 @@ export async function encodeVideoSimple(
 
       onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / totalFrames)));
 
-      // Render at the requested fps
-      setTimeout(tick, 1000 / fps);
+      // Use requestAnimationFrame for smooth real-time rendering
+      requestAnimationFrame(tick);
     };
 
-    tick();
+    // Kick off with requestAnimationFrame for real-time playback
+    requestAnimationFrame(tick);
   });
 }
