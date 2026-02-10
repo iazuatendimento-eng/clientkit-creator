@@ -243,7 +243,11 @@ const CardCoverPreview = ({
     return () => window.clearInterval(interval);
   }, [totalPages, pageDuration]);
 
-  const hasVideo = video.previewVideoUrls?.[currentPage] && video.previewVideoUrls[currentPage] !== null;
+  // Use current page video, or fallback to first available video for continuous playback
+  const currentVideoUrl = video.previewVideoUrls?.[currentPage] || null;
+  const fallbackVideoUrl = video.previewVideoUrls?.find(v => v && v !== "") || null;
+  const activeVideoUrl = currentVideoUrl || fallbackVideoUrl;
+  const hasVideo = !!activeVideoUrl;
   const overlayPage = video.overlayPages?.[currentPage];
   const logoOverlay = video.logoOverlayPages?.[currentPage];
 
@@ -266,7 +270,7 @@ const CardCoverPreview = ({
                 el.play().catch(() => {});
               }
             }}
-            src={video.previewVideoUrls![currentPage]!}
+            src={activeVideoUrl!}
             className={`absolute inset-0 w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
             muted
             loop
