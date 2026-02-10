@@ -263,10 +263,8 @@ const CardCoverPreview = memo(({
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
         {/* Layer 1: Background - wrapped to prevent edge trembling */}
-        <div className="absolute inset-0 overflow-hidden" style={{ contain: 'strict' }}>
-          <div
-            className={`absolute inset-[-5%] ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
-          >
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute inset-0">
             {hasVideo ? (
               <video
                 key={`card-vid-${video.cardId}-${currentPage}`}
