@@ -970,11 +970,30 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
-      const images = await searchImages(searchQuery, 12);
-      setSearchResults(images);
+      // Search Pexels videos first, fallback to images
+      const videos = await searchPexelsVideos(searchQuery, 12);
+      if (videos.length > 0) {
+        // Convert video results to SearchImage format using thumbnails
+        const videoAsImages: SearchImage[] = videos.map(v => ({
+          id: v.id,
+          urls: {
+            regular: v.image,
+            small: v.image,
+            thumb: v.image,
+          },
+          photographer: v.photographer,
+          photographerUrl: '',
+          description: v.description,
+          source: 'pexels' as const,
+        }));
+        setSearchResults(videoAsImages);
+      } else {
+        const images = await searchImages(searchQuery, 12);
+        setSearchResults(images);
+      }
     } catch (error) {
       toast({
-        title: "Erro ao buscar imagens",
+        title: "Erro ao buscar vídeos",
         variant: "destructive",
       });
     } finally {
@@ -1670,7 +1689,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="bank">
                 <Search className="h-4 w-4 mr-2" />
-                Banco de Imagens
+                Banco de Vídeos
               </TabsTrigger>
               <TabsTrigger value="custom">
                 <Upload className="h-4 w-4 mr-2" />
@@ -1681,7 +1700,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
             <TabsContent value="bank" className="space-y-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Buscar imagens..."
+                  placeholder="Buscar vídeos..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearchImages()}
@@ -1705,18 +1724,21 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, onBack, onCom
                     >
                       <img
                         src={image.urls.small}
-                        alt={image.description || "Image"}
+                        alt={image.description || "Video"}
                         className="w-full h-full object-cover"
                       />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Play className="h-8 w-8 text-white/80 drop-shadow-lg" />
+                      </div>
                       <div className="absolute bottom-1 right-1 bg-background/80 text-[10px] px-1 rounded">
-                        {image.source}
+                        Pexels
                       </div>
                     </div>
                   ))}
                 </div>
                 {searchResults.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>Busque por imagens acima</p>
+                    <p>Busque por vídeos acima</p>
                     <p className="text-xs mt-2">Digite um termo e clique em buscar</p>
                   </div>
                 )}
