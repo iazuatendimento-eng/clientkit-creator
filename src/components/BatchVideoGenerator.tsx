@@ -365,24 +365,24 @@ const CardCoverPreview = memo(({
       onClick={onClick}
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
-        {/* Layer 0: Always render static page as base */}
+        {/* Layer 0: Always render static page as base (z-0) */}
         {video.pages[currentPage] ? (
           <img
             key={`card-base-${video.cardId}-${currentPage}`}
             src={video.pages[currentPage]}
             alt={video.clientName}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover z-0"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center z-0">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {/* Layer 1: Video background on top of static page (within image placeholder) */}
+        {/* Layer 1: Video background - ABOVE static page, BELOW overlays (z-[1]) */}
         {hasVideo && (
           <div
-            className="absolute overflow-hidden"
+            className="absolute overflow-hidden z-[1]"
             style={imageRect ? {
               left: `${imageRect.left}%`, top: `${imageRect.top}%`,
               width: `${imageRect.width}%`, height: `${imageRect.height}%`,
@@ -411,36 +411,36 @@ const CardCoverPreview = memo(({
           </div>
         )}
 
-        {/* Layer 2: Frame overlay (static shapes - no animation) */}
+        {/* Layer 2: Frame overlay (static shapes - no animation) - z-[2] */}
         {frameOverlay && frameOverlay !== "" && (
           <img
             key={`frame-${video.cardId}-${currentPage}`}
             src={frameOverlay}
             alt=""
-            className="absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none"
+            className="absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none"
             draggable={false}
           />
         )}
 
-        {/* Layer 3: Text overlay (animated) */}
+        {/* Layer 3: Text overlay (animated) - z-[3] */}
         {overlayPage && overlayPage !== "" && (
           <img
             key={`overlay-${video.cardId}-${currentPage}-${textAnimation}`}
             src={overlayPage}
             alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
+            className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
             style={{ animationDuration: `${textAnimDuration}s` }}
             draggable={false}
           />
         )}
 
-        {/* Layer 4: Logo overlay (animated) */}
+        {/* Layer 4: Logo overlay (animated) - z-[4] */}
         {logoOverlay && logoOverlay !== "" && (
           <img
             key={`logo-${video.cardId}-${currentPage}-${logoAnimation}`}
             src={logoOverlay}
             alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
+            className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
             draggable={false}
           />
         )}
