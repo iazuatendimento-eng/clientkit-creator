@@ -272,7 +272,7 @@ export function VideoAdjustOverlay({
         }
       }
       
-      const estimatedH = Math.max(els.textEl.height * scale, estimatedLines * lineHeight + fontSize);
+      const estimatedH = estimatedLines * lineHeight;
       
       return {
         x: els.textEl.x + textX,
