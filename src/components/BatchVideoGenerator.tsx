@@ -192,6 +192,7 @@ interface ClientVideo {
   team?: string;
   imageType?: string;
   particularityType?: string;
+  hasMaterialUploads?: boolean;
 }
 
 interface BatchVideoGeneratorProps {
@@ -666,6 +667,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         };
       });
 
+      // Check which cards have material uploads
+      if (videos.length > 0) {
+        const cardIds = videos.map(v => v.cardId);
+        const { data: uploads } = await supabase
+          .from("card_uploads")
+          .select("card_id")
+          .in("card_id", cardIds)
+          .eq("upload_type", "material");
+        const cardsWithUploads = new Set((uploads || []).map(u => u.card_id));
+        videos.forEach(v => {
+          v.hasMaterialUploads = cardsWithUploads.has(v.cardId);
+        });
+      }
+
       setClientVideos(videos);
 
       // Regenerate overlay layers (text/logo/frame) using saved data
@@ -740,6 +755,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           particularityType: card.client?.particularity_type || undefined,
         };
       });
+
+      // Check which cards have material uploads
+      if (videos.length > 0) {
+        const cardIds = videos.map(v => v.cardId);
+        const { data: uploads } = await supabase
+          .from("card_uploads")
+          .select("card_id")
+          .in("card_id", cardIds)
+          .eq("upload_type", "material");
+        const cardsWithUploads = new Set((uploads || []).map(u => u.card_id));
+        videos.forEach(v => {
+          v.hasMaterialUploads = cardsWithUploads.has(v.cardId);
+        });
+      }
 
       setClientVideos(videos);
 
@@ -2407,6 +2436,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   {video.particularityType && (
                     <p className="text-xs text-muted-foreground/80 truncate">⚠️ {video.particularityType}</p>
                   )}
+                  {video.hasMaterialUploads && (
+                    <p className="text-xs text-yellow-500 truncate">⚠ cliente tem foto</p>
+                  )}
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
@@ -2541,6 +2573,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     </div>
                     {selectedVideo.imageType && <p className="text-primary/70">🎬 {selectedVideo.imageType}</p>}
                     {selectedVideo.particularityType && <p className="text-muted-foreground">⚠️ {selectedVideo.particularityType}</p>}
+                    {selectedVideo.hasMaterialUploads && <p className="text-yellow-500">⚠ cliente tem foto</p>}
 
                     {/* Adjustment values */}
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground/70">
