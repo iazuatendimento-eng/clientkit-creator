@@ -811,7 +811,7 @@ export async function encodeVideoSimple(
         const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
         applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
       } else if (bgVideo && bgVideo.readyState >= 2) {
-        // Draw the current playing video frame
+        // Draw the current playing video frame with motion effect applied to the whole composition
         try {
           const vw = bgVideo.videoWidth;
           const vh = bgVideo.videoHeight;
@@ -836,8 +836,22 @@ export async function encodeVideoSimple(
             sy = (vh - sh) / 2;
           }
 
+          // Apply motion effect to the entire canvas
+          const applyMotionToCanvas = motionEffect !== "none";
+          if (applyMotionToCanvas) {
+            const motion = getMotionTransform(motionEffect, pageProgress);
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            ctx.rotate((motion.rotate * Math.PI) / 180);
+            ctx.scale(motion.scale, motion.scale);
+            ctx.translate(
+              -width / 2 + (motion.translateX * width) / 100,
+              -height / 2 + (motion.translateY * height) / 100
+            );
+          }
+
           // Draw static page image first as background (has bg color, shapes without video area)
-          drawSource(img, false, pageProgress);
+          ctx.drawImage(img, 0, 0, width, height);
 
           // Apply per-page image adjustments (position/scale) and clip shape to the video
           const adj = pageImageAdjustments?.[pageIdx];
@@ -868,6 +882,11 @@ export async function encodeVideoSimple(
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) {
             ctx.drawImage(frameOverlay, 0, 0, width, height);
+          }
+
+          // Restore motion transform before drawing animated overlays
+          if (applyMotionToCanvas) {
+            ctx.restore();
           }
 
           // Draw overlay (transparent PNG with text/elements) on top with animation
