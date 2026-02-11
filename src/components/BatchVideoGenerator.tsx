@@ -2480,6 +2480,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     isBusy={isApplyingAdjustments}
                     onCommit={() => applyAdjustments()}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
+                    pageText={selectedVideo.pageTexts[currentPreviewPage] || ""}
+                    logoUrl={selectedVideo.brandKit?.logo || ""}
+                    contactInfo={selectedVideo.brandKit?.contactInfo || ""}
+                    mascotUrl={selectedVideo.brandKit?.mascot || ""}
                     logoX={currentPreviewPage < selectedVideo.pages.length - 1 
                       ? selectedVideo.adjustments.logoX 
                       : (selectedVideo.adjustments.sigLogoX ?? selectedVideo.adjustments.logoX)}

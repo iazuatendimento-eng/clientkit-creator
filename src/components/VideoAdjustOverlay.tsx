@@ -86,6 +86,12 @@ export function VideoAdjustOverlay({
   onCommit,
   isContentPage,
 
+  // Content to render inside boxes
+  pageText,
+  logoUrl,
+  contactInfo,
+  mascotUrl,
+
   logoX,
   logoY,
   logoScaleX,
@@ -132,6 +138,11 @@ export function VideoAdjustOverlay({
   isBusy?: boolean;
   onCommit?: () => void;
   isContentPage?: boolean;
+
+  pageText?: string;
+  logoUrl?: string;
+  contactInfo?: string;
+  mascotUrl?: string;
 
   logoX: number;
   logoY: number;
@@ -555,10 +566,12 @@ export function VideoAdjustOverlay({
     part,
     label,
     tone,
+    children,
   }: {
     part: Part;
     label: string;
     tone: Tone;
+    children?: React.ReactNode;
   }) => {
     const rect = getRect(part);
     if (!rect) return null;
@@ -616,7 +629,7 @@ export function VideoAdjustOverlay({
     return (
       <div
         className={cn(
-          "absolute rounded-md border-2 border-dashed bg-background/0 touch-none cursor-move",
+          "absolute rounded-md border-2 border-dashed touch-none cursor-move overflow-hidden",
           isActive ? cn(t.border, t.bg) : "border-border/70 hover:border-primary/70"
         )}
         style={{
@@ -627,9 +640,16 @@ export function VideoAdjustOverlay({
         }}
         onPointerDown={(e) => begin(e, part, "move")}
       >
+        {/* Content preview inside box */}
+        {children && (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden p-1">
+            {children}
+          </div>
+        )}
+
         <div
           className={cn(
-            "absolute -top-6 left-0 rounded border px-1.5 py-0.5 text-[10px] shadow-sm",
+            "absolute -top-6 left-0 rounded border px-1.5 py-0.5 text-[10px] shadow-sm z-10",
             t.badge
           )}
         >
@@ -674,13 +694,41 @@ export function VideoAdjustOverlay({
       )}
 
       <div className="absolute inset-0">
-        {/* Content pages: only Foto and Texto */}
+        {/* Content pages: Foto and Texto */}
         {isContentPage && setImageX && <Box part="image" label="Foto" tone="warning" />}
-        {isContentPage && els.textEl && <Box part="text" label="Texto" tone="muted" />}
-        {/* Signature page: only Logo, Contato, Mascote */}
-        {!isContentPage && els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
-        {!isContentPage && els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
-        {!isContentPage && els.mascotEl && <Box part="mascot" label="Mascote" tone="secondary" />}
+        {isContentPage && els.textEl && (
+          <Box part="text" label="Texto" tone="muted">
+            {pageText && (
+              <span className="text-[8px] leading-tight text-foreground/80 text-center line-clamp-4 break-words">
+                {pageText}
+              </span>
+            )}
+          </Box>
+        )}
+        {/* Signature page: Logo, Contato, Mascote */}
+        {!isContentPage && els.logoEl && (
+          <Box part="logo" label="Logo" tone="primary">
+            {logoUrl && (
+              <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain opacity-70" draggable={false} />
+            )}
+          </Box>
+        )}
+        {!isContentPage && els.contactEl && (
+          <Box part="contact" label="Contato" tone="accent">
+            {contactInfo && (
+              <span className="text-[7px] leading-tight text-foreground/70 text-center line-clamp-3 break-words">
+                {contactInfo}
+              </span>
+            )}
+          </Box>
+        )}
+        {!isContentPage && els.mascotEl && (
+          <Box part="mascot" label="Mascote" tone="secondary">
+            {mascotUrl && (
+              <img src={mascotUrl} alt="Mascote" className="max-w-full max-h-full object-contain opacity-70" draggable={false} />
+            )}
+          </Box>
+        )}
       </div>
 
       {isBusy && (
