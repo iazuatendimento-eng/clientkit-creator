@@ -791,6 +791,24 @@ export async function encodeVideoSimple(
       } else {
         // No background video — use static image with motion effects
         drawSource(img, true, pageProgress);
+
+        // Draw frame overlay (decorative shapes)
+        const frameOverlay = frameOverlayImages[pageIdx];
+        if (frameOverlay) {
+          ctx.drawImage(frameOverlay, 0, 0, width, height);
+        }
+
+        // Draw text overlay on top with animation
+        const overlay = overlayImages[pageIdx];
+        if (overlay) {
+          drawOverlay(overlay, pageProgress);
+        }
+
+        // Draw logo overlay on top with its own animation
+        const logoOverlay = logoOverlayImages[pageIdx];
+        if (logoOverlay) {
+          drawLogoOverlay(logoOverlay, pageProgress);
+        }
       }
 
       globalFrame++;
