@@ -520,6 +520,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(0);
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [activeDialogTab, setActiveDialogTab] = useState("preview");
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
@@ -2379,14 +2380,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           </DialogHeader>
 
           {selectedVideo && (
-            <Tabs defaultValue="preview" className="w-full">
+            <Tabs defaultValue="preview" className="w-full" onValueChange={(v) => setActiveDialogTab(v)}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="preview">Preview com Efeitos</TabsTrigger>
                 <TabsTrigger value="adjust">Ajustar Elementos</TabsTrigger>
               </TabsList>
               
               <TabsContent value="preview" className="mt-4">
-                <VideoPreviewPlayer
+                {activeDialogTab === "preview" && <VideoPreviewPlayer
                   pages={selectedVideo.pages}
                   pageDuration={template.pageDuration || 3}
                   onPageChange={setCurrentPreviewPage}
@@ -2402,7 +2403,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
                   pageImageAdjustments={selectedVideo.pageImageAdjustments}
                   imageElSize={getImageElSize(template.contentElements as CanvasElement[])}
-                />
+                />}
               </TabsContent>
               
               <TabsContent value="adjust" className="mt-4">
