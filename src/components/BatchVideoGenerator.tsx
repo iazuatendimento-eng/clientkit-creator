@@ -2066,7 +2066,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           transitionEffect,
           textAnimation,
           logoAnimation,
-          textAnimDuration: textAnimDuration / (template.pageDuration || 3), // convert seconds to fraction of page
+          textAnimDuration: textAnimDuration / (template.pageDuration || 3),
           backgroundVideoUrls: video.previewVideoUrls || undefined,
           frameOverlayPages: video.frameOverlayPages || undefined,
           overlayPages: video.overlayPages || undefined,
@@ -2078,64 +2078,55 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         });
 
         const fileName = `video_${video.cardId}_${Date.now()}.mp4`;
-
-        // Upload video file
-        const { error: uploadError } = await supabase.storage
-          .from("card-uploads")
-          .upload(`videos/${fileName}`, videoBlob, {
-            contentType: "video/mp4",
-          });
-
-        if (uploadError) {
-          console.error("Upload error:", uploadError);
-          throw uploadError;
-        }
-
-        const { data: urlData } = supabase.storage
-          .from("card-uploads")
-          .getPublicUrl(`videos/${fileName}`);
-
-        // Create card upload record for video
-        await createCardUpload({
-          card_id: video.cardId,
-          file_name: fileName,
-          file_url: urlData.publicUrl,
-          file_type: "video/mp4",
-          upload_type: "final",
-        });
-
-        // Also upload first frame as thumbnail
-        setGenerationStatus(`Gerando capa (${idx + 1}/${approvedVideos.length}) • ${video.clientName}`);
-        const thumbResponse = await fetch(video.pages[0]);
-        const thumbBlob = await thumbResponse.blob();
         const thumbFileName = `thumb_${video.cardId}_${Date.now()}.png`;
 
-        const { error: thumbUploadError } = await supabase.storage
-          .from("card-uploads")
-          .upload(`videos/${thumbFileName}`, thumbBlob, {
-            contentType: "image/png",
-          });
+        // Prepare thumbnail blob in parallel with video upload
+        setGenerationStatus(`Subindo arquivos (${idx + 1}/${approvedVideos.length}) • ${video.clientName}`);
 
-        if (thumbUploadError) {
-          console.error("Thumb upload error:", thumbUploadError);
-          throw thumbUploadError;
+        const thumbBlobPromise = fetch(video.pages[0]).then(r => r.blob());
+
+        // Upload video + prepare thumb simultaneously
+        const [videoUploadResult, thumbBlob] = await Promise.all([
+          supabase.storage.from("card-uploads").upload(`videos/${fileName}`, videoBlob, { contentType: "video/mp4" }),
+          thumbBlobPromise,
+        ]);
+
+        if (videoUploadResult.error) {
+          console.error("Upload error:", videoUploadResult.error);
+          throw videoUploadResult.error;
         }
 
-        const { data: thumbUrlData } = supabase.storage
+        // Upload thumbnail
+        const thumbUploadResult = await supabase.storage
           .from("card-uploads")
-          .getPublicUrl(`videos/${thumbFileName}`);
+          .upload(`videos/${thumbFileName}`, thumbBlob, { contentType: "image/png" });
 
-        // Update card with video URL and thumbnail
-        await updateProjectBrief(video.cardId, {
-          cover_image: thumbUrlData.publicUrl,
-          cover_video: urlData.publicUrl,
-          brief_type: "video",
-        });
+        if (thumbUploadResult.error) {
+          console.error("Thumb upload error:", thumbUploadResult.error);
+          throw thumbUploadResult.error;
+        }
+
+        const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(`videos/${fileName}`);
+        const { data: thumbUrlData } = supabase.storage.from("card-uploads").getPublicUrl(`videos/${thumbFileName}`);
+
+        // DB writes in parallel (card_upload record + brief update)
+        await Promise.all([
+          createCardUpload({
+            card_id: video.cardId,
+            file_name: fileName,
+            file_url: urlData.publicUrl,
+            file_type: "video/mp4",
+            upload_type: "final",
+          }),
+          updateProjectBrief(video.cardId, {
+            cover_image: thumbUrlData.publicUrl,
+            cover_video: urlData.publicUrl,
+            brief_type: "video",
+          }),
+        ]);
       }
 
-      await clearArtGenerationTags();
-
-      // Save batch to history
+      // Clear tags + save batch history in parallel (batch save is non-blocking)
       const batchItems: BatchItem[] = approvedVideos.map((video) => ({
         cardId: video.cardId,
         clientId: video.clientId,
@@ -2144,10 +2135,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         cardTitle: video.cardTitle,
         cardText: video.cardText,
         brandKit: video.brandKit,
-        files: video.pages,
+        files: [], // Don't store base64 pages in DB - they're already in Storage
         backgroundImages: video.searchedImages,
       }));
-      await saveBatchGeneration("video", template, batchItems);
+
+      await Promise.all([
+        clearArtGenerationTags(),
+        saveBatchGeneration("video", template, batchItems).catch((e) =>
+          console.error("Batch history save failed (non-critical):", e)
+        ),
+      ]);
 
       // Dispatch event to notify ProjectBoard to reload
       window.dispatchEvent(new Event("bulkBriefsUpdated"));
