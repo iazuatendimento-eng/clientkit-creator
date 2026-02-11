@@ -379,6 +379,11 @@ const CardCoverPreview = memo(({
 
   const transitionClass = isTransitioning ? "opacity-0" : "opacity-100";
 
+  // Debug: log video state
+  useEffect(() => {
+    console.log(`[CardCover] ${video.clientName}: hasVideo=${hasVideo}, activeVideoUrl=${activeVideoUrl?.substring(0, 60) || 'NONE'}, imageRect=`, imageRect, 'previewVideoUrls=', video.previewVideoUrls);
+  }, [hasVideo, activeVideoUrl, imageRect, video.clientName, video.previewVideoUrls]);
+
   return (
     <div
       className="aspect-[9/16] bg-muted relative group cursor-pointer overflow-hidden"
@@ -419,13 +424,17 @@ const CardCoverPreview = memo(({
               }}
               src={activeVideoUrl!}
               className="w-full h-full object-cover"
+              crossOrigin="anonymous"
               muted
               loop
               autoPlay
               playsInline
-              onError={() => {
-                console.warn(`[CardCover] Video failed to load for page ${currentPage}: ${activeVideoUrl?.substring(0, 60)}`);
+              onError={(e) => {
+                console.error(`[CardCover] Video FAILED to load for page ${currentPage}: ${activeVideoUrl?.substring(0, 60)}`, e);
                 setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+              }}
+              onLoadedData={() => {
+                console.log(`[CardCover] ✅ Video loaded OK for ${video.clientName} page ${currentPage}`);
               }}
             />
           </div>
