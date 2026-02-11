@@ -2121,6 +2121,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   textAnimDuration={textAnimDuration}
                   videoUrls={selectedVideo.previewVideoUrls}
                   overlayPages={selectedVideo.overlayPages}
+                  frameOverlayPages={selectedVideo.frameOverlayPages}
                   logoOverlayPages={selectedVideo.logoOverlayPages}
                 />
               </TabsContent>

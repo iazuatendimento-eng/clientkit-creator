@@ -16,6 +16,7 @@ interface VideoPreviewPlayerProps {
   textAnimDuration?: number; // seconds for text animation (default 0.8)
   videoUrls?: (string | null)[];
   overlayPages?: string[];
+  frameOverlayPages?: string[];
   logoOverlayPages?: string[];
 }
 
@@ -31,6 +32,7 @@ export function VideoPreviewPlayer({
   textAnimDuration = 0.8,
   videoUrls,
   overlayPages,
+  frameOverlayPages,
   logoOverlayPages,
 }: VideoPreviewPlayerProps) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -153,8 +155,10 @@ export function VideoPreviewPlayer({
 
   const showVideoBackground = hasVideoForPage(currentPage);
   const currentOverlay = overlayPages?.[currentPage];
+  const currentFrameOverlay = frameOverlayPages?.[currentPage];
   const currentLogoOverlay = logoOverlayPages?.[currentPage];
   const hasOverlay = currentOverlay && currentOverlay !== "";
+  const hasFrameOverlay = currentFrameOverlay && currentFrameOverlay !== "";
   const hasLogoOverlay = currentLogoOverlay && currentLogoOverlay !== "";
 
   return (
@@ -189,13 +193,24 @@ export function VideoPreviewPlayer({
             />
           )}
 
+          {/* Frame overlay - static shapes (no animation) */}
+          {hasFrameOverlay && (
+            <img
+              key={`frame-${currentPage}`}
+              src={currentFrameOverlay}
+              alt=""
+              className="absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none"
+              draggable={false}
+            />
+          )}
+
           {/* Text overlay - always render on top when available */}
           {hasOverlay && (
             <img
               key={`overlay-${currentPage}-${pageStartTime}`}
               src={currentOverlay}
               alt=""
-              className={cn("absolute inset-0 w-full h-full object-contain z-[1]", getTextAnimClass())}
+              className={cn("absolute inset-0 w-full h-full object-contain z-[2]", getTextAnimClass())}
               style={{ animationDuration: `${textAnimDuration}s` }}
               draggable={false}
             />
@@ -207,7 +222,7 @@ export function VideoPreviewPlayer({
               key={`logo-${currentPage}-${pageStartTime}`}
               src={currentLogoOverlay}
               alt=""
-              className={cn("absolute inset-0 w-full h-full object-contain z-[2]", getLogoAnimClass())}
+              className={cn("absolute inset-0 w-full h-full object-contain z-[3]", getLogoAnimClass())}
               draggable={false}
             />
           )}
