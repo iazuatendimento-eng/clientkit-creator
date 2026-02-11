@@ -2486,6 +2486,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     logoUrl={selectedVideo.brandKit?.pngs?.[0] || selectedVideo.brandKit?.logo || ""}
                     contactUrl={selectedVideo.brandKit?.pngs?.[1] || selectedVideo.brandKit?.contactInfo || ""}
                     mascotUrl={selectedVideo.brandKit?.pngs?.[2] || selectedVideo.brandKit?.mascot || ""}
+                    frameOverlayUrl={selectedVideo.frameOverlayPages?.[currentPreviewPage] || ""}
+                    textOverlayUrl={selectedVideo.overlayPages?.[currentPreviewPage] || ""}
+                    logoOverlayUrl={selectedVideo.logoOverlayPages?.[currentPreviewPage] || ""}
                     logoX={currentPreviewPage < selectedVideo.pages.length - 1 
                       ? selectedVideo.adjustments.logoX 
                       : (selectedVideo.adjustments.sigLogoX ?? selectedVideo.adjustments.logoX)}
