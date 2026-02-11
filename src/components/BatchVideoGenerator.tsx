@@ -1285,13 +1285,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       logoOverlayPages.push(logoOverlay);
     }
 
+    // Signature base: exclude logo since it comes from the logo overlay layer
     const signaturePage = await generatePageImage(
       template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, false, true, true
     );
     pages.push(signaturePage);
-    overlayPages.push("");
-    frameOverlayPages.push("");
+    // Text overlay for signature page (contact info, etc.)
+    const sigTextOverlay = await generatePageImage(
+      template.signatureElements, "", video.brandKit, true, undefined,
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, false
+    );
+    overlayPages.push(sigTextOverlay);
+    // Frame overlay for signature
+    const sigFrameOverlay = await generatePageImage(
+      template.signatureElements, "", video.brandKit, true, undefined,
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true
+    );
+    frameOverlayPages.push(sigFrameOverlay);
     // Generate logo overlay for signature page using signatureElements
     const sigLogoOverlay = await generateLogoOverlay(
       template.signatureElements, video.brandKit, true, video.adjustments
@@ -1340,13 +1351,22 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       logoOverlayPages.push(logoOverlay);
     }
 
+    // Signature base: exclude logo since it comes from the logo overlay layer
     const signaturePage = await generatePageImage(
       template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, false, true, true
     );
     pages.push(signaturePage);
-    overlayPages.push("");
-    frameOverlayPages.push("");
+    const sigTextOverlay2 = await generatePageImage(
+      template.signatureElements, "", video.brandKit, true, undefined,
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, false
+    );
+    overlayPages.push(sigTextOverlay2);
+    const sigFrameOverlay2 = await generatePageImage(
+      template.signatureElements, "", video.brandKit, true, undefined,
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true
+    );
+    frameOverlayPages.push(sigFrameOverlay2);
     // Generate logo overlay for signature page using signatureElements
     const sigLogoOverlay2 = await generateLogoOverlay(
       template.signatureElements, video.brandKit, true, video.adjustments
