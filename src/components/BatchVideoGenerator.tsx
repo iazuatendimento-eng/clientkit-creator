@@ -2493,6 +2493,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     frameOverlayUrl={selectedVideo.frameOverlayPages?.[currentPreviewPage] || ""}
                     textOverlayUrl={selectedVideo.overlayPages?.[currentPreviewPage] || ""}
                     logoOverlayUrl={selectedVideo.logoOverlayPages?.[currentPreviewPage] || ""}
+                    backgroundImageUrl={selectedVideo.searchedImages?.[currentPreviewPage] || ""}
                     logoX={currentPreviewPage < selectedVideo.pages.length - 1 
                       ? selectedVideo.adjustments.logoX 
                       : (selectedVideo.adjustments.sigLogoX ?? selectedVideo.adjustments.logoX)}
