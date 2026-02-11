@@ -190,6 +190,7 @@ interface ClientVideo {
   pageImageAdjustments: PageImageAdjustment[]; // Per-page image adjustments
   team?: string;
   imageType?: string;
+  particularityType?: string;
 }
 
 interface BatchVideoGeneratorProps {
@@ -578,10 +579,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const clientIds = [...new Set(batch.items.map(item => item.clientId))];
       const { data: clientsData } = await supabase
         .from("client_data")
-        .select("id, image_type")
+        .select("id, image_type, particularity_type")
         .in("id", clientIds);
       const imageTypeMap: Record<string, string> = {};
-      clientsData?.forEach(c => { if (c.image_type) imageTypeMap[c.id] = c.image_type; });
+      const particularityMap: Record<string, string> = {};
+      clientsData?.forEach(c => { 
+        if (c.image_type) imageTypeMap[c.id] = c.image_type;
+        if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
+      });
 
       const videos: ClientVideo[] = batch.items.map((item) => {
         const pageTexts = item.files.length > 1
@@ -605,6 +610,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           pageTextAdjustments: pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
           pageImageAdjustments: pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
           imageType: imageTypeMap[item.clientId] || undefined,
+          particularityType: particularityMap[item.clientId] || undefined,
         };
       });
 
@@ -655,6 +661,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           pageImageAdjustments: pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
           team: card.client?.team || undefined,
           imageType: card.client?.image_type || undefined,
+          particularityType: card.client?.particularity_type || undefined,
         };
       });
 
@@ -2314,6 +2321,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   <p className="text-xs line-clamp-2">{video.cardTitle}</p>
                   {video.imageType && (
                     <p className="text-xs text-primary/70 truncate">{video.imageType}</p>
+                  )}
+                  {video.particularityType && (
+                    <p className="text-xs text-muted-foreground/80 truncate">⚠️ {video.particularityType}</p>
                   )}
 
                   {/* Actions */}
