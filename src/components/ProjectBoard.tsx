@@ -1176,21 +1176,12 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                       <div>
                         <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
                         <textarea
-                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none break-words whitespace-pre-wrap overflow-hidden"
+                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                           placeholder="Título do projeto"
                           value={newBrief.title || ""}
-                          onChange={(e) => {
-                            setNewBrief({...newBrief, title: e.target.value});
-                            e.target.style.height = "auto";
-                            e.target.style.height = e.target.scrollHeight + "px";
-                          }}
-                          ref={(el) => {
-                            if (el) {
-                              el.style.height = "auto";
-                              el.style.height = el.scrollHeight + "px";
-                            }
-                          }}
-                          rows={1}
+                          onChange={(e) => setNewBrief({...newBrief, title: e.target.value})}
+                          rows={4}
+                          style={{ wordBreak: "break-word" }}
                         />
                       </div>
                       <div>
