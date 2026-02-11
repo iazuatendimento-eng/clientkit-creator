@@ -203,13 +203,14 @@ export function VideoAdjustOverlay({
   const [active, setActive] = useState<Part>("logo");
 
   const els = useMemo(() => {
-    // Only search elements for the CURRENT page to avoid showing elements from the other page
     const currentElements = isContentPage ? template.contentElements : template.signatureElements;
     const logoEl = currentElements.find((e) => e.type === "logo");
     const contactEl = currentElements.find((e) => e.type === "contact");
     const mascotEl = currentElements.find((e) => e.type === "mascot");
     const textEl = currentElements.find((e) => e.type === "text");
-    return { logoEl, contactEl, mascotEl, textEl };
+    // Image placeholder comes from contentElements always
+    const imageEl = template.contentElements.find((e) => e.type === "image");
+    return { logoEl, contactEl, mascotEl, textEl, imageEl };
   }, [template.contentElements, template.signatureElements, isContentPage]);
 
   const getRect = (part: Part) => {
@@ -283,16 +284,19 @@ export function VideoAdjustOverlay({
     }
 
     if (part === "image") {
-      // Image covers the full canvas, scaled/offset from center
+      if (!els.imageEl) return null;
+      // Use the image placeholder element dimensions from the template
       const scale = (imageScale ?? 100) / 100;
-      const baseW = template.width * scale;
-      const baseH = template.height * scale;
-      // Center the scaled image and apply offset
+      const baseW = els.imageEl.width * scale;
+      const baseH = els.imageEl.height * scale;
       const offsetX = (imageX ?? 0);
       const offsetY = (imageY ?? 0);
+      // Center the scaling around the element's center
+      const cx = els.imageEl.x + els.imageEl.width / 2;
+      const cy = els.imageEl.y + els.imageEl.height / 2;
       return {
-        x: (template.width - baseW) / 2 + offsetX,
-        y: (template.height - baseH) / 2 + offsetY,
+        x: cx - baseW / 2 + offsetX,
+        y: cy - baseH / 2 + offsetY,
         w: baseW,
         h: baseH,
       };
@@ -364,8 +368,10 @@ export function VideoAdjustOverlay({
     const textW = els.textEl ? els.textEl.width * (textScale / 100) : 0;
     const textH = els.textEl ? els.textEl.height * (textScale / 100) : 0;
     const currentImageScale = imageScale ?? 100;
-    const imageW = template.width * (currentImageScale / 100);
-    const imageH = template.height * (currentImageScale / 100);
+    const imgElW = els.imageEl?.width || template.width;
+    const imgElH = els.imageEl?.height || template.height;
+    const imageW = imgElW * (currentImageScale / 100);
+    const imageH = imgElH * (currentImageScale / 100);
 
     setActive(part);
     startRef.current = {
@@ -569,8 +575,8 @@ export function VideoAdjustOverlay({
           return;
         }
 
-        // Image uses uniform scale from center
-        const baseW = template.width;
+        // Image uses uniform scale based on image element size
+        const baseW = els.imageEl?.width || template.width;
         const h = s.handle as Handle;
 
         const signedDx = handleSignX(h) * dx;
