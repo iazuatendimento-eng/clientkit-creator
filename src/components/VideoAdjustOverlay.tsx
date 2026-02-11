@@ -94,6 +94,11 @@ export function VideoAdjustOverlay({
   contactUrl,
   mascotUrl,
 
+  // Overlay layers (to match preview exactly)
+  frameOverlayUrl,
+  textOverlayUrl,
+  logoOverlayUrl,
+
   logoX,
   logoY,
   logoScaleX,
@@ -147,6 +152,9 @@ export function VideoAdjustOverlay({
   logoUrl?: string;
   contactUrl?: string;
   mascotUrl?: string;
+  frameOverlayUrl?: string;
+  textOverlayUrl?: string;
+  logoOverlayUrl?: string;
 
   logoX: number;
   logoY: number;
@@ -682,22 +690,37 @@ export function VideoAdjustOverlay({
       className="relative mx-auto w-full aspect-[9/16] overflow-hidden rounded-lg border bg-muted touch-none"
     >
       {previewUrl ? (
-        <img
-          src={previewUrl}
-          alt="Prévia do vídeo"
-          className={cn(
-            "absolute inset-0 h-full w-full object-cover",
-            isBusy ? "opacity-80" : "opacity-100"
+        <>
+          {/* Base page image */}
+          <img
+            src={previewUrl}
+            alt="Prévia do vídeo"
+            className={cn(
+              "absolute inset-0 h-full w-full object-contain",
+              isBusy ? "opacity-80" : "opacity-100"
+            )}
+            draggable={false}
+          />
+          {/* Frame overlay layer */}
+          {frameOverlayUrl && (
+            <img src={frameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
           )}
-          draggable={false}
-        />
+          {/* Text overlay layer */}
+          {textOverlayUrl && (
+            <img src={textOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[2]" draggable={false} />
+          )}
+          {/* Logo overlay layer */}
+          {logoOverlayUrl && (
+            <img src={logoOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[3]" draggable={false} />
+          )}
+        </>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
           Sem prévia
         </div>
       )}
 
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 z-[5]">
         {/* Image/video background - only on content pages */}
         {isContentPage && setImageX && <Box part="image" label="Foto" tone="warning" />}
         {/* Text - only on content pages */}
