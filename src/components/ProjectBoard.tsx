@@ -828,7 +828,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
       const briefData = {
         client_id: clientId,
-        title: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
+        title: text,
         description: text,
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         status: "todo" as const,
@@ -927,7 +927,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
         const briefData = {
           client_id: clientId,
-          title: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
+          title: text,
           description: text,
           deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           status: "todo" as const,
