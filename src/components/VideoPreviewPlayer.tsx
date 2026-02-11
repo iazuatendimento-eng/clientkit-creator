@@ -174,8 +174,16 @@ export function VideoPreviewPlayer({
             getTransitionClass()
           )}
         >
-        {/* Background: video or static image */}
-          {showVideoBackground ? (
+        {/* Base layer: always show static page image */}
+          <img
+            src={pages[currentPage]}
+            alt={`Página ${currentPage + 1}`}
+            className={cn("w-full h-full object-contain", showVideoBackground ? "" : getMotionClass())}
+            draggable={false}
+          />
+
+          {/* Video background on top of static page (within image placeholder) */}
+          {showVideoBackground && (
             <div
               className="absolute overflow-hidden"
               style={imageRect ? {
@@ -192,15 +200,9 @@ export function VideoPreviewPlayer({
                 loop
                 playsInline
                 crossOrigin="anonymous"
+                onError={() => console.warn(`[VideoPreview] Video failed to load for page ${currentPage}`)}
               />
             </div>
-          ) : (
-            <img
-              src={pages[currentPage]}
-              alt={`Página ${currentPage + 1}`}
-              className={cn("w-full h-full object-contain", getMotionClass())}
-              draggable={false}
-            />
           )}
 
           {/* Frame overlay - static shapes (no animation) */}
