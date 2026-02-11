@@ -2519,13 +2519,26 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       </span>
                     </div>
 
-                    {/* Page text */}
-                    {currentPreviewPage < selectedVideo.pageTexts.length && selectedVideo.pageTexts[currentPreviewPage] && (
+                    {/* Page text - show for content pages */}
+                    {currentPreviewPage < selectedVideo.pageTexts.length ? (
                       <div>
-                        <span className="text-muted-foreground">Texto:</span>
-                        <p className="text-foreground mt-0.5 line-clamp-3 whitespace-pre-wrap">{selectedVideo.pageTexts[currentPreviewPage]}</p>
+                        <span className="text-muted-foreground">Texto da página {currentPreviewPage + 1}:</span>
+                        <p className="text-foreground mt-0.5 whitespace-pre-wrap bg-background/50 rounded p-1.5 border border-border/50">{selectedVideo.pageTexts[currentPreviewPage] || "(vazio)"}</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="text-muted-foreground">Página de assinatura</span>
+                        <p className="text-foreground/60 mt-0.5 text-[10px]">Esta página usa os elementos do template (logo, contato, mascote).</p>
                       </div>
                     )}
+
+                    {/* Card title/description for reference */}
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground">📋 Card: <span className="text-foreground">{selectedVideo.cardTitle}</span></p>
+                      {selectedVideo.cardText && selectedVideo.cardText !== selectedVideo.cardTitle && (
+                        <p className="text-muted-foreground/70 line-clamp-2">{selectedVideo.cardText}</p>
+                      )}
+                    </div>
 
                     {/* Brand kit info */}
                     {selectedVideo.brandKit && (
