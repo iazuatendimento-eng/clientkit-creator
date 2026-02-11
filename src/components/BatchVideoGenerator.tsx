@@ -198,17 +198,43 @@ interface BatchVideoGeneratorProps {
   onComplete: () => void;
 }
 
-// Helper to load image
-const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
+// Image cache to avoid reloading the same large base64/URL images
+const imageCache = new Map<string, HTMLImageElement>();
+
+// Helper to load image with caching and retry
+const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | null> => {
   if (!url) return null;
   
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
+  // Use cache key (for base64, use first 100 chars as key to avoid huge map keys)
+  const cacheKey = url.length > 200 ? url.substring(0, 100) + url.length : url;
+  const cached = imageCache.get(cacheKey);
+  if (cached) return cached;
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const img = await new Promise<HTMLImageElement | null>((resolve) => {
+        const el = new Image();
+        // Don't set crossOrigin for data URIs (unnecessary and can cause issues in some browsers)
+        if (!url.startsWith("data:")) {
+          el.crossOrigin = "anonymous";
+        }
+        el.onload = () => resolve(el);
+        el.onerror = () => {
+          console.warn(`[loadImage] Failed to load image (attempt ${attempt + 1}), url starts with: ${url.substring(0, 50)}`);
+          resolve(null);
+        };
+        el.src = url;
+      });
+      if (img) {
+        imageCache.set(cacheKey, img);
+        return img;
+      }
+    } catch (e) {
+      console.warn(`[loadImage] Exception on attempt ${attempt + 1}:`, e);
+    }
+  }
+  console.error(`[loadImage] All attempts failed for url starting with: ${url.substring(0, 50)}`);
+  return null;
 };
 
 // System fonts that don't need Google Fonts loading
@@ -940,9 +966,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             const adjustedY = el.y + logoY;
             const adjustedW = el.width * (logoScaleX / 100);
             const adjustedH = el.height * (logoScaleY / 100);
+            console.log(`[generatePageImage] Drawing logo on ${isSignature ? 'signature' : 'content'} page at (${adjustedX}, ${adjustedY}) size ${adjustedW}x${adjustedH}`);
             ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
+          } else {
+            console.error(`[generatePageImage] Logo image failed to load for ${isSignature ? 'signature' : 'content'} page`);
           }
         } else {
+          console.warn(`[generatePageImage] No logo URL in brandKit for ${isSignature ? 'signature' : 'content'} page`);
           ctx.fillStyle = "rgba(59, 130, 246, 0.3)";
           ctx.fillRect(el.x, el.y, el.width, el.height);
         }
@@ -996,10 +1026,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     adjustments: ElementAdjustments = defaultAdjustments
   ): Promise<string> => {
     const logoEl = elements.find((e) => e.type === "logo");
-    if (!logoEl) return "";
+    if (!logoEl) {
+      console.warn(`[generateLogoOverlay] No logo element found in ${isSignature ? 'signature' : 'content'} elements (${elements.length} elements, types: ${elements.map(e => e.type).join(',')})`);
+      return "";
+    }
 
     const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
-    if (!logoUrl) return "";
+    if (!logoUrl) {
+      console.warn(`[generateLogoOverlay] No logo URL in brandKit for ${isSignature ? 'signature' : 'content'} page`);
+      return "";
+    }
 
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -1008,7 +1044,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     // transparent background
 
     const img = await loadImage(logoUrl);
-    if (!img) return "";
+    if (!img) {
+      console.error(`[generateLogoOverlay] Failed to load logo image for ${isSignature ? 'signature' : 'content'} page`);
+      return "";
+    }
 
     const logoX = isSignature ? (adjustments.sigLogoX ?? adjustments.logoX) : adjustments.logoX;
     const logoY = isSignature ? (adjustments.sigLogoY ?? adjustments.logoY) : adjustments.logoY;
