@@ -318,10 +318,20 @@ const Index = () => {
 
   const handleUpdateClient = async (updatedClient: Client) => {
     await loadClients();
-    const refreshedClient = clients.find(c => c.id === updatedClient.id);
-    if (refreshedClient) {
-      setSelectedClient(refreshedClient);
+    // Re-fetch full client with brand_kit (excluded from listing for performance)
+    try {
+      const fullClient = await getClientWithBrandKit(updatedClient.id);
+      if (fullClient) {
+        setSelectedClient({
+          ...updatedClient,
+          brand_kit: fullClient.brand_kit,
+        });
+        return;
+      }
+    } catch (e) {
+      console.error("Error re-fetching client with brand_kit:", e);
     }
+    setSelectedClient(updatedClient);
   };
 
   const handleToggleClientActive = async (clientId: string, currentActive: boolean) => {
@@ -871,9 +881,15 @@ const Index = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          setEditingClient(client);
+                          // Load brand_kit for editing
+                          try {
+                            const fullClient = await getClientWithBrandKit(client.id);
+                            setEditingClient({ ...client, brand_kit: fullClient?.brand_kit || null });
+                          } catch {
+                            setEditingClient(client);
+                          }
                           setCurrentView("client-editor");
                         }}
                         className={`p-1 rounded transition-colors ${
