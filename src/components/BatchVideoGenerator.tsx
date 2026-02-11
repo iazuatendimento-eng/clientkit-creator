@@ -390,13 +390,13 @@ const CardCoverPreview = memo(({
       onClick={onClick}
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
-        {/* Layer 0: Always render static page as base (z-0) */}
+        {/* Layer 0: Always render static page as base (z-0) with motion effect */}
         {video.pages[currentPage] ? (
           <img
             key={`card-base-${video.cardId}-${currentPage}`}
             src={video.pages[currentPage]}
             alt={video.clientName}
-            className="absolute inset-0 w-full h-full object-contain z-0"
+            className={`absolute inset-0 w-full h-full object-contain z-0 ${!hasVideo && motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center z-0">
@@ -416,7 +416,7 @@ const CardCoverPreview = memo(({
             <video
               key={`card-vid-${video.cardId}-${activeVideoUrl}`}
               src={activeVideoUrl!}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
               muted
               loop
               autoPlay
@@ -1258,9 +1258,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
       const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
 
+      // Base page: exclude text and logo since they come from animated overlay layers
       const pageImage = await generatePageImage(
         template.contentElements, text, video.brandKit, false, bgImage,
-        video.adjustments, textAdj, imageAdj
+        video.adjustments, textAdj, imageAdj, false, true, true
       );
       pages.push(pageImage);
 
@@ -1312,9 +1313,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
       const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
 
+      // Base page: exclude text and logo since they come from animated overlay layers
       const pageImage = await generatePageImage(
         template.contentElements, text, video.brandKit, false, bgImage,
-        video.adjustments, textAdj, imageAdj
+        video.adjustments, textAdj, imageAdj, false, true, true
       );
       pages.push(pageImage);
 
