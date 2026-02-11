@@ -578,7 +578,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       clientVideos.length > 0 &&
       !isLoading &&
       !isGenerating &&
-      !clientVideos.some((v) => v.pages.length > 0)
+      !clientVideos.some((v) => v.pages.length > 0) &&
+      !initialBatch
     ) {
       generateAllVideos();
     }
@@ -602,63 +603,43 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       setIsLoading(true);
       
       const clientIds = [...new Set(batch.items.map(item => item.clientId))];
-      const cardIds = [...new Set(batch.items.map(item => item.cardId))];
 
-      // Fetch fresh client data and card texts from database
-      const [clientsResult, cardsResult] = await Promise.all([
-        supabase
-          .from("client_data")
-          .select("id, image_type, particularity_type, brand_kit, name, company")
-          .in("id", clientIds),
-        supabase
-          .from("project_briefs")
-          .select("id, title, description")
-          .in("id", cardIds),
-      ]);
+      // Only fetch image_type and particularity_type (lightweight)
+      const { data: clientsData } = await supabase
+        .from("client_data")
+        .select("id, image_type, particularity_type")
+        .in("id", clientIds);
 
       const imageTypeMap: Record<string, string> = {};
       const particularityMap: Record<string, string> = {};
-      const brandKitMap: Record<string, any> = {};
-      const clientNameMap: Record<string, string> = {};
-      const clientCompanyMap: Record<string, string> = {};
-      clientsResult.data?.forEach(c => { 
+      clientsData?.forEach(c => { 
         if (c.image_type) imageTypeMap[c.id] = c.image_type;
         if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
-        if (c.brand_kit) brandKitMap[c.id] = c.brand_kit;
-        if (c.name) clientNameMap[c.id] = c.name;
-        if (c.company) clientCompanyMap[c.id] = c.company;
-      });
-
-      // Map current card texts from DB
-      const cardTextMap: Record<string, { title: string; description: string }> = {};
-      cardsResult.data?.forEach(card => {
-        cardTextMap[card.id] = { title: card.title || "", description: card.description || "" };
       });
 
       const videos: ClientVideo[] = batch.items.map((item) => {
-        // Always use the CURRENT text from the database, not the old saved text
-        const currentCard = cardTextMap[item.cardId];
-        const currentTitle = currentCard?.title || item.cardTitle;
-        const currentText = currentCard?.description || currentCard?.title || item.cardText || item.cardTitle;
-        const currentBrandKit = brandKitMap[item.clientId] || item.brandKit;
-
-        const textParts = currentText
+        // Use saved text/brandKit from the batch snapshot (preserve history as-is)
+        const savedText = item.cardText || item.cardTitle;
+        const textParts = savedText
           .split(";")
           .map((t: string) => t.trim())
           .filter((t: string) => t.length > 0);
-        const pageTexts = textParts.length > 0 ? textParts : [currentText];
+        const pageTexts = textParts.length > 0 ? textParts : [savedText];
+
+        // Restore saved pages (file URLs) from the batch items
+        const savedPages = (item.files || []).map((url: string) => url);
 
         return {
           clientId: item.clientId,
-          clientName: clientNameMap[item.clientId] || item.clientName,
-          company: clientCompanyMap[item.clientId] || item.company,
+          clientName: item.clientName,
+          company: item.company,
           cardId: item.cardId,
-          cardTitle: currentTitle,
-          cardText: currentText,
-          brandKit: currentBrandKit,
-          pages: [], // Clear old pages to force fresh rendering with current code
+          cardTitle: item.cardTitle,
+          cardText: savedText,
+          brandKit: item.brandKit,
+          pages: savedPages,
           videoUrl: null,
-          status: "pending" as const,
+          status: savedPages.length > 0 ? ("approved" as const) : ("pending" as const),
           pageTexts,
           searchedImages: item.backgroundImages,
           adjustments: item.adjustments ? { ...defaultAdjustments, ...item.adjustments } : { ...defaultAdjustments },
@@ -1738,7 +1719,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const newCardText = cardData?.description || video.cardText;
       
       // Rebuild pageTexts from updated card text (split by newlines for multi-page)
-      const rawTexts = newCardText ? newCardText.split(/\n+/).filter((t: string) => t.trim()) : [newCardTitle];
+      const rawTexts = newCardText ? newCardText.split(";").map((t: string) => t.trim()).filter((t: string) => t.length > 0) : [newCardTitle];
       const newPageTexts = rawTexts.length > 0 ? rawTexts : [newCardTitle];
 
       const updatedVideo: ClientVideo = {
