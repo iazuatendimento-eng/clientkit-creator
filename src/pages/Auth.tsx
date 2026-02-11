@@ -45,31 +45,36 @@ export default function Auth() {
     ]) as Promise<T>;
   };
 
-  const checkBackendHealth = async () => {
+  const checkBackendHealth = async (retries = 3) => {
     if (!navigator.onLine) throw new Error("offline");
 
     const url = import.meta.env.VITE_SUPABASE_URL;
     const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     if (!url || !key) throw new Error("missing_config");
 
-    const controller = new AbortController();
-    const abortId = window.setTimeout(() => controller.abort(), 8000);
+    for (let attempt = 0; attempt < retries; attempt++) {
+      const controller = new AbortController();
+      const abortId = window.setTimeout(() => controller.abort(), 10000);
 
-    try {
-      const res = await fetch(`${url}/auth/v1/health`, {
-        method: "GET",
-        headers: { apikey: key },
-        signal: controller.signal,
-      });
+      try {
+        const res = await fetch(`${url}/auth/v1/health`, {
+          method: "GET",
+          headers: { apikey: key },
+          signal: controller.signal,
+        });
+        window.clearTimeout(abortId);
+        if (res.ok) return true;
+        // Non-OK: retry after delay
+      } catch {
+        window.clearTimeout(abortId);
+        // Network/timeout error: retry after delay
+      }
 
-      if (!res.ok) throw new Error(`backend_http_${res.status}`);
-      return true;
-    } catch (err: any) {
-      if (err?.name === "AbortError") throw new Error("backend_timeout");
-      throw err;
-    } finally {
-      window.clearTimeout(abortId);
+      if (attempt < retries - 1) {
+        await new Promise(r => window.setTimeout(r, (attempt + 1) * 2000));
+      }
     }
+    throw new Error("backend_timeout");
   };
 
   const handleLogin = async (e: React.FormEvent) => {
