@@ -698,8 +698,9 @@ export function VideoAdjustOverlay({
       )}
 
       <div className="absolute inset-0">
-        {/* Content pages: Foto and Texto */}
+        {/* Image/video background - only on content pages */}
         {isContentPage && setImageX && <Box part="image" label="Foto" tone="warning" />}
+        {/* Text - only on content pages */}
         {isContentPage && els.textEl && (
           <Box part="text" label="Texto" tone="muted">
             {pageText && (
@@ -712,22 +713,22 @@ export function VideoAdjustOverlay({
             )}
           </Box>
         )}
-        {/* Signature page: Logo, Contato, Mascote */}
-        {!isContentPage && els.logoEl && (
+        {/* Logo, Contato, Mascote - visible on ALL pages */}
+        {els.logoEl && (
           <Box part="logo" label="Logo" tone="primary">
             {logoUrl && (
               <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" draggable={false} />
             )}
           </Box>
         )}
-        {!isContentPage && els.contactEl && (
+        {els.contactEl && (
           <Box part="contact" label="Contato" tone="accent">
             {contactUrl && (
               <img src={contactUrl} alt="Contato" className="max-w-full max-h-full object-contain" draggable={false} />
             )}
           </Box>
         )}
-        {!isContentPage && els.mascotEl && (
+        {els.mascotEl && (
           <Box part="mascot" label="Mascote" tone="secondary">
             {mascotUrl && (
               <img src={mascotUrl} alt="Mascote" className="max-w-full max-h-full object-contain" draggable={false} />
