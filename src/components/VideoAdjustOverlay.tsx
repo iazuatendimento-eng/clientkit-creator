@@ -706,8 +706,14 @@ export function VideoAdjustOverlay({
           {frameOverlayUrl && (
             <img src={frameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
           )}
-          {/* Text overlay layer - NOT rendered here because the interactive Box below already shows the text */}
-          {/* Logo overlay layer - NOT rendered here because the interactive Box below already shows the logo */}
+          {/* Text overlay layer - render as visual reference so text looks identical to preview */}
+          {textOverlayUrl && (
+            <img src={textOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[2]" draggable={false} />
+          )}
+          {/* Logo overlay layer - render as visual reference */}
+          {logoOverlayUrl && (
+            <img src={logoOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[3]" draggable={false} />
+          )}
         </>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
@@ -720,51 +726,12 @@ export function VideoAdjustOverlay({
         {isContentPage && setImageX && <Box part="image" label="Foto" tone="warning" />}
         {/* Text - only on content pages */}
         {isContentPage && els.textEl && (
-          <Box part="text" label="Texto" tone="muted">
-            {pageText && (
-              <span
-                className="leading-tight font-bold text-center break-words w-full"
-                style={{
-                  fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
-                  color: textColor || "#ffffff",
-                  // Scale font size proportionally to the container width vs template width
-                  // The overlay container width maps to template.width, so we use percentage-based sizing
-                  fontSize: els.textEl.fontSize
-                    ? `${(els.textEl.fontSize / template.height) * 100}cqh`
-                    : "clamp(8px, 4vw, 24px)",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 10,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {pageText}
-              </span>
-            )}
-          </Box>
+          <Box part="text" label="Texto" tone="muted" />
         )}
-        {/* Logo, Contato, Mascote - visible on ALL pages */}
-        {els.logoEl && (
-          <Box part="logo" label="Logo" tone="primary">
-            {logoUrl && (
-              <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" draggable={false} />
-            )}
-          </Box>
-        )}
-        {els.contactEl && (
-          <Box part="contact" label="Contato" tone="accent">
-            {contactUrl && (
-              <img src={contactUrl} alt="Contato" className="max-w-full max-h-full object-contain" draggable={false} />
-            )}
-          </Box>
-        )}
-        {els.mascotEl && (
-          <Box part="mascot" label="Mascote" tone="secondary">
-            {mascotUrl && (
-              <img src={mascotUrl} alt="Mascote" className="max-w-full max-h-full object-contain" draggable={false} />
-            )}
-          </Box>
-        )}
+        {/* Logo, Contato, Mascote - visible on ALL pages (visuals come from overlay layers) */}
+        {els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
+        {els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
+        {els.mascotEl && <Box part="mascot" label="Mascote" tone="secondary" />}
       </div>
 
       {isBusy && (
