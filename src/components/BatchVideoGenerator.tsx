@@ -785,6 +785,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Draw background image if provided (skip if transparent for video overlay)
     if (backgroundImage && !transparentBackground) {
+      console.log(`[generatePageImage] Loading background image: ${backgroundImage.substring(0, 80)}`);
       const bgImg = await loadImage(backgroundImage);
       if (bgImg) {
         // Find image placeholder element to constrain background
@@ -793,6 +794,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const destY = imageEl ? imageEl.y : 0;
         const destW = imageEl ? imageEl.width : w;
         const destH = imageEl ? imageEl.height : h;
+
+        console.log(`[generatePageImage] Drawing bg image: dest=(${destX},${destY},${destW},${destH}), imgSize=${bgImg.width}x${bgImg.height}, imageEl=${imageEl ? 'found' : 'NOT FOUND'}`);
 
         // Cover the destination area with the image, applying adjustments
         const scale = imageAdjustment.imageScale / 100;
@@ -819,6 +822,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         ctx.clip();
         ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
         ctx.restore();
+      } else {
+        console.error(`[generatePageImage] FAILED to load background image: ${backgroundImage.substring(0, 80)}`);
       }
     }
 
@@ -1149,7 +1154,31 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       ctx.restore();
     }
 
-    return canvas.toDataURL("image/png");
+    try {
+      return canvas.toDataURL("image/png");
+    } catch (e) {
+      console.error(`[generatePageImage] canvas.toDataURL FAILED (tainted canvas?):`, e);
+      // If tainted, redraw without the external image
+      if (backgroundImage) {
+        const canvas2 = document.createElement("canvas");
+        canvas2.width = w;
+        canvas2.height = h;
+        const ctx2 = canvas2.getContext("2d")!;
+        ctx2.fillStyle = bgColor;
+        ctx2.fillRect(0, 0, w, h);
+        // Draw a placeholder indicator
+        const imageEl = elements.find(e => e.type === "image");
+        if (imageEl) {
+          ctx2.fillStyle = "rgba(100, 100, 255, 0.3)";
+          ctx2.fillRect(imageEl.x, imageEl.y, imageEl.width, imageEl.height);
+          ctx2.fillStyle = "#fff";
+          ctx2.font = "24px Arial";
+          ctx2.fillText("⚠ Imagem CORS", imageEl.x + 10, imageEl.y + imageEl.height / 2);
+        }
+        return canvas2.toDataURL("image/png");
+      }
+      return "";
+    }
   };
 
   // Generate a logo-only overlay (transparent PNG with only logo element)
