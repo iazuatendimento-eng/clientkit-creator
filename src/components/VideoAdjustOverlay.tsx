@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
+type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon";
 
 interface CanvasElement {
   id?: string;
