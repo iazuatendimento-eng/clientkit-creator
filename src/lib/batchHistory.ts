@@ -63,14 +63,15 @@ export async function saveBatchGeneration(
 
 export async function getBatchGenerations(type?: "art" | "video"): Promise<BatchGeneration[]> {
   try {
-    // First check if user is authenticated
     const { data: { user } } = await supabase.auth.getUser();
     console.log("getBatchGenerations - Current user:", user?.id);
 
+    // Fetch only lightweight columns - exclude heavy 'items' JSONB (can be 8MB+ per row)
     let query = supabase
       .from("batch_generations")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("id, type, template_snapshot, created_by, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
 
     if (type) {
       query = query.eq("type", type);
@@ -88,8 +89,8 @@ export async function getBatchGenerations(type?: "art" | "video"): Promise<Batch
     return (data || []).map((b) => ({
       ...b,
       type: b.type as "art" | "video",
-      items: b.items as unknown as BatchItem[],
-    })) as BatchGeneration[];
+      items: [] as BatchItem[], // items loaded on demand via getBatchById
+    }));
   } catch (error) {
     console.error("Error fetching batches:", error);
     return [];
