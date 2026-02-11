@@ -22,6 +22,7 @@ export interface VideoEncoderOptions {
   frameOverlayPages?: string[]; // Transparent frame overlay pages (decorative shapes - static)
   overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
   logoOverlayPages?: string[]; // Transparent logo-only overlay pages
+  imageRect?: { left: number; top: number; width: number; height: number } | null; // Image placeholder rect as percentages
   onProgress?: (progress: number) => void;
 }
 
@@ -451,6 +452,7 @@ export async function encodeVideoSimple(
     frameOverlayPages,
     overlayPages,
     logoOverlayPages,
+    imageRect,
     onProgress 
   } = options;
 
@@ -735,22 +737,36 @@ export async function encodeVideoSimple(
         const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
         applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
       } else if (bgVideo && bgVideo.readyState >= 2) {
-        // Draw the current playing video frame — no seeking needed!
+        // Draw the current playing video frame
         try {
           const vw = bgVideo.videoWidth;
           const vh = bgVideo.videoHeight;
-          const canvasRatio = width / height;
+
+          // Calculate destination rect based on imageRect or fullscreen
+          let dx = 0, dy = 0, dw = width, dh = height;
+          if (imageRect) {
+            dx = (imageRect.left / 100) * width;
+            dy = (imageRect.top / 100) * height;
+            dw = (imageRect.width / 100) * width;
+            dh = (imageRect.height / 100) * height;
+          }
+
+          const destRatio = dw / dh;
           const videoRatio = vw / vh;
           let sx = 0, sy = 0, sw = vw, sh = vh;
-          if (videoRatio > canvasRatio) {
-            sw = vh * canvasRatio;
+          if (videoRatio > destRatio) {
+            sw = vh * destRatio;
             sx = (vw - sw) / 2;
           } else {
-            sh = vw / canvasRatio;
+            sh = vw / destRatio;
             sy = (vh - sh) / 2;
           }
 
-          ctx.drawImage(bgVideo, sx, sy, sw, sh, 0, 0, width, height);
+          // Draw static page image first as background (has bg color, shapes without video area)
+          drawSource(img, false, pageProgress);
+
+          // Draw video only in the image placeholder area
+          ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh);
 
           // Draw frame overlay (decorative shapes - static, no animation)
           const frameOverlay = frameOverlayImages[pageIdx];

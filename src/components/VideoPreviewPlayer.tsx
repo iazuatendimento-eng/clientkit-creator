@@ -18,6 +18,7 @@ interface VideoPreviewPlayerProps {
   overlayPages?: string[];
   frameOverlayPages?: string[];
   logoOverlayPages?: string[];
+  imageRect?: { left: number; top: number; width: number; height: number } | null;
 }
 
 export function VideoPreviewPlayer({
@@ -34,6 +35,7 @@ export function VideoPreviewPlayer({
   overlayPages,
   frameOverlayPages,
   logoOverlayPages,
+  imageRect,
 }: VideoPreviewPlayerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -174,16 +176,24 @@ export function VideoPreviewPlayer({
         >
         {/* Background: video or static image */}
           {showVideoBackground ? (
-            <video
-              key={`video-bg-${currentPage}`}
-              ref={(el) => { videoRefs.current[0] = el; if (el) { el.play().catch(() => {}); } }}
-              src={videoUrls![currentPage]!}
-              className={cn("w-full h-full object-cover", getMotionClass())}
-              muted
-              loop
-              playsInline
-              crossOrigin="anonymous"
-            />
+            <div
+              className="absolute overflow-hidden"
+              style={imageRect ? {
+                left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+                width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+              } : { left: 0, top: 0, width: '100%', height: '100%' }}
+            >
+              <video
+                key={`video-bg-${currentPage}`}
+                ref={(el) => { videoRefs.current[0] = el; if (el) { el.play().catch(() => {}); } }}
+                src={videoUrls![currentPage]!}
+                className={cn("w-full h-full object-cover", getMotionClass())}
+                muted
+                loop
+                playsInline
+                crossOrigin="anonymous"
+              />
+            </div>
           ) : (
             <img
               src={pages[currentPage]}
