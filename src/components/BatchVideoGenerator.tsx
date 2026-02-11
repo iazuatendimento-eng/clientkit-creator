@@ -38,7 +38,7 @@ import {
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon";
   x: number;
   y: number;
   width: number;
@@ -759,9 +759,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (transparentBackground && excludeLogo && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
       }
-      // For frame-only overlay: skip text, contact, logo, image
+      // For frame-only overlay: skip text, contact, logo, image, mascot
       if (transparentBackground && excludeText) {
-        if (["text", "contact", "logo", "image"].includes(el.type)) continue;
+        if (["text", "contact", "logo", "image", "mascot"].includes(el.type)) continue;
       }
       // For transparent overlays, skip background images
       if (transparentBackground && el.type === "image") continue;
@@ -777,11 +777,65 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         } else {
           ctx.fillRect(el.x, el.y, el.width, el.height);
         }
+        if (el.borderWidth && el.borderWidth > 0) { ctx.strokeStyle = el.borderColor || "#000000"; ctx.lineWidth = el.borderWidth; ctx.stroke(); }
       } else if (el.type === "circle") {
         ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor2);
         ctx.beginPath();
         ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
         ctx.fill();
+        if (el.borderWidth && el.borderWidth > 0) { ctx.strokeStyle = el.borderColor || "#000000"; ctx.lineWidth = el.borderWidth; ctx.stroke(); }
+      } else if (el.type === "triangle") {
+        ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width / 2, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height);
+        ctx.closePath();
+        ctx.fill();
+        if (el.borderWidth && el.borderWidth > 0) { ctx.strokeStyle = el.borderColor || "#000000"; ctx.lineWidth = el.borderWidth; ctx.stroke(); }
+      } else if (el.type === "diamond") {
+        ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width / 2, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+        ctx.lineTo(el.x + el.width / 2, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height / 2);
+        ctx.closePath();
+        ctx.fill();
+        if (el.borderWidth && el.borderWidth > 0) { ctx.strokeStyle = el.borderColor || "#000000"; ctx.lineWidth = el.borderWidth; ctx.stroke(); }
+      } else if (el.type === "hexagon") {
+        ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
+        const hcx = el.x + el.width / 2, hcy = el.y + el.height / 2, hr = Math.min(el.width, el.height) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
+        ctx.closePath();
+        ctx.fill();
+        if (el.borderWidth && el.borderWidth > 0) { ctx.strokeStyle = el.borderColor || "#000000"; ctx.lineWidth = el.borderWidth; ctx.stroke(); }
+      } else if (el.type === "pentagon") {
+        ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
+        const pcx = el.x + el.width / 2, pcy = el.y + el.height / 2, pr = Math.min(el.width, el.height) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
+        ctx.closePath();
+        ctx.fill();
+        if (el.borderWidth && el.borderWidth > 0) { ctx.strokeStyle = el.borderColor || "#000000"; ctx.lineWidth = el.borderWidth; ctx.stroke(); }
+      } else if (el.type === "star") {
+        ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor2);
+        const scx = el.x + el.width / 2, scy = el.y + el.height / 2;
+        const outerR = Math.min(el.width, el.height) / 2, innerR = outerR * 0.4;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
+        ctx.closePath();
+        ctx.fill();
+        if (el.borderWidth && el.borderWidth > 0) { ctx.strokeStyle = el.borderColor || "#000000"; ctx.lineWidth = el.borderWidth; ctx.stroke(); }
+      } else if (el.type === "line") {
+        ctx.strokeStyle = getElementColor(el, accessoryColor1);
+        ctx.lineWidth = el.height || 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height / 2);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+        ctx.stroke();
       } else if (el.type === "polkaDots") {
         const color = getElementColor(el, accessoryColor1);
         const dotRadius = Math.min(el.width, el.height) * 0.08;
