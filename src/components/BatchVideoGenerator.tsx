@@ -2382,7 +2382,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           </DialogHeader>
 
           {selectedVideo && (
-            <Tabs defaultValue="preview" className="w-full" onValueChange={(v) => setActiveDialogTab(v)}>
+            <Tabs defaultValue="preview" className="w-full" onValueChange={(v) => { setActiveDialogTab(v); if (v === "adjust") setCurrentPreviewPage(0); }}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="preview">Preview com Efeitos</TabsTrigger>
                 <TabsTrigger value="adjust">Ajustar Elementos</TabsTrigger>
