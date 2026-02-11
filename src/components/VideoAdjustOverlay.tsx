@@ -99,6 +99,7 @@ export function VideoAdjustOverlay({
   textOverlayUrl,
   logoOverlayUrl,
   backgroundImageUrl,
+  backgroundVideoUrl,
 
   logoX,
   logoY,
@@ -157,6 +158,7 @@ export function VideoAdjustOverlay({
   textOverlayUrl?: string;
   logoOverlayUrl?: string;
   backgroundImageUrl?: string;
+  backgroundVideoUrl?: string;
 
   logoX: number;
   logoY: number;
@@ -761,9 +763,20 @@ export function VideoAdjustOverlay({
         {/* Image/video background - only on content pages */}
         {isContentPage && setImageX && (
           <Box part="image" label="Foto" tone="warning">
-            {backgroundImageUrl && (
+            {backgroundVideoUrl ? (
+              <video
+                src={backgroundVideoUrl}
+                className="w-full h-full object-cover"
+                muted
+                loop
+                autoPlay
+                playsInline
+                crossOrigin="anonymous"
+                draggable={false}
+              />
+            ) : backgroundImageUrl ? (
               <img src={backgroundImageUrl} alt="Fundo" className="w-full h-full object-cover" draggable={false} />
-            )}
+            ) : null}
           </Box>
         )}
         {/* Text - only on content pages */}
