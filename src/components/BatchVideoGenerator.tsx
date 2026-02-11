@@ -260,6 +260,18 @@ const loadGoogleFont = async (fontFamily: string): Promise<void> => {
   } catch { /* font may still work */ }
 };
 
+// Compute image placeholder rect as percentage of template dimensions
+const getImagePlaceholderRect = (elements: CanvasElement[], templateWidth: number, templateHeight: number) => {
+  const imageEl = elements.find(e => e.type === "image");
+  if (!imageEl) return null;
+  return {
+    left: (imageEl.x / templateWidth) * 100,
+    top: (imageEl.y / templateHeight) * 100,
+    width: (imageEl.width / templateWidth) * 100,
+    height: (imageEl.height / templateHeight) * 100,
+  };
+};
+
 // Card cover with auto page cycling
 const CardCoverPreview = memo(({
   video,
@@ -270,6 +282,7 @@ const CardCoverPreview = memo(({
   textAnimDuration = 1.5,
   pageDuration,
   onClick,
+  imageRect,
 }: {
   video: ClientVideo;
   motionEffect: MotionEffect;
@@ -279,6 +292,7 @@ const CardCoverPreview = memo(({
   textAnimDuration?: number;
   pageDuration: number;
   onClick: () => void;
+  imageRect?: { left: number; top: number; width: number; height: number } | null;
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -314,40 +328,47 @@ const CardCoverPreview = memo(({
       onClick={onClick}
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
-        {/* Layer 1: Background - wrapped to prevent edge trembling */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0">
-            {hasVideo ? (
-              <video
-                key={`card-vid-${video.cardId}-${currentPage}`}
-                ref={(el) => {
-                  if (el) {
-                    el.muted = true;
-                    el.playsInline = true;
-                    el.play().catch(() => {});
-                  }
-                }}
-                src={activeVideoUrl!}
-                className="w-full h-full object-cover"
-                muted
-                loop
-                autoPlay
-                playsInline
-              />
-            ) : video.pages[currentPage] ? (
-              <img
-                key={`card-img-${video.cardId}-${currentPage}`}
-                src={video.pages[currentPage]}
-                alt={video.clientName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            )}
+        {/* Layer 1: Background color (always rendered) */}
+        <div className="absolute inset-0" />
+
+        {/* Layer 1b: Video/Image background - positioned within image placeholder */}
+        {hasVideo ? (
+          <div
+            className="absolute overflow-hidden"
+            style={imageRect ? {
+              left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+              width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+            } : { left: 0, top: 0, width: '100%', height: '100%' }}
+          >
+            <video
+              key={`card-vid-${video.cardId}-${currentPage}`}
+              ref={(el) => {
+                if (el) {
+                  el.muted = true;
+                  el.playsInline = true;
+                  el.play().catch(() => {});
+                }
+              }}
+              src={activeVideoUrl!}
+              className="w-full h-full object-cover"
+              muted
+              loop
+              autoPlay
+              playsInline
+            />
           </div>
-        </div>
+        ) : video.pages[currentPage] ? (
+          <img
+            key={`card-img-${video.cardId}-${currentPage}`}
+            src={video.pages[currentPage]}
+            alt={video.clientName}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
 
         {/* Layer 2: Frame overlay (static shapes - no animation) */}
         {frameOverlay && frameOverlay !== "" && (
@@ -725,29 +746,38 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     if (backgroundImage && !transparentBackground) {
       const bgImg = await loadImage(backgroundImage);
       if (bgImg) {
-        // Cover the canvas with the image, applying adjustments
+        // Find image placeholder element to constrain background
+        const imageEl = elements.find(e => e.type === "image");
+        const destX = imageEl ? imageEl.x : 0;
+        const destY = imageEl ? imageEl.y : 0;
+        const destW = imageEl ? imageEl.width : w;
+        const destH = imageEl ? imageEl.height : h;
+
+        // Cover the destination area with the image, applying adjustments
         const scale = imageAdjustment.imageScale / 100;
         const imgAspect = bgImg.width / bgImg.height;
-        const canvasAspect = w / h;
+        const destAspect = destW / destH;
         let drawWidth, drawHeight, drawX, drawY;
 
-        if (imgAspect > canvasAspect) {
-          drawHeight = h * scale;
+        if (imgAspect > destAspect) {
+          drawHeight = destH * scale;
           drawWidth = drawHeight * imgAspect;
-          drawX = (w - drawWidth) / 2 + imageAdjustment.imageX;
-          drawY = (h - drawHeight) / 2 + imageAdjustment.imageY;
+          drawX = destX + (destW - drawWidth) / 2 + imageAdjustment.imageX;
+          drawY = destY + (destH - drawHeight) / 2 + imageAdjustment.imageY;
         } else {
-          drawWidth = w * scale;
+          drawWidth = destW * scale;
           drawHeight = drawWidth / imgAspect;
-          drawX = (w - drawWidth) / 2 + imageAdjustment.imageX;
-          drawY = (h - drawHeight) / 2 + imageAdjustment.imageY;
+          drawX = destX + (destW - drawWidth) / 2 + imageAdjustment.imageX;
+          drawY = destY + (destH - drawHeight) / 2 + imageAdjustment.imageY;
         }
 
+        // Clip to the image placeholder area
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(destX, destY, destW, destH);
+        ctx.clip();
         ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
-
-        // Add overlay for text readability
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
       }
     }
 
@@ -1748,6 +1778,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           frameOverlayPages: video.frameOverlayPages || undefined,
           overlayPages: video.overlayPages || undefined,
           logoOverlayPages: video.logoOverlayPages || undefined,
+          imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
 
@@ -2083,6 +2114,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   logoAnimation={logoAnimation}
                   textAnimDuration={textAnimDuration}
                   pageDuration={template.pageDuration || 3}
+                  imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
                   onClick={() => {
                     setSelectedVideo(video);
                     setCurrentPreviewPage(0);
@@ -2177,6 +2209,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   overlayPages={selectedVideo.overlayPages}
                   frameOverlayPages={selectedVideo.frameOverlayPages}
                   logoOverlayPages={selectedVideo.logoOverlayPages}
+                  imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
                 />
               </TabsContent>
               
