@@ -379,10 +379,10 @@ const CardCoverPreview = memo(({
 
   const transitionClass = isTransitioning ? "opacity-0" : "opacity-100";
 
-  // Debug: log video state
+  // Debug: log video state on mount and changes
   useEffect(() => {
-    console.log(`[CardCover] ${video.clientName}: hasVideo=${hasVideo}, activeVideoUrl=${activeVideoUrl?.substring(0, 60) || 'NONE'}, imageRect=`, imageRect, 'previewVideoUrls=', video.previewVideoUrls);
-  }, [hasVideo, activeVideoUrl, imageRect, video.clientName, video.previewVideoUrls]);
+    console.log(`[CardCover] ${video.clientName} page=${currentPage}: hasVideo=${hasVideo}, url=${activeVideoUrl?.substring(0, 80) || 'NONE'}, previewVideoUrls=`, video.previewVideoUrls, 'imageRect=', imageRect);
+  }, [hasVideo, activeVideoUrl, currentPage, video.clientName]);
 
   return (
     <div
@@ -404,50 +404,32 @@ const CardCoverPreview = memo(({
           </div>
         )}
 
-        {/* Layer 1: Video background - IN the image frame (z-[1]) */}
-        {hasVideo && (
+        {/* Layer 1: Video playing IN the image frame (z-[1]) */}
+        {hasVideo && imageRect && (
           <div
-            className="absolute overflow-hidden z-[1] bg-black/50"
-            style={imageRect ? {
+            className="absolute overflow-hidden z-[1]"
+            style={{
               left: `${imageRect.left}%`, top: `${imageRect.top}%`,
               width: `${imageRect.width}%`, height: `${imageRect.height}%`,
-            } : { left: 0, top: 0, width: '100%', height: '100%' }}
+            }}
           >
             <video
-              key={`card-vid-${video.cardId}-${currentPage}-${activeVideoUrl}`}
-              ref={(el) => {
-                if (el) {
-                  el.muted = true;
-                  el.playsInline = true;
-                  el.play().catch(() => {});
-                }
-              }}
+              key={`card-vid-${video.cardId}-${activeVideoUrl}`}
               src={activeVideoUrl!}
               className="w-full h-full object-cover"
               muted
               loop
               autoPlay
               playsInline
-              onError={(e) => {
-                console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`, e);
+              onError={() => {
+                console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
                 setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
               }}
               onLoadedData={() => {
-                console.log(`[CardCover] ✅ Video loaded: ${video.clientName} page ${currentPage}`);
+                console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
               }}
             />
           </div>
-        )}
-        {/* Debug: show video area even without video */}
-        {!hasVideo && imageRect && (
-          <div
-            className="absolute z-[1] pointer-events-none"
-            style={{
-              left: `${imageRect.left}%`, top: `${imageRect.top}%`,
-              width: `${imageRect.width}%`, height: `${imageRect.height}%`,
-              outline: '2px dashed rgba(255,0,0,0.5)',
-            }}
-          />
         )}
 
         {/* Layer 2: Frame overlay (static shapes - no animation) - z-[2] */}
