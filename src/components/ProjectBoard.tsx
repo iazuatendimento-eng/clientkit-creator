@@ -435,7 +435,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </Button>
                 </>
               )}
-              {finalArtworks.length > 0 && (
+              {finalArtworks.length > 0 ? (
                 <>
                   {finalArtworks.length === 1 ? (
                     <div className="flex gap-2">
@@ -497,8 +497,39 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     </div>
                   )}
                 </>
-              )}
-              {finalArtworks.length > 0 && (
+              ) : (brief.coverVideo || brief.coverImage) ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (brief.coverVideo) {
+                        handleDownload(brief.coverVideo, `${brief.clientName || 'video'}-${brief.id}.mp4`);
+                      } else if (brief.coverImage) {
+                        handleDownload(brief.coverImage, `${brief.clientName || 'arte'}-${brief.id}.png`);
+                      }
+                    }}
+                    className="text-xs px-2 py-1 h-auto flex-1"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    Baixar {brief.coverVideo ? 'Vídeo' : 'Arte'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleView(brief.coverVideo || brief.coverImage || '');
+                    }}
+                    className="text-xs px-2 py-1 h-auto flex-1"
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Ver
+                  </Button>
+                </div>
+              ) : null}
+              {(finalArtworks.length > 0 || brief.coverVideo || brief.coverImage) && (
                 <div className="text-sm sm:text-base text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg p-3 sm:p-4 leading-relaxed mt-2">
                   <p className="font-semibold mb-1">🎵 Dica importante:</p>
                   <p>Ao postar, escolha a música direto na rede social (Instagram, TikTok, etc.) para gerar mais engajamento. Não esqueça de clicar em <strong>"editar capa"</strong> e selecionar o melhor trecho do vídeo.</p>
