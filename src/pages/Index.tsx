@@ -80,9 +80,15 @@ const Index = () => {
     supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
       if (data) setAvailableTeams(data);
     });
+
+    // Keepalive: ping DB every 4 min to prevent cold-start timeouts
+    const keepalive = window.setInterval(() => {
+      supabase.from("teams").select("id").limit(1).maybeSingle().then(() => {});
+    }, 4 * 60 * 1000);
+    return () => window.clearInterval(keepalive);
   }, []);
 
-  // Load clients without text in todo cards (optimized - handles 1000+ row limit)
+  // Load clients without text in todo cards (deferred to avoid blocking initial render)
   useEffect(() => {
     const checkClientsWithoutText = async () => {
       try {
@@ -129,9 +135,6 @@ const Index = () => {
         for (const client of clients) {
           if (!client.active) continue;
           const clientBriefs = briefsByClient.get(client.id);
-          // Cliente entra no filtro se:
-          // 1. Não tem nenhum card "a fazer", OU
-          // 2. Tem cards "a fazer" mas NENHUM deles tem texto na descrição
           if (!clientBriefs || !clientBriefs.hasText) {
             clientsNoText.add(client.id);
           }
@@ -143,7 +146,9 @@ const Index = () => {
     };
 
     if (clients.length > 0) {
-      checkClientsWithoutText();
+      // Defer this heavy query so it doesn't compete with initial client load
+      const timer = window.setTimeout(checkClientsWithoutText, 1500);
+      return () => window.clearTimeout(timer);
     }
   }, [clients]);
 
