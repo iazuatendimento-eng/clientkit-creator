@@ -699,8 +699,8 @@ export async function encodeVideoSimple(
     }
 
     const frameInterval = 1000 / fps;
-    let lastFrameTime = performance.now();
     let lastPageIdx = 0;
+    let lastFrameTime = performance.now();
 
     const tick = () => {
       if (globalFrame >= totalFrames) {
@@ -709,6 +709,16 @@ export async function encodeVideoSimple(
         setTimeout(() => mediaRecorder.stop(), 200);
         return;
       }
+
+      const now = performance.now();
+      const elapsed = now - lastFrameTime;
+
+      // Throttle to target fps — only draw when enough time has passed
+      if (elapsed < frameInterval) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      lastFrameTime = now - (elapsed % frameInterval); // account for drift
 
       const pageIdx = Math.floor(globalFrame / framesPerPage);
       const frameInPage = globalFrame - (pageIdx * framesPerPage);
@@ -836,11 +846,9 @@ export async function encodeVideoSimple(
 
       onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / totalFrames)));
 
-      // Use requestAnimationFrame for smooth real-time rendering
       requestAnimationFrame(tick);
     };
 
-    // Kick off with requestAnimationFrame for real-time playback
     requestAnimationFrame(tick);
   });
 }
