@@ -705,10 +705,7 @@ export function VideoAdjustOverlay({
           {frameOverlayUrl && (
             <img src={frameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
           )}
-          {/* Text overlay layer */}
-          {textOverlayUrl && (
-            <img src={textOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[2]" draggable={false} />
-          )}
+          {/* Text overlay layer - NOT rendered here because the interactive Box below already shows the text */}
           {/* Logo overlay layer - NOT rendered here because the interactive Box below already shows the logo */}
         </>
       ) : (
