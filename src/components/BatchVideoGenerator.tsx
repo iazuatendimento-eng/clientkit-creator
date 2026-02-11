@@ -212,30 +212,60 @@ const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | n
   const cached = imageCache.get(cacheKey);
   if (cached) return cached;
   
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const img = await new Promise<HTMLImageElement | null>((resolve) => {
-        const el = new Image();
-        // Don't set crossOrigin for data URIs (unnecessary and can cause issues in some browsers)
-        if (!url.startsWith("data:")) {
-          el.crossOrigin = "anonymous";
+  // Try loading with crossOrigin first (needed for canvas export), then without it as fallback
+  const strategies: Array<'anonymous' | 'none'> = url.startsWith("data:") ? ['none'] : ['anonymous', 'none'];
+  
+  for (const strategy of strategies) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const img = await new Promise<HTMLImageElement | null>((resolve) => {
+          const el = new Image();
+          if (strategy === 'anonymous') {
+            el.crossOrigin = "anonymous";
+          }
+          el.onload = () => resolve(el);
+          el.onerror = () => {
+            console.warn(`[loadImage] Failed (strategy=${strategy}, attempt ${attempt + 1}): ${url.substring(0, 80)}`);
+            resolve(null);
+          };
+          el.src = url;
+        });
+        if (img) {
+          imageCache.set(cacheKey, img);
+          return img;
         }
-        el.onload = () => resolve(el);
-        el.onerror = () => {
-          console.warn(`[loadImage] Failed to load image (attempt ${attempt + 1}), url starts with: ${url.substring(0, 50)}`);
-          resolve(null);
-        };
-        el.src = url;
-      });
-      if (img) {
-        imageCache.set(cacheKey, img);
-        return img;
+      } catch (e) {
+        console.warn(`[loadImage] Exception (strategy=${strategy}, attempt ${attempt + 1}):`, e);
       }
-    } catch (e) {
-      console.warn(`[loadImage] Exception on attempt ${attempt + 1}:`, e);
     }
   }
-  console.error(`[loadImage] All attempts failed for url starting with: ${url.substring(0, 50)}`);
+  
+  // Last resort: try fetching as blob and creating object URL (bypasses CORS for canvas)
+  if (!url.startsWith("data:")) {
+    try {
+      console.log(`[loadImage] Trying fetch-as-blob fallback: ${url.substring(0, 80)}`);
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const img = await new Promise<HTMLImageElement | null>((resolve) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => resolve(null);
+          el.src = objectUrl;
+        });
+        if (img) {
+          imageCache.set(cacheKey, img);
+          console.log(`[loadImage] Blob fallback succeeded: ${url.substring(0, 80)}`);
+          return img;
+        }
+      }
+    } catch (e) {
+      console.warn(`[loadImage] Blob fallback failed:`, e);
+    }
+  }
+  
+  console.error(`[loadImage] ALL strategies failed for: ${url.substring(0, 80)}`);
   return null;
 };
 
