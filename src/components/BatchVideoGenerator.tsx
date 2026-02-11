@@ -670,7 +670,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const taggedCards = await getTaggedCardsForArtGeneration();
 
       const videos: ClientVideo[] = taggedCards.map((card: any) => {
-        const fullText = card.description || card.title;
+        const fullText = card.title || card.description;
         // Split by semicolons for carousel pages
         const textParts = fullText
           .split(";")
@@ -1715,8 +1715,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       setGenerationStatus(`Atualizando ${video.clientName}...`);
 
       // Build updated video with refreshed brand kit and card text
+      // Use title as primary text source (it's what the user edits on the card)
       const newCardTitle = cardData?.title || video.cardTitle;
-      const newCardText = cardData?.description || video.cardText;
+      const newCardText = cardData?.title || cardData?.description || video.cardText;
       
       // Rebuild pageTexts from updated card text (split by newlines for multi-page)
       const rawTexts = newCardText ? newCardText.split(";").map((t: string) => t.trim()).filter((t: string) => t.length > 0) : [newCardTitle];
