@@ -204,47 +204,34 @@ interface BatchVideoGeneratorProps {
 const imageCache = new Map<string, HTMLImageElement>();
 
 // Helper to load image with caching and retry
+// PRIMARY: fetch as blob (bypasses CORS, keeps canvas clean for toDataURL)
+// FALLBACK: Image element with/without crossOrigin
 const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | null> => {
   if (!url) return null;
   
-  // Use cache key (for base64, use first 100 chars as key to avoid huge map keys)
   const cacheKey = url.length > 200 ? url.substring(0, 100) + url.length : url;
   const cached = imageCache.get(cacheKey);
   if (cached) return cached;
   
-  // Try loading with crossOrigin first (needed for canvas export), then without it as fallback
-  const strategies: Array<'anonymous' | 'none'> = url.startsWith("data:") ? ['none'] : ['anonymous', 'none'];
-  
-  for (const strategy of strategies) {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const img = await new Promise<HTMLImageElement | null>((resolve) => {
-          const el = new Image();
-          if (strategy === 'anonymous') {
-            el.crossOrigin = "anonymous";
-          }
-          el.onload = () => resolve(el);
-          el.onerror = () => {
-            console.warn(`[loadImage] Failed (strategy=${strategy}, attempt ${attempt + 1}): ${url.substring(0, 80)}`);
-            resolve(null);
-          };
-          el.src = url;
-        });
-        if (img) {
-          imageCache.set(cacheKey, img);
-          return img;
-        }
-      } catch (e) {
-        console.warn(`[loadImage] Exception (strategy=${strategy}, attempt ${attempt + 1}):`, e);
-      }
-    }
+  // Data URIs: load directly
+  if (url.startsWith("data:")) {
+    const img = await new Promise<HTMLImageElement | null>((resolve) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => resolve(null);
+      el.src = url;
+    });
+    if (img) imageCache.set(cacheKey, img);
+    return img;
   }
   
-  // Last resort: try fetching as blob and creating object URL (bypasses CORS for canvas)
-  if (!url.startsWith("data:")) {
+  // Strategy 1 (PRIMARY): fetch → blob → objectURL (bypasses CORS entirely for canvas)
+  for (let attempt = 0; attempt <= 1; attempt++) {
     try {
-      console.log(`[loadImage] Trying fetch-as-blob fallback: ${url.substring(0, 80)}`);
-      const response = await fetch(url);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
       if (response.ok) {
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
@@ -256,16 +243,49 @@ const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | n
         });
         if (img) {
           imageCache.set(cacheKey, img);
-          console.log(`[loadImage] Blob fallback succeeded: ${url.substring(0, 80)}`);
+          console.log(`[loadImage] ✅ blob OK: ${url.substring(0, 80)}`);
           return img;
         }
+      } else {
+        console.warn(`[loadImage] fetch status ${response.status}: ${url.substring(0, 80)}`);
       }
     } catch (e) {
-      console.warn(`[loadImage] Blob fallback failed:`, e);
+      console.warn(`[loadImage] fetch failed (attempt ${attempt + 1}): ${url.substring(0, 80)}`, e instanceof Error ? e.message : e);
     }
   }
   
-  console.error(`[loadImage] ALL strategies failed for: ${url.substring(0, 80)}`);
+  // Strategy 2: Image with crossOrigin (works if server sends CORS headers)
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const img = await new Promise<HTMLImageElement | null>((resolve) => {
+        const el = new Image();
+        el.crossOrigin = "anonymous";
+        el.onload = () => resolve(el);
+        el.onerror = () => resolve(null);
+        el.src = url;
+      });
+      if (img) {
+        imageCache.set(cacheKey, img);
+        console.log(`[loadImage] ✅ CORS OK: ${url.substring(0, 80)}`);
+        return img;
+      }
+    } catch (e) { /* retry */ }
+  }
+  
+  // Strategy 3: Image without crossOrigin (canvas tainted but visible)
+  const img = await new Promise<HTMLImageElement | null>((resolve) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => resolve(null);
+    el.src = url;
+  });
+  if (img) {
+    imageCache.set(cacheKey, img);
+    console.warn(`[loadImage] ⚠️ no-CORS (tainted): ${url.substring(0, 80)}`);
+    return img;
+  }
+  
+  console.error(`[loadImage] ❌ ALL failed: ${url.substring(0, 80)}`);
   return null;
 };
 
@@ -1453,6 +1473,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const generateAllVideos = async () => {
     setIsGenerating(true);
     setGenerationStatus("Preparando geração...");
+    // Clear image cache to force fresh loads with current strategy
+    imageCache.clear();
 
     try {
       const updatedVideos = [...clientVideos];
