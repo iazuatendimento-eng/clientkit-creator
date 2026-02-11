@@ -722,8 +722,16 @@ export function VideoAdjustOverlay({
           <Box part="text" label="Texto" tone="muted">
             {pageText && (
               <span
-                className="text-[10px] leading-tight font-bold text-center line-clamp-6 break-words"
-                style={{ fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined, color: textColor || "#ffffff" }}
+                className="leading-tight font-bold text-center break-words w-full"
+                style={{
+                  fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
+                  color: textColor || "#ffffff",
+                  fontSize: "clamp(6px, 2.5vw, 18px)",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 10,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
               >
                 {pageText}
               </span>
