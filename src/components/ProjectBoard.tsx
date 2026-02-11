@@ -168,35 +168,65 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   const handleDownload = async (url: string, filename: string) => {
     try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-
-      // On mobile, try Web Share API first — on iOS this shows "Save Image/Video" option
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile && navigator.share) {
+
+      // Try fetch + blob approach
+      let blob: Blob | null = null;
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          blob = await res.blob();
+        }
+      } catch (fetchErr) {
+        console.warn("Fetch failed, falling back:", fetchErr);
+      }
+
+      // On mobile with blob, try Web Share API first
+      if (isMobile && blob && navigator.share) {
         const file = new File([blob], filename, { type: blob.type });
         try {
           await navigator.share({ files: [file] });
           toast.success("Compartilhado!");
           return;
         } catch (shareError: any) {
-          // User cancelled share or share not supported for this file type — fall through to normal download
           if (shareError?.name === 'AbortError') return;
+          // Fall through to other methods
         }
       }
 
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
-      toast.success("Download iniciado!");
+      // If we have a blob, use createObjectURL
+      if (blob) {
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
+        toast.success("Download iniciado!");
+        return;
+      }
+
+      // Fallback: open URL directly (works on mobile even if fetch fails)
+      if (isMobile) {
+        window.open(url, '_blank');
+        toast.success("Abrindo arquivo...");
+      } else {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Download iniciado!");
+      }
     } catch (error) {
       console.error("Error downloading file:", error);
-      toast.error("Erro ao baixar arquivo");
+      // Ultimate fallback
+      window.open(url, '_blank');
+      toast.info("Abrindo arquivo...");
     }
   };
 
