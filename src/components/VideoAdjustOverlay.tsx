@@ -287,20 +287,12 @@ export function VideoAdjustOverlay({
 
     if (part === "image") {
       if (!els.imageEl) return null;
-      // Use the image placeholder element dimensions from the template
-      const scale = (imageScale ?? 100) / 100;
-      const baseW = els.imageEl.width * scale;
-      const baseH = els.imageEl.height * scale;
-      const offsetX = (imageX ?? 0);
-      const offsetY = (imageY ?? 0);
-      // Center the scaling around the element's center
-      const cx = els.imageEl.x + els.imageEl.width / 2;
-      const cy = els.imageEl.y + els.imageEl.height / 2;
+      // Fixed frame matching the template element - zoom/pan happens to content inside
       return {
-        x: cx - baseW / 2 + offsetX,
-        y: cy - baseH / 2 + offsetY,
-        w: baseW,
-        h: baseH,
+        x: els.imageEl.x,
+        y: els.imageEl.y,
+        w: els.imageEl.width,
+        h: els.imageEl.height,
       };
     }
 
@@ -572,26 +564,23 @@ export function VideoAdjustOverlay({
 
       if (s.part === "image" && setImageX && setImageY && setImageScale) {
         if (s.mode === "move") {
+          // Drag = pan the image inside the fixed frame
           setImageX(clamp(s.start.imageX + dx, -1000, 1000));
           setImageY(clamp(s.start.imageY + dy, -1000, 1000));
           return;
         }
 
-        // Image uses uniform scale based on image element size
-        const baseW = els.imageEl?.width || template.width;
+        // Resize handles = zoom the image content (frame stays fixed)
         const h = s.handle as Handle;
-
         const signedDx = handleSignX(h) * dx;
         const signedDy = handleSignY(h) * dy;
         const delta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        const imgElW = els.imageEl?.width || template.width;
         
-        const newW = clamp(s.start.imageW + delta, baseW * 0.5, baseW * 2);
-        const newScale = clamp((newW / baseW) * 100, 50, 200);
+        // Scale relative to the element size
+        const scaleDelta = (delta / imgElW) * 100;
+        const newScale = clamp(s.start.imageScale + scaleDelta, 50, 300);
         setImageScale(newScale);
-        
-        // Adjust position to maintain anchor point when resizing
-        if (handleHasW(h)) setImageX(clamp(s.start.imageX + dx / 2, -1000, 1000));
-        if (handleHasN(h)) setImageY(clamp(s.start.imageY + dy / 2, -1000, 1000));
       }
     };
 
@@ -759,26 +748,73 @@ export function VideoAdjustOverlay({
         </div>
       )}
 
+      {/* Image/video background - behind other elements */}
+      {isContentPage && setImageX && els.imageEl && (() => {
+        const rect = getRect("image");
+        if (!rect) return null;
+        const left = (rect.x / template.width) * 100;
+        const top = (rect.y / template.height) * 100;
+        const width = (rect.w / template.width) * 100;
+        const height = (rect.h / template.height) * 100;
+        const scale = (imageScale ?? 100) / 100;
+        const panX = ((imageX ?? 0) / els.imageEl.width) * 100;
+        const panY = ((imageY ?? 0) / els.imageEl.height) * 100;
+        const mediaStyle: React.CSSProperties = {
+          transform: `scale(${scale}) translate(${panX}%, ${panY}%)`,
+          transformOrigin: "center center",
+        };
+        return (
+          <div
+            className="absolute overflow-hidden rounded-md border-2 border-dashed border-orange-500 touch-none cursor-move z-[2]"
+            style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
+            onPointerDown={(e) => begin(e, "image", "move")}
+          >
+            <div className="absolute inset-0 pointer-events-none" style={mediaStyle}>
+              {backgroundVideoUrl ? (
+                <video
+                  src={backgroundVideoUrl}
+                  className="w-full h-full object-cover"
+                  muted loop autoPlay playsInline crossOrigin="anonymous" draggable={false}
+                />
+              ) : backgroundImageUrl ? (
+                <img src={backgroundImageUrl} alt="Fundo" className="w-full h-full object-cover" draggable={false} />
+              ) : null}
+            </div>
+            {/* Label */}
+            <div className="absolute -top-6 left-0 rounded border px-1.5 py-0.5 text-[10px] shadow-sm z-10 bg-orange-500 text-white">
+              Foto (arraste=mover, alças=zoom)
+            </div>
+            {/* Resize handles for zoom */}
+            {active === "image" && (
+              <>
+                {(["nw","ne","sw","se","n","s","w","e"] as const).map(h => {
+                  const pos = h === "nw" ? "-left-1.5 -top-1.5"
+                    : h === "ne" ? "-right-1.5 -top-1.5"
+                    : h === "sw" ? "-left-1.5 -bottom-1.5"
+                    : h === "se" ? "-right-1.5 -bottom-1.5"
+                    : h === "n" ? "left-1/2 -top-1.5 -translate-x-1/2"
+                    : h === "s" ? "left-1/2 -bottom-1.5 -translate-x-1/2"
+                    : h === "w" ? "-left-1.5 top-1/2 -translate-y-1/2"
+                    : "-right-1.5 top-1/2 -translate-y-1/2";
+                  const cursor = h === "n" || h === "s" ? "cursor-ns-resize"
+                    : h === "e" || h === "w" ? "cursor-ew-resize"
+                    : h === "nw" || h === "se" ? "cursor-nwse-resize" : "cursor-nesw-resize";
+                  return (
+                    <button
+                      key={h}
+                      type="button"
+                      className={cn("absolute z-20 h-3.5 w-3.5 rounded-sm border-2 border-background bg-orange-500", pos, cursor)}
+                      onPointerDown={(e) => begin(e, "image", "resize", h)}
+                    />
+                  );
+                })}
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       <div className="absolute inset-0 z-[5]">
-        {/* Image/video background - only on content pages */}
-        {isContentPage && setImageX && (
-          <Box part="image" label="Foto" tone="warning">
-            {backgroundVideoUrl ? (
-              <video
-                src={backgroundVideoUrl}
-                className="w-full h-full object-cover"
-                muted
-                loop
-                autoPlay
-                playsInline
-                crossOrigin="anonymous"
-                draggable={false}
-              />
-            ) : backgroundImageUrl ? (
-              <img src={backgroundImageUrl} alt="Fundo" className="w-full h-full object-cover" draggable={false} />
-            ) : null}
-          </Box>
-        )}
         {/* Text - only on content pages */}
         {isContentPage && els.textEl && (
           <Box part="text" label="Texto" tone="muted" />
