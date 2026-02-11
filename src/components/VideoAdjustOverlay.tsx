@@ -89,7 +89,7 @@ export function VideoAdjustOverlay({
   // Content to render inside boxes
   pageText,
   logoUrl,
-  contactInfo,
+  contactUrl,
   mascotUrl,
 
   logoX,
@@ -141,7 +141,7 @@ export function VideoAdjustOverlay({
 
   pageText?: string;
   logoUrl?: string;
-  contactInfo?: string;
+  contactUrl?: string;
   mascotUrl?: string;
 
   logoX: number;
@@ -715,10 +715,8 @@ export function VideoAdjustOverlay({
         )}
         {!isContentPage && els.contactEl && (
           <Box part="contact" label="Contato" tone="accent">
-            {contactInfo && (
-              <span className="text-[7px] leading-tight text-foreground/70 text-center line-clamp-3 break-words">
-                {contactInfo}
-              </span>
+            {contactUrl && (
+              <img src={contactUrl} alt="Contato" className="max-w-full max-h-full object-contain opacity-70" draggable={false} />
             )}
           </Box>
         )}
