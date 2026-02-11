@@ -249,11 +249,36 @@ export function VideoAdjustOverlay({
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textScale / 100;
+      const elW = els.textEl.width * scale;
+
+      // Estimate wrapped text height
+      const baseFontSize = els.textEl.fontSize || 48;
+      const lineHeight = baseFontSize * 1.3;
+      const maxWidth = els.textEl.width; // wrap width before scale
+
+      let estimatedLines = 1;
+      if (pageText) {
+        const avgCharWidth = baseFontSize * 0.65; // bold text is wider
+        const words = pageText.split(" ");
+        let lineWidth = 0;
+        for (const word of words) {
+          const wordWidth = word.length * avgCharWidth;
+          if (lineWidth > 0 && lineWidth + avgCharWidth + wordWidth > maxWidth) {
+            estimatedLines++;
+            lineWidth = wordWidth;
+          } else {
+            lineWidth += (lineWidth > 0 ? avgCharWidth : 0) + wordWidth;
+          }
+        }
+      }
+
+      const estimatedH = Math.max(estimatedLines * lineHeight * scale, els.textEl.height * scale);
+
       return {
         x: els.textEl.x + textX,
         y: els.textEl.y + textY,
-        w: els.textEl.width * scale,
-        h: els.textEl.height * scale,
+        w: elW,
+        h: estimatedH,
       };
     }
 
