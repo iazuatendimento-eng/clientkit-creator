@@ -1068,7 +1068,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     pages.push(signaturePage);
     overlayPages.push("");
     frameOverlayPages.push("");
-    logoOverlayPages.push("");
+    // Generate logo overlay for signature page using signatureElements
+    const sigLogoOverlay = await generateLogoOverlay(
+      template.signatureElements, video.brandKit, true, video.adjustments
+    );
+    logoOverlayPages.push(sigLogoOverlay);
 
     return { pages, overlayPages, frameOverlayPages, logoOverlayPages };
   };
@@ -1118,7 +1122,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     pages.push(signaturePage);
     overlayPages.push("");
     frameOverlayPages.push("");
-    logoOverlayPages.push("");
+    // Generate logo overlay for signature page using signatureElements
+    const sigLogoOverlay2 = await generateLogoOverlay(
+      template.signatureElements, video.brandKit, true, video.adjustments
+    );
+    logoOverlayPages.push(sigLogoOverlay2);
 
     return { pages, overlayPages, frameOverlayPages, logoOverlayPages };
   };
