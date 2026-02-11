@@ -168,57 +168,49 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   const handleDownload = async (url: string, filename: string) => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // iOS: open directly — Safari shows native video player with share/save button
-    if (isIOS) {
-      window.location.href = url;
-      toast.success("Segure o vídeo para salvar na galeria 📲");
-      return;
-    }
+    toast.loading("Preparando arquivo...", { id: "download-loading" });
 
     try {
-      // Try fetch + blob
-      let blob: Blob | null = null;
-      try {
-        const res = await fetch(url);
-        if (res.ok) blob = await res.blob();
-      } catch (e) {
-        console.warn("Fetch failed:", e);
-      }
+      // Fetch the file as blob - use no-cache to avoid CORS caching issues
+      const res = await fetch(url, { cache: "no-cache" });
+      if (!res.ok) throw new Error("Fetch failed");
+      const blob = await res.blob();
+      toast.dismiss("download-loading");
 
-      // Android: try Web Share API
-      if (isMobile && blob && navigator.share) {
-        const file = new File([blob], filename, { type: blob.type });
-        try {
-          await navigator.share({ files: [file] });
-          toast.success("Compartilhado!");
-          return;
-        } catch (shareError: any) {
-          if (shareError?.name === 'AbortError') return;
+      // Mobile: use Web Share API — iOS shows "Save Video/Image" option
+      if (isMobile && navigator.share && navigator.canShare) {
+        const mimeType = blob.type || (filename.endsWith('.mp4') ? 'video/mp4' : 'image/png');
+        const file = new File([blob], filename, { type: mimeType });
+        
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file] });
+            toast.success("Salvo!");
+            return;
+          } catch (shareError: any) {
+            if (shareError?.name === 'AbortError') return;
+            // Fall through
+          }
         }
       }
 
-      // Desktop or Android fallback with blob
-      if (blob) {
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
-        toast.success("Download iniciado!");
-        return;
-      }
-
-      // Final fallback
-      window.open(url, '_blank');
-      toast.success("Abrindo arquivo...");
+      // Desktop / fallback: blob download
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
+      toast.success("Download iniciado!");
     } catch (error) {
+      toast.dismiss("download-loading");
       console.error("Download error:", error);
+      // Ultimate fallback: open in new tab
       window.open(url, '_blank');
+      toast.info("Segure o vídeo para salvar na galeria 📲");
     }
   };
 
