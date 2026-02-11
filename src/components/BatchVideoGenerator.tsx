@@ -404,17 +404,17 @@ const CardCoverPreview = memo(({
           </div>
         )}
 
-        {/* Layer 1: Video background - ABOVE static page, BELOW overlays (z-[1]) */}
+        {/* Layer 1: Video background - IN the image frame (z-[1]) */}
         {hasVideo && (
           <div
-            className="absolute overflow-hidden z-[1]"
+            className="absolute overflow-hidden z-[1] bg-black/50"
             style={imageRect ? {
               left: `${imageRect.left}%`, top: `${imageRect.top}%`,
               width: `${imageRect.width}%`, height: `${imageRect.height}%`,
             } : { left: 0, top: 0, width: '100%', height: '100%' }}
           >
             <video
-              key={`card-vid-${video.cardId}-${currentPage}`}
+              key={`card-vid-${video.cardId}-${currentPage}-${activeVideoUrl}`}
               ref={(el) => {
                 if (el) {
                   el.muted = true;
@@ -424,20 +424,30 @@ const CardCoverPreview = memo(({
               }}
               src={activeVideoUrl!}
               className="w-full h-full object-cover"
-              crossOrigin="anonymous"
               muted
               loop
               autoPlay
               playsInline
               onError={(e) => {
-                console.error(`[CardCover] Video FAILED to load for page ${currentPage}: ${activeVideoUrl?.substring(0, 60)}`, e);
+                console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`, e);
                 setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
               }}
               onLoadedData={() => {
-                console.log(`[CardCover] ✅ Video loaded OK for ${video.clientName} page ${currentPage}`);
+                console.log(`[CardCover] ✅ Video loaded: ${video.clientName} page ${currentPage}`);
               }}
             />
           </div>
+        )}
+        {/* Debug: show video area even without video */}
+        {!hasVideo && imageRect && (
+          <div
+            className="absolute z-[1] pointer-events-none"
+            style={{
+              left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+              width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+              outline: '2px dashed rgba(255,0,0,0.5)',
+            }}
+          />
         )}
 
         {/* Layer 2: Frame overlay (static shapes - no animation) - z-[2] */}
