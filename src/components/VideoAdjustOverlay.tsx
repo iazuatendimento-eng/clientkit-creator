@@ -748,7 +748,7 @@ export function VideoAdjustOverlay({
         </div>
       )}
 
-      {/* Image/video background - behind other elements */}
+      {/* Image/video background content - BEHIND overlays */}
       {isContentPage && setImageX && els.imageEl && (() => {
         const rect = getRect("image");
         if (!rect) return null;
@@ -765,11 +765,10 @@ export function VideoAdjustOverlay({
         };
         return (
           <div
-            className="absolute overflow-hidden rounded-md border-2 border-dashed border-orange-500 touch-none cursor-move z-[2]"
+            className="absolute overflow-hidden z-[0] pointer-events-none"
             style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
-            onPointerDown={(e) => begin(e, "image", "move")}
           >
-            <div className="absolute inset-0 pointer-events-none" style={mediaStyle}>
+            <div className="absolute inset-0" style={mediaStyle}>
               {backgroundVideoUrl ? (
                 <video
                   src={backgroundVideoUrl}
@@ -780,46 +779,20 @@ export function VideoAdjustOverlay({
                 <img src={backgroundImageUrl} alt="Fundo" className="w-full h-full object-cover" draggable={false} />
               ) : null}
             </div>
-            {/* Label */}
-            <div className="absolute -top-6 left-0 rounded border px-1.5 py-0.5 text-[10px] shadow-sm z-10 bg-orange-500 text-white">
-              Foto (arraste=mover, alças=zoom)
-            </div>
-            {/* Resize handles for zoom */}
-            {active === "image" && (
-              <>
-                {(["nw","ne","sw","se","n","s","w","e"] as const).map(h => {
-                  const pos = h === "nw" ? "-left-1.5 -top-1.5"
-                    : h === "ne" ? "-right-1.5 -top-1.5"
-                    : h === "sw" ? "-left-1.5 -bottom-1.5"
-                    : h === "se" ? "-right-1.5 -bottom-1.5"
-                    : h === "n" ? "left-1/2 -top-1.5 -translate-x-1/2"
-                    : h === "s" ? "left-1/2 -bottom-1.5 -translate-x-1/2"
-                    : h === "w" ? "-left-1.5 top-1/2 -translate-y-1/2"
-                    : "-right-1.5 top-1/2 -translate-y-1/2";
-                  const cursor = h === "n" || h === "s" ? "cursor-ns-resize"
-                    : h === "e" || h === "w" ? "cursor-ew-resize"
-                    : h === "nw" || h === "se" ? "cursor-nwse-resize" : "cursor-nesw-resize";
-                  return (
-                    <button
-                      key={h}
-                      type="button"
-                      className={cn("absolute z-20 h-3.5 w-3.5 rounded-sm border-2 border-background bg-orange-500", pos, cursor)}
-                      onPointerDown={(e) => begin(e, "image", "resize", h)}
-                    />
-                  );
-                })}
-              </>
-            )}
           </div>
         );
       })()}
 
       <div className="absolute inset-0 z-[5]">
+        {/* Image interactive handles - on top for interaction */}
+        {isContentPage && setImageX && els.imageEl && (
+          <Box part="image" label="Foto (zoom)" tone="warning" />
+        )}
         {/* Text - only on content pages */}
         {isContentPage && els.textEl && (
           <Box part="text" label="Texto" tone="muted" />
         )}
-        {/* Logo, Contato, Mascote - visible on ALL pages (visuals come from overlay layers) */}
+        {/* Logo, Contato, Mascote */}
         {els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
         {els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
         {els.mascotEl && <Box part="mascot" label="Mascote" tone="secondary" />}
