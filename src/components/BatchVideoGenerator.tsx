@@ -391,7 +391,7 @@ const CardCoverPreview = memo(({
             key={`card-base-${video.cardId}-${currentPage}`}
             src={video.pages[currentPage]}
             alt={video.clientName}
-            className="absolute inset-0 w-full h-full object-cover z-0"
+            className="absolute inset-0 w-full h-full object-contain z-0"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center z-0">
