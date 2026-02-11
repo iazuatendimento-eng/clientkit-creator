@@ -718,7 +718,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     const updatedVideos = [...videos];
     for (let i = 0; i < updatedVideos.length; i++) {
       const video = updatedVideos[i];
-      const firstText = video.pageTexts[0] || video.cardTitle || "";
+      // Combine ALL page texts and card title for a complete search query
+      const allTexts = [...video.pageTexts, video.cardTitle].filter(Boolean).join(" ");
+      const firstText = allTexts || "";
       if (!firstText) continue;
       try {
         // Combine card text with client's imageType for more precise search
@@ -1600,14 +1602,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const pexelsVideoUrls: (string | null)[] = [];
         for (const text of video.pageTexts) {
           try {
-            // Combine card text with client's imageType for more precise search
-            const combinedText = video.imageType ? `${text} ${video.imageType}` : text;
-            let searchTerms = combinedText.split(" ").slice(0, 8).join(" ");
+            // Combine ALL page texts + card title + imageType for complete search context
+            const fullContext = [text, video.cardTitle, video.imageType].filter(Boolean).join(" ");
+            let searchTerms = fullContext;
 
             // Translate to English for better search results (with timeout)
             try {
               const translatePromise = supabase.functions.invoke("translate-text", {
-                body: { text: combinedText },
+                body: { text: fullContext },
               });
 
               const timeoutPromise = new Promise<never>((_, reject) =>
@@ -2669,7 +2671,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         size="sm"
                         onClick={() => {
                           const pageText = selectedVideo.pageTexts[currentPreviewPage] || "";
-                          setSearchQuery(pageText.split(" ").slice(0, 3).join(" "));
+                          const cardTitle = selectedVideo.cardTitle || "";
+                          const fullSearch = [pageText, cardTitle].filter(Boolean).join(" ").trim();
+                          setSearchQuery(fullSearch);
                           setIsImageDialogOpen(true);
                         }}
                       >
