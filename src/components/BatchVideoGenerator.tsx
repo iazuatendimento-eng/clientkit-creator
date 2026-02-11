@@ -332,6 +332,25 @@ const getImageElSize = (elements: CanvasElement[]) => {
   return imageEl ? { width: imageEl.width, height: imageEl.height } : null;
 };
 
+// Get clip shape from image element
+const getImageClipShape = (elements: CanvasElement[]): string => {
+  const imageEl = elements.find(e => e.type === "image");
+  return imageEl?.clipShape || "rect";
+};
+
+// CSS clip-path for geometric shapes
+const getCSSClipPath = (shape: string): string | undefined => {
+  switch (shape) {
+    case "circle": return "ellipse(50% 50% at 50% 50%)";
+    case "triangle": return "polygon(50% 0%, 100% 100%, 0% 100%)";
+    case "diamond": return "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)";
+    case "hexagon": return "polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)";
+    case "pentagon": return "polygon(50% 0%, 97.6% 34.5%, 79.4% 90.5%, 20.6% 90.5%, 2.4% 34.5%)";
+    case "star": return "polygon(50% 0%, 61.8% 34.5%, 97.6% 34.5%, 69% 55.9%, 79.4% 90.5%, 50% 69%, 20.6% 90.5%, 31% 55.9%, 2.4% 34.5%, 38.2% 34.5%)";
+    default: return undefined;
+  }
+};
+
 // Card cover with auto page cycling
 const CardCoverPreview = memo(({
   video,
@@ -344,6 +363,7 @@ const CardCoverPreview = memo(({
   onClick,
   imageRect,
   imageElSize,
+  imageClipShape,
 }: {
   video: ClientVideo;
   motionEffect: MotionEffect;
@@ -355,6 +375,7 @@ const CardCoverPreview = memo(({
   onClick: () => void;
   imageRect?: { left: number; top: number; width: number; height: number } | null;
   imageElSize?: { width: number; height: number } | null;
+  imageClipShape?: string;
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -431,6 +452,7 @@ const CardCoverPreview = memo(({
               style={{
                 left: `${imageRect.left}%`, top: `${imageRect.top}%`,
                 width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+                clipPath: getCSSClipPath(imageClipShape || "rect"),
               }}
             >
               <video
@@ -1968,6 +1990,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           overlayPages: video.overlayPages || undefined,
           logoOverlayPages: video.logoOverlayPages || undefined,
           imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
+          imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
           pageImageAdjustments: video.pageImageAdjustments,
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
@@ -2304,9 +2327,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   logoAnimation={logoAnimation}
                   textAnimDuration={textAnimDuration}
                   pageDuration={template.pageDuration || 3}
-                  imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
-                  imageElSize={getImageElSize(template.contentElements as CanvasElement[])}
-                  onClick={() => {
+                   imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
+                   imageElSize={getImageElSize(template.contentElements as CanvasElement[])}
+                   imageClipShape={getImageClipShape(template.contentElements as CanvasElement[])}
+                   onClick={() => {
                     setSelectedVideo(video);
                     setCurrentPreviewPage(0);
                     setIsPlayingPreview(true);
@@ -2406,6 +2430,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
                   pageImageAdjustments={selectedVideo.pageImageAdjustments}
                   imageElSize={getImageElSize(template.contentElements as CanvasElement[])}
+                  imageClipShape={getImageClipShape(template.contentElements as CanvasElement[])}
                 />}
               </TabsContent>
               

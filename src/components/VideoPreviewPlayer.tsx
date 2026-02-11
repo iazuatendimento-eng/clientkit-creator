@@ -27,6 +27,7 @@ interface VideoPreviewPlayerProps {
   imageRect?: { left: number; top: number; width: number; height: number } | null;
   pageImageAdjustments?: PageImageAdjustment[];
   imageElSize?: { width: number; height: number } | null;
+  imageClipShape?: string;
 }
 
 export function VideoPreviewPlayer({
@@ -46,6 +47,7 @@ export function VideoPreviewPlayer({
   imageRect,
   pageImageAdjustments,
   imageElSize,
+  imageClipShape,
 }: VideoPreviewPlayerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -173,6 +175,18 @@ export function VideoPreviewPlayer({
   const hasFrameOverlay = currentFrameOverlay && currentFrameOverlay !== "";
   const hasLogoOverlay = currentLogoOverlay && currentLogoOverlay !== "";
 
+  const getClipPathCSS = (shape?: string): string | undefined => {
+    switch (shape) {
+      case "circle": return "ellipse(50% 50% at 50% 50%)";
+      case "triangle": return "polygon(50% 0%, 100% 100%, 0% 100%)";
+      case "diamond": return "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)";
+      case "hexagon": return "polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)";
+      case "pentagon": return "polygon(50% 0%, 97.6% 34.5%, 79.4% 90.5%, 20.6% 90.5%, 2.4% 34.5%)";
+      case "star": return "polygon(50% 0%, 61.8% 34.5%, 97.6% 34.5%, 69% 55.9%, 79.4% 90.5%, 50% 69%, 20.6% 90.5%, 31% 55.9%, 2.4% 34.5%, 38.2% 34.5%)";
+      default: return undefined;
+    }
+  };
+
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Video Preview */}
@@ -209,6 +223,7 @@ export function VideoPreviewPlayer({
                 style={imageRect ? {
                   left: `${imageRect.left}%`, top: `${imageRect.top}%`,
                   width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+                  clipPath: getClipPathCSS(imageClipShape),
                 } : { left: 0, top: 0, width: '100%', height: '100%' }}
               >
                 <video

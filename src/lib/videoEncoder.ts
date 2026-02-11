@@ -24,6 +24,7 @@ export interface VideoEncoderOptions {
   logoOverlayPages?: string[]; // Transparent logo-only overlay pages
   imageRect?: { left: number; top: number; width: number; height: number } | null; // Image placeholder rect as percentages
   pageImageAdjustments?: { imageX: number; imageY: number; imageScale: number }[]; // Per-page image position/scale adjustments
+  imageClipShape?: string; // Geometric clip shape for image placeholder (circle, triangle, diamond, etc.)
   onProgress?: (progress: number) => void;
 }
 
@@ -426,6 +427,66 @@ function seekVideoToTime(video: HTMLVideoElement, time: number): Promise<void> {
   });
 }
 
+// Apply geometric clip path to canvas context
+function applyCanvasClipShape(ctx: CanvasRenderingContext2D, shape: string, x: number, y: number, w: number, h: number) {
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  ctx.beginPath();
+  switch (shape) {
+    case "circle":
+      ctx.ellipse(cx, cy, w / 2, h / 2, 0, 0, Math.PI * 2);
+      break;
+    case "triangle":
+      ctx.moveTo(cx, y);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x, y + h);
+      break;
+    case "diamond":
+      ctx.moveTo(cx, y);
+      ctx.lineTo(x + w, cy);
+      ctx.lineTo(cx, y + h);
+      ctx.lineTo(x, cy);
+      break;
+    case "hexagon": {
+      const r = Math.min(w, h) / 2;
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2;
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      break;
+    }
+    case "pentagon": {
+      const r = Math.min(w, h) / 2;
+      for (let i = 0; i < 5; i++) {
+        const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      break;
+    }
+    case "star": {
+      const outerR = Math.min(w, h) / 2;
+      const innerR = outerR * 0.4;
+      for (let i = 0; i < 10; i++) {
+        const angle = (Math.PI / 5) * i - Math.PI / 2;
+        const r = i % 2 === 0 ? outerR : innerR;
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      break;
+    }
+    default:
+      ctx.rect(x, y, w, h);
+      break;
+  }
+  ctx.closePath();
+  ctx.clip();
+}
+
 export async function encodeVideoSimple(pages: string[], options: VideoEncoderOptions): Promise<Blob>;
 export async function encodeVideoSimple(
   pages: string[],
@@ -455,6 +516,7 @@ export async function encodeVideoSimple(
     logoOverlayPages,
     imageRect,
     pageImageAdjustments,
+    imageClipShape,
     onProgress 
   } = options;
 
@@ -777,8 +839,10 @@ export async function encodeVideoSimple(
           // Draw static page image first as background (has bg color, shapes without video area)
           drawSource(img, false, pageProgress);
 
-          // Apply per-page image adjustments (position/scale) to the video
+          // Apply per-page image adjustments (position/scale) and clip shape to the video
           const adj = pageImageAdjustments?.[pageIdx];
+          const clipShape = imageClipShape || "rect";
+
           if (adj && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
             const scale = adj.imageScale / 100;
             const scaledW = dw * scale;
@@ -789,14 +853,15 @@ export async function encodeVideoSimple(
             const adjDy = dy + (dh - scaledH) / 2 + offsetY;
 
             ctx.save();
-            ctx.beginPath();
-            ctx.rect(dx, dy, dw, dh);
-            ctx.clip();
+            applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
             ctx.drawImage(bgVideo, sx, sy, sw, sh, adjDx, adjDy, scaledW, scaledH);
             ctx.restore();
           } else {
-            // Draw video only in the image placeholder area
+            // Draw video in the image placeholder area with clip shape
+            ctx.save();
+            applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
             ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh);
+            ctx.restore();
           }
 
           // Draw frame overlay (decorative shapes - static, no animation)
