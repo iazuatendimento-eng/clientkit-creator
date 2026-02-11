@@ -667,6 +667,30 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       });
 
       setClientVideos(videos);
+
+      // Regenerate overlay layers (text/logo/frame) using saved data
+      // The base pages exclude text/logo (they're animated overlays), so we need to rebuild them
+      setIsGenerating(true);
+      setGenerationStatus("Reconstruindo camadas de texto...");
+      try {
+        const updatedVideos = [...videos];
+        for (let i = 0; i < updatedVideos.length; i++) {
+          const video = updatedVideos[i];
+          setGenerationStatus(`Reconstruindo ${video.clientName}... (${i + 1}/${updatedVideos.length})`);
+          const result = await regenerateSingleVideo(video);
+          updatedVideos[i] = {
+            ...video,
+            pages: result.pages,
+            overlayPages: result.overlayPages,
+            frameOverlayPages: result.frameOverlayPages,
+            logoOverlayPages: result.logoOverlayPages,
+          };
+          setClientVideos([...updatedVideos]);
+        }
+      } finally {
+        setIsGenerating(false);
+        setGenerationStatus("");
+      }
     } catch (error) {
       console.error("Error loading batch:", error);
       toast({
