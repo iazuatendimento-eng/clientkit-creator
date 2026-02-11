@@ -179,6 +179,12 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   const handleDownload = async (url: string, filename: string) => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // Ensure filename has proper extension for videos
+    if (!filename.match(/\.\w+$/)) {
+      filename = filename + '.mp4';
+    }
 
     toast.loading("Preparando arquivo...", { id: "download-loading" });
 
@@ -188,19 +194,25 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       const arrayBuffer = await res.arrayBuffer();
       toast.dismiss("download-loading");
 
-      // Force correct MIME type based on extension (storage often returns wrong type)
       const mimeType = getMimeType(filename);
       const blob = new Blob([arrayBuffer], { type: mimeType });
 
       // Mobile: use Web Share API — iOS shows "Save Video/Image" option
       if (isMobile && navigator.share && navigator.canShare) {
-        const file = new File([blob], filename, { type: mimeType });
+        // Ensure .mp4 extension for video files (iOS requires it)
+        let shareFilename = filename;
+        if (mimeType.startsWith('video/') && !shareFilename.toLowerCase().endsWith('.mp4')) {
+          shareFilename = shareFilename.replace(/\.\w+$/, '.mp4');
+        }
+
+        const file = new File([blob], shareFilename, { type: mimeType });
         
-        console.log("Share file:", { filename, mimeType, size: blob.size, canShare: navigator.canShare({ files: [file] }) });
+        // IMPORTANT: on iOS, share ONLY files — no title, no text, no url
+        const shareData = { files: [file] };
         
-        if (navigator.canShare({ files: [file] })) {
+        if (navigator.canShare(shareData)) {
           try {
-            await navigator.share({ files: [file] });
+            await navigator.share(shareData);
             toast.success("Salvo!");
             return;
           } catch (shareError: any) {
@@ -210,7 +222,16 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         }
       }
 
-      // Desktop / fallback: blob download
+      // iOS fallback: create blob URL and open — user can long-press to save
+      if (isIOS) {
+        const blobUrl = window.URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        toast.success("Segure o vídeo e toque em 'Salvar Vídeo' 📲");
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+        return;
+      }
+
+      // Desktop / Android fallback: blob download
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
