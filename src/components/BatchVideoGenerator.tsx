@@ -615,9 +615,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       });
 
       const videos: ClientVideo[] = batch.items.map((item) => {
-        const pageTexts = item.files.length > 1
-          ? item.files.slice(0, -1).map((_, i) => item.cardText?.split(";")[i]?.trim() || item.cardTitle)
-          : [item.cardText || item.cardTitle];
+        // Recalculate pageTexts from the actual text, not from old generated files
+        const fullText = item.cardText || item.cardTitle;
+        const textParts = fullText
+          .split(";")
+          .map((t: string) => t.trim())
+          .filter((t: string) => t.length > 0);
+        const pageTexts = textParts.length > 0 ? textParts : [fullText];
 
         return {
           clientId: item.clientId,
@@ -627,12 +631,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           cardTitle: item.cardTitle,
           cardText: item.cardText,
           brandKit: item.brandKit,
-          pages: item.files || [],
+          pages: [], // Clear old pages to force fresh rendering with current code
           videoUrl: null,
           status: "pending" as const,
           pageTexts,
           searchedImages: item.backgroundImages,
-          adjustments: { ...defaultAdjustments },
+          adjustments: item.adjustments ? { ...defaultAdjustments, ...item.adjustments } : { ...defaultAdjustments },
           pageTextAdjustments: pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
           pageImageAdjustments: pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
           imageType: imageTypeMap[item.clientId] || undefined,
