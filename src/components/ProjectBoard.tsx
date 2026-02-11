@@ -1175,10 +1175,12 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                     <div className="space-y-3">
                       <div>
                         <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
-                        <Input
+                        <textarea
+                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[60px] resize-y"
                           placeholder="Título do projeto"
                           value={newBrief.title || ""}
                           onChange={(e) => setNewBrief({...newBrief, title: e.target.value})}
+                          rows={2}
                         />
                       </div>
                       <div>
