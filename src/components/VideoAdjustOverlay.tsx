@@ -89,6 +89,7 @@ export function VideoAdjustOverlay({
   // Content to render inside boxes
   pageText,
   fontFamily,
+  textColor,
   logoUrl,
   contactUrl,
   mascotUrl,
@@ -142,6 +143,7 @@ export function VideoAdjustOverlay({
 
   pageText?: string;
   fontFamily?: string;
+  textColor?: string;
   logoUrl?: string;
   contactUrl?: string;
   mascotUrl?: string;
@@ -684,7 +686,7 @@ export function VideoAdjustOverlay({
           src={previewUrl}
           alt="Prévia do vídeo"
           className={cn(
-            "absolute inset-0 h-full w-full object-contain",
+            "absolute inset-0 h-full w-full object-cover",
             isBusy ? "opacity-80" : "opacity-100"
           )}
           draggable={false}
@@ -702,8 +704,8 @@ export function VideoAdjustOverlay({
           <Box part="text" label="Texto" tone="muted">
             {pageText && (
               <span
-                className="text-[10px] leading-tight text-foreground font-bold text-center line-clamp-6 break-words"
-                style={fontFamily ? { fontFamily: `"${fontFamily}", sans-serif` } : undefined}
+                className="text-[10px] leading-tight font-bold text-center line-clamp-6 break-words"
+                style={{ fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined, color: textColor || "#ffffff" }}
               >
                 {pageText}
               </span>
@@ -714,21 +716,21 @@ export function VideoAdjustOverlay({
         {!isContentPage && els.logoEl && (
           <Box part="logo" label="Logo" tone="primary">
             {logoUrl && (
-              <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain opacity-70" draggable={false} />
+              <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" draggable={false} />
             )}
           </Box>
         )}
         {!isContentPage && els.contactEl && (
           <Box part="contact" label="Contato" tone="accent">
             {contactUrl && (
-              <img src={contactUrl} alt="Contato" className="max-w-full max-h-full object-contain opacity-70" draggable={false} />
+              <img src={contactUrl} alt="Contato" className="max-w-full max-h-full object-contain" draggable={false} />
             )}
           </Box>
         )}
         {!isContentPage && els.mascotEl && (
           <Box part="mascot" label="Mascote" tone="secondary">
             {mascotUrl && (
-              <img src={mascotUrl} alt="Mascote" className="max-w-full max-h-full object-contain opacity-70" draggable={false} />
+              <img src={mascotUrl} alt="Mascote" className="max-w-full max-h-full object-contain" draggable={false} />
             )}
           </Box>
         )}
