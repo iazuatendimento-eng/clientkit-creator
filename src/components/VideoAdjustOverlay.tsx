@@ -709,10 +709,7 @@ export function VideoAdjustOverlay({
           {textOverlayUrl && (
             <img src={textOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[2]" draggable={false} />
           )}
-          {/* Logo overlay layer */}
-          {logoOverlayUrl && (
-            <img src={logoOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[3]" draggable={false} />
-          )}
+          {/* Logo overlay layer - NOT rendered here because the interactive Box below already shows the logo */}
         </>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
