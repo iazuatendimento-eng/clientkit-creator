@@ -249,39 +249,11 @@ export function VideoAdjustOverlay({
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textScale / 100;
-      const elW = els.textEl.width * scale;
-      
-      // Estimate actual rendered text height by simulating word wrap
-      // Canvas uses: fontSize, lineHeight = fontSize * 1.3, maxWidth = el.width
-      const baseFontSize = els.textEl.fontSize || 48;
-      const fontSize = Math.round(baseFontSize * scale);
-      const lineHeight = fontSize * 1.3;
-      const maxWidth = els.textEl.width; // wrap width (before scale)
-      
-      let estimatedLines = 1;
-      if (pageText) {
-        // Rough estimation: average char width ≈ fontSize * 0.55
-        const avgCharWidth = baseFontSize * 0.55;
-        const words = pageText.split(" ");
-        let lineWidth = 0;
-        for (const word of words) {
-          const wordWidth = word.length * avgCharWidth + avgCharWidth; // +space
-          if (lineWidth + wordWidth > maxWidth && lineWidth > 0) {
-            estimatedLines++;
-            lineWidth = wordWidth;
-          } else {
-            lineWidth += wordWidth;
-          }
-        }
-      }
-      
-      const estimatedH = estimatedLines * lineHeight;
-      
       return {
         x: els.textEl.x + textX,
         y: els.textEl.y + textY,
-        w: elW,
-        h: estimatedH,
+        w: els.textEl.width * scale,
+        h: els.textEl.height * scale,
       };
     }
 
