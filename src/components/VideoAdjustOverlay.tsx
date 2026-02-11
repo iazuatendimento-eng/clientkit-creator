@@ -688,6 +688,7 @@ export function VideoAdjustOverlay({
     <div
       ref={containerRef}
       className="relative mx-auto w-full aspect-[9/16] overflow-hidden rounded-lg border bg-muted touch-none"
+      style={{ containerType: "size" }}
     >
       {previewUrl ? (
         <>
@@ -726,7 +727,11 @@ export function VideoAdjustOverlay({
                 style={{
                   fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
                   color: textColor || "#ffffff",
-                  fontSize: "clamp(6px, 2.5vw, 18px)",
+                  // Scale font size proportionally to the container width vs template width
+                  // The overlay container width maps to template.width, so we use percentage-based sizing
+                  fontSize: els.textEl.fontSize
+                    ? `${(els.textEl.fontSize / template.height) * 100}cqh`
+                    : "clamp(8px, 4vw, 24px)",
                   display: "-webkit-box",
                   WebkitLineClamp: 10,
                   WebkitBoxOrient: "vertical",
