@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
 import {
   ArrowLeft,
   Check,
@@ -2576,8 +2577,137 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   />
 
                   <p className="text-center text-[10px] text-muted-foreground">
-                    Arraste os elementos para mover. Arraste as alças para redimensionar.
+                    Arraste os elementos para mover. Arraste as alças para redimensionar. Ou use os controles abaixo.
                   </p>
+
+                  {/* Fine-tune controls */}
+                  {(() => {
+                    const isContent = currentPreviewPage < selectedVideo.pages.length - 1;
+                    const isSig = !isContent;
+                    const step = 5;
+                    const scaleStep = 5;
+
+                    const AdjRow = ({ label, x, y, scale, scaleLabel, onX, onY, onScale, scaleX, scaleY, onScaleX, onScaleY }: {
+                      label: string; x: number; y: number; scale?: number; scaleLabel?: string;
+                      onX: (v: number) => void; onY: (v: number) => void; onScale?: (v: number) => void;
+                      scaleX?: number; scaleY?: number; onScaleX?: (v: number) => void; onScaleY?: (v: number) => void;
+                    }) => (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-semibold text-foreground">{label}</p>
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-muted-foreground w-5">X</span>
+                            <Slider value={[x]} min={-500} max={500} step={1} onValueChange={([v]) => onX(v)} className="flex-1" />
+                            <input type="number" value={Math.round(x)} onChange={e => onX(Number(e.target.value) || 0)}
+                              className="w-12 h-5 text-[10px] text-center bg-background border border-border rounded px-0.5" />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-muted-foreground w-5">Y</span>
+                            <Slider value={[y]} min={-500} max={500} step={1} onValueChange={([v]) => onY(v)} className="flex-1" />
+                            <input type="number" value={Math.round(y)} onChange={e => onY(Number(e.target.value) || 0)}
+                              className="w-12 h-5 text-[10px] text-center bg-background border border-border rounded px-0.5" />
+                          </div>
+                          {scale !== undefined && onScale && (
+                            <div className="flex items-center gap-1 col-span-2">
+                              <span className="text-[9px] text-muted-foreground w-5">{scaleLabel || "⚖"}</span>
+                              <Slider value={[scale]} min={25} max={300} step={1} onValueChange={([v]) => onScale(v)} className="flex-1" />
+                              <input type="number" value={Math.round(scale)} onChange={e => onScale(Number(e.target.value) || 100)}
+                                className="w-12 h-5 text-[10px] text-center bg-background border border-border rounded px-0.5" />
+                              <span className="text-[9px] text-muted-foreground">%</span>
+                            </div>
+                          )}
+                          {scaleX !== undefined && onScaleX && scaleY !== undefined && onScaleY && (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] text-muted-foreground w-5">W</span>
+                                <Slider value={[scaleX]} min={25} max={300} step={1} onValueChange={([v]) => onScaleX(v)} className="flex-1" />
+                                <input type="number" value={Math.round(scaleX)} onChange={e => onScaleX(Number(e.target.value) || 100)}
+                                  className="w-12 h-5 text-[10px] text-center bg-background border border-border rounded px-0.5" />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] text-muted-foreground w-5">H</span>
+                                <Slider value={[scaleY]} min={25} max={300} step={1} onValueChange={([v]) => onScaleY(v)} className="flex-1" />
+                                <input type="number" value={Math.round(scaleY)} onChange={e => onScaleY(Number(e.target.value) || 100)}
+                                  className="w-12 h-5 text-[10px] text-center bg-background border border-border rounded px-0.5" />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+
+                    return (
+                      <div className="bg-muted/50 rounded-lg p-3 space-y-3 text-xs">
+                        <p className="text-[11px] font-medium text-foreground">Ajuste Fino</p>
+
+                        {/* Image/Video zoom - content pages only */}
+                        {isContent && (
+                          <AdjRow label="📷 Foto / Vídeo" 
+                            x={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageX || 0}
+                            y={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageY || 0}
+                            scale={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageScale || 100}
+                            scaleLabel="🔍"
+                            onX={v => updatePageImageAdjustment(currentPreviewPage, "imageX", v)}
+                            onY={v => updatePageImageAdjustment(currentPreviewPage, "imageY", v)}
+                            onScale={v => updatePageImageAdjustment(currentPreviewPage, "imageScale", v)}
+                          />
+                        )}
+
+                        {/* Text - content pages only */}
+                        {isContent && (
+                          <AdjRow label="📝 Texto"
+                            x={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textX || 0}
+                            y={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textY || 0}
+                            scale={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textScale || 100}
+                            scaleLabel="Aa"
+                            onX={v => updatePageTextAdjustment(currentPreviewPage, "textX", v)}
+                            onY={v => updatePageTextAdjustment(currentPreviewPage, "textY", v)}
+                            onScale={v => updatePageTextAdjustment(currentPreviewPage, "textScale", v)}
+                          />
+                        )}
+
+                        {/* Logo */}
+                        <AdjRow label="🏷️ Logo"
+                          x={isContent ? selectedVideo.adjustments.logoX : (selectedVideo.adjustments.sigLogoX ?? selectedVideo.adjustments.logoX)}
+                          y={isContent ? selectedVideo.adjustments.logoY : (selectedVideo.adjustments.sigLogoY ?? selectedVideo.adjustments.logoY)}
+                          onX={v => updateAdjustmentLocal(isContent ? "logoX" : "sigLogoX", v)}
+                          onY={v => updateAdjustmentLocal(isContent ? "logoY" : "sigLogoY", v)}
+                          scaleX={isContent ? selectedVideo.adjustments.logoScaleX : (selectedVideo.adjustments.sigLogoScaleX ?? selectedVideo.adjustments.logoScaleX)}
+                          scaleY={isContent ? selectedVideo.adjustments.logoScaleY : (selectedVideo.adjustments.sigLogoScaleY ?? selectedVideo.adjustments.logoScaleY)}
+                          onScaleX={v => updateAdjustmentLocal(isContent ? "logoScaleX" : "sigLogoScaleX", v)}
+                          onScaleY={v => updateAdjustmentLocal(isContent ? "logoScaleY" : "sigLogoScaleY", v)}
+                        />
+
+                        {/* Contact */}
+                        <AdjRow label="📞 Contato"
+                          x={isContent ? selectedVideo.adjustments.contactX : (selectedVideo.adjustments.sigContactX ?? selectedVideo.adjustments.contactX)}
+                          y={isContent ? selectedVideo.adjustments.contactY : (selectedVideo.adjustments.sigContactY ?? selectedVideo.adjustments.contactY)}
+                          onX={v => updateAdjustmentLocal(isContent ? "contactX" : "sigContactX", v)}
+                          onY={v => updateAdjustmentLocal(isContent ? "contactY" : "sigContactY", v)}
+                          scaleX={isContent ? selectedVideo.adjustments.contactScaleX : (selectedVideo.adjustments.sigContactScaleX ?? selectedVideo.adjustments.contactScaleX)}
+                          scaleY={isContent ? selectedVideo.adjustments.contactScaleY : (selectedVideo.adjustments.sigContactScaleY ?? selectedVideo.adjustments.contactScaleY)}
+                          onScaleX={v => updateAdjustmentLocal(isContent ? "contactScaleX" : "sigContactScaleX", v)}
+                          onScaleY={v => updateAdjustmentLocal(isContent ? "contactScaleY" : "sigContactScaleY", v)}
+                        />
+
+                        {/* Mascot */}
+                        <AdjRow label="🎭 Mascote"
+                          x={isContent ? selectedVideo.adjustments.mascotX : (selectedVideo.adjustments.sigMascotX ?? selectedVideo.adjustments.mascotX)}
+                          y={isContent ? selectedVideo.adjustments.mascotY : (selectedVideo.adjustments.sigMascotY ?? selectedVideo.adjustments.mascotY)}
+                          onX={v => updateAdjustmentLocal(isContent ? "mascotX" : "sigMascotX", v)}
+                          onY={v => updateAdjustmentLocal(isContent ? "mascotY" : "sigMascotY", v)}
+                          scaleX={isContent ? selectedVideo.adjustments.mascotScaleX : (selectedVideo.adjustments.sigMascotScaleX ?? selectedVideo.adjustments.mascotScaleX)}
+                          scaleY={isContent ? selectedVideo.adjustments.mascotScaleY : (selectedVideo.adjustments.sigMascotScaleY ?? selectedVideo.adjustments.mascotScaleY)}
+                          onScaleX={v => updateAdjustmentLocal(isContent ? "mascotScaleX" : "sigMascotScaleX", v)}
+                          onScaleY={v => updateAdjustmentLocal(isContent ? "mascotScaleY" : "sigMascotScaleY", v)}
+                        />
+
+                        <Button size="sm" variant="outline" className="w-full" onClick={() => applyAdjustments()}>
+                          Aplicar Ajustes
+                        </Button>
+                      </div>
+                    );
+                  })()}
 
                   {/* Page navigation */}
                   <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
