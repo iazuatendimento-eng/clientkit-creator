@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BatchHistory } from "@/components/BatchHistory";
-import { BatchHistoryEditor } from "@/components/BatchHistoryEditor";
+import { BatchVideoGenerator } from "@/components/BatchVideoGenerator";
 import { BatchGeneration } from "@/lib/batchHistory";
 
 const BatchHistoryPage = () => {
@@ -30,10 +30,11 @@ const BatchHistoryPage = () => {
 
   if (view === "edit" && selectedBatch) {
     return (
-      <BatchHistoryEditor
-        batch={selectedBatch}
+      <BatchVideoGenerator
+        template={selectedBatch.template_snapshot as any}
+        initialBatch={selectedBatch}
         onBack={handleBack}
-        onSaved={handleSaved}
+        onComplete={handleSaved}
       />
     );
   }
