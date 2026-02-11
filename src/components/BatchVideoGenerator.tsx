@@ -603,34 +603,60 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       setIsLoading(true);
       
       const clientIds = [...new Set(batch.items.map(item => item.clientId))];
-      const { data: clientsData } = await supabase
-        .from("client_data")
-        .select("id, image_type, particularity_type")
-        .in("id", clientIds);
+      const cardIds = [...new Set(batch.items.map(item => item.cardId))];
+
+      // Fetch fresh client data and card texts from database
+      const [clientsResult, cardsResult] = await Promise.all([
+        supabase
+          .from("client_data")
+          .select("id, image_type, particularity_type, brand_kit, name, company")
+          .in("id", clientIds),
+        supabase
+          .from("project_briefs")
+          .select("id, title, description")
+          .in("id", cardIds),
+      ]);
+
       const imageTypeMap: Record<string, string> = {};
       const particularityMap: Record<string, string> = {};
-      clientsData?.forEach(c => { 
+      const brandKitMap: Record<string, any> = {};
+      const clientNameMap: Record<string, string> = {};
+      const clientCompanyMap: Record<string, string> = {};
+      clientsResult.data?.forEach(c => { 
         if (c.image_type) imageTypeMap[c.id] = c.image_type;
         if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
+        if (c.brand_kit) brandKitMap[c.id] = c.brand_kit;
+        if (c.name) clientNameMap[c.id] = c.name;
+        if (c.company) clientCompanyMap[c.id] = c.company;
+      });
+
+      // Map current card texts from DB
+      const cardTextMap: Record<string, { title: string; description: string }> = {};
+      cardsResult.data?.forEach(card => {
+        cardTextMap[card.id] = { title: card.title || "", description: card.description || "" };
       });
 
       const videos: ClientVideo[] = batch.items.map((item) => {
-        // Recalculate pageTexts from the actual text, not from old generated files
-        const fullText = item.cardText || item.cardTitle;
-        const textParts = fullText
+        // Always use the CURRENT text from the database, not the old saved text
+        const currentCard = cardTextMap[item.cardId];
+        const currentTitle = currentCard?.title || item.cardTitle;
+        const currentText = currentCard?.description || currentCard?.title || item.cardText || item.cardTitle;
+        const currentBrandKit = brandKitMap[item.clientId] || item.brandKit;
+
+        const textParts = currentText
           .split(";")
           .map((t: string) => t.trim())
           .filter((t: string) => t.length > 0);
-        const pageTexts = textParts.length > 0 ? textParts : [fullText];
+        const pageTexts = textParts.length > 0 ? textParts : [currentText];
 
         return {
           clientId: item.clientId,
-          clientName: item.clientName,
-          company: item.company,
+          clientName: clientNameMap[item.clientId] || item.clientName,
+          company: clientCompanyMap[item.clientId] || item.company,
           cardId: item.cardId,
-          cardTitle: item.cardTitle,
-          cardText: item.cardText,
-          brandKit: item.brandKit,
+          cardTitle: currentTitle,
+          cardText: currentText,
+          brandKit: currentBrandKit,
           pages: [], // Clear old pages to force fresh rendering with current code
           videoUrl: null,
           status: "pending" as const,
