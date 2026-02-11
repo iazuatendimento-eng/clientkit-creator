@@ -298,6 +298,7 @@ const CardCoverPreview = memo(({
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
   const totalPages = video.pages.length;
 
   useEffect(() => {
@@ -312,12 +313,16 @@ const CardCoverPreview = memo(({
     return () => window.clearInterval(interval);
   }, [totalPages, pageDuration]);
 
+  // Reset video failed state when video URLs change
+  useEffect(() => {
+    setVideoFailed({});
+  }, [video.previewVideoUrls]);
+
   const isSignaturePage = currentPage === totalPages - 1 && totalPages > 1;
-  // Use current page video, or fallback to first available video (but not for signature page)
   const currentVideoUrl = video.previewVideoUrls?.[currentPage] || null;
   const fallbackVideoUrl = !isSignaturePage ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
   const activeVideoUrl = currentVideoUrl || fallbackVideoUrl;
-  const hasVideo = !!activeVideoUrl;
+  const hasVideo = !!activeVideoUrl && !videoFailed[currentPage];
   const overlayPage = video.overlayPages?.[currentPage];
   const frameOverlay = video.frameOverlayPages?.[currentPage];
   const logoOverlay = video.logoOverlayPages?.[currentPage];
@@ -330,11 +335,22 @@ const CardCoverPreview = memo(({
       onClick={onClick}
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
-        {/* Layer 1: Background color (always rendered) */}
-        <div className="absolute inset-0" />
+        {/* Layer 0: Always render static page as base */}
+        {video.pages[currentPage] ? (
+          <img
+            key={`card-base-${video.cardId}-${currentPage}`}
+            src={video.pages[currentPage]}
+            alt={video.clientName}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
 
-        {/* Layer 1b: Video/Image background - positioned within image placeholder */}
-        {hasVideo ? (
+        {/* Layer 1: Video background on top of static page (within image placeholder) */}
+        {hasVideo && (
           <div
             className="absolute overflow-hidden"
             style={imageRect ? {
@@ -357,18 +373,11 @@ const CardCoverPreview = memo(({
               loop
               autoPlay
               playsInline
+              onError={() => {
+                console.warn(`[CardCover] Video failed to load for page ${currentPage}: ${activeVideoUrl?.substring(0, 60)}`);
+                setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+              }}
             />
-          </div>
-        ) : video.pages[currentPage] ? (
-          <img
-            key={`card-img-${video.cardId}-${currentPage}`}
-            src={video.pages[currentPage]}
-            alt={video.clientName}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         )}
 
