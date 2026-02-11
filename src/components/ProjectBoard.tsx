@@ -118,8 +118,9 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     isDragging,
   } = useSortable({ id: brief.id, disabled: isPublicView || isInactive });
 
-  // Load final artworks for both admin and public view
+  // Load final artworks lazily - only when modal opens (avoids N+1 queries on mount)
   useEffect(() => {
+    if (!isDetailModalOpen) return;
     const loadFinalArtworks = async () => {
       try {
         const uploads = await getCardUploads(brief.id);
