@@ -157,9 +157,11 @@ const Index = () => {
     return matchesSearch && matchesTextFilter;
   });
 
+  const [loadError, setLoadError] = useState(false);
+
   const loadClients = async (retryCount = 0) => {
-    const maxRetries = 2;
-    const timeoutMs = 30000; // 30s timeout
+    const maxRetries = 5;
+    const timeoutMs = 30000;
 
     const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
       Promise.race([
@@ -169,8 +171,17 @@ const Index = () => {
         ),
       ]);
 
+    const delay = (ms: number) => new Promise(r => window.setTimeout(r, ms));
+
     try {
       setIsLoadingClients(true);
+      setLoadError(false);
+
+      // Add increasing delay between retries to let DB wake up
+      if (retryCount > 0) {
+        await delay(Math.min(retryCount * 2000, 8000));
+      }
+
       const data = await withTimeout(getAllClients(), timeoutMs);
       const mappedClients: Client[] = (data as any[]).map((c: any) => ({
         id: c.id,
@@ -194,7 +205,6 @@ const Index = () => {
         briefing: c.briefing || "",
       }));
 
-      // Sort: active clients first, then by creation date
       mappedClients.sort((a, b) => {
         if (a.active === b.active) {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -203,18 +213,19 @@ const Index = () => {
       });
 
       setClients(mappedClients);
+      setLoadError(false);
     } catch (error: any) {
       console.error("Error loading clients:", error);
-      // Auto-retry on timeout
       if (retryCount < maxRetries) {
         console.log(`Retrying loadClients (${retryCount + 1}/${maxRetries})...`);
         return loadClients(retryCount + 1);
       }
+      setLoadError(true);
       toast({
         title: "Erro ao carregar clientes",
         description:
           error?.message === "timeout"
-            ? "O carregamento demorou demais. Tente novamente em instantes."
+            ? "O banco demorou para responder. Clique em 'Tentar novamente'."
             : "Não foi possível carregar a lista de clientes.",
         variant: "destructive",
       });
@@ -604,8 +615,21 @@ const Index = () => {
 
   if (isLoadingClients) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground text-sm">Conectando ao banco de dados...</p>
+      </div>
+    );
+  }
+
+  if (loadError && clients.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <p className="text-destructive font-semibold">Falha ao carregar clientes</p>
+        <p className="text-muted-foreground text-sm">O banco de dados demorou para responder.</p>
+        <Button onClick={() => loadClients()} variant="default">
+          Tentar novamente
+        </Button>
       </div>
     );
   }
