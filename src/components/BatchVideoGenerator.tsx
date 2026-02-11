@@ -602,7 +602,23 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     try {
       setIsLoading(true);
       
-      const clientIds = [...new Set(batch.items.map(item => item.clientId))];
+      // The list query excludes heavy 'items' column, so fetch full batch data
+      let batchItems = batch.items;
+      if (!batchItems || batchItems.length === 0) {
+        const { getBatchById } = await import("@/lib/batchHistory");
+        const fullBatch = await getBatchById(batch.id);
+        if (fullBatch) {
+          batchItems = fullBatch.items;
+        }
+      }
+      
+      if (!batchItems || batchItems.length === 0) {
+        toast({ title: "Lote sem itens", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+      
+      const clientIds = [...new Set(batchItems.map(item => item.clientId))];
 
       // Only fetch image_type and particularity_type (lightweight)
       const { data: clientsData } = await supabase
@@ -617,7 +633,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
       });
 
-      const videos: ClientVideo[] = batch.items.map((item) => {
+      const videos: ClientVideo[] = batchItems.map((item) => {
         // Use saved text/brandKit from the batch snapshot (preserve history as-is)
         const savedText = item.cardText || item.cardTitle;
         const textParts = savedText
