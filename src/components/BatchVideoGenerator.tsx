@@ -578,8 +578,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       clientVideos.length > 0 &&
       !isLoading &&
       !isGenerating &&
-      !clientVideos.some((v) => v.pages.length > 0) &&
-      !initialBatch
+      !clientVideos.some((v) => v.pages.length > 0)
     ) {
       generateAllVideos();
     }
