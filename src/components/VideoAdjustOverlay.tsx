@@ -251,23 +251,46 @@ export function VideoAdjustOverlay({
       const scale = textScale / 100;
       const elW = els.textEl.width * scale;
 
-      // Estimate wrapped text height
+      // Use canvas to measure actual text width for accurate line wrapping
       const baseFontSize = els.textEl.fontSize || 48;
       const lineHeight = baseFontSize * 1.3;
-      const maxWidth = els.textEl.width; // wrap width before scale
+      const maxWidth = els.textEl.width;
+      const fontWeight = (els.textEl as any).fontWeight || "bold";
+      const fontFamily = (els.textEl as any).fontFamily || "sans-serif";
 
       let estimatedLines = 1;
       if (pageText) {
-        const avgCharWidth = baseFontSize * 0.65; // bold text is wider
-        const words = pageText.split(" ");
-        let lineWidth = 0;
-        for (const word of words) {
-          const wordWidth = word.length * avgCharWidth;
-          if (lineWidth > 0 && lineWidth + avgCharWidth + wordWidth > maxWidth) {
-            estimatedLines++;
-            lineWidth = wordWidth;
-          } else {
-            lineWidth += (lineWidth > 0 ? avgCharWidth : 0) + wordWidth;
+        try {
+          const measureCanvas = document.createElement("canvas");
+          const ctx = measureCanvas.getContext("2d");
+          if (ctx) {
+            ctx.font = `${fontWeight} ${baseFontSize}px ${fontFamily}`;
+            const words = pageText.split(" ");
+            let lineWidth = 0;
+            for (const word of words) {
+              const wordWidth = ctx.measureText(word).width;
+              const spaceWidth = ctx.measureText(" ").width;
+              if (lineWidth > 0 && lineWidth + spaceWidth + wordWidth > maxWidth) {
+                estimatedLines++;
+                lineWidth = wordWidth;
+              } else {
+                lineWidth += (lineWidth > 0 ? spaceWidth : 0) + wordWidth;
+              }
+            }
+          }
+        } catch {
+          // fallback: rough estimate
+          const avgCharWidth = baseFontSize * 0.6;
+          const words = pageText.split(" ");
+          let lineWidth = 0;
+          for (const word of words) {
+            const wordWidth = word.length * avgCharWidth;
+            if (lineWidth > 0 && lineWidth + avgCharWidth + wordWidth > maxWidth) {
+              estimatedLines++;
+              lineWidth = wordWidth;
+            } else {
+              lineWidth += (lineWidth > 0 ? avgCharWidth : 0) + wordWidth;
+            }
           }
         }
       }
