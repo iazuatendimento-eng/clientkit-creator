@@ -4,6 +4,12 @@ import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 
+interface PageImageAdjustment {
+  imageX: number;
+  imageY: number;
+  imageScale: number;
+}
+
 interface VideoPreviewPlayerProps {
   pages: string[];
   pageDuration?: number;
@@ -19,6 +25,8 @@ interface VideoPreviewPlayerProps {
   frameOverlayPages?: string[];
   logoOverlayPages?: string[];
   imageRect?: { left: number; top: number; width: number; height: number } | null;
+  pageImageAdjustments?: PageImageAdjustment[];
+  imageElSize?: { width: number; height: number } | null;
 }
 
 export function VideoPreviewPlayer({
@@ -36,6 +44,8 @@ export function VideoPreviewPlayer({
   frameOverlayPages,
   logoOverlayPages,
   imageRect,
+  pageImageAdjustments,
+  imageElSize,
 }: VideoPreviewPlayerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -183,27 +193,39 @@ export function VideoPreviewPlayer({
           />
 
           {/* Layer 1: Video background within image placeholder (z-[1]) */}
-          {showVideoBackground && (
-            <div
-              className="absolute overflow-hidden z-[1]"
-              style={imageRect ? {
-                left: `${imageRect.left}%`, top: `${imageRect.top}%`,
-                width: `${imageRect.width}%`, height: `${imageRect.height}%`,
-              } : { left: 0, top: 0, width: '100%', height: '100%' }}
-            >
-              <video
-                key={`video-bg-${currentPage}`}
-                ref={(el) => { videoRefs.current[0] = el; if (el) { el.play().catch(() => {}); } }}
-                src={videoUrls![currentPage]!}
-                className={cn("w-full h-full object-cover", getMotionClass())}
-                muted
-                loop
-                playsInline
-                crossOrigin="anonymous"
-                onError={() => console.warn(`[VideoPreview] Video failed to load for page ${currentPage}`)}
-              />
-            </div>
-          )}
+          {showVideoBackground && (() => {
+            const adj = pageImageAdjustments?.[currentPage];
+            const videoTransform: React.CSSProperties = {};
+            if (adj && imageElSize && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
+              const scale = adj.imageScale / 100;
+              const xPct = (adj.imageX / imageElSize.width) * 100;
+              const yPct = (adj.imageY / imageElSize.height) * 100;
+              videoTransform.transform = `scale(${scale}) translate(${xPct}%, ${yPct}%)`;
+              videoTransform.transformOrigin = 'center center';
+            }
+            return (
+              <div
+                className="absolute overflow-hidden z-[1]"
+                style={imageRect ? {
+                  left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+                  width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+                } : { left: 0, top: 0, width: '100%', height: '100%' }}
+              >
+                <video
+                  key={`video-bg-${currentPage}`}
+                  ref={(el) => { videoRefs.current[0] = el; if (el) { el.play().catch(() => {}); } }}
+                  src={videoUrls![currentPage]!}
+                  className={cn("w-full h-full object-cover", getMotionClass())}
+                  style={videoTransform}
+                  muted
+                  loop
+                  playsInline
+                  crossOrigin="anonymous"
+                  onError={() => console.warn(`[VideoPreview] Video failed to load for page ${currentPage}`)}
+                />
+              </div>
+            );
+          })()}
 
           {/* Layer 2: Frame overlay - static shapes (z-[2]) */}
           {hasFrameOverlay && (

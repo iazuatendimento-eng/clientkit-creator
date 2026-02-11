@@ -324,6 +324,12 @@ const getImagePlaceholderRect = (elements: CanvasElement[], templateWidth: numbe
   };
 };
 
+// Get image element size in template coords for video transform calculations
+const getImageElSize = (elements: CanvasElement[]) => {
+  const imageEl = elements.find(e => e.type === "image");
+  return imageEl ? { width: imageEl.width, height: imageEl.height } : null;
+};
+
 // Card cover with auto page cycling
 const CardCoverPreview = memo(({
   video,
@@ -335,6 +341,7 @@ const CardCoverPreview = memo(({
   pageDuration,
   onClick,
   imageRect,
+  imageElSize,
 }: {
   video: ClientVideo;
   motionEffect: MotionEffect;
@@ -345,6 +352,7 @@ const CardCoverPreview = memo(({
   pageDuration: number;
   onClick: () => void;
   imageRect?: { left: number; top: number; width: number; height: number } | null;
+  imageElSize?: { width: number; height: number } | null;
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -405,32 +413,44 @@ const CardCoverPreview = memo(({
         )}
 
         {/* Layer 1: Video playing IN the image frame (z-[1]) */}
-        {hasVideo && imageRect && (
-          <div
-            className="absolute overflow-hidden z-[1]"
-            style={{
-              left: `${imageRect.left}%`, top: `${imageRect.top}%`,
-              width: `${imageRect.width}%`, height: `${imageRect.height}%`,
-            }}
-          >
-            <video
-              key={`card-vid-${video.cardId}-${activeVideoUrl}`}
-              src={activeVideoUrl!}
-              className="w-full h-full object-cover"
-              muted
-              loop
-              autoPlay
-              playsInline
-              onError={() => {
-                console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
-                setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+        {hasVideo && imageRect && (() => {
+          const adj = video.pageImageAdjustments?.[currentPage];
+          const videoTransform: React.CSSProperties = {};
+          if (adj && imageElSize && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
+            const scale = adj.imageScale / 100;
+            const xPct = (adj.imageX / imageElSize.width) * 100;
+            const yPct = (adj.imageY / imageElSize.height) * 100;
+            videoTransform.transform = `scale(${scale}) translate(${xPct}%, ${yPct}%)`;
+            videoTransform.transformOrigin = 'center center';
+          }
+          return (
+            <div
+              className="absolute overflow-hidden z-[1]"
+              style={{
+                left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+                width: `${imageRect.width}%`, height: `${imageRect.height}%`,
               }}
-              onLoadedData={() => {
-                console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
-              }}
-            />
-          </div>
-        )}
+            >
+              <video
+                key={`card-vid-${video.cardId}-${activeVideoUrl}`}
+                src={activeVideoUrl!}
+                className="w-full h-full object-cover"
+                style={videoTransform}
+                muted
+                loop
+                autoPlay
+                playsInline
+                onError={() => {
+                  console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
+                  setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+                }}
+                onLoadedData={() => {
+                  console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
+                }}
+              />
+            </div>
+          );
+        })()}
 
         {/* Layer 2: Frame overlay (static shapes - no animation) - z-[2] */}
         {frameOverlay && frameOverlay !== "" && (
@@ -1619,25 +1639,52 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
-  // Refresh brand kit from database and regenerate video
+  // Refresh brand kit + card text from database and regenerate video
   const refreshBrandKitAndRegenerate = async (index: number) => {
     const video = clientVideos[index];
     try {
-      const { data: clientData, error } = await supabase
+      // Fetch brand kit from client_data
+      const { data: clientData, error: clientError } = await supabase
         .from("client_data")
-        .select("brand_kit")
+        .select("brand_kit, name")
         .eq("id", video.clientId)
         .single();
 
-      if (error || !clientData) {
+      if (clientError || !clientData) {
         toast({ title: "Erro ao buscar dados do cliente", variant: "destructive" });
         return;
       }
 
+      // Fetch card title and description from project_briefs
+      const { data: cardData, error: cardError } = await supabase
+        .from("project_briefs")
+        .select("title, description")
+        .eq("id", video.cardId)
+        .single();
+
       setIsGenerating(true);
       setGenerationStatus(`Atualizando ${video.clientName}...`);
 
-      const updatedVideo: ClientVideo = { ...video, brandKit: clientData.brand_kit };
+      // Build updated video with refreshed brand kit and card text
+      const newCardTitle = cardData?.title || video.cardTitle;
+      const newCardText = cardData?.description || video.cardText;
+      
+      // Rebuild pageTexts from updated card text (split by newlines for multi-page)
+      const rawTexts = newCardText ? newCardText.split(/\n+/).filter((t: string) => t.trim()) : [newCardTitle];
+      const newPageTexts = rawTexts.length > 0 ? rawTexts : [newCardTitle];
+
+      const updatedVideo: ClientVideo = {
+        ...video,
+        brandKit: clientData.brand_kit,
+        clientName: clientData.name || video.clientName,
+        cardTitle: newCardTitle,
+        cardText: newCardText,
+        pageTexts: newPageTexts,
+        // Ensure pageTextAdjustments array matches new page count
+        pageTextAdjustments: newPageTexts.map((_, i) => video.pageTextAdjustments[i] || { ...defaultPageTextAdjustment }),
+        pageImageAdjustments: newPageTexts.map((_, i) => video.pageImageAdjustments[i] || { ...defaultPageImageAdjustment }),
+      };
+      
       const result = await regenerateSingleVideo(updatedVideo);
       const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, logoOverlayPages: result.logoOverlayPages };
 
@@ -1645,10 +1692,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         prev.map((v, i) => (i === index ? finalVideo : v))
       );
 
-      toast({ title: "Kit de marca atualizado!", description: `Cores de ${video.clientName} recarregadas.` });
+      toast({ title: "Dados atualizados!", description: `Kit de marca e texto de ${video.clientName} recarregados.` });
     } catch (error) {
       console.error("Error refreshing brand kit:", error);
-      toast({ title: "Erro ao atualizar kit de marca", variant: "destructive" });
+      toast({ title: "Erro ao atualizar dados", variant: "destructive" });
     } finally {
       setIsGenerating(false);
       setGenerationStatus("");
@@ -2242,6 +2289,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   textAnimDuration={textAnimDuration}
                   pageDuration={template.pageDuration || 3}
                   imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
+                  imageElSize={getImageElSize(template.contentElements as CanvasElement[])}
                   onClick={() => {
                     setSelectedVideo(video);
                     setCurrentPreviewPage(0);
@@ -2337,6 +2385,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   frameOverlayPages={selectedVideo.frameOverlayPages}
                   logoOverlayPages={selectedVideo.logoOverlayPages}
                   imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
+                  pageImageAdjustments={selectedVideo.pageImageAdjustments}
+                  imageElSize={getImageElSize(template.contentElements as CanvasElement[])}
                 />
               </TabsContent>
               
