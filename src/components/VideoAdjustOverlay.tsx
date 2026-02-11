@@ -98,6 +98,7 @@ export function VideoAdjustOverlay({
   frameOverlayUrl,
   textOverlayUrl,
   logoOverlayUrl,
+  backgroundImageUrl,
 
   logoX,
   logoY,
@@ -155,6 +156,7 @@ export function VideoAdjustOverlay({
   frameOverlayUrl?: string;
   textOverlayUrl?: string;
   logoOverlayUrl?: string;
+  backgroundImageUrl?: string;
 
   logoX: number;
   logoY: number;
@@ -751,7 +753,13 @@ export function VideoAdjustOverlay({
 
       <div className="absolute inset-0 z-[5]">
         {/* Image/video background - only on content pages */}
-        {isContentPage && setImageX && <Box part="image" label="Foto" tone="warning" />}
+        {isContentPage && setImageX && (
+          <Box part="image" label="Foto" tone="warning">
+            {backgroundImageUrl && (
+              <img src={backgroundImageUrl} alt="Fundo" className="w-full h-full object-cover" draggable={false} />
+            )}
+          </Box>
+        )}
         {/* Text - only on content pages */}
         {isContentPage && els.textEl && (
           <Box part="text" label="Texto" tone="muted" />
