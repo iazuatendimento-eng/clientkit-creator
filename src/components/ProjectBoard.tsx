@@ -167,21 +167,27 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   };
 
   const handleDownload = async (url: string, filename: string) => {
-    try {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      // Try fetch + blob approach
+    // iOS: open directly — Safari shows native video player with share/save button
+    if (isIOS) {
+      window.location.href = url;
+      toast.success("Segure o vídeo para salvar na galeria 📲");
+      return;
+    }
+
+    try {
+      // Try fetch + blob
       let blob: Blob | null = null;
       try {
         const res = await fetch(url);
-        if (res.ok) {
-          blob = await res.blob();
-        }
-      } catch (fetchErr) {
-        console.warn("Fetch failed, falling back:", fetchErr);
+        if (res.ok) blob = await res.blob();
+      } catch (e) {
+        console.warn("Fetch failed:", e);
       }
 
-      // On mobile with blob, try Web Share API first
+      // Android: try Web Share API
       if (isMobile && blob && navigator.share) {
         const file = new File([blob], filename, { type: blob.type });
         try {
@@ -190,11 +196,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           return;
         } catch (shareError: any) {
           if (shareError?.name === 'AbortError') return;
-          // Fall through to other methods
         }
       }
 
-      // If we have a blob, use createObjectURL
+      // Desktop or Android fallback with blob
       if (blob) {
         const downloadUrl = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -208,25 +213,12 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         return;
       }
 
-      // Fallback: open URL directly (works on mobile even if fetch fails)
-      if (isMobile) {
-        window.open(url, '_blank');
-        toast.success("Abrindo arquivo...");
-      } else {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("Download iniciado!");
-      }
-    } catch (error) {
-      console.error("Error downloading file:", error);
-      // Ultimate fallback
+      // Final fallback
       window.open(url, '_blank');
-      toast.info("Abrindo arquivo...");
+      toast.success("Abrindo arquivo...");
+    } catch (error) {
+      console.error("Download error:", error);
+      window.open(url, '_blank');
     }
   };
 
