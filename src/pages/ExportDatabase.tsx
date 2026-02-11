@@ -41,14 +41,16 @@ async function fetchAllRows(table: string) {
   const PAGE = 1000;
   let all: any[] = [];
   let from = 0;
+  const TIMEOUT = 15000;
   while (true) {
-    const { data, error } = await (supabase.from(table as any) as any)
-      .select("*")
-      .range(from, from + PAGE - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all = all.concat(data);
-    if (data.length < PAGE) break;
+    const result: any = await Promise.race([
+      (supabase.from(table as any) as any).select("*").range(from, from + PAGE - 1),
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout ao buscar ${table}`)), TIMEOUT)),
+    ]);
+    if (result.error) throw result.error;
+    if (!result.data || result.data.length === 0) break;
+    all = all.concat(result.data);
+    if (result.data.length < PAGE) break;
     from += PAGE;
   }
   return all;
@@ -69,14 +71,21 @@ const ExportDatabase = () => {
     try {
       const zip = new JSZip();
 
+      const errors: string[] = [];
       for (let i = 0; i < TABLES.length; i++) {
         const table = TABLES[i];
         setCurrentTable(table);
         setProgress(Math.round(((i) / TABLES.length) * 100));
 
-        const rows = await fetchAllRows(table);
-        const csv = rows.length > 0 ? arrayToCsv(rows) : "// tabela vazia";
-        zip.file(`${table}.csv`, csv);
+        try {
+          const rows = await fetchAllRows(table);
+          const csv = rows.length > 0 ? arrayToCsv(rows) : "// tabela vazia";
+          zip.file(`${table}.csv`, csv);
+        } catch (e: any) {
+          console.warn(`Erro ao exportar ${table}:`, e);
+          errors.push(table);
+          zip.file(`${table}.csv`, `// erro ao exportar: ${e.message || e}`);
+        }
       }
 
       setProgress(100);
