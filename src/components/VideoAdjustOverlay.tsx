@@ -178,14 +178,14 @@ export function VideoAdjustOverlay({
   const [active, setActive] = useState<Part>("logo");
 
   const els = useMemo(() => {
-    // Use the correct page elements based on whether it's a content or signature page
-    const pageElements = isContentPage ? template.contentElements : template.signatureElements;
-    const logoEl = pageElements.find((e) => e.type === "logo");
-    const contactEl = pageElements.find((e) => e.type === "contact");
-    const mascotEl = pageElements.find((e) => e.type === "mascot");
-    const textEl = pageElements.find((e) => e.type === "text");
+    // Search across BOTH content and signature elements so all adjustable parts are always visible
+    const allElements = [...template.contentElements, ...template.signatureElements];
+    const logoEl = allElements.find((e) => e.type === "logo");
+    const contactEl = allElements.find((e) => e.type === "contact");
+    const mascotEl = allElements.find((e) => e.type === "mascot");
+    const textEl = allElements.find((e) => e.type === "text");
     return { logoEl, contactEl, mascotEl, textEl };
-  }, [template.contentElements, template.signatureElements, isContentPage]);
+  }, [template.contentElements, template.signatureElements]);
 
   const getRect = (part: Part) => {
     if (part === "logo") {
