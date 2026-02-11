@@ -23,6 +23,7 @@ export interface VideoEncoderOptions {
   overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
   logoOverlayPages?: string[]; // Transparent logo-only overlay pages
   imageRect?: { left: number; top: number; width: number; height: number } | null; // Image placeholder rect as percentages
+  pageImageAdjustments?: { imageX: number; imageY: number; imageScale: number }[]; // Per-page image position/scale adjustments
   onProgress?: (progress: number) => void;
 }
 
@@ -453,6 +454,7 @@ export async function encodeVideoSimple(
     overlayPages,
     logoOverlayPages,
     imageRect,
+    pageImageAdjustments,
     onProgress 
   } = options;
 
@@ -765,8 +767,27 @@ export async function encodeVideoSimple(
           // Draw static page image first as background (has bg color, shapes without video area)
           drawSource(img, false, pageProgress);
 
-          // Draw video only in the image placeholder area
-          ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh);
+          // Apply per-page image adjustments (position/scale) to the video
+          const adj = pageImageAdjustments?.[pageIdx];
+          if (adj && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
+            const scale = adj.imageScale / 100;
+            const scaledW = dw * scale;
+            const scaledH = dh * scale;
+            const offsetX = (adj.imageX / dw) * scaledW;
+            const offsetY = (adj.imageY / dh) * scaledH;
+            const adjDx = dx + (dw - scaledW) / 2 + offsetX;
+            const adjDy = dy + (dh - scaledH) / 2 + offsetY;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(dx, dy, dw, dh);
+            ctx.clip();
+            ctx.drawImage(bgVideo, sx, sy, sw, sh, adjDx, adjDy, scaledW, scaledH);
+            ctx.restore();
+          } else {
+            // Draw video only in the image placeholder area
+            ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh);
+          }
 
           // Draw frame overlay (decorative shapes - static, no animation)
           const frameOverlay = frameOverlayImages[pageIdx];

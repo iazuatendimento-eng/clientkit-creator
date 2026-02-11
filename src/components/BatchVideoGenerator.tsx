@@ -1968,6 +1968,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           overlayPages: video.overlayPages || undefined,
           logoOverlayPages: video.logoOverlayPages || undefined,
           imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
+          pageImageAdjustments: video.pageImageAdjustments,
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
 
