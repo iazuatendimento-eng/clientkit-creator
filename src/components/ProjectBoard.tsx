@@ -497,6 +497,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   )}
                 </>
               )}
+              {finalArtworks.some(a => a.fileType.startsWith("video")) && (
+                <div className="text-[10px] text-muted-foreground/70 bg-muted/30 rounded p-2 leading-relaxed mt-1">
+                  🎵 <strong>Dica:</strong> Ao postar, escolha a música direto na rede social (Instagram, TikTok, etc.) para gerar mais engajamento. Não esqueça de clicar em "editar capa" e selecionar o melhor trecho do vídeo.
+                </div>
+              )}
             </div>
           )}
           
