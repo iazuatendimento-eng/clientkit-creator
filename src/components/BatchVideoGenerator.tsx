@@ -850,15 +850,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Draw elements
     for (const el of elements) {
-      // Skip logo if generating overlay without logo (logo has its own layer)
+      // Skip logo if excludeLogo is set (logo has its own overlay layer)
       if (excludeLogo && el.type === "logo") continue;
-      // For text-only overlay: skip everything except text and contact
-      if (transparentBackground && excludeLogo && !excludeText) {
+      // Skip text/contact if excludeText is set (text has its own overlay layer)
+      if (excludeText && ["text", "contact"].includes(el.type)) continue;
+      // For text-only overlay (transparent + excludeLogo + !excludeText): only render text/contact
+      if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
       }
-      // For frame-only overlay: skip text, contact, logo, image, mascot
+      // For frame-only overlay (transparent + excludeText): skip image/mascot too
       if (transparentBackground && excludeText) {
-        if (["text", "contact", "logo", "image", "mascot"].includes(el.type)) continue;
+        if (["image", "mascot"].includes(el.type)) continue;
       }
       // For transparent overlays, skip background images
       if (transparentBackground && el.type === "image") continue;
