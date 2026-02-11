@@ -277,7 +277,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               )}
             </div>
             <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed">
-              {(brief.description?.trim() ? brief.description : brief.title)}
+              {(brief.title?.trim() ? brief.title : brief.description)}
             </h4>
           </div>
           {!isPublicView && (
@@ -406,7 +406,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             <div className="flex flex-col gap-2 mt-2">
               {/* Observação / Descrição - sempre visível, fallback para title */}
               {(() => {
-                const displayText = brief.description?.trim() || brief.title?.trim() || "";
+                const displayText = brief.title?.trim() || brief.description?.trim() || "";
                 return displayText ? (
                   <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words bg-muted/50 rounded p-2 max-h-24 overflow-y-auto">
                     <LinkifyText text={displayText} />
