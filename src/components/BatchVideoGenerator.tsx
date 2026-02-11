@@ -389,14 +389,14 @@ const CardCoverPreview = memo(({
       className="aspect-[9/16] bg-muted relative group cursor-pointer overflow-hidden"
       onClick={onClick}
     >
-      <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass}`}>
-        {/* Layer 0: Always render static page as base (z-0) with motion effect */}
+      <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass} ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}>
+        {/* Layer 0: Always render static page as base (z-0) */}
         {video.pages[currentPage] ? (
           <img
             key={`card-base-${video.cardId}-${currentPage}`}
             src={video.pages[currentPage]}
             alt={video.clientName}
-            className={`absolute inset-0 w-full h-full object-contain z-0 ${!hasVideo && motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+            className="absolute inset-0 w-full h-full object-contain z-0"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center z-0">
@@ -416,7 +416,7 @@ const CardCoverPreview = memo(({
             <video
               key={`card-vid-${video.cardId}-${activeVideoUrl}`}
               src={activeVideoUrl!}
-              className={`w-full h-full object-cover ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}
+              className="w-full h-full object-cover"
               muted
               loop
               autoPlay
