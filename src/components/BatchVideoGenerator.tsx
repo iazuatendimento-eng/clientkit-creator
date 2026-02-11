@@ -688,10 +688,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const firstText = video.pageTexts[0] || video.cardTitle || "";
       if (!firstText) continue;
       try {
-        let searchTerms = firstText.split(" ").slice(0, 5).join(" ");
+        // Combine card text with client's imageType for more precise search
+        const combinedText = video.imageType ? `${firstText} ${video.imageType}` : firstText;
+        let searchTerms = combinedText.split(" ").slice(0, 8).join(" ");
         try {
           const { data, error } = await Promise.race([
-            supabase.functions.invoke("translate-text", { body: { text: firstText } }),
+            supabase.functions.invoke("translate-text", { body: { text: combinedText } }),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
           ]);
           if (!error && data?.translatedText) searchTerms = data.translatedText;
@@ -1565,12 +1567,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const pexelsVideoUrls: (string | null)[] = [];
         for (const text of video.pageTexts) {
           try {
-            let searchTerms = text.split(" ").slice(0, 5).join(" ");
+            // Combine card text with client's imageType for more precise search
+            const combinedText = video.imageType ? `${text} ${video.imageType}` : text;
+            let searchTerms = combinedText.split(" ").slice(0, 8).join(" ");
 
             // Translate to English for better search results (with timeout)
             try {
               const translatePromise = supabase.functions.invoke("translate-text", {
-                body: { text },
+                body: { text: combinedText },
               });
 
               const timeoutPromise = new Promise<never>((_, reject) =>
