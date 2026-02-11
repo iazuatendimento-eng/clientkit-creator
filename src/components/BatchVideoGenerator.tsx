@@ -2437,7 +2437,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     <p className="text-xs text-muted-foreground/80 truncate">⚠️ {video.particularityType}</p>
                   )}
                   {video.hasMaterialUploads && (
-                    <p className="text-xs text-yellow-500 truncate">⚠ cliente tem foto</p>
+                    <p className="text-xs text-yellow-500 truncate">⚠ cliente tem foto no card</p>
                   )}
 
                   {/* Actions */}
@@ -2573,7 +2573,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     </div>
                     {selectedVideo.imageType && <p className="text-primary/70">🎬 {selectedVideo.imageType}</p>}
                     {selectedVideo.particularityType && <p className="text-muted-foreground">⚠️ {selectedVideo.particularityType}</p>}
-                    {selectedVideo.hasMaterialUploads && <p className="text-yellow-500">⚠ cliente tem foto</p>}
+                    {selectedVideo.hasMaterialUploads && <p className="text-yellow-500">⚠ cliente tem foto no card</p>}
 
                     {/* Adjustment values */}
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground/70">
