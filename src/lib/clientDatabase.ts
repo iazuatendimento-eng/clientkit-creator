@@ -80,6 +80,13 @@ export async function deleteClient(id: string) {
 }
 
 export async function getAllClients() {
+  // Wake-up ping: a lightweight query to force the DB out of cold start
+  try {
+    await supabase.from("client_data").select("id", { count: "exact", head: true });
+  } catch (_) {
+    // ignore ping errors, the main query will retry anyway
+  }
+
   const { data, error } = await supabase
     .from("client_data")
     .select("*")
