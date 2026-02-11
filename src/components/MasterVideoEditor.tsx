@@ -73,6 +73,7 @@ interface CanvasElement {
   shadowColor?: string;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  clipShape?: "rect" | "circle" | "triangle" | "diamond" | "hexagon" | "pentagon" | "star";
   gradient?: {
     type: "linear" | "radial";
     color1: string;
@@ -469,6 +470,16 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
     // Draw elements
     elements.forEach((el) => {
       ctx.save();
+      
+      // Apply rotation
+      if (el.rotation) {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate((el.rotation * Math.PI) / 180);
+        ctx.translate(-cx, -cy);
+      }
+      
       const fillStyle = applyStyles(el);
       ctx.fillStyle = fillStyle;
 
@@ -730,18 +741,118 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         ctx.textAlign = "left";
         ctx.fillText(el.text || "Texto", el.x, el.y + (el.fontSize || 48));
       } else if (el.type === "image" && el.placeholder) {
-        // Draw image placeholder
+        // Draw image placeholder with clip shape
+        const shape = el.clipShape || "rect";
         ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
-        ctx.fillRect(el.x, el.y, el.width, el.height);
-        ctx.strokeStyle = "#8B5CF6";
-        ctx.lineWidth = 3;
-        ctx.setLineDash([10, 5]);
-        ctx.strokeRect(el.x, el.y, el.width, el.height);
-        ctx.setLineDash([]);
+        
+        if (shape === "circle") {
+          ctx.beginPath();
+          ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#8B5CF6";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (shape === "triangle") {
+          ctx.beginPath();
+          ctx.moveTo(el.x + el.width / 2, el.y);
+          ctx.lineTo(el.x + el.width, el.y + el.height);
+          ctx.lineTo(el.x, el.y + el.height);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#8B5CF6";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (shape === "diamond") {
+          ctx.beginPath();
+          ctx.moveTo(el.x + el.width / 2, el.y);
+          ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+          ctx.lineTo(el.x + el.width / 2, el.y + el.height);
+          ctx.lineTo(el.x, el.y + el.height / 2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#8B5CF6";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (shape === "hexagon") {
+          const cx = el.x + el.width / 2;
+          const cy = el.y + el.height / 2;
+          const r = Math.min(el.width, el.height) / 2;
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i - Math.PI / 2;
+            const px = cx + r * Math.cos(angle);
+            const py = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#8B5CF6";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (shape === "pentagon") {
+          const cx = el.x + el.width / 2;
+          const cy = el.y + el.height / 2;
+          const r = Math.min(el.width, el.height) / 2;
+          ctx.beginPath();
+          for (let i = 0; i < 5; i++) {
+            const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+            const px = cx + r * Math.cos(angle);
+            const py = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#8B5CF6";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (shape === "star") {
+          const cx = el.x + el.width / 2;
+          const cy = el.y + el.height / 2;
+          const outerR = Math.min(el.width, el.height) / 2;
+          const innerR = outerR * 0.4;
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const angle = (Math.PI / 5) * i - Math.PI / 2;
+            const r = i % 2 === 0 ? outerR : innerR;
+            const px = cx + r * Math.cos(angle);
+            const py = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#8B5CF6";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else {
+          // Default rect
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+          ctx.strokeStyle = "#8B5CF6";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.strokeRect(el.x, el.y, el.width, el.height);
+          ctx.setLineDash([]);
+        }
+        
         ctx.fillStyle = "#8B5CF6";
         ctx.font = "bold 36px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("📷 IMAGEM", el.x + el.width / 2, el.y + el.height / 2);
+        const shapeLabel = shape === "rect" ? "📷 IMAGEM" : `📷 ${shape.toUpperCase()}`;
+        ctx.fillText(shapeLabel, el.x + el.width / 2, el.y + el.height / 2);
       } else if (el.type === "logo") {
         ctx.fillStyle = "rgba(59, 130, 246, 0.3)";
         ctx.fillRect(el.x, el.y, el.width, el.height);
@@ -1303,6 +1414,42 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                     />
                   </div>
                 </div>
+
+                {/* Rotation */}
+                <div>
+                  <Label className="text-xs">Rotação: {selectedEl.rotation || 0}°</Label>
+                  <Slider
+                    value={[selectedEl.rotation || 0]}
+                    onValueChange={([v]) => updateSelectedElement({ rotation: v })}
+                    min={-180}
+                    max={180}
+                    step={1}
+                  />
+                </div>
+
+                {/* Clip Shape for image placeholders */}
+                {selectedEl.type === "image" && selectedEl.placeholder && (
+                  <div>
+                    <Label className="text-xs">Formato da Foto</Label>
+                    <Select
+                      value={selectedEl.clipShape || "rect"}
+                      onValueChange={(v) => updateSelectedElement({ clipShape: v as any })}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="rect">Retângulo</SelectItem>
+                        <SelectItem value="circle">Círculo</SelectItem>
+                        <SelectItem value="triangle">Triângulo</SelectItem>
+                        <SelectItem value="diamond">Losango</SelectItem>
+                        <SelectItem value="hexagon">Hexágono</SelectItem>
+                        <SelectItem value="pentagon">Pentágono</SelectItem>
+                        <SelectItem value="star">Estrela</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {selectedEl.type === "text" && (
                   <>

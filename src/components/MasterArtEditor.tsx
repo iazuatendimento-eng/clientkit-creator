@@ -71,6 +71,7 @@ interface CanvasElement {
   shadowColor?: string;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  clipShape?: "rect" | "circle" | "triangle" | "diamond" | "hexagon" | "pentagon" | "star";
   gradient?: {
     type: "linear" | "radial";
     color1: string;
@@ -515,6 +516,16 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     // Draw elements
     elements.forEach((el) => {
       ctx.save();
+      
+      // Apply rotation
+      if (el.rotation) {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate((el.rotation * Math.PI) / 180);
+        ctx.translate(-cx, -cy);
+      }
+      
       const fillStyle = applyStyles(el);
       ctx.fillStyle = fillStyle;
 
@@ -908,8 +919,72 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         ctx.globalAlpha = (el.opacity ?? 100) / 100;
         ctx.fillStyle = el.color || "#e5e7eb";
 
+        const shape = el.type === "image" ? (el.clipShape || "rect") : "rect";
         const radius = el.borderRadius || 0;
-        if (radius > 0) {
+        
+        if (el.type === "image" && shape !== "rect") {
+          // Draw shaped image placeholder
+          ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
+          ctx.beginPath();
+          if (shape === "circle") {
+            ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
+          } else if (shape === "triangle") {
+            ctx.moveTo(el.x + el.width / 2, el.y);
+            ctx.lineTo(el.x + el.width, el.y + el.height);
+            ctx.lineTo(el.x, el.y + el.height);
+            ctx.closePath();
+          } else if (shape === "diamond") {
+            ctx.moveTo(el.x + el.width / 2, el.y);
+            ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+            ctx.lineTo(el.x + el.width / 2, el.y + el.height);
+            ctx.lineTo(el.x, el.y + el.height / 2);
+            ctx.closePath();
+          } else if (shape === "hexagon") {
+            const cx = el.x + el.width / 2;
+            const cy = el.y + el.height / 2;
+            const r = Math.min(el.width, el.height) / 2;
+            for (let i = 0; i < 6; i++) {
+              const angle = (Math.PI / 3) * i - Math.PI / 2;
+              const px = cx + r * Math.cos(angle);
+              const py = cy + r * Math.sin(angle);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+          } else if (shape === "pentagon") {
+            const cx = el.x + el.width / 2;
+            const cy = el.y + el.height / 2;
+            const r = Math.min(el.width, el.height) / 2;
+            for (let i = 0; i < 5; i++) {
+              const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+              const px = cx + r * Math.cos(angle);
+              const py = cy + r * Math.sin(angle);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+          } else if (shape === "star") {
+            const cx = el.x + el.width / 2;
+            const cy = el.y + el.height / 2;
+            const outerR = Math.min(el.width, el.height) / 2;
+            const innerR = outerR * 0.4;
+            for (let i = 0; i < 10; i++) {
+              const angle = (Math.PI / 5) * i - Math.PI / 2;
+              const r = i % 2 === 0 ? outerR : innerR;
+              const px = cx + r * Math.cos(angle);
+              const py = cy + r * Math.sin(angle);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+          }
+          ctx.fill();
+          ctx.strokeStyle = "#8b5cf6";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (radius > 0) {
           ctx.beginPath();
           roundedRectPath(ctx, el.x, el.y, el.width, el.height, radius);
           ctx.fill();
@@ -934,7 +1009,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         ctx.fillStyle = el.type === "image" ? "#8b5cf6" : "#6b7280";
         ctx.font = "24px Arial";
         ctx.textAlign = "center";
-        const label = el.type === "logo" ? "LOGO" : el.type === "contact" ? "CONTATO" : el.type === "mascot" ? "MASCOTE" : "FOTO";
+        const label = el.type === "logo" ? "LOGO" : el.type === "contact" ? "CONTATO" : el.type === "mascot" ? "MASCOTE" : (shape !== "rect" ? `FOTO (${shape.toUpperCase()})` : "FOTO");
         ctx.fillText(label, el.x + el.width / 2, el.y + el.height / 2 + 8);
         
         // Draw image icon for image placeholder
@@ -1544,6 +1619,42 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
               <div className="space-y-3 border-t pt-4 pr-2">
                 <Label className="text-sm font-medium">Propriedades</Label>
               
+                {/* Rotation */}
+                <div>
+                  <Label className="text-xs">Rotação: {selectedEl.rotation || 0}°</Label>
+                  <Slider
+                    value={[selectedEl.rotation || 0]}
+                    onValueChange={([v]) => updateSelectedElement({ rotation: v })}
+                    min={-180}
+                    max={180}
+                    step={1}
+                  />
+                </div>
+
+                {/* Clip Shape for image placeholders */}
+                {selectedEl.type === "image" && selectedEl.placeholder && (
+                  <div>
+                    <Label className="text-xs">Formato da Foto</Label>
+                    <Select
+                      value={selectedEl.clipShape || "rect"}
+                      onValueChange={(v) => updateSelectedElement({ clipShape: v as any })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="rect">Retângulo</SelectItem>
+                        <SelectItem value="circle">Círculo</SelectItem>
+                        <SelectItem value="triangle">Triângulo</SelectItem>
+                        <SelectItem value="diamond">Losango</SelectItem>
+                        <SelectItem value="hexagon">Hexágono</SelectItem>
+                        <SelectItem value="pentagon">Pentágono</SelectItem>
+                        <SelectItem value="star">Estrela</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {selectedEl.type === "text" && (
                   <>
                     <div>
