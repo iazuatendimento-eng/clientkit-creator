@@ -2,16 +2,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Trash2,
   Edit,
-  Image as ImageIcon,
   Film,
   Loader2,
   Calendar,
-  Users,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -25,7 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getBatchGenerations, deleteBatch, BatchGeneration } from "@/lib/batchHistory";
+import { getBatchGenerations, getBatchById, deleteBatch, BatchGeneration } from "@/lib/batchHistory";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -38,7 +35,7 @@ interface BatchHistoryProps {
 export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryProps) => {
   const [batches, setBatches] = useState<BatchGeneration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"all" | "art" | "video">(filterType || "all");
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -48,9 +45,26 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
 
   const loadBatches = async () => {
     setIsLoading(true);
-    const data = await getBatchGenerations();
+    // Only fetch video batches
+    const data = await getBatchGenerations("video");
     setBatches(data);
     setIsLoading(false);
+  };
+
+  const handleEdit = async (batch: BatchGeneration) => {
+    // Load full batch data (with items) on demand
+    setLoadingEditId(batch.id);
+    try {
+      const fullBatch = await getBatchById(batch.id);
+      if (fullBatch) {
+        onEditBatch(fullBatch);
+      } else {
+        toast({ title: "Erro ao carregar lote", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro ao carregar lote", variant: "destructive" });
+    }
+    setLoadingEditId(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -71,14 +85,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     setDeletingId(null);
   };
 
-  const filteredBatches = batches.filter((b) => {
-    if (activeTab === "all") return true;
-    return b.type === activeTab;
-  });
-
-  const artCount = batches.filter((b) => b.type === "art").length;
-  const videoCount = batches.filter((b) => b.type === "video").length;
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -97,7 +103,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
             Voltar
           </Button>
           <div>
-            <h1 className="text-lg font-semibold">Histórico de Lotes</h1>
+            <h1 className="text-lg font-semibold">Histórico de Vídeos em Lote</h1>
             <p className="text-sm text-muted-foreground">
               {batches.length} lote(s) salvos
             </p>
@@ -105,83 +111,35 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="p-4">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList>
-            <TabsTrigger value="all">
-              Todos ({batches.length})
-            </TabsTrigger>
-            <TabsTrigger value="art">
-              <ImageIcon className="mr-2 h-4 w-4" />
-              Artes ({artCount})
-            </TabsTrigger>
-            <TabsTrigger value="video">
-              <Film className="mr-2 h-4 w-4" />
-              Vídeos ({videoCount})
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
       {/* Content */}
-      <ScrollArea className="flex-1 px-4 pb-4">
-        {filteredBatches.length === 0 ? (
+      <ScrollArea className="flex-1 px-4 py-4">
+        {batches.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <p>Nenhum lote encontrado.</p>
             <p className="text-sm mt-2">
-              Gere artes ou vídeos em lote para ver o histórico aqui.
+              Gere vídeos em lote para ver o histórico aqui.
             </p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {filteredBatches.map((batch) => (
+            {batches.map((batch) => (
               <div
                 key={batch.id}
                 className="bg-card border rounded-lg p-4 flex gap-4"
               >
-                {/* Preview thumbnails */}
-                <div className="flex gap-1 shrink-0">
-                  {batch.items.slice(0, 4).map((item, idx) => (
-                    <div
-                      key={idx}
-                      className={`${
-                        batch.type === "video"
-                          ? "w-10 h-16"
-                          : "w-12 h-16"
-                      } bg-muted rounded overflow-hidden`}
-                    >
-                      {item.files[0] && (
-                        <img
-                          src={item.files[0]}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                  ))}
-                  {batch.items.length > 4 && (
-                    <div className="w-12 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
-                      +{batch.items.length - 4}
-                    </div>
-                  )}
+                {/* Icon */}
+                <div className="flex items-center shrink-0">
+                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                    <Film className="h-6 w-6 text-muted-foreground" />
+                  </div>
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant={batch.type === "art" ? "default" : "secondary"}>
-                      {batch.type === "art" ? (
-                        <>
-                          <ImageIcon className="mr-1 h-3 w-3" />
-                          Arte
-                        </>
-                      ) : (
-                        <>
-                          <Film className="mr-1 h-3 w-3" />
-                          Vídeo
-                        </>
-                      )}
+                    <Badge variant="secondary">
+                      <Film className="mr-1 h-3 w-3" />
+                      Vídeo
                     </Badge>
                     <span className="text-sm text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -194,16 +152,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                   <p className="text-sm font-medium">
                     Template: {batch.template_snapshot?.name || "Sem nome"}
                   </p>
-
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <Users className="h-3 w-3" />
-                    {batch.items.length} cliente(s):{" "}
-                    {batch.items
-                      .slice(0, 3)
-                      .map((i) => i.clientName)
-                      .join(", ")}
-                    {batch.items.length > 3 && `... +${batch.items.length - 3}`}
-                  </p>
                 </div>
 
                 {/* Actions */}
@@ -211,9 +159,14 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onEditBatch(batch)}
+                    onClick={() => handleEdit(batch)}
+                    disabled={loadingEditId === batch.id}
                   >
-                    <Edit className="mr-2 h-4 w-4" />
+                    {loadingEditId === batch.id ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Edit className="mr-2 h-4 w-4" />
+                    )}
                     Editar
                   </Button>
 
