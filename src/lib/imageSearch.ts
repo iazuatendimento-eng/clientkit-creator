@@ -155,9 +155,14 @@ export const searchPexelsVideos = async (query: string, perPage: number = 5): Pr
     return [];
   }
 
+  // Sanitize query: remove newlines, trim, and limit to first 80 chars (3-5 words)
+  const sanitized = query.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const shortQuery = sanitized.split(/\s+/).slice(0, 5).join(' ').substring(0, 80);
+  console.log(`[Pexels Video] Searching: "${shortQuery}"`);
+
   try {
     const response = await fetch(
-      `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=portrait`,
+      `https://api.pexels.com/videos/search?query=${encodeURIComponent(shortQuery)}&per_page=${perPage}&orientation=portrait`,
       {
         headers: {
           'Authorization': apiKey
