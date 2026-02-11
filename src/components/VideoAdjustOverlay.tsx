@@ -674,11 +674,13 @@ export function VideoAdjustOverlay({
       )}
 
       <div className="absolute inset-0">
+        {/* Content pages: only Foto and Texto */}
         {isContentPage && setImageX && <Box part="image" label="Foto" tone="warning" />}
-        {els.textEl && <Box part="text" label="Texto" tone="muted" />}
-        {els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
-        {els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
-        {els.mascotEl && <Box part="mascot" label="Mascote" tone="secondary" />}
+        {isContentPage && els.textEl && <Box part="text" label="Texto" tone="muted" />}
+        {/* Signature page: only Logo, Contato, Mascote */}
+        {!isContentPage && els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
+        {!isContentPage && els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
+        {!isContentPage && els.mascotEl && <Box part="mascot" label="Mascote" tone="secondary" />}
       </div>
 
       {isBusy && (
