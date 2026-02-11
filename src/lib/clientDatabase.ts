@@ -79,21 +79,27 @@ export async function deleteClient(id: string) {
   if (error) throw error;
 }
 
+// Light query for listing - excludes heavy brand_kit JSONB (can be 14MB+ per row)
 export async function getAllClients() {
-  // Wake-up ping: a lightweight query to force the DB out of cold start
-  try {
-    await supabase.from("client_data").select("id", { count: "exact", head: true });
-  } catch (_) {
-    // ignore ping errors, the main query will retry anyway
-  }
-
   const { data, error } = await supabase
     .from("client_data")
-    .select("*")
+    .select("id, name, email, company, phone, notes, team, slug, created_at, active, payment_method, payment_due_day, monthly_amount, narration_type, image_type, particularity_type, briefing")
     .order("created_at", { ascending: false });
   
   if (error) throw error;
   return data || [];
+}
+
+// Full client data including brand_kit - use only when opening a specific client
+export async function getClientWithBrandKit(id: string) {
+  const { data, error } = await supabase
+    .from("client_data")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  
+  if (error) throw error;
+  return data;
 }
 
 export async function getClientBySlug(slug: string) {

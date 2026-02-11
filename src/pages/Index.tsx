@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   getAllClients, 
+  getClientWithBrandKit,
   createClient, 
   updateClient, 
   deleteClient, 
@@ -837,8 +838,18 @@ const Index = () => {
               filteredClients.map((client) => (
                 <button
                   key={client.id}
-                  onClick={() => {
-                    setSelectedClient(client);
+                  onClick={async () => {
+                    // Load brand_kit on demand (it's excluded from listing for performance)
+                    try {
+                      const fullClient = await getClientWithBrandKit(client.id);
+                      const clientWithBrandKit = {
+                        ...client,
+                        brand_kit: fullClient?.brand_kit || null,
+                      };
+                      setSelectedClient(clientWithBrandKit);
+                    } catch {
+                      setSelectedClient(client);
+                    }
                     setCurrentView("client-dashboard");
                   }}
                   className={`w-full text-left p-4 rounded-lg transition-all ${
