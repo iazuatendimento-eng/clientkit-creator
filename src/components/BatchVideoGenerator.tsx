@@ -1264,6 +1264,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       setIsApplyingAdjustments(true);
       try {
+        // Pre-load brand kit images before regenerating
+        const bk = base.brandKit;
+        if (bk) {
+          const urls = [bk.pngs?.[0] || bk.logo, bk.pngs?.[1] || bk.contactInfo, bk.pngs?.[2] || bk.mascot].filter(Boolean);
+          await Promise.all(urls.map(u => loadImage(u, 3)));
+        }
         const result = await regenerateSingleVideo(base);
         const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, logoOverlayPages: result.logoOverlayPages };
 
@@ -1291,6 +1297,34 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       // Preload all unique fonts from brand kits
       const uniqueFonts = new Set(updatedVideos.map(v => v.brandKit?.font || v.brandKit?.fontFamily).filter(Boolean));
       await Promise.all([...uniqueFonts].map(f => loadGoogleFont(f)));
+
+      // Pre-load all brand kit images (logo, contact, mascot) into cache
+      setGenerationStatus("Pré-carregando logos e contatos...");
+      const preloadPromises: Promise<any>[] = [];
+      const seenUrls = new Set<string>();
+      for (const video of updatedVideos) {
+        const bk = video.brandKit;
+        if (!bk) continue;
+        const urls = [
+          bk.pngs?.[0] || bk.logo,
+          bk.pngs?.[1] || bk.contactInfo,
+          bk.pngs?.[2] || bk.mascot,
+        ].filter(Boolean);
+        for (const url of urls) {
+          const key = url.length > 200 ? url.substring(0, 100) + url.length : url;
+          if (!seenUrls.has(key)) {
+            seenUrls.add(key);
+            preloadPromises.push(
+              loadImage(url, 3).then(img => {
+                if (!img) console.error(`[preload] FAILED to load brand kit image: ${url.substring(0, 60)}...`);
+                else console.log(`[preload] Loaded brand kit image: ${url.substring(0, 60)}...`);
+              })
+            );
+          }
+        }
+      }
+      await Promise.all(preloadPromises);
+      console.log(`[preload] Finished pre-loading ${preloadPromises.length} brand kit images`);
 
       for (let i = 0; i < updatedVideos.length; i++) {
         const video = updatedVideos[i];
