@@ -88,6 +88,7 @@ export function VideoAdjustOverlay({
 
   // Content to render inside boxes
   pageText,
+  fontFamily,
   logoUrl,
   contactUrl,
   mascotUrl,
@@ -140,6 +141,7 @@ export function VideoAdjustOverlay({
   isContentPage?: boolean;
 
   pageText?: string;
+  fontFamily?: string;
   logoUrl?: string;
   contactUrl?: string;
   mascotUrl?: string;
@@ -699,7 +701,10 @@ export function VideoAdjustOverlay({
         {isContentPage && els.textEl && (
           <Box part="text" label="Texto" tone="muted">
             {pageText && (
-              <span className="text-[8px] leading-tight text-foreground/80 text-center line-clamp-4 break-words">
+              <span
+                className="text-[10px] leading-tight text-foreground font-bold text-center line-clamp-6 break-words"
+                style={fontFamily ? { fontFamily: `"${fontFamily}", sans-serif` } : undefined}
+              >
                 {pageText}
               </span>
             )}

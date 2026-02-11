@@ -2481,6 +2481,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     onCommit={() => applyAdjustments()}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
                     pageText={selectedVideo.pageTexts[currentPreviewPage] || ""}
+                    fontFamily={selectedVideo.brandKit?.font || selectedVideo.brandKit?.fontFamily || ""}
                     logoUrl={selectedVideo.brandKit?.pngs?.[0] || selectedVideo.brandKit?.logo || ""}
                     contactUrl={selectedVideo.brandKit?.pngs?.[1] || selectedVideo.brandKit?.contactInfo || ""}
                     mascotUrl={selectedVideo.brandKit?.pngs?.[2] || selectedVideo.brandKit?.mascot || ""}
