@@ -48,6 +48,7 @@ interface CanvasElement {
   fontSize?: number;
   imageUrl?: string;
   placeholder?: boolean;
+  rotation?: number;
   colorRole?: "background" | "text" | "accessory1" | "accessory2";
   opacity?: number;
   borderRadius?: number;
@@ -57,6 +58,7 @@ interface CanvasElement {
   shadowColor?: string;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
+  clipShape?: "rect" | "circle" | "triangle" | "diamond" | "hexagon" | "pentagon" | "star";
   gradient?: {
     type: "linear" | "radial";
     color1: string;
@@ -798,6 +800,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       ctx.save();
       applyElementStyles(el);
       
+      // Apply rotation
+      if (el.rotation) {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate((el.rotation * Math.PI) / 180);
+        ctx.translate(-cx, -cy);
+      }
+      
       if (el.type === "rect") {
         ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
         if (el.borderRadius && el.borderRadius > 0) {
@@ -1470,6 +1481,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           }
         }
 
+        console.log(`[BatchVideo] ${video.clientName}: searchedImages=${searchedImages.map(s => s ? 'OK' : 'EMPTY').join(',')}, videoUrls=${pexelsVideoUrls.map(v => v ? 'OK' : 'NULL').join(',')}`);
         const result = await generateVideoForClient(video, searchedImages, pexelsVideoUrls);
         updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, logoOverlayPages: result.logoOverlayPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
         setClientVideos([...updatedVideos]);
