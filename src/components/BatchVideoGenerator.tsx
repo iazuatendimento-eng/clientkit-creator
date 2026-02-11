@@ -2406,6 +2406,68 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               
               <TabsContent value="adjust" className="mt-4">
                 <div className="space-y-4">
+                  {/* Page info panel - BEFORE the overlay so it's always visible */}
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-foreground">
+                        Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        currentPreviewPage === selectedVideo.pages.length - 1
+                          ? "bg-accent text-accent-foreground"
+                          : "bg-primary/10 text-primary"
+                      }`}>
+                        {currentPreviewPage === selectedVideo.pages.length - 1 ? "Assinatura" : "Conteúdo"}
+                      </span>
+                    </div>
+
+                    {/* Page text */}
+                    {currentPreviewPage < selectedVideo.pageTexts.length ? (
+                      <div>
+                        <span className="text-muted-foreground">Texto da página {currentPreviewPage + 1}:</span>
+                        <p className="text-foreground mt-0.5 whitespace-pre-wrap bg-background/50 rounded p-1.5 border border-border/50">{selectedVideo.pageTexts[currentPreviewPage] || "(vazio)"}</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="text-muted-foreground">Página de assinatura</span>
+                        <p className="text-foreground/60 mt-0.5 text-[10px]">Esta página usa os elementos do template (logo, contato, mascote).</p>
+                      </div>
+                    )}
+
+                    {/* Card title/description */}
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground">📋 Card: <span className="text-foreground">{selectedVideo.cardTitle}</span></p>
+                      {selectedVideo.cardText && selectedVideo.cardText !== selectedVideo.cardTitle && (
+                        <p className="text-muted-foreground/70 line-clamp-2">{selectedVideo.cardText}</p>
+                      )}
+                    </div>
+
+                    {/* Brand kit + metadata */}
+                    <div className="flex flex-wrap gap-2">
+                      {selectedVideo.brandKit?.colors?.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">Cores:</span>
+                          {selectedVideo.brandKit.colors.slice(0, 5).map((c: string, i: number) => (
+                            <span key={i} className="inline-block w-3.5 h-3.5 rounded-sm border border-border" style={{ backgroundColor: c }} />
+                          ))}
+                        </div>
+                      )}
+                      {selectedVideo.brandKit?.logo && <span className="text-muted-foreground">✓ Logo</span>}
+                      {selectedVideo.brandKit?.mascot && <span className="text-muted-foreground">✓ Mascote</span>}
+                      {selectedVideo.brandKit?.contactInfo && <span className="text-muted-foreground">✓ Contato</span>}
+                    </div>
+                    {selectedVideo.imageType && <p className="text-primary/70">🎬 {selectedVideo.imageType}</p>}
+                    {selectedVideo.particularityType && <p className="text-muted-foreground">⚠️ {selectedVideo.particularityType}</p>}
+
+                    {/* Adjustment values */}
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground/70">
+                      {currentPreviewPage < selectedVideo.pages.length - 1 && (
+                        <span>Foto: x={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageX || 0} y={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageY || 0} zoom={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageScale || 100}%</span>
+                      )}
+                      <span>Texto: x={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textX || 0} y={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textY || 0} zoom={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textScale || 100}%</span>
+                    </div>
+                  </div>
+
                   {/* Adjust Overlay - drag corners to resize */}
                   <VideoAdjustOverlay
                     template={{
@@ -2504,90 +2566,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     setImageScale={(v) => updatePageImageAdjustment(currentPreviewPage, "imageScale", v)}
                   />
 
-                  {/* Page info panel */}
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-foreground">
-                        Página {currentPreviewPage + 1} de {selectedVideo.pages.length}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        currentPreviewPage === selectedVideo.pages.length - 1
-                          ? "bg-accent text-accent-foreground"
-                          : "bg-primary/10 text-primary"
-                      }`}>
-                        {currentPreviewPage === selectedVideo.pages.length - 1 ? "Assinatura" : "Conteúdo"}
-                      </span>
-                    </div>
-
-                    {/* Page text - show for content pages */}
-                    {currentPreviewPage < selectedVideo.pageTexts.length ? (
-                      <div>
-                        <span className="text-muted-foreground">Texto da página {currentPreviewPage + 1}:</span>
-                        <p className="text-foreground mt-0.5 whitespace-pre-wrap bg-background/50 rounded p-1.5 border border-border/50">{selectedVideo.pageTexts[currentPreviewPage] || "(vazio)"}</p>
-                      </div>
-                    ) : (
-                      <div>
-                        <span className="text-muted-foreground">Página de assinatura</span>
-                        <p className="text-foreground/60 mt-0.5 text-[10px]">Esta página usa os elementos do template (logo, contato, mascote).</p>
-                      </div>
-                    )}
-
-                    {/* Card title/description for reference */}
-                    <div className="space-y-0.5">
-                      <p className="text-muted-foreground">📋 Card: <span className="text-foreground">{selectedVideo.cardTitle}</span></p>
-                      {selectedVideo.cardText && selectedVideo.cardText !== selectedVideo.cardTitle && (
-                        <p className="text-muted-foreground/70 line-clamp-2">{selectedVideo.cardText}</p>
-                      )}
-                    </div>
-
-                    {/* Brand kit info */}
-                    {selectedVideo.brandKit && (
-                      <div className="flex flex-wrap gap-2">
-                        {selectedVideo.brandKit.colors?.length > 0 && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">Cores:</span>
-                            {selectedVideo.brandKit.colors.slice(0, 5).map((c: string, i: number) => (
-                              <span key={i} className="inline-block w-3.5 h-3.5 rounded-sm border border-border" style={{ backgroundColor: c }} />
-                            ))}
-                          </div>
-                        )}
-                        {selectedVideo.brandKit.logo && (
-                          <span className="text-muted-foreground">✓ Logo</span>
-                        )}
-                        {selectedVideo.brandKit.mascot && (
-                          <span className="text-muted-foreground">✓ Mascote</span>
-                        )}
-                        {selectedVideo.brandKit.contactInfo && (
-                          <span className="text-muted-foreground">✓ Contato</span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Client metadata */}
-                    {(selectedVideo.imageType || selectedVideo.particularityType) && (
-                      <div className="space-y-0.5">
-                        {selectedVideo.imageType && (
-                          <p className="text-primary/70">🎬 {selectedVideo.imageType}</p>
-                        )}
-                        {selectedVideo.particularityType && (
-                          <p className="text-muted-foreground">⚠️ {selectedVideo.particularityType}</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Adjustment values for current page */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground/70">
-                      {currentPreviewPage < selectedVideo.pages.length - 1 && (
-                        <>
-                          <span>Foto: x={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageX || 0} y={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageY || 0} zoom={selectedVideo.pageImageAdjustments[currentPreviewPage]?.imageScale || 100}%</span>
-                        </>
-                      )}
-                      <span>Texto: x={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textX || 0} y={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textY || 0} zoom={selectedVideo.pageTextAdjustments[currentPreviewPage]?.textScale || 100}%</span>
-                    </div>
-                  </div>
-
                   <p className="text-center text-[10px] text-muted-foreground">
-                    Arraste os elementos para mover. Arraste as alças nos cantos para redimensionar.
+                    Arraste os elementos para mover. Arraste as alças para redimensionar.
                   </p>
 
                   {/* Page navigation */}
