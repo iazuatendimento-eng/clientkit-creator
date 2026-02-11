@@ -166,22 +166,37 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     }
   };
 
+  const getMimeType = (name: string): string => {
+    const ext = name.split('.').pop()?.toLowerCase();
+    if (ext === 'mp4' || ext === 'mpg' || ext === 'mpeg') return 'video/mp4';
+    if (ext === 'mov') return 'video/quicktime';
+    if (ext === 'webm') return 'video/webm';
+    if (ext === 'png') return 'image/png';
+    if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+    if (ext === 'webp') return 'image/webp';
+    return 'application/octet-stream';
+  };
+
   const handleDownload = async (url: string, filename: string) => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     toast.loading("Preparando arquivo...", { id: "download-loading" });
 
     try {
-      // Fetch the file as blob - use no-cache to avoid CORS caching issues
       const res = await fetch(url, { cache: "no-cache" });
-      if (!res.ok) throw new Error("Fetch failed");
-      const blob = await res.blob();
+      if (!res.ok) throw new Error("Fetch failed: " + res.status);
+      const arrayBuffer = await res.arrayBuffer();
       toast.dismiss("download-loading");
+
+      // Force correct MIME type based on extension (storage often returns wrong type)
+      const mimeType = getMimeType(filename);
+      const blob = new Blob([arrayBuffer], { type: mimeType });
 
       // Mobile: use Web Share API — iOS shows "Save Video/Image" option
       if (isMobile && navigator.share && navigator.canShare) {
-        const mimeType = blob.type || (filename.endsWith('.mp4') ? 'video/mp4' : 'image/png');
         const file = new File([blob], filename, { type: mimeType });
+        
+        console.log("Share file:", { filename, mimeType, size: blob.size, canShare: navigator.canShare({ files: [file] }) });
         
         if (navigator.canShare({ files: [file] })) {
           try {
@@ -189,8 +204,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             toast.success("Salvo!");
             return;
           } catch (shareError: any) {
+            console.error("Share error:", shareError);
             if (shareError?.name === 'AbortError') return;
-            // Fall through
           }
         }
       }
@@ -208,7 +223,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
-      // Ultimate fallback: open in new tab
       window.open(url, '_blank');
       toast.info("Segure o vídeo para salvar na galeria 📲");
     }
