@@ -25,21 +25,26 @@ export const useAuth = () => {
       window.clearTimeout(safetyTimeout);
     });
 
-    // THEN check for existing session
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
+    // THEN check for existing session with retry
+    const fetchSession = async (attempt = 0) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         if (!active) return;
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
         window.clearTimeout(safetyTimeout);
-      })
-      .catch(() => {
+      } catch {
         if (!active) return;
-        setLoading(false);
-        window.clearTimeout(safetyTimeout);
-      });
+        if (attempt < 2) {
+          window.setTimeout(() => fetchSession(attempt + 1), (attempt + 1) * 2000);
+        } else {
+          setLoading(false);
+          window.clearTimeout(safetyTimeout);
+        }
+      }
+    };
+    fetchSession();
 
     return () => {
       active = false;
