@@ -149,3 +149,178 @@ All colors MUST be HSL.
     transition: var(--transition-bounce);
   }
 }
+
+/* ========== Motion Effect Animations ========== */
+
+/* Ken Burns */
+@keyframes ken-burns {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.08) translate(1.5%, 1%); }
+  100% { transform: scale(1.15) translate(3%, 2%); }
+}
+@keyframes ken-burns-reverse {
+  0% { transform: scale(1.15) translate(-3%, -2%); }
+  50% { transform: scale(1.08) translate(-1.5%, -1%); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+
+/* Pulse */
+@keyframes pulse-subtle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+@keyframes pulse-strong {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* Float */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.5%); }
+}
+@keyframes float-diagonal {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(0.3%, -0.5%); }
+  75% { transform: translate(-0.3%, 0.5%); }
+}
+
+/* Shake */
+@keyframes shake-subtle {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(0.2%); }
+  75% { transform: translateX(-0.2%); }
+}
+@keyframes shake-strong {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(0.5%); }
+  75% { transform: translateX(-0.5%); }
+}
+
+/* Sway */
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(2deg); }
+  75% { transform: rotate(-2deg); }
+}
+
+/* Breathe */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Drift */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(0.3%, -0.3%) rotate(0.5deg); }
+  75% { transform: translate(-0.3%, 0.3%) rotate(-0.5deg); }
+}
+
+/* Wobble */
+@keyframes wobble {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.02) rotate(2deg); }
+  75% { transform: scale(1.02) rotate(-2deg); }
+}
+
+/* Zoom Pulse */
+@keyframes zoom-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Pan */
+@keyframes pan-left {
+  0% { transform: scale(1.05) translateX(1.5%); }
+  100% { transform: scale(1.05) translateX(-1.5%); }
+}
+@keyframes pan-right {
+  0% { transform: scale(1.05) translateX(-1.5%); }
+  100% { transform: scale(1.05) translateX(1.5%); }
+}
+
+/* VideoPreviewPlayer classes: animate-{effect} */
+.animate-ken-burns { animation: ken-burns var(--motion-duration, 6s) ease-in-out infinite alternate; }
+.animate-ken-burns-reverse { animation: ken-burns-reverse var(--motion-duration, 6s) ease-in-out infinite alternate; }
+.animate-pulse-subtle { animation: pulse-subtle var(--motion-duration, 3s) ease-in-out infinite; }
+.animate-pulse-strong { animation: pulse-strong var(--motion-duration, 3s) ease-in-out infinite; }
+.animate-float { animation: float var(--motion-duration, 4s) ease-in-out infinite; }
+.animate-float-diagonal { animation: float-diagonal var(--motion-duration, 5s) ease-in-out infinite; }
+.animate-shake-subtle { animation: shake-subtle 0.5s ease-in-out infinite; }
+.animate-shake-strong { animation: shake-strong 0.3s ease-in-out infinite; }
+.animate-sway { animation: sway var(--motion-duration, 4s) ease-in-out infinite; }
+.animate-breathe { animation: breathe var(--motion-duration, 4s) ease-in-out infinite; }
+.animate-drift { animation: drift var(--motion-duration, 5s) ease-in-out infinite; }
+.animate-wobble { animation: wobble var(--motion-duration, 3s) ease-in-out infinite; }
+.animate-zoom-pulse { animation: zoom-pulse var(--motion-duration, 3s) ease-in-out infinite; }
+.animate-pan-left { animation: pan-left var(--motion-duration, 6s) linear infinite alternate; }
+.animate-pan-right { animation: pan-right var(--motion-duration, 6s) linear infinite alternate; }
+
+/* CardCoverPreview classes: card-animate-{effect} */
+.card-animate-ken-burns { animation: ken-burns 6s ease-in-out infinite alternate; }
+.card-animate-ken-burns-reverse { animation: ken-burns-reverse 6s ease-in-out infinite alternate; }
+.card-animate-pulse { animation: pulse-subtle 3s ease-in-out infinite; }
+.card-animate-pulse-strong { animation: pulse-strong 3s ease-in-out infinite; }
+.card-animate-float { animation: float 4s ease-in-out infinite; }
+.card-animate-float-diagonal { animation: float-diagonal 5s ease-in-out infinite; }
+.card-animate-shake { animation: shake-subtle 0.5s ease-in-out infinite; }
+.card-animate-shake-strong { animation: shake-strong 0.3s ease-in-out infinite; }
+.card-animate-sway { animation: sway 4s ease-in-out infinite; }
+.card-animate-breathe { animation: breathe 4s ease-in-out infinite; }
+.card-animate-drift { animation: drift 5s ease-in-out infinite; }
+.card-animate-wobble { animation: wobble 3s ease-in-out infinite; }
+.card-animate-zoom-pulse { animation: zoom-pulse 3s ease-in-out infinite; }
+.card-animate-pan-left { animation: pan-left 6s linear infinite alternate; }
+.card-animate-pan-right { animation: pan-right 6s linear infinite alternate; }
+
+/* ========== Text Animation Classes ========== */
+@keyframes text-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes text-slide-up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes text-slide-down { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes text-slide-left { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes text-slide-right { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes text-scale-in { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+@keyframes text-bounce-in { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.1); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
+@keyframes text-rotate-in { from { opacity: 0; transform: rotate(15deg) scale(0.7); } to { opacity: 1; transform: rotate(0) scale(1); } }
+@keyframes text-blur-in { from { opacity: 0; filter: blur(10px); } to { opacity: 1; filter: blur(0); } }
+@keyframes text-drop-in { 0% { opacity: 0; transform: translateY(-50px); } 60% { transform: translateY(5px); } 80% { transform: translateY(-3px); } 100% { opacity: 1; transform: translateY(0); } }
+@keyframes text-swing-in { 0% { opacity: 0; transform: rotate(-20deg); } 40% { transform: rotate(10deg); } 60% { transform: rotate(-5deg); } 100% { opacity: 1; transform: rotate(0); } }
+@keyframes text-elastic-in { 0% { opacity: 0; transform: scale(0.3); } 55% { transform: scale(1.1); } 70% { transform: scale(0.85); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes text-flip-in { 0% { opacity: 0; transform: perspective(400px) rotateX(90deg); } 40% { transform: perspective(400px) rotateX(-10deg); } 70% { transform: perspective(400px) rotateX(10deg); } 100% { opacity: 1; transform: perspective(400px) rotateX(0); } }
+
+.card-animate-text-fade-in, .animate-text-fade-in { animation: text-fade-in 0.8s ease-out forwards; }
+.card-animate-text-slide-up, .animate-text-slide-up { animation: text-slide-up 0.8s ease-out forwards; }
+.card-animate-text-slide-down, .animate-text-slide-down { animation: text-slide-down 0.8s ease-out forwards; }
+.card-animate-text-slide-left, .animate-text-slide-left { animation: text-slide-left 0.8s ease-out forwards; }
+.card-animate-text-slide-right, .animate-text-slide-right { animation: text-slide-right 0.8s ease-out forwards; }
+.card-animate-text-scale-in, .animate-text-scale-in { animation: text-scale-in 0.8s ease-out forwards; }
+.card-animate-text-typewriter, .animate-text-typewriter { animation: text-fade-in 0.8s ease-out forwards; }
+.card-animate-text-bounce-in, .animate-text-bounce-in { animation: text-bounce-in 0.8s ease-out forwards; }
+.card-animate-text-rotate-in, .animate-text-rotate-in { animation: text-rotate-in 0.8s ease-out forwards; }
+.card-animate-text-blur-in, .animate-text-blur-in { animation: text-blur-in 0.8s ease-out forwards; }
+.card-animate-text-drop-in, .animate-text-drop-in { animation: text-drop-in 0.8s ease-out forwards; }
+.card-animate-text-swing-in, .animate-text-swing-in { animation: text-swing-in 0.8s ease-out forwards; }
+.card-animate-text-elastic-in, .animate-text-elastic-in { animation: text-elastic-in 0.8s ease-out forwards; }
+.card-animate-text-flip-in, .animate-text-flip-in { animation: text-flip-in 0.8s ease-out forwards; }
+
+/* ========== Logo Animation Classes ========== */
+@keyframes logo-spin-in { from { opacity: 0; transform: rotate(360deg) scale(0.3); } to { opacity: 1; transform: rotate(0) scale(1); } }
+@keyframes logo-swing { 0% { opacity: 0; transform: rotate(-25deg); } 40% { transform: rotate(15deg); } 60% { transform: rotate(-8deg); } 100% { opacity: 1; transform: rotate(0); } }
+
+.card-animate-logo-fade-in, .animate-logo-fade-in { animation: text-fade-in 0.6s ease-out forwards; }
+.card-animate-logo-slide-up, .animate-logo-slide-up { animation: text-slide-up 0.6s ease-out forwards; }
+.card-animate-logo-slide-down, .animate-logo-slide-down { animation: text-slide-down 0.6s ease-out forwards; }
+.card-animate-logo-slide-left, .animate-logo-slide-left { animation: text-slide-left 0.6s ease-out forwards; }
+.card-animate-logo-slide-right, .animate-logo-slide-right { animation: text-slide-right 0.6s ease-out forwards; }
+.card-animate-logo-scale-in, .animate-logo-scale-in { animation: text-scale-in 0.6s ease-out forwards; }
+.card-animate-logo-bounce-in, .animate-logo-bounce-in { animation: text-bounce-in 0.6s ease-out forwards; }
+.card-animate-logo-spin-in, .animate-logo-spin-in { animation: logo-spin-in 0.6s ease-out forwards; }
+.card-animate-logo-flip-in, .animate-logo-flip-in { animation: text-flip-in 0.6s ease-out forwards; }
+.card-animate-logo-swing, .animate-logo-swing { animation: logo-swing 0.6s ease-out forwards; }
+
+/* Progress bar animation for video preview */
+@keyframes progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
