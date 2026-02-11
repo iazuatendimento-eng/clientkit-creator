@@ -174,18 +174,18 @@ export function VideoPreviewPlayer({
             getTransitionClass()
           )}
         >
-        {/* Base layer: always show static page image */}
+        {/* Layer 0: Base static page image (z-0) */}
           <img
             src={pages[currentPage]}
             alt={`Página ${currentPage + 1}`}
-            className={cn("w-full h-full object-contain", showVideoBackground ? "" : getMotionClass())}
+            className={cn("w-full h-full object-contain z-0", showVideoBackground ? "" : getMotionClass())}
             draggable={false}
           />
 
-          {/* Video background on top of static page (within image placeholder) */}
+          {/* Layer 1: Video background within image placeholder (z-[1]) */}
           {showVideoBackground && (
             <div
-              className="absolute overflow-hidden"
+              className="absolute overflow-hidden z-[1]"
               style={imageRect ? {
                 left: `${imageRect.left}%`, top: `${imageRect.top}%`,
                 width: `${imageRect.width}%`, height: `${imageRect.height}%`,
@@ -205,36 +205,36 @@ export function VideoPreviewPlayer({
             </div>
           )}
 
-          {/* Frame overlay - static shapes (no animation) */}
+          {/* Layer 2: Frame overlay - static shapes (z-[2]) */}
           {hasFrameOverlay && (
             <img
               key={`frame-${currentPage}`}
               src={currentFrameOverlay}
               alt=""
-              className="absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none"
+              className="absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none"
               draggable={false}
             />
           )}
 
-          {/* Text overlay - always render on top when available */}
+          {/* Layer 3: Text overlay (z-[3]) */}
           {hasOverlay && (
             <img
               key={`overlay-${currentPage}-${pageStartTime}`}
               src={currentOverlay}
               alt=""
-              className={cn("absolute inset-0 w-full h-full object-contain z-[2]", getTextAnimClass())}
+              className={cn("absolute inset-0 w-full h-full object-contain z-[3]", getTextAnimClass())}
               style={{ animationDuration: `${textAnimDuration}s` }}
               draggable={false}
             />
           )}
 
-          {/* Logo overlay - always render on top when available */}
+          {/* Layer 4: Logo overlay (z-[4]) */}
           {hasLogoOverlay && (
             <img
               key={`logo-${currentPage}-${pageStartTime}`}
               src={currentLogoOverlay}
               alt=""
-              className={cn("absolute inset-0 w-full h-full object-contain z-[3]", getLogoAnimClass())}
+              className={cn("absolute inset-0 w-full h-full object-contain z-[4]", getLogoAnimClass())}
               draggable={false}
             />
           )}
