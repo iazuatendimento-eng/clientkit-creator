@@ -194,6 +194,7 @@ interface ClientVideo {
   team?: string;
   imageType?: string;
   particularityType?: string;
+  briefing?: string;
   hasMaterialUploads?: boolean;
 }
 
@@ -757,6 +758,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           team: card.client?.team || undefined,
           imageType: card.client?.image_type || undefined,
           particularityType: card.client?.particularity_type || undefined,
+          briefing: card.client?.briefing || undefined,
         };
       });
 
@@ -801,13 +803,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     const updatedVideos = [...videos];
     for (let i = 0; i < updatedVideos.length; i++) {
       const video = updatedVideos[i];
-      // Combine ALL page texts and card title for a complete search query
-      const allTexts = [...video.pageTexts, video.cardTitle].filter(Boolean).join(" ");
+      // Combine ALL page texts, card title, imageType, briefing and company for a complete search query
+      const allTexts = [...video.pageTexts, video.cardTitle, video.imageType, video.briefing, video.company].filter(Boolean).join(" ");
       const firstText = allTexts || "";
       if (!firstText) continue;
       try {
-        // Combine card text with client's imageType for more precise search
-        const combinedText = video.imageType ? `${firstText} ${video.imageType}` : firstText;
+        const combinedText = firstText;
         let searchTerms = combinedText.split(" ").slice(0, 8).join(" ");
         try {
           const { data, error } = await Promise.race([
@@ -1691,8 +1692,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const pexelsVideoUrls: (string | null)[] = [];
         for (const text of video.pageTexts) {
           try {
-            // Combine ALL page texts + card title + imageType for complete search context
-            const fullContext = [text, video.cardTitle, video.imageType].filter(Boolean).join(" ");
+            // Combine page text + card title + imageType + briefing + company for complete search context
+            const fullContext = [text, video.cardTitle, video.imageType, video.briefing, video.company].filter(Boolean).join(" ");
             let searchTerms = fullContext;
 
             // Translate to English for better search results (with timeout)
@@ -1774,7 +1775,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       // Fetch brand kit from client_data
       const { data: clientData, error: clientError } = await supabase
         .from("client_data")
-        .select("brand_kit, name")
+        .select("brand_kit, name, briefing, image_type, company")
         .eq("id", video.clientId)
         .single();
 
@@ -1806,6 +1807,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         ...video,
         brandKit: clientData.brand_kit,
         clientName: clientData.name || video.clientName,
+        company: clientData.company || clientData.name || video.company,
+        briefing: clientData.briefing || video.briefing,
+        imageType: clientData.image_type || video.imageType,
         cardTitle: newCardTitle,
         cardText: newCardText,
         pageTexts: newPageTexts,
@@ -2802,7 +2806,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         onClick={() => {
                           const pageText = selectedVideo.pageTexts[currentPreviewPage] || "";
                           const cardTitle = selectedVideo.cardTitle || "";
-                          const fullSearch = [pageText, cardTitle].filter(Boolean).join(" ").trim();
+                          const fullSearch = [pageText, cardTitle, selectedVideo.imageType, selectedVideo.briefing, selectedVideo.company].filter(Boolean).join(" ").trim();
                           setSearchQuery(fullSearch);
                           setIsImageDialogOpen(true);
                         }}
