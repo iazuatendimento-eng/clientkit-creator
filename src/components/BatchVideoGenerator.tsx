@@ -21,6 +21,8 @@ import {
   Upload,
   ClipboardPaste,
   Save,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
@@ -515,9 +517,35 @@ const CardCoverPreview = memo(({
         )}
       </div>
 
-      {/* Page indicator */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 px-2 py-1 rounded text-xs text-white z-10">
-        {currentPage + 1} / {totalPages}
+      {/* Page indicator with navigation arrows */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 px-1.5 py-1 rounded text-xs text-white z-10 flex items-center gap-1.5">
+        <button
+          className="hover:text-primary transition-colors p-0.5"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setCurrentPage((p) => (p - 1 + totalPages) % totalPages);
+              setTimeout(() => setIsTransitioning(false), 100);
+            }, 100);
+          }}
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        <span>{currentPage + 1} / {totalPages}</span>
+        <button
+          className="hover:text-primary transition-colors p-0.5"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setCurrentPage((p) => (p + 1) % totalPages);
+              setTimeout(() => setIsTransitioning(false), 100);
+            }, 100);
+          }}
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {/* Status overlay */}
