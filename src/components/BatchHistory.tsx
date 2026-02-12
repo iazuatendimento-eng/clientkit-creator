@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
   Trash2,
@@ -9,6 +10,8 @@ import {
   Film,
   Loader2,
   Calendar,
+  Search,
+  Users,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -37,6 +40,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   const [isLoading, setIsLoading] = useState(true);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,6 +54,22 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     setBatches(data);
     setIsLoading(false);
   };
+
+  const filteredBatches = useMemo(() => {
+    if (!searchQuery.trim()) return batches;
+    const q = searchQuery.toLowerCase();
+    return batches.filter((batch) => {
+      const snap = batch.template_snapshot as any;
+      const teamName = snap?.teamFilter || "";
+      const templateName = snap?.name || "";
+      const dateStr = format(new Date(batch.created_at), "dd/MM/yyyy", { locale: ptBR });
+      return (
+        teamName.toLowerCase().includes(q) ||
+        templateName.toLowerCase().includes(q) ||
+        dateStr.includes(q)
+      );
+    });
+  }, [batches, searchQuery]);
 
   const handleEdit = async (batch: BatchGeneration) => {
     // Load full batch data (with items) on demand
@@ -96,33 +116,46 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="border-b bg-card px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-          <div>
-            <h1 className="text-lg font-semibold">Histórico de Vídeos em Lote</h1>
-            <p className="text-sm text-muted-foreground">
-              {batches.length} lote(s) salvos
-            </p>
+      <div className="border-b bg-card px-4 py-3 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={onBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+            <div>
+              <h1 className="text-lg font-semibold">Histórico de Vídeos em Lote</h1>
+              <p className="text-sm text-muted-foreground">
+                {filteredBatches.length} de {batches.length} lote(s)
+              </p>
+            </div>
           </div>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por equipe, template ou data..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
       </div>
 
       {/* Content */}
       <ScrollArea className="flex-1 px-4 py-4">
-        {batches.length === 0 ? (
+        {filteredBatches.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            <p>Nenhum lote encontrado.</p>
+            <p>{searchQuery ? "Nenhum resultado encontrado." : "Nenhum lote encontrado."}</p>
             <p className="text-sm mt-2">
-              Gere vídeos em lote para ver o histórico aqui.
+              {searchQuery ? "Tente outro termo de busca." : "Gere vídeos em lote para ver o histórico aqui."}
             </p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {batches.map((batch) => (
+            {filteredBatches.map((batch) => {
+              const teamName = (batch.template_snapshot as any)?.teamFilter;
+              return (
               <div
                 key={batch.id}
                 className="bg-card border rounded-lg p-4 flex gap-4"
@@ -136,11 +169,17 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge variant="secondary">
                       <Film className="mr-1 h-3 w-3" />
                       Vídeo
                     </Badge>
+                    {teamName && (
+                      <Badge variant="outline" className="text-xs">
+                        <Users className="mr-1 h-3 w-3" />
+                        {teamName}
+                      </Badge>
+                    )}
                     <span className="text-sm text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       {format(new Date(batch.created_at), "dd/MM/yyyy 'às' HH:mm", {
@@ -150,7 +189,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                   </div>
 
                   <p className="text-sm font-medium">
-                    Template: {batch.template_snapshot?.name || "Sem nome"}
+                    Template: {(batch.template_snapshot as any)?.name || "Sem nome"}
                   </p>
                 </div>
 
@@ -205,7 +244,9 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                   </AlertDialog>
                 </div>
               </div>
-            ))}
+              );
+            })}
+
           </div>
         )}
       </ScrollArea>
