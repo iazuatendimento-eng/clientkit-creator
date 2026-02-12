@@ -61,6 +61,8 @@ interface CanvasElement {
   color?: string;
   text?: string;
   fontSize?: number;
+  textAlign?: "left" | "center" | "right";
+  lineHeight?: number; // multiplier e.g. 1.2
   imageUrl?: string;
   placeholder?: boolean;
   rotation?: number;
@@ -737,10 +739,30 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         ctx.stroke();
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#ffffff";
-        ctx.font = `${el.fontSize || 48}px Arial`;
+        const fontSize = el.fontSize || 48;
+        ctx.font = `${fontSize}px Arial`;
+        const align = el.textAlign || "left";
+        ctx.textAlign = align;
+        const lh = (el.lineHeight || 1.3) * fontSize;
+        const text = el.text || "Texto";
+        const words = text.split(" ");
+        let line = "";
+        let drawX = align === "center" ? el.x + el.width / 2 : align === "right" ? el.x + el.width : el.x;
+        let y = el.y + fontSize;
+        const maxWidth = el.width || 800;
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + " ";
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && i > 0) {
+            ctx.fillText(line.trim(), drawX, y);
+            line = words[i] + " ";
+            y += lh;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line.trim(), drawX, y);
         ctx.textAlign = "left";
-        ctx.fillText(el.text || "Texto", el.x, el.y + (el.fontSize || 48));
-      } else if (el.type === "image" && el.placeholder) {
         // Draw image placeholder with clip shape
         const shape = el.clipShape || "rect";
         ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
@@ -1468,6 +1490,32 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                         onValueChange={(v) => updateSelectedElement({ fontSize: v[0] })}
                         min={12}
                         max={200}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Alinhamento</Label>
+                      <Select
+                        value={selectedEl.textAlign || "left"}
+                        onValueChange={(v) => updateSelectedElement({ textAlign: v as "left" | "center" | "right" })}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="left">Esquerda</SelectItem>
+                          <SelectItem value="center">Centralizado</SelectItem>
+                          <SelectItem value="right">Direita</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Altura da Linha: {(selectedEl.lineHeight || 1.3).toFixed(1)}x</Label>
+                      <Slider
+                        value={[((selectedEl.lineHeight || 1.3) * 10)]}
+                        onValueChange={(v) => updateSelectedElement({ lineHeight: v[0] / 10 })}
+                        min={8}
+                        max={30}
+                        step={1}
                       />
                     </div>
                   </>

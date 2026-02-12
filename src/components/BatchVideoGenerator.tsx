@@ -47,6 +47,8 @@ interface CanvasElement {
   color?: string;
   text?: string;
   fontSize?: number;
+  textAlign?: "left" | "center" | "right";
+  lineHeight?: number;
   imageUrl?: string;
   placeholder?: boolean;
   rotation?: number;
@@ -1232,27 +1234,33 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         // Use card text for content pages, placeholder for signature
         const displayText = isSignature ? (el.text || "") : text;
         
+        // Text alignment
+        const align = el.textAlign || "left";
+        ctx.textAlign = align;
+        
         // Word wrap with adjusted position
         const adjustedX = el.x + textAdjustment.textX;
         const adjustedY = el.y + textAdjustment.textY;
+        const drawX = align === "center" ? adjustedX + (el.width || 800) / 2 : align === "right" ? adjustedX + (el.width || 800) : adjustedX;
         const words = displayText.split(" ");
         let line = "";
         let y = adjustedY + fontSize;
         const maxWidth = el.width || 800;
-        const lineHeight = fontSize * 1.3;
+        const lineHeight = (el.lineHeight || 1.3) * fontSize;
         
         for (let i = 0; i < words.length; i++) {
           const testLine = line + words[i] + " ";
           const metrics = ctx.measureText(testLine);
           if (metrics.width > maxWidth && i > 0) {
-            ctx.fillText(line.trim(), adjustedX, y);
+            ctx.fillText(line.trim(), drawX, y);
             line = words[i] + " ";
             y += lineHeight;
           } else {
             line = testLine;
           }
         }
-        ctx.fillText(line.trim(), adjustedX, y);
+        ctx.fillText(line.trim(), drawX, y);
+        ctx.textAlign = "left";
       } else if (el.type === "logo") {
         const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
         if (logoUrl) {

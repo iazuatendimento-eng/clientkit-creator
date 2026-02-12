@@ -51,6 +51,8 @@ interface CanvasElement {
   color?: string;
   text?: string;
   fontSize?: number;
+  textAlign?: "left" | "center" | "right";
+  lineHeight?: number;
   imageUrl?: string;
   placeholder?: boolean;
   colorRole?: "background" | "text" | "accessory1" | "accessory2";
@@ -843,25 +845,31 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         const baseX = el.x + textOffsetX;
         const baseY = el.y + textOffsetY;
         
+        // Text alignment
+        const align = el.textAlign || "left";
+        ctx.textAlign = align;
+        const drawX = align === "center" ? baseX + (el.width || 400) / 2 : align === "right" ? baseX + (el.width || 400) : baseX;
+        
         // Word wrap text within element width
         const words = text.split(' ');
         let line = '';
         let y = baseY + fontSize;
         const maxWidth = el.width || 400;
-        const lineHeight = fontSize * 1.2;
+        const lineHeight = (el.lineHeight || 1.2) * fontSize;
         
         for (let i = 0; i < words.length; i++) {
           const testLine = line + words[i] + ' ';
           const metrics = ctx.measureText(testLine);
           if (metrics.width > maxWidth && i > 0) {
-            ctx.fillText(line.trim(), baseX, y);
+            ctx.fillText(line.trim(), drawX, y);
             line = words[i] + ' ';
             y += lineHeight;
           } else {
             line = testLine;
           }
         }
-        ctx.fillText(line.trim(), baseX, y);
+        ctx.fillText(line.trim(), drawX, y);
+        ctx.textAlign = "left";
         console.log("Drew text at:", baseX, baseY, "Text:", text.substring(0, 50), "Font:", fontFamily);
       } else if (el.type === "image" && el.placeholder && art.photoImage) {
         // Draw photo with pan (offset) + zoom (photoScale)
