@@ -56,6 +56,7 @@ const MasterVideo = () => {
       pageDuration: snap.pageDuration || snap.page_duration || 3,
     };
     setTemplate(batchTemplate);
+    setTeamFilter(snap.teamFilter || undefined);
     setEditingBatch(batch);
     setView("batch");
   };
