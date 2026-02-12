@@ -549,6 +549,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
   const [searchVideoUrlMap, setSearchVideoUrlMap] = useState<Record<string, string>>({});
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [videoSearchPage, setVideoSearchPage] = useState(1);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
   const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
@@ -1836,9 +1838,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const handleSearchImages = async () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
+    setVideoSearchPage(1);
     try {
       // Search Pexels videos first, fallback to images
-      const videos = await searchPexelsVideos(searchQuery, 12);
+      const videos = await searchPexelsVideos(searchQuery, 12, 1);
       if (videos.length > 0) {
         // Convert video results to SearchImage format using thumbnails
         const videoUrlMap: Record<string, string> = {};
@@ -1870,6 +1873,42 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleLoadMoreVideos = async () => {
+    if (!searchQuery.trim()) return;
+    const nextPage = videoSearchPage + 1;
+    setIsLoadingMore(true);
+    try {
+      const videos = await searchPexelsVideos(searchQuery, 12, nextPage);
+      if (videos.length > 0) {
+        const newVideoUrlMap: Record<string, string> = {};
+        const videoAsImages: SearchImage[] = videos.map(v => {
+          newVideoUrlMap[v.id] = v.videoUrl;
+          return {
+            id: v.id,
+            urls: {
+              regular: v.image,
+              small: v.image,
+              thumb: v.image,
+            },
+            photographer: v.photographer,
+            photographerUrl: '',
+            description: v.description,
+            source: 'pexels' as const,
+          };
+        });
+        setSearchVideoUrlMap(prev => ({ ...prev, ...newVideoUrlMap }));
+        setSearchResults(prev => [...prev, ...videoAsImages]);
+        setVideoSearchPage(nextPage);
+      } else {
+        toast({ title: "Sem mais resultados" });
+      }
+    } catch (error) {
+      toast({ title: "Erro ao carregar mais vídeos", variant: "destructive" });
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -2866,6 +2905,21 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     </div>
                   ))}
                 </div>
+                {searchResults.length > 0 && (
+                  <div className="flex justify-center pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLoadMoreVideos}
+                      disabled={isLoadingMore}
+                    >
+                      {isLoadingMore ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Carregar Mais
+                    </Button>
+                  </div>
+                )}
                 {searchResults.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Busque por vídeos acima</p>

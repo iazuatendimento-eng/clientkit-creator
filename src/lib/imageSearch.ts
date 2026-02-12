@@ -147,7 +147,7 @@ export interface SearchVideo {
   description: string;
 }
 
-export const searchPexelsVideos = async (query: string, perPage: number = 5): Promise<SearchVideo[]> => {
+export const searchPexelsVideos = async (query: string, perPage: number = 5, page: number = 1): Promise<SearchVideo[]> => {
   const apiKey = import.meta.env.VITE_PEXELS_API_KEY || 'Ogmbd5yQ7EvLxAyzUKA7o9JqFsQj28loZrZKNoPzzQflzmBjCl28EUuk';
   
   if (!apiKey) {
@@ -162,7 +162,7 @@ export const searchPexelsVideos = async (query: string, perPage: number = 5): Pr
 
   try {
     const response = await fetch(
-      `https://api.pexels.com/videos/search?query=${encodeURIComponent(shortQuery)}&per_page=${perPage}&orientation=portrait`,
+      `https://api.pexels.com/videos/search?query=${encodeURIComponent(shortQuery)}&per_page=${perPage}&page=${page}&orientation=portrait`,
       {
         headers: {
           'Authorization': apiKey
