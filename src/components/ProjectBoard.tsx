@@ -178,7 +178,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   };
 
   const handleDownload = async (url: string, filename: string) => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // Ensure filename has proper extension for videos
@@ -197,8 +196,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       const mimeType = getMimeType(filename);
       const blob = new Blob([arrayBuffer], { type: mimeType });
 
-      // Mobile: try Web Share API first (works on iOS & some Android browsers)
-      if (isMobile && navigator.share && navigator.canShare) {
+      // iOS: use Web Share API — shows "Save Video/Image" option
+      if (isIOS && navigator.share && navigator.canShare) {
         let shareFilename = filename;
         if (mimeType.startsWith('video/') && !shareFilename.toLowerCase().endsWith('.mp4')) {
           shareFilename = shareFilename.replace(/\.\w+$/, '.mp4');
@@ -215,12 +214,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           } catch (shareError: any) {
             console.error("Share error:", shareError);
             if (shareError?.name === 'AbortError') return;
-            // Fall through to other methods
           }
         }
       }
 
-      // Blob download via <a> tag (works on desktop & most Android browsers)
+      // Android & Desktop: direct blob download via <a> tag
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
@@ -230,13 +228,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       link.click();
       document.body.removeChild(link);
       toast.success("Download iniciado!");
-
-      // Give browser time to start download before revoking
       setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 30000);
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
-      // Ultimate fallback: just open the URL directly
+      // Fallback: open URL directly
       window.open(url, '_blank');
       toast.info("Segure o arquivo para salvar 📲");
     }
