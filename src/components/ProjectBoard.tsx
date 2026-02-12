@@ -197,17 +197,14 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       const mimeType = getMimeType(filename);
       const blob = new Blob([arrayBuffer], { type: mimeType });
 
-      // Mobile: use Web Share API — iOS shows "Save Video/Image" option
+      // Mobile: try Web Share API first (works on iOS & some Android browsers)
       if (isMobile && navigator.share && navigator.canShare) {
-        // Ensure .mp4 extension for video files (iOS requires it)
         let shareFilename = filename;
         if (mimeType.startsWith('video/') && !shareFilename.toLowerCase().endsWith('.mp4')) {
           shareFilename = shareFilename.replace(/\.\w+$/, '.mp4');
         }
 
         const file = new File([blob], shareFilename, { type: mimeType });
-        
-        // IMPORTANT: on iOS, share ONLY files — no title, no text, no url
         const shareData = { files: [file] };
         
         if (navigator.canShare(shareData)) {
@@ -218,34 +215,30 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           } catch (shareError: any) {
             console.error("Share error:", shareError);
             if (shareError?.name === 'AbortError') return;
+            // Fall through to other methods
           }
         }
       }
 
-      // iOS fallback: create blob URL and open — user can long-press to save
-      if (isIOS) {
-        const blobUrl = window.URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-        toast.success("Segure o vídeo e toque em 'Salvar Vídeo' 📲");
-        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
-        return;
-      }
-
-      // Desktop / Android fallback: blob download
+      // Blob download via <a> tag (works on desktop & most Android browsers)
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = filename;
+      link.style.display = "none";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
       toast.success("Download iniciado!");
+
+      // Give browser time to start download before revoking
+      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 30000);
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
+      // Ultimate fallback: just open the URL directly
       window.open(url, '_blank');
-      toast.info("Segure o vídeo para salvar na galeria 📲");
+      toast.info("Segure o arquivo para salvar 📲");
     }
   };
 
