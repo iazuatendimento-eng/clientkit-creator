@@ -998,9 +998,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
       }
-      // For frame-only overlay (transparent + excludeText): skip image/mascot too
+      // For frame-only overlay (transparent + excludeText): skip image too (but keep mascot so it renders above shapes)
       if (transparentBackground && excludeText) {
-        if (["image", "mascot"].includes(el.type)) continue;
+        if (el.type === "image") continue;
       }
       // For transparent overlays, skip background images
       if (transparentBackground && el.type === "image") continue;
