@@ -1254,9 +1254,9 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const selectedEl = elements.find((el) => el.id === selectedElement);
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Left Sidebar - Tools */}
-      <div className="w-72 border-r bg-card flex flex-col">
+      <div className="w-72 border-r bg-card flex flex-col h-full">
         <div className="p-4 border-b">
           <Button variant="outline" onClick={onBack} className="w-full">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -2118,7 +2118,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       </div>
 
       {/* Right Sidebar - Images */}
-      <div className="w-72 border-l bg-card flex flex-col">
+      <div className="w-72 border-l bg-card flex flex-col h-full">
         <div className="p-4 border-b">
           <h3 className="font-semibold flex items-center gap-2">
             <FileVideo className="h-4 w-4" />
