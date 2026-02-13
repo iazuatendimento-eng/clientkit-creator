@@ -183,20 +183,26 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
     for (const el of targetEls) {
       // Draw ONLY this element on an isolated offscreen canvas
+      // Use a larger offscreen canvas to capture elements that extend beyond bounds
+      const extraMargin = 200;
+      const offW = CANVAS_WIDTH + extraMargin * 2;
+      const offH = CANVAS_HEIGHT + extraMargin * 2;
       const off = document.createElement("canvas");
-      off.width = CANVAS_WIDTH;
-      off.height = CANVAS_HEIGHT;
+      off.width = offW;
+      off.height = offH;
       const octx = off.getContext("2d");
       if (!octx) continue;
 
+      // Translate so element coords map to (el.x + extraMargin, el.y + extraMargin)
+      octx.translate(extraMargin, extraMargin);
       drawFn(octx, el);
 
-      // Calculate crop bounds with padding
+      // Calculate crop bounds with padding — allow negative coords (captured via extraMargin)
       const pad = (el.borderWidth || 0) + (el.shadowBlur || 0) + 6;
-      const sx = Math.max(0, Math.floor(el.x - pad));
-      const sy = Math.max(0, Math.floor(el.y - pad));
-      const ex = Math.min(CANVAS_WIDTH, Math.ceil(el.x + el.width + pad));
-      const ey = Math.min(CANVAS_HEIGHT, Math.ceil(el.y + el.height + pad));
+      const sx = Math.max(0, Math.floor(el.x - pad) + extraMargin);
+      const sy = Math.max(0, Math.floor(el.y - pad) + extraMargin);
+      const ex = Math.min(offW, Math.ceil(el.x + el.width + pad) + extraMargin);
+      const ey = Math.min(offH, Math.ceil(el.y + el.height + pad) + extraMargin);
       const sw = ex - sx;
       const sh = ey - sy;
 
@@ -208,7 +214,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         if (cctx) {
           cctx.drawImage(off, sx, sy, sw, sh, 0, 0, sw, sh);
           snaps[el.id] = crop.toDataURL();
-          bounds[el.id] = { x: sx, y: sy, w: sw, h: sh };
+          // Store bounds in original canvas coordinates
+          bounds[el.id] = { x: sx - extraMargin, y: sy - extraMargin, w: sw, h: sh };
         }
       }
     }
@@ -2525,7 +2532,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
           {animatingElementId && (
             <div
               className="absolute inset-0 pointer-events-none"
-              style={{ borderRadius: '0.5rem', overflow: 'hidden' }}
+              style={{ borderRadius: '0.5rem' }}
             >
               {elements
                 .filter((el) => {
