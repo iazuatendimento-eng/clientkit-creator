@@ -2081,7 +2081,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
       {/* Canvas Area */}
       <div className="flex-1 flex items-center justify-center bg-muted/30 p-8 overflow-auto">
-        <div ref={canvasWrapperRef} className="relative shadow-2xl rounded-lg overflow-hidden">
+        <div ref={canvasWrapperRef} className="relative shadow-2xl rounded-lg">
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
@@ -2090,6 +2090,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
               width: CANVAS_WIDTH * SCALE,
               height: CANVAS_HEIGHT * SCALE,
               cursor: cursorStyle,
+              borderRadius: '0.5rem',
             }}
             onClick={handleCanvasClick}
             onMouseDown={handleMouseDown}
@@ -2101,16 +2102,17 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
           {animPreview && (
             <div
               key={animPreview.key}
-              className={`absolute pointer-events-none rounded border-2 border-primary/60 bg-primary/20 anim-preview-${animPreview.type}`}
+              className={`absolute pointer-events-none rounded-md border-2 border-primary bg-primary/30 shadow-lg shadow-primary/20 anim-preview-${animPreview.type}`}
               style={{
                 left: animPreview.x,
                 top: animPreview.y,
                 width: animPreview.width,
                 height: animPreview.height,
+                zIndex: 50,
               }}
             >
-              <div className="w-full h-full flex items-center justify-center text-[10px] text-primary font-bold uppercase opacity-80">
-                {animPreview.type}
+              <div className="w-full h-full flex items-center justify-center text-xs text-primary-foreground font-bold uppercase bg-primary/40 rounded">
+                ✨ {animPreview.type.replace(/-/g, ' ')}
               </div>
             </div>
           )}
@@ -2398,9 +2400,23 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                           </div>
                           {el.animationType && el.animationType !== "none" && (
                             <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">
-                                Duração: {(el.animDuration || 0.8).toFixed(1)}s
-                              </Label>
+                              <div className="flex items-center justify-between">
+                                <Label className="text-[10px] text-muted-foreground">
+                                  Duração: {(el.animDuration || 0.8).toFixed(1)}s
+                                </Label>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] gap-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerAnimPreview(el, el.animationType!);
+                                  }}
+                                >
+                                  <Play className="h-3 w-3" />
+                                  Play
+                                </Button>
+                              </div>
                               <Slider
                                 value={[el.animDuration || 0.8]}
                                 onValueChange={([v]) => {
