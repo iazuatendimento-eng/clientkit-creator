@@ -78,6 +78,8 @@ interface CanvasElement {
     color2Role?: "background" | "text" | "accessory1" | "accessory2";
   };
   animated?: boolean;
+  animationType?: string;
+  animDuration?: number;
 }
 
 interface VideoTemplate {
