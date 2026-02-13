@@ -61,6 +61,7 @@ interface CanvasElement {
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
+  borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
@@ -447,6 +448,26 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       return el.color || defaultColor;
     };
 
+    // Helper to get border color based on borderColorRole
+    const getBorderColor = (el: CanvasElement): string => {
+      if (el.borderColorRole === "background") return bgColor;
+      if (el.borderColorRole === "text") return textColor;
+      if (el.borderColorRole === "accessory1") return accessoryColor1;
+      if (el.borderColorRole === "accessory2") return accessoryColor2;
+      return el.borderColor || "#000000";
+    };
+
+    // Helper to draw border after fill (always full opacity)
+    const drawShapeBorder = (el: CanvasElement) => {
+      if (el.borderWidth && el.borderWidth > 0) {
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = getBorderColor(el);
+        ctx.lineWidth = el.borderWidth;
+        ctx.stroke();
+        ctx.globalAlpha = (el.opacity ?? 100) / 100;
+      }
+    };
+
     // Helper to convert hex to rgba
     const hexToRgba = (hex: string, opacity: number): string => {
       const r = parseInt(hex.slice(1, 3), 16);
@@ -537,8 +558,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           ctx.beginPath();
           ctx.roundRect(x, y, w, h, el.borderRadius);
           ctx.fill();
+          drawShapeBorder(el);
         } else {
           ctx.fillRect(x, y, w, h);
+          drawShapeBorder(el);
         }
       } else if (el.type === "circle") {
         const ov = art.elementOverrides?.shapes?.[el.id];
@@ -550,6 +573,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         ctx.beginPath();
         ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
         ctx.fill();
+        drawShapeBorder(el);
       } else if (el.type === "triangle") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
@@ -563,6 +587,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         ctx.lineTo(x, y + h);
         ctx.closePath();
         ctx.fill();
+        drawShapeBorder(el);
       } else if (el.type === "diamond") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
@@ -577,6 +602,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         ctx.lineTo(x, y + h / 2);
         ctx.closePath();
         ctx.fill();
+        drawShapeBorder(el);
       } else if (el.type === "hexagon") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
@@ -597,6 +623,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         }
         ctx.closePath();
         ctx.fill();
+        drawShapeBorder(el);
       } else if (el.type === "pentagon") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
@@ -617,6 +644,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         }
         ctx.closePath();
         ctx.fill();
+        drawShapeBorder(el);
       } else if (el.type === "star") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
@@ -639,6 +667,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         }
         ctx.closePath();
         ctx.fill();
+        drawShapeBorder(el);
       } else if (el.type === "line") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
