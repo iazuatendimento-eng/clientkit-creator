@@ -162,6 +162,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const [animatingElementId, setAnimatingElementId] = useState<string | null>(null);
   const [animKey, setAnimKey] = useState(0);
 
+
   useEffect(() => {
     supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
       if (data) setAvailableTeams(data);
@@ -314,6 +315,20 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
   const elements = currentPage === "content" ? contentElements : signatureElements;
   const setElements = currentPage === "content" ? setContentElements : setSignatureElements;
+
+  // Auto-clear animation after duration (for non-looping)
+  useEffect(() => {
+    if (!animatingElementId) return;
+    const animEls = elements.filter((el) => {
+      if (animatingElementId === "__all__") return el.animationType && el.animationType !== "none";
+      return el.id === animatingElementId && el.animationType && el.animationType !== "none";
+    });
+    const allLoop = animEls.length > 0 && animEls.every((el) => el.animLoop);
+    if (allLoop) return;
+    const maxDur = Math.max(...animEls.map((el) => el.animDuration || 0.8), 1);
+    const timer = setTimeout(() => setAnimatingElementId(null), maxDur * 1000 + 200);
+    return () => clearTimeout(timer);
+  }, [animatingElementId, animKey, elements]);
 
   const tools = [
     { id: "select", icon: Move, label: "Mover" },
@@ -475,7 +490,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   // Draw canvas
   useEffect(() => {
     drawCanvas();
-  }, [elements, selectedElement, backgroundColor, currentPage]);
+  }, [elements, selectedElement, backgroundColor, currentPage, animatingElementId, animKey]);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -554,6 +569,13 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
     // Draw elements
     elements.forEach((el) => {
+      // Skip elements currently being animated via the HTML overlay
+      if (animatingElementId) {
+        const isAnimating = animatingElementId === "__all__"
+          ? (el.animationType && el.animationType !== "none")
+          : (el.id === animatingElementId && el.animationType && el.animationType !== "none");
+        if (isAnimating) return;
+      }
       ctx.save();
       
       // Apply rotation
@@ -1021,7 +1043,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         });
       }
     });
-  }, [elements, selectedElement, backgroundColor, currentPage, currentColor]);
+  }, [elements, selectedElement, backgroundColor, currentPage, currentColor, animatingElementId]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
