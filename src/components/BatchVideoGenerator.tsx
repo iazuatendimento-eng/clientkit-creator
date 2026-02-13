@@ -373,6 +373,8 @@ const CardCoverPreview = memo(({
   textAnimation,
   logoAnimation,
   textAnimDuration = 1.5,
+  shapeAnimation = "none",
+  shapeAnimDuration = 2.5,
   pageDuration,
   onClick,
   imageRect,
@@ -385,6 +387,8 @@ const CardCoverPreview = memo(({
   textAnimation: TextAnimation;
   logoAnimation: LogoAnimation;
   textAnimDuration?: number;
+  shapeAnimation?: string;
+  shapeAnimDuration?: number;
   pageDuration: number;
   onClick: () => void;
   imageRect?: { left: number; top: number; width: number; height: number } | null;
@@ -490,13 +494,14 @@ const CardCoverPreview = memo(({
           );
         })()}
 
-        {/* Layer 2: Frame overlay (static shapes - no animation) - z-[2] */}
+        {/* Layer 2: Frame overlay (shapes with animation) - z-[2] */}
         {frameOverlay && frameOverlay !== "" && (
           <img
-            key={`frame-${video.cardId}-${currentPage}`}
+            key={`frame-${video.cardId}-${currentPage}-${shapeAnimation}`}
             src={frameOverlay}
             alt=""
-            className="absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none"
+            className={`absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
+            style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined}
             draggable={false}
           />
         )}
@@ -609,12 +614,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     const textEl = allEls.find(e => (e.type === "text" || e.type === "contact") && e.animationType && e.animationType !== "none");
     return textEl?.animDuration || 2.5;
   };
+  const getTemplateShapeAnimation = (): string => {
+    const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
+    const shapeEl = allEls.find(e => !["text", "contact", "logo", "mascot", "image"].includes(e.type) && e.animationType && e.animationType !== "none");
+    return shapeEl?.animationType || "none";
+  };
+  const getTemplateShapeAnimDuration = (): number => {
+    const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
+    const shapeEl = allEls.find(e => !["text", "contact", "logo", "mascot", "image"].includes(e.type) && e.animationType && e.animationType !== "none");
+    return shapeEl?.animDuration || 2.5;
+  };
 
   const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
   const [textAnimation, setTextAnimation] = useState<TextAnimation>(getTemplateTextAnimation);
   const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>(getTemplateLogoAnimation);
   const [textAnimDuration, setTextAnimDuration] = useState(getTemplateTextAnimDuration);
+  const [shapeAnimation, setShapeAnimation] = useState<string>(getTemplateShapeAnimation);
+  const [shapeAnimDuration, setShapeAnimDuration] = useState(getTemplateShapeAnimDuration);
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -2609,6 +2626,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   textAnimation={textAnimation}
                   logoAnimation={logoAnimation}
                   textAnimDuration={textAnimDuration}
+                  shapeAnimation={shapeAnimation}
+                  shapeAnimDuration={shapeAnimDuration}
                   pageDuration={template.pageDuration || 3}
                    imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
                    imageElSize={getImageElSize(template.contentElements as CanvasElement[])}
