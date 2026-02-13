@@ -133,7 +133,10 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
 
         const { error: uploadError } = await supabase.storage
           .from("card-uploads")
-          .upload(filePath, file);
+          .upload(filePath, file, {
+            contentType: file.type,
+            upsert: false,
+          });
 
         if (uploadError) throw uploadError;
 
