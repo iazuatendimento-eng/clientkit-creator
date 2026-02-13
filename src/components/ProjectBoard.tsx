@@ -259,10 +259,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       {...(!isPublicView && !isInactive ? attributes : {})}
       {...(!isPublicView && !isInactive ? listeners : {})}
     >
-      {/* Cover Media - use brief cover fields, fallback to first final upload */}
+      {/* Cover Media - use brief cover fields, fallback to last final upload */}
       {(() => {
-        const coverVideo = brief.coverVideo || (finalArtworks.length > 0 && finalArtworks[0].fileType.startsWith("video") ? finalArtworks[0].url : null);
-        const coverImage = !coverVideo ? (brief.coverImage || (finalArtworks.length > 0 && !finalArtworks[0].fileType.startsWith("video") ? finalArtworks[0].url : null)) : null;
+        const lastFinal = finalArtworks.length > 0 ? finalArtworks[finalArtworks.length - 1] : null;
+        const coverVideo = brief.coverVideo || (lastFinal && lastFinal.fileType.startsWith("video") ? lastFinal.url : null);
+        const coverImage = !coverVideo ? (brief.coverImage || (lastFinal && !lastFinal.fileType.startsWith("video") ? lastFinal.url : null)) : null;
         
         if (coverVideo) {
           return (

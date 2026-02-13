@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Image as ImageIcon, FileVideo, X, Download, Loader2, FolderOpen } from "lucide-react";
+import { Image as ImageIcon, FileVideo, X, Download, Loader2, FolderOpen, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { createCardUpload, getCardUploads, deleteCardUpload } from "@/lib/clientDatabase";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,11 +74,13 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
   }, [cardId, isOpen]);
 
   const updateCover = (newUploads: UploadedFile[]) => {
-    const finalUploads = newUploads.filter(u => u.type === "final");
-    if (finalUploads.length === 0) return;
-    const firstFinal = finalUploads[0];
-    const isVideo = firstFinal.fileType === "video";
-    onCoverUpdate(firstFinal.url, isVideo);
+    const finalUps = newUploads.filter(u => u.type === "final");
+    if (finalUps.length === 0) return;
+    // Last uploaded final file is the cover
+    const sorted = [...finalUps].sort((a, b) => new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime());
+    const lastFinal = sorted[sorted.length - 1];
+    const isVideo = lastFinal.fileType === "video";
+    onCoverUpdate(lastFinal.url, isVideo);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, uploadType: "material" | "final") => {
@@ -222,6 +226,10 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(file.uploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -245,7 +253,7 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                   <>
                     <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">Clique para fazer upload de artes finalizadas</p>
-                    <p className="text-xs text-muted-foreground mt-1">Primeira imagem será a capa do card</p>
+                    <p className="text-xs text-muted-foreground mt-1">Último upload será a capa do card</p>
                   </>
                 )}
               </div>
@@ -261,14 +269,16 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
 
             {finalUploads.length > 0 && (
               <div className="grid grid-cols-3 gap-3">
-                {finalUploads.map((file, index) => (
+                {finalUploads.map((file, index) => {
+                  const isLast = index === finalUploads.length - 1;
+                  return (
                   <div key={file.id} className="relative group">
                     {file.fileType === "image" ? (
                       <img src={file.url} alt={file.name} className="w-full h-28 object-cover rounded-lg" />
                     ) : (
                       <video src={file.url} className="w-full h-28 object-cover rounded-lg" muted />
                     )}
-                    {index === 0 && (
+                    {isLast && (
                       <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded">
                         Capa
                       </div>
@@ -282,8 +292,13 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(file.uploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
