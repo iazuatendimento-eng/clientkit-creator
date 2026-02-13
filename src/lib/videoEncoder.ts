@@ -82,6 +82,20 @@ function pickSupportedMimeType(candidates: string[]): string | null {
 }
 
 // Generate MP4 (best effort: native MediaRecorder MP4 when available, otherwise WebM->FFmpeg)
+// Check if blob is actually MP4 by verifying ftyp box header
+async function isValidMP4(blob: Blob): Promise<boolean> {
+  try {
+    const header = await blob.slice(0, 12).arrayBuffer();
+    const view = new Uint8Array(header);
+    // MP4 files have "ftyp" at bytes 4-7
+    const ftyp = String.fromCharCode(view[4], view[5], view[6], view[7]);
+    console.log("[VideoEncoder] File header check:", ftyp, "size:", blob.size);
+    return ftyp === "ftyp";
+  } catch {
+    return false;
+  }
+}
+
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress } = options;
 
@@ -92,21 +106,30 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   ]);
 
   if (mp4Mime) {
+    console.log("[VideoEncoder] Using native MP4 recording:", mp4Mime);
     onProgress?.(0.1);
     const mp4 = await withTimeout(
       encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
       240_000,
       "gerar MP4 (nativo)"
     );
-    onProgress?.(1);
-    return mp4;
+    
+    // Verify it's actually MP4
+    if (await isValidMP4(mp4)) {
+      console.log("[VideoEncoder] Native MP4 is valid! Size:", mp4.size);
+      onProgress?.(1);
+      return mp4;
+    }
+    console.warn("[VideoEncoder] Native MP4 recording produced invalid file, falling back to FFmpeg");
   }
 
-  // Fallback: WebM first, then try FFmpeg conversion
+  // Record as WebM, then convert with FFmpeg
+  console.log("[VideoEncoder] Recording as WebM for FFmpeg conversion");
   onProgress?.(0.1);
   const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
+  console.log("[VideoEncoder] WebM recorded, size:", webmBlob.size);
 
-  // Try FFmpeg conversion to MP4
+  // Try FFmpeg conversion to real MP4
   try {
     onProgress?.(0.35);
     const ff = await loadFFmpeg();
@@ -115,6 +138,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     const webmData = await fetchFile(webmBlob);
     await ff.writeFile("input.webm", webmData);
 
+    console.log("[VideoEncoder] Starting FFmpeg conversion...");
     await withTimeout(
       ff.exec([
         "-i",
@@ -150,13 +174,20 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     await ff.deleteFile("input.webm");
     await ff.deleteFile("output.mp4");
 
+    // Verify the converted file is valid MP4
+    if (await isValidMP4(mp4Blob)) {
+      console.log("[VideoEncoder] FFmpeg MP4 is valid! Size:", mp4Blob.size);
+      onProgress?.(1);
+      return mp4Blob;
+    }
+
+    console.warn("[VideoEncoder] FFmpeg produced invalid MP4, returning WebM as fallback");
     onProgress?.(1);
-    return mp4Blob;
+    return new Blob([webmBlob], { type: "video/webm" });
   } catch (ffmpegError) {
-    console.warn("FFmpeg conversion failed, returning WebM:", ffmpegError);
+    console.error("[VideoEncoder] FFmpeg conversion failed:", ffmpegError);
     onProgress?.(1);
-    // Return WebM as last resort
-    return webmBlob;
+    return new Blob([webmBlob], { type: "video/webm" });
   }
 }
 

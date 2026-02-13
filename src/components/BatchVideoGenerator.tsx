@@ -2187,8 +2187,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
 
-        const fileName = `video_${video.cardId}_${Date.now()}.mp4`;
+        const isActualMP4 = videoBlob.type === "video/mp4";
+        const fileExt = isActualMP4 ? "mp4" : "webm";
+        const contentType = isActualMP4 ? "video/mp4" : "video/webm";
+        const fileName = `video_${video.cardId}_${Date.now()}.${fileExt}`;
         const thumbFileName = `thumb_${video.cardId}_${Date.now()}.png`;
+
+        console.log("[BatchSave] Video blob type:", videoBlob.type, "size:", videoBlob.size, "ext:", fileExt);
 
         // Prepare thumbnail blob in parallel with video upload
         setGenerationStatus(`Subindo arquivos (${idx + 1}/${approvedVideos.length}) • ${video.clientName}`);
@@ -2197,7 +2202,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
         // Upload video + prepare thumb simultaneously
         const [videoUploadResult, thumbBlob] = await Promise.all([
-          supabase.storage.from("card-uploads").upload(`videos/${fileName}`, videoBlob, { contentType: "video/mp4" }),
+          supabase.storage.from("card-uploads").upload(`videos/${fileName}`, videoBlob, { contentType }),
           thumbBlobPromise,
         ]);
 
@@ -2225,7 +2230,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             card_id: video.cardId,
             file_name: fileName,
             file_url: urlData.publicUrl,
-            file_type: "video/mp4",
+            file_type: contentType,
             upload_type: "final",
           }),
           updateProjectBrief(video.cardId, {
