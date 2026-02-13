@@ -2613,8 +2613,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           </DialogHeader>
 
           {selectedVideo && (
-            <div className="w-full mt-4">
-                <div className="space-y-4">
+                <div className="space-y-4 mt-4">
                   {/* Page info panel - BEFORE the overlay so it's always visible */}
                   <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-xs">
                     <div className="flex items-center justify-between">
@@ -2894,8 +2893,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     </Button>
                   </div>
                 </div>
-              </div>
-            </div>
           )}
         </DialogContent>
       </Dialog>
