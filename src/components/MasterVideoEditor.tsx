@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { drawNewShape } from "@/lib/canvasShapes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +53,7 @@ import { removeBackground } from "@/lib/backgroundRemoval";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent";
   x: number;
   y: number;
   width: number;
@@ -460,12 +461,14 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       return el.color || currentColor;
     };
 
-    // Helper to draw border
+    // Helper to draw border (always at full opacity)
     const drawBorder = (el: CanvasElement) => {
       if (el.borderWidth && el.borderWidth > 0) {
+        ctx.globalAlpha = 1; // Borders are always fully opaque
         ctx.strokeStyle = el.borderColor || "#000000";
         ctx.lineWidth = el.borderWidth;
         ctx.stroke();
+        ctx.globalAlpha = (el.opacity ?? 100) / 100; // Restore element opacity
       }
     };
 
@@ -495,9 +498,11 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         } else {
           ctx.fillRect(el.x, el.y, el.width, el.height);
           if (el.borderWidth && el.borderWidth > 0) {
+            ctx.globalAlpha = 1;
             ctx.strokeStyle = el.borderColor || "#000000";
             ctx.lineWidth = el.borderWidth;
             ctx.strokeRect(el.x, el.y, el.width, el.height);
+            ctx.globalAlpha = (el.opacity ?? 100) / 100;
           }
         }
       } else if (el.type === "circle") {
@@ -737,6 +742,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
+      } else if (drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, ctx.fillStyle as string)) {
+        // New shape drawn by helper
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#ffffff";
         const fontSize = el.fontSize || 48;
