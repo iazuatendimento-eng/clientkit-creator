@@ -2699,7 +2699,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     textOverlayUrl={selectedVideo.overlayPages?.[currentPreviewPage] || ""}
                     logoOverlayUrl={selectedVideo.logoOverlayPages?.[currentPreviewPage] || ""}
                     backgroundImageUrl={selectedVideo.searchedImages?.[currentPreviewPage] || ""}
-                    backgroundVideoUrl={selectedVideo.previewVideoUrls?.[currentPreviewPage] || ""}
+                    backgroundVideoUrl={selectedVideo.previewVideoUrls?.[currentPreviewPage] || (currentPreviewPage < selectedVideo.pages.length - 1 ? (selectedVideo.previewVideoUrls?.find(v => v && v !== "") || "") : "")}
                     logoX={currentPreviewPage < selectedVideo.pages.length - 1 
                       ? selectedVideo.adjustments.logoX 
                       : (selectedVideo.adjustments.sigLogoX ?? selectedVideo.adjustments.logoX)}
