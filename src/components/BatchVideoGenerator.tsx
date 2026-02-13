@@ -1033,10 +1033,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Helper to apply element styles (opacity, shadow)
     const applyElementStyles = (el: CanvasElement) => {
-      // Always use el.opacity for globalAlpha - this matches the template editor behavior exactly.
-      // For fadeMode, the gradient stops already encode their own alpha (opacity1/opacity2),
-      // and globalAlpha multiplies on top, just like in the MasterVideoEditor.
-      ctx.globalAlpha = (el.opacity ?? 100) / 100;
+      // For fadeMode on the transparent overlay: use globalAlpha=1 so the solid end
+      // fully blocks the video underneath, matching the template where the solid end
+      // blends with the same-color background and appears fully opaque.
+      // The gradient stops already encode their own alpha transition (opacity1→opacity2).
+      if (el.gradient?.fadeMode && transparentBackground) {
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.globalAlpha = (el.opacity ?? 100) / 100;
+      }
       if (el.shadowBlur && el.shadowBlur > 0) {
         ctx.shadowBlur = el.shadowBlur;
         ctx.shadowColor = el.shadowColor || "#000000";
