@@ -1732,10 +1732,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const video = updatedVideos[i];
         setGenerationStatus(`Gerando páginas (${i + 1}/${updatedVideos.length}) • ${video.clientName}`);
 
-        // Search for videos from Pexels for each content page with translation
+        // Reuse existing user-chosen videos/images when available; only search for missing pages
+        const existingVideoUrls = video.previewVideoUrls || [];
+        const existingImages = video.searchedImages || [];
         const searchedImages: string[] = [];
         const pexelsVideoUrls: (string | null)[] = [];
-        for (const text of video.pageTexts) {
+
+        for (let pageIdx = 0; pageIdx < video.pageTexts.length; pageIdx++) {
+          const text = video.pageTexts[pageIdx];
+          const existingUrl = existingVideoUrls[pageIdx];
+          const existingImg = existingImages[pageIdx];
+
+          // If this page already has a user-chosen video, keep it
+          if (existingUrl && existingUrl !== "") {
+            searchedImages.push(existingImg || "");
+            pexelsVideoUrls.push(existingUrl);
+            continue;
+          }
+
           try {
             // Combine page text + card title + imageType + briefing + company for complete search context
             const fullContext = [text, video.cardTitle, video.imageType, video.briefing, video.company].filter(Boolean).join(" ");
@@ -1764,12 +1778,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             let foundVideo = false;
             let videos = await searchPexelsVideos(searchTerms, 3);
             if (videos.length === 0) {
-              // Retry with simpler terms
               const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
               videos = await searchPexelsVideos(simpleTerms, 3);
             }
             if (videos.length === 0) {
-              // Generic fallback
               videos = await searchPexelsVideos("business technology", 3);
             }
             if (videos.length > 0) {
@@ -1778,7 +1790,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               foundVideo = true;
             }
             if (!foundVideo) {
-              // Last resort: still try to get an image
               const images = await searchImages(searchTerms, 1);
               searchedImages.push(images.length > 0 ? images[0].urls.regular : "");
               pexelsVideoUrls.push(null);
