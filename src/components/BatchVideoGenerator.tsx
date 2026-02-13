@@ -2301,7 +2301,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         cardTitle: video.cardTitle,
         cardText: video.cardText,
         brandKit: video.brandKit,
-        files: video.pages,
+        files: [], // Don't store base64 pages in DB to avoid payload bloat / timeouts
         backgroundImages: video.searchedImages,
         previewVideoUrls: video.previewVideoUrls,
       }));
