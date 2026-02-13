@@ -24,34 +24,16 @@ const downloadFile = async (url: string, fileName: string) => {
   try {
     toast.loading("Baixando arquivo original...", { id: "download-prep" });
     
-    // Fetch raw bytes directly from storage
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Fetch failed: " + response.status);
-    const arrayBuffer = await response.arrayBuffer();
+    // Use edge function proxy to guarantee correct Content-Type and Content-Disposition
+    const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(fileName)}`;
     
-    // Force correct MIME type based on original file extension
-    const mimeType = getMimeFromName(fileName);
-    
-    // Ensure filename has proper extension
-    if (!fileName.match(/\.\w{2,5}$/)) {
-      if (mimeType.startsWith('video/')) fileName += '.mp4';
-      else if (mimeType === 'image/png') fileName += '.png';
-      else fileName += '.jpg';
-    }
-    
-    console.log("[Download]", fileName, "MIME:", mimeType, "Size:", arrayBuffer.byteLength);
-    
-    // Create blob with explicit MIME type and download via blob URL (same-origin, so download attr works)
-    const blob = new Blob([arrayBuffer], { type: mimeType });
-    const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = blobUrl;
+    link.href = proxyUrl;
     link.download = fileName;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     toast.dismiss("download-prep");
     toast.success("Download concluído!");
   } catch (error) {

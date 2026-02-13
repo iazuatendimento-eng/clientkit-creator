@@ -185,10 +185,13 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       filename = filename + '.mp4';
     }
 
+    // Use edge function proxy to guarantee correct headers
+    const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`;
+
     toast.loading("Baixando arquivo original...", { id: "download-loading" });
 
     try {
-      const res = await fetch(url, { cache: "no-cache" });
+      const res = await fetch(proxyUrl, { cache: "no-cache" });
       if (!res.ok) throw new Error("Fetch failed: " + res.status);
       const arrayBuffer = await res.arrayBuffer();
       toast.dismiss("download-loading");
@@ -197,7 +200,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       console.log("[Download]", filename, "MIME:", mimeType, "Size:", arrayBuffer.byteLength);
       const blob = new Blob([arrayBuffer], { type: mimeType });
 
-      // iOS: use Web Share API — shows "Save Video/Image" option
+      // iOS: use Web Share API
       if (isIOS && navigator.share && navigator.canShare) {
         let shareFilename = filename;
         if (mimeType.startsWith('video/') && !shareFilename.toLowerCase().endsWith('.mp4')) {
@@ -219,7 +222,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         }
       }
 
-      // Android & Desktop: direct blob download via <a> tag
+      // Android & Desktop: direct blob download
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
@@ -233,7 +236,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     } catch (error) {
       toast.dismiss("download-loading");
       console.error("Download error:", error);
-      // Fallback: open URL directly
       window.open(url, '_blank');
       toast.info("Segure o arquivo para salvar 📲");
     }
