@@ -163,29 +163,43 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const [animKey, setAnimKey] = useState(0);
   const animSnapshotsRef = useRef<Record<string, string>>({});
 
-  // Helper: capture element snapshots from canvas before starting animation
+  // Helper: draw element in isolation on offscreen canvas for snapshot
+  const drawSingleElementRef = useRef<((ctx: CanvasRenderingContext2D, el: CanvasElement) => void) | null>(null);
+
   const startAnimation = useCallback((elId: string) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
     const currentEls = currentPage === "content" ? contentElements : signatureElements;
     const targetEls = elId === "__all__"
       ? currentEls.filter(e => e.animationType && e.animationType !== "none")
       : currentEls.filter(e => e.id === elId && e.animationType && e.animationType !== "none");
 
+    const drawFn = drawSingleElementRef.current;
+    if (!drawFn) return;
+
     const snaps: Record<string, string> = {};
     for (const el of targetEls) {
-      const sx = Math.max(0, Math.floor(el.x * SCALE));
-      const sy = Math.max(0, Math.floor(el.y * SCALE));
-      const sw = Math.min(Math.ceil(el.width * SCALE), canvas.width - sx);
-      const sh = Math.min(Math.ceil(el.height * SCALE), canvas.height - sy);
-      if (sw > 0 && sh > 0) {
-        const off = document.createElement("canvas");
-        off.width = sw;
-        off.height = sh;
-        const octx = off.getContext("2d");
-        if (octx) {
-          octx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
-          snaps[el.id] = off.toDataURL();
+      const fullW = CANVAS_WIDTH;
+      const fullH = CANVAS_HEIGHT;
+      const off = document.createElement("canvas");
+      off.width = fullW;
+      off.height = fullH;
+      const octx = off.getContext("2d");
+      if (octx) {
+        drawFn(octx, el);
+        // Crop to element bounds at full resolution (with padding for borders/shadows)
+        const pad = (el.borderWidth || 0) + (el.shadowBlur || 0) + 4;
+        const sx = Math.max(0, Math.floor(el.x) - pad);
+        const sy = Math.max(0, Math.floor(el.y) - pad);
+        const sw = Math.min(Math.ceil(el.width) + pad * 2, fullW - sx);
+        const sh = Math.min(Math.ceil(el.height) + pad * 2, fullH - sy);
+        if (sw > 0 && sh > 0) {
+          const crop = document.createElement("canvas");
+          crop.width = sw;
+          crop.height = sh;
+          const cctx = crop.getContext("2d");
+          if (cctx) {
+            cctx.drawImage(off, sx, sy, sw, sh, 0, 0, sw, sh);
+            snaps[el.id] = crop.toDataURL();
+          }
         }
       }
     }
@@ -523,6 +537,300 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   useEffect(() => {
     drawCanvas();
   }, [elements, selectedElement, backgroundColor, currentPage, animatingElementId, animKey]);
+
+  // Draw a single element on a given context (for snapshot isolation)
+  const drawSingleElement = useCallback((ctx: CanvasRenderingContext2D, el: CanvasElement) => {
+    ctx.save();
+    if (el.rotation) {
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      ctx.translate(cx, cy);
+      ctx.rotate((el.rotation * Math.PI) / 180);
+      ctx.translate(-cx, -cy);
+    }
+    ctx.globalAlpha = (el.opacity ?? 100) / 100;
+    if (el.shadowBlur && el.shadowBlur > 0) {
+      ctx.shadowBlur = el.shadowBlur;
+      ctx.shadowColor = el.shadowColor || "rgba(0,0,0,0.5)";
+      ctx.shadowOffsetX = el.shadowOffsetX || 0;
+      ctx.shadowOffsetY = el.shadowOffsetY || 0;
+    }
+    // Fill style
+    let fillStyle: string | CanvasGradient = el.color || "#3B82F6";
+    if (el.gradient) {
+      const hexToRgba = (hex: string, opacity: number) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${opacity / 100})`;
+      };
+      let gradient;
+      if (el.gradient.type === "linear") {
+        const angle = (el.gradient.angle || 0) * Math.PI / 180;
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const dx = Math.cos(angle) * el.width / 2;
+        const dy = Math.sin(angle) * el.height / 2;
+        gradient = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
+      } else {
+        gradient = ctx.createRadialGradient(
+          el.x + el.width / 2, el.y + el.height / 2, 0,
+          el.x + el.width / 2, el.y + el.height / 2, Math.max(el.width, el.height) / 2
+        );
+      }
+      gradient.addColorStop(0, hexToRgba(el.gradient.color1, el.gradient.opacity1 ?? 100));
+      gradient.addColorStop(1, hexToRgba(el.gradient.color2, el.gradient.opacity2 ?? 100));
+      fillStyle = gradient;
+    }
+    ctx.fillStyle = fillStyle;
+
+    const drawBorderSingle = () => {
+      if (el.borderWidth && el.borderWidth > 0) {
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = el.borderColor || "#000000";
+        ctx.lineWidth = el.borderWidth;
+        ctx.stroke();
+        ctx.globalAlpha = (el.opacity ?? 100) / 100;
+      }
+    };
+
+    if (el.type === "rect") {
+      const radius = el.borderRadius || 0;
+      if (radius > 0) {
+        ctx.beginPath();
+        ctx.roundRect(el.x, el.y, el.width, el.height, radius);
+        ctx.fill();
+        drawBorderSingle();
+      } else {
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+        if (el.borderWidth && el.borderWidth > 0) {
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = el.borderColor || "#000000";
+          ctx.lineWidth = el.borderWidth;
+          ctx.strokeRect(el.x, el.y, el.width, el.height);
+        }
+      }
+    } else if (el.type === "circle") {
+      ctx.beginPath();
+      ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      drawBorderSingle();
+    } else if (el.type === "triangle") {
+      ctx.beginPath();
+      ctx.moveTo(el.x + el.width / 2, el.y);
+      ctx.lineTo(el.x + el.width, el.y + el.height);
+      ctx.lineTo(el.x, el.y + el.height);
+      ctx.closePath();
+      ctx.fill();
+      drawBorderSingle();
+    } else if (el.type === "diamond") {
+      ctx.beginPath();
+      ctx.moveTo(el.x + el.width / 2, el.y);
+      ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+      ctx.lineTo(el.x + el.width / 2, el.y + el.height);
+      ctx.lineTo(el.x, el.y + el.height / 2);
+      ctx.closePath();
+      ctx.fill();
+      drawBorderSingle();
+    } else if (el.type === "hexagon") {
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      const r = Math.min(el.width, el.height) / 2;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2;
+        if (i === 0) ctx.moveTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+        else ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+      }
+      ctx.closePath();
+      ctx.fill();
+      drawBorderSingle();
+    } else if (el.type === "pentagon") {
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      const r = Math.min(el.width, el.height) / 2;
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        if (i === 0) ctx.moveTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+        else ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+      }
+      ctx.closePath();
+      ctx.fill();
+      drawBorderSingle();
+    } else if (el.type === "star") {
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      const outerR = Math.min(el.width, el.height) / 2;
+      const innerR = outerR * 0.4;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const angle = (Math.PI / 5) * i - Math.PI / 2;
+        const r = i % 2 === 0 ? outerR : innerR;
+        if (i === 0) ctx.moveTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+        else ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+      }
+      ctx.closePath();
+      ctx.fill();
+      drawBorderSingle();
+    } else if (el.type === "line") {
+      ctx.strokeStyle = el.color || "#3B82F6";
+      ctx.lineWidth = el.height || 4;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(el.x, el.y + el.height / 2);
+      ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+      ctx.stroke();
+    } else if (el.type === "zigzag") {
+      ctx.strokeStyle = el.color || "#3B82F6";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      const peaks = 8;
+      const peakWidth = el.width / peaks;
+      ctx.beginPath();
+      ctx.moveTo(el.x, el.y + el.height / 2);
+      for (let i = 0; i <= peaks; i++) {
+        ctx.lineTo(el.x + i * peakWidth, el.y + (i % 2 === 0 ? el.height : 0));
+      }
+      ctx.stroke();
+    } else if (el.type === "spiral") {
+      ctx.strokeStyle = el.color || "#3B82F6";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      const maxRadius = Math.min(el.width, el.height) / 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const t = (i / 100) * 3 * Math.PI * 2;
+        const r = (i / 100) * maxRadius;
+        if (i === 0) ctx.moveTo(cx + r * Math.cos(t), cy + r * Math.sin(t));
+        else ctx.lineTo(cx + r * Math.cos(t), cy + r * Math.sin(t));
+      }
+      ctx.stroke();
+    } else if (el.type === "text") {
+      ctx.fillStyle = el.color || "#ffffff";
+      const fontSize = el.fontSize || 48;
+      ctx.font = `${fontSize}px Arial`;
+      ctx.textAlign = el.textAlign || "left";
+      const lh = (el.lineHeight || 1.3) * fontSize;
+      const text = el.text || "Texto";
+      const words = text.split(" ");
+      let line = "";
+      let drawX = (el.textAlign || "left") === "center" ? el.x + el.width / 2 : (el.textAlign || "left") === "right" ? el.x + el.width : el.x;
+      let y = el.y + fontSize;
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + " ";
+        if (ctx.measureText(testLine).width > el.width && i > 0) {
+          ctx.fillText(line.trim(), drawX, y);
+          line = words[i] + " ";
+          y += lh;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line.trim(), drawX, y);
+      ctx.textAlign = "left";
+    } else if (el.type === "contact") {
+      ctx.fillStyle = el.color || "#10B981";
+      const fontSize = el.fontSize || 48;
+      ctx.font = `${fontSize}px Arial`;
+      ctx.textAlign = el.textAlign || "left";
+      const lh = (el.lineHeight || 1.3) * fontSize;
+      const text = el.text || "Contato";
+      let drawX = (el.textAlign || "left") === "center" ? el.x + el.width / 2 : (el.textAlign || "left") === "right" ? el.x + el.width : el.x;
+      ctx.fillText(text, drawX, el.y + fontSize);
+      ctx.textAlign = "left";
+    } else if (el.type === "polkaDots") {
+      const dotRadius = Math.min(el.width, el.height) * 0.08;
+      const spacing = dotRadius * 3;
+      const cols = Math.floor(el.width / spacing);
+      const rows = Math.floor(el.height / spacing);
+      const offsetX = (el.width - (cols - 1) * spacing) / 2;
+      const offsetY = (el.height - (rows - 1) * spacing) / 2;
+      ctx.fillStyle = el.color || "#3B82F6";
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          ctx.beginPath();
+          ctx.arc(el.x + offsetX + col * spacing, el.y + offsetY + row * spacing, dotRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else if (el.type === "dotsGrid" || el.type === "confetti" || el.type === "splatter") {
+      // These use seeded random - draw as rect placeholder for snapshot
+      ctx.fillStyle = el.color || "#3B82F6";
+      const seed = el.x + el.y;
+      const random = (i: number) => { const x = Math.sin(seed + i * 9.999) * 10000; return x - Math.floor(x); };
+      if (el.type === "dotsGrid") {
+        for (let i = 0; i < 25; i++) {
+          ctx.beginPath();
+          ctx.arc(el.x + random(i * 2) * el.width, el.y + random(i * 2 + 1) * el.height, 3 + random(i * 3) * 12, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (el.type === "confetti") {
+        const colors = [el.color || "#3B82F6", "#f59e0b", "#3b82f6", "#10b981", "#8b5cf6"];
+        for (let i = 0; i < 30; i++) {
+          ctx.fillStyle = colors[Math.floor(random(i * 5) * colors.length)];
+          const size = 5 + random(i * 3) * 15;
+          ctx.save();
+          ctx.translate(el.x + random(i * 2) * el.width, el.y + random(i * 2 + 1) * el.height);
+          ctx.rotate(random(i * 4) * Math.PI * 2);
+          ctx.fillRect(-size / 2, -size / 4, size, size / 2);
+          ctx.restore();
+        }
+      } else {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const mainRadius = Math.min(el.width, el.height) * 0.3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, mainRadius, 0, Math.PI * 2);
+        ctx.fill();
+        for (let i = 0; i < 20; i++) {
+          const angle = random(i) * Math.PI * 2;
+          const distance = mainRadius + random(i + 20) * mainRadius * 1.5;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance, 3 + random(i + 40) * 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else if (el.type === "logo") {
+      ctx.fillStyle = "rgba(59, 130, 246, 0.3)";
+      ctx.fillRect(el.x, el.y, el.width, el.height);
+      ctx.strokeStyle = "#3B82F6";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(el.x, el.y, el.width, el.height);
+      ctx.fillStyle = "#3B82F6";
+      ctx.font = "bold 32px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("LOGO", el.x + el.width / 2, el.y + el.height / 2 + 12);
+    } else if (el.type === "mascot") {
+      ctx.fillStyle = "rgba(245, 158, 11, 0.3)";
+      ctx.fillRect(el.x, el.y, el.width, el.height);
+      ctx.strokeStyle = "#F59E0B";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(el.x, el.y, el.width, el.height);
+      ctx.fillStyle = "#F59E0B";
+      ctx.font = "bold 32px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("MASCOTE", el.x + el.width / 2, el.y + el.height / 2 + 12);
+    } else if (el.type === "image") {
+      // Image placeholder
+      ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
+      const shape = el.clipShape || "rect";
+      if (shape === "circle") {
+        ctx.beginPath();
+        ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(el.x, el.y, el.width, el.height);
+      }
+    } else {
+      drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, ctx.fillStyle as string);
+    }
+    ctx.restore();
+  }, []);
+  drawSingleElementRef.current = drawSingleElement;
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -2218,6 +2526,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   const duration = el.animDuration || 0.8;
                   const animClass = `anim-preview-${el.animationType}`;
                   const snap = animSnapshotsRef.current[el.id];
+                  const pad = (el.borderWidth || 0) + (el.shadowBlur || 0) + 4;
 
                   return (
                     <div
@@ -2225,10 +2534,10 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                       className={animClass}
                       style={{
                         position: "absolute",
-                        left: el.x * SCALE,
-                        top: el.y * SCALE,
-                        width: el.width * SCALE,
-                        height: el.height * SCALE,
+                        left: (el.x - pad) * SCALE,
+                        top: (el.y - pad) * SCALE,
+                        width: (el.width + pad * 2) * SCALE,
+                        height: (el.height + pad * 2) * SCALE,
                         animationDuration: `${duration}s`,
                         animationIterationCount: isLoop ? "infinite" : undefined,
                         animationDirection: isLoop ? "alternate" : undefined,
