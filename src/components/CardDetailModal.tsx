@@ -11,28 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 const downloadFile = async (url: string, fileName: string) => {
   try {
     const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    let view = new Uint8Array(arrayBuffer);
-
-    // Detect MIME from extension
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    const isVideo = ext === 'mp4' || ext === 'mov' || ext === 'webm';
-    const mimeType = isVideo ? 'video/mp4' : (ext === 'png' ? 'image/png' : 'image/jpeg');
-
-    // Patch MP4 brand for WhatsApp compatibility (mp42 -> isom)
-    if (isVideo && view.length > 12) {
-      const ftyp = String.fromCharCode(view[4], view[5], view[6], view[7]);
-      if (ftyp === "ftyp") {
-        const brand = String.fromCharCode(view[8], view[9], view[10], view[11]);
-        if (brand !== "isom") {
-          view = new Uint8Array(arrayBuffer.slice(0));
-          view[8] = 105; view[9] = 115; view[10] = 111; view[11] = 109;
-          console.log("[Download] Patched MP4 brand from", brand, "to isom");
-        }
-      }
-    }
-
-    const blob = new Blob([view], { type: mimeType });
+    const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = downloadUrl;
