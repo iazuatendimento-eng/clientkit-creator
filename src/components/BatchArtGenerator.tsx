@@ -484,9 +484,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         let gradient;
         if (el.gradient.type === "linear") {
           const angle = (el.gradient.angle || 0) * Math.PI / 180;
-          const dx = Math.cos(angle) * w;
-          const dy = Math.sin(angle) * h;
-          gradient = ctx.createLinearGradient(x, y, x + dx, y + dy);
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          const dx = Math.cos(angle) * w / 2;
+          const dy = Math.sin(angle) * h / 2;
+          gradient = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
         } else {
           gradient = ctx.createRadialGradient(
             x + w / 2, y + h / 2, 0,

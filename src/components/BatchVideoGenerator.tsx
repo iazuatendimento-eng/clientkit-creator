@@ -77,6 +77,7 @@ interface CanvasElement {
     color1Role?: "background" | "text" | "accessory1" | "accessory2";
     color2Role?: "background" | "text" | "accessory1" | "accessory2";
   };
+  animated?: boolean;
 }
 
 interface VideoTemplate {
@@ -960,9 +961,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         let gradient;
         if (el.gradient.type === "linear") {
           const angle = (el.gradient.angle || 0) * Math.PI / 180;
-          const dx = Math.cos(angle) * elW;
-          const dy = Math.sin(angle) * elH;
-          gradient = ctx.createLinearGradient(x, y, x + dx, y + dy);
+          const cx = x + elW / 2;
+          const cy = y + elH / 2;
+          const dx = Math.cos(angle) * elW / 2;
+          const dy = Math.sin(angle) * elH / 2;
+          gradient = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
         } else {
           gradient = ctx.createRadialGradient(
             x + elW / 2, y + elH / 2, 0,
@@ -1084,18 +1087,21 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Draw elements
     for (const el of elements) {
-      // Skip logo if excludeLogo is set (logo has its own overlay layer)
-      if (excludeLogo && el.type === "logo") continue;
-      // Skip text/contact if excludeText is set (text has its own overlay layer)
-      if (excludeText && ["text", "contact"].includes(el.type)) continue;
-      // For text-only overlay (transparent + excludeLogo + !excludeText): only render text/contact
+      const isAnimated = el.animated !== false; // default true
+      // Skip logo if excludeLogo is set AND element is animated (non-animated logos stay on base)
+      if (excludeLogo && el.type === "logo" && isAnimated) continue;
+      // Skip text/contact if excludeText is set AND element is animated (non-animated text stays on base)
+      if (excludeText && ["text", "contact"].includes(el.type) && isAnimated) continue;
+      // For text-only overlay (transparent + !excludeText): only render animated text/contact
       if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
+        if (!isAnimated) continue; // Non-animated text stays on base, not on animated overlay
       }
-      // For frame-only overlay: render shapes and image borders on top of video
+      // For frame-only overlay: render animated shapes and image borders on top of video
       if (transparentBackground && excludeText) {
         // Skip non-visual elements
         if (["text", "contact", "logo"].includes(el.type)) continue;
+        if (!isAnimated) continue; // Non-animated shapes stay on base
         
         // For image elements, draw just the border
         if (el.type === "image") {
@@ -1519,6 +1525,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       console.warn(`[generateLogoOverlay] No logo element found in ${isSignature ? 'signature' : 'content'} elements (${elements.length} elements, types: ${elements.map(e => e.type).join(',')})`);
       return "";
     }
+    // If logo is marked as non-animated, skip overlay (it stays on base page)
+    if (logoEl.animated === false) return "";
 
     const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
     if (!logoUrl) {

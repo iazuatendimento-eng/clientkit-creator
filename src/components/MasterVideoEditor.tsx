@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { drawNewShape } from "@/lib/canvasShapes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +90,7 @@ interface CanvasElement {
     color1Role?: "background" | "text" | "accessory1" | "accessory2";
     color2Role?: "background" | "text" | "accessory1" | "accessory2";
   };
+  animated?: boolean; // Whether this layer participates in video animations (default true)
 }
 
 interface VideoTemplate {
@@ -441,9 +443,11 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         let gradient;
         if (el.gradient.type === "linear") {
           const angle = (el.gradient.angle || 0) * Math.PI / 180;
-          const dx = Math.cos(angle) * el.width;
-          const dy = Math.sin(angle) * el.height;
-          gradient = ctx.createLinearGradient(el.x, el.y, el.x + dx, el.y + dy);
+          const cx = el.x + el.width / 2;
+          const cy = el.y + el.height / 2;
+          const dx = Math.cos(angle) * el.width / 2;
+          const dy = Math.sin(angle) * el.height / 2;
+          gradient = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
         } else {
           gradient = ctx.createRadialGradient(
             el.x + el.width / 2, el.y + el.height / 2, 0,
@@ -2165,6 +2169,20 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                       }`}
                       onClick={() => setSelectedElement(el.id)}
                     >
+                      <Checkbox
+                        checked={el.animated !== false}
+                        onCheckedChange={(checked) => {
+                          const newElements = [...elements];
+                          const idx = elements.findIndex((e) => e.id === el.id);
+                          if (idx >= 0) {
+                            newElements[idx] = { ...newElements[idx], animated: !!checked };
+                            setElements(newElements);
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="shrink-0"
+                        title="Anima este elemento no vídeo"
+                      />
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         {el.type === "rect" && <Square className="h-4 w-4 shrink-0" />}
                         {el.type === "circle" && <Circle className="h-4 w-4 shrink-0" />}
