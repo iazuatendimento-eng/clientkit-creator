@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, searchPexelsVideos } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
+import { saveBatchGeneration, getBatchById, BatchItem } from "@/lib/batchHistory";
 import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
@@ -2238,7 +2238,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
 
       // Clear tags + save batch history in parallel (batch save is non-blocking)
-      const batchItems: BatchItem[] = approvedVideos.map((video) => ({
+      const newBatchItems: BatchItem[] = approvedVideos.map((video) => ({
         cardId: video.cardId,
         clientId: video.clientId,
         clientName: video.clientName,
@@ -2253,6 +2253,21 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         pageTextAdjustments: video.pageTextAdjustments,
         pageImageAdjustments: video.pageImageAdjustments,
       }));
+
+      // Merge with existing batch items to preserve non-edited items
+      let batchItems = newBatchItems;
+      if (currentBatchId) {
+        try {
+          const existingBatch = await getBatchById(currentBatchId);
+          if (existingBatch && existingBatch.items.length > 0) {
+            const updatedCardIds = new Set(newBatchItems.map((i) => i.cardId));
+            const preservedItems = existingBatch.items.filter((i) => !updatedCardIds.has(i.cardId));
+            batchItems = [...preservedItems, ...newBatchItems];
+          }
+        } catch (e) {
+          console.warn("Could not merge with existing batch items:", e);
+        }
+      }
 
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
       await Promise.all([
@@ -2300,7 +2315,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
 
     try {
-      const batchItems: BatchItem[] = videosWithPages.map((video) => ({
+      const newBatchItems: BatchItem[] = videosWithPages.map((video) => ({
         cardId: video.cardId,
         clientId: video.clientId,
         clientName: video.clientName,
@@ -2315,6 +2330,22 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         pageTextAdjustments: video.pageTextAdjustments,
         pageImageAdjustments: video.pageImageAdjustments,
       }));
+
+      // Merge with existing batch items to preserve non-edited items
+      let batchItems = newBatchItems;
+      if (currentBatchId) {
+        try {
+          const existingBatch = await getBatchById(currentBatchId);
+          if (existingBatch && existingBatch.items.length > 0) {
+            const updatedCardIds = new Set(newBatchItems.map((i) => i.cardId));
+            const preservedItems = existingBatch.items.filter((i) => !updatedCardIds.has(i.cardId));
+            batchItems = [...preservedItems, ...newBatchItems];
+          }
+        } catch (e) {
+          console.warn("Could not merge with existing batch items:", e);
+        }
+      }
+
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
       const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
       if (savedId) setCurrentBatchId(savedId);
