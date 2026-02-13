@@ -2556,29 +2556,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       {/* Effect Controls */}
       <div className="border-b bg-card/50 px-6 py-3 flex items-center gap-6 flex-wrap">
         <div className="flex items-center gap-2">
-          <Label className="text-sm whitespace-nowrap">Movimento:</Label>
-          <select
-            value={motionEffect}
-            onChange={(e) => setMotionEffect(e.target.value as MotionEffect)}
-            className="h-8 px-2 text-sm border rounded-md bg-background"
-          >
-            <option value="none">Nenhum</option>
-            <option value="ken-burns">Ken Burns</option>
-            <option value="ken-burns-reverse">Ken Burns Reverso</option>
-            <option value="pulse">Pulsar Suave</option>
-            <option value="pulse-strong">Pulsar Forte</option>
-            <option value="float">Flutuar</option>
-            <option value="float-diagonal">Flutuar Diagonal</option>
-            <option value="sway">Balançar</option>
-            <option value="breathe">Respirar</option>
-            <option value="drift">Deriva</option>
-            <option value="wobble">Bambolear</option>
-            <option value="zoom-pulse">Zoom Pulsar</option>
-            <option value="pan-left">Pan Esquerda</option>
-            <option value="pan-right">Pan Direita</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
           <Label className="text-sm whitespace-nowrap">Transição:</Label>
           <select
             value={transitionEffect}

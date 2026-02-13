@@ -605,29 +605,6 @@ export const BatchHistoryEditor = ({
                     </h3>
 
                     <div className="space-y-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Movimento</Label>
-                        <select
-                          value={motionEffect}
-                          onChange={(e) => setMotionEffect(e.target.value as MotionEffect)}
-                          className="w-full h-8 px-2 text-sm border rounded-md bg-background"
-                        >
-                          <option value="none">Nenhum</option>
-                          <option value="ken-burns">Ken Burns</option>
-                          <option value="ken-burns-reverse">Ken Burns Reverso</option>
-                          <option value="pulse">Pulsar Suave</option>
-                          <option value="pulse-strong">Pulsar Forte</option>
-                          <option value="float">Flutuar</option>
-                          <option value="float-diagonal">Flutuar Diagonal</option>
-                          <option value="sway">Balançar</option>
-                          <option value="breathe">Respirar</option>
-                          <option value="drift">Deriva</option>
-                          <option value="wobble">Bambolear</option>
-                          <option value="zoom-pulse">Zoom Pulsar</option>
-                          <option value="pan-left">Pan Esquerda</option>
-                          <option value="pan-right">Pan Direita</option>
-                        </select>
-                      </div>
 
                       <div className="space-y-1">
                         <Label className="text-xs">Transição</Label>
