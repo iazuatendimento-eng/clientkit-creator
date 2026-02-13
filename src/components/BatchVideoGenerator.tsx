@@ -1033,7 +1033,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Helper to apply element styles (opacity, shadow)
     const applyElementStyles = (el: CanvasElement) => {
-      ctx.globalAlpha = (el.opacity ?? 100) / 100;
+      // For fadeMode gradient elements, opacity is already embedded in the RGBA gradient stops
+      // so we don't multiply globalAlpha again to avoid double-reducing opacity
+      if (el.gradient?.fadeMode) {
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.globalAlpha = (el.opacity ?? 100) / 100;
+      }
       if (el.shadowBlur && el.shadowBlur > 0) {
         ctx.shadowBlur = el.shadowBlur;
         ctx.shadowColor = el.shadowColor || "#000000";
