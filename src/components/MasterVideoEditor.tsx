@@ -47,6 +47,7 @@ import {
   Scissors,
   Pencil,
   Plus,
+  Palette,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { searchImages, SearchImage } from "@/lib/imageSearch";
@@ -2271,15 +2272,25 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                           <div className="space-y-3">
                             <div className="space-y-1 p-2 bg-muted/30 rounded">
                               <div className="flex items-center gap-2">
-                                <Input
-                                  type="color"
-                                  value={selectedEl.gradient.color1}
-                                  onChange={(e) => updateSelectedElement({ 
-                                    gradient: { ...selectedEl.gradient!, color1: e.target.value, color2: e.target.value }
-                                  })}
-                                  className="w-10 h-8 p-1"
-                                />
-                                <Label className="text-[10px] text-muted-foreground flex-1">Cor {selectedEl.gradient.color1Role ? "(preview)" : ""}</Label>
+                                {!selectedEl.gradient.color1Role ? (
+                                  <Input
+                                    type="color"
+                                    value={selectedEl.gradient.color1}
+                                    onChange={(e) => updateSelectedElement({ 
+                                      gradient: { ...selectedEl.gradient!, color1: e.target.value, color2: e.target.value }
+                                    })}
+                                    className="w-10 h-8 p-1"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-8 rounded border border-primary/30 bg-primary/20 flex items-center justify-center" title="Cor definida pelo Kit de Marca">
+                                    <Palette className="h-4 w-4 text-primary" />
+                                  </div>
+                                )}
+                                <Label className="text-[10px] text-muted-foreground flex-1">
+                                  {selectedEl.gradient.color1Role 
+                                    ? `Kit: ${selectedEl.gradient.color1Role === "background" ? "Fundo" : selectedEl.gradient.color1Role === "text" ? "Texto" : selectedEl.gradient.color1Role === "accessory1" ? "Acessório 1" : "Acessório 2"}`
+                                    : "Cor fixa"}
+                                </Label>
                               </div>
                               <Select
                                 value={selectedEl.gradient.color1Role || "none"}
@@ -2335,15 +2346,25 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                             {/* Color 1 with opacity */}
                             <div className="space-y-1 p-2 bg-muted/30 rounded">
                               <div className="flex items-center gap-2">
-                                <Input
-                                  type="color"
-                                  value={selectedEl.gradient.color1}
-                                  onChange={(e) => updateSelectedElement({ 
-                                    gradient: { ...selectedEl.gradient!, color1: e.target.value }
-                                  })}
-                                  className="w-10 h-8 p-1"
-                                />
-                                <Label className="text-[10px] text-muted-foreground flex-1">Cor 1 {selectedEl.gradient.color1Role ? "(preview)" : ""}</Label>
+                                {!selectedEl.gradient.color1Role ? (
+                                  <Input
+                                    type="color"
+                                    value={selectedEl.gradient.color1}
+                                    onChange={(e) => updateSelectedElement({ 
+                                      gradient: { ...selectedEl.gradient!, color1: e.target.value }
+                                    })}
+                                    className="w-10 h-8 p-1"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-8 rounded border border-primary/30 bg-primary/20 flex items-center justify-center" title="Cor definida pelo Kit de Marca">
+                                    <Palette className="h-4 w-4 text-primary" />
+                                  </div>
+                                )}
+                                <Label className="text-[10px] text-muted-foreground flex-1">
+                                  {selectedEl.gradient.color1Role 
+                                    ? `Kit: ${selectedEl.gradient.color1Role === "background" ? "Fundo" : selectedEl.gradient.color1Role === "text" ? "Texto" : selectedEl.gradient.color1Role === "accessory1" ? "Acessório 1" : "Acessório 2"}`
+                                    : "Cor 1"}
+                                </Label>
                               </div>
                               <Select
                                 value={selectedEl.gradient.color1Role || "none"}
@@ -2381,15 +2402,25 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                             {/* Color 2 with opacity */}
                             <div className="space-y-1 p-2 bg-muted/30 rounded">
                               <div className="flex items-center gap-2">
-                                <Input
-                                  type="color"
-                                  value={selectedEl.gradient.color2}
-                                  onChange={(e) => updateSelectedElement({ 
-                                    gradient: { ...selectedEl.gradient!, color2: e.target.value }
-                                  })}
-                                  className="w-10 h-8 p-1"
-                                />
-                                <Label className="text-[10px] text-muted-foreground flex-1">Cor 2 {selectedEl.gradient.color2Role ? "(preview)" : ""}</Label>
+                                {!selectedEl.gradient.color2Role ? (
+                                  <Input
+                                    type="color"
+                                    value={selectedEl.gradient.color2}
+                                    onChange={(e) => updateSelectedElement({ 
+                                      gradient: { ...selectedEl.gradient!, color2: e.target.value }
+                                    })}
+                                    className="w-10 h-8 p-1"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-8 rounded border border-primary/30 bg-primary/20 flex items-center justify-center" title="Cor definida pelo Kit de Marca">
+                                    <Palette className="h-4 w-4 text-primary" />
+                                  </div>
+                                )}
+                                <Label className="text-[10px] text-muted-foreground flex-1">
+                                  {selectedEl.gradient.color2Role 
+                                    ? `Kit: ${selectedEl.gradient.color2Role === "background" ? "Fundo" : selectedEl.gradient.color2Role === "text" ? "Texto" : selectedEl.gradient.color2Role === "accessory1" ? "Acessório 1" : "Acessório 2"}`
+                                    : "Cor 2"}
+                                </Label>
                               </div>
                               <Select
                                 value={selectedEl.gradient.color2Role || "none"}
