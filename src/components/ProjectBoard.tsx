@@ -194,7 +194,22 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       toast.dismiss("download-loading");
 
       const mimeType = getMimeType(filename);
-      const blob = new Blob([arrayBuffer], { type: mimeType });
+      let view = new Uint8Array(arrayBuffer);
+
+      // Patch MP4 brand for WhatsApp compatibility (mp42 -> isom)
+      if (mimeType === "video/mp4" && view.length > 12) {
+        const ftyp = String.fromCharCode(view[4], view[5], view[6], view[7]);
+        if (ftyp === "ftyp") {
+          const brand = String.fromCharCode(view[8], view[9], view[10], view[11]);
+          if (brand !== "isom") {
+            view = new Uint8Array(arrayBuffer.slice(0)); // clone
+            view[8] = 105; view[9] = 115; view[10] = 111; view[11] = 109; // "isom"
+            console.log("[Download] Patched MP4 brand from", brand, "to isom");
+          }
+        }
+      }
+
+      const blob = new Blob([view], { type: mimeType });
 
       // iOS: use Web Share API — shows "Save Video/Image" option
       if (isIOS && navigator.share && navigator.canShare) {
