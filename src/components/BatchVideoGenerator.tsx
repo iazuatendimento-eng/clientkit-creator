@@ -737,6 +737,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           };
           setClientVideos([...updatedVideos]);
         }
+
+        // If any videos lack previewVideoUrls (old batches saved before this field existed),
+        // auto-fetch from Pexels so previews show video instead of static images
+        const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
+        if (videosNeedingFetch.length > 0) {
+          setGenerationStatus("Buscando vídeos de fundo...");
+          await autoFetchPexelsCovers(updatedVideos);
+        }
       } finally {
         setIsGenerating(false);
         setGenerationStatus("");
