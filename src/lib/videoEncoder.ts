@@ -99,69 +99,67 @@ async function isValidMP4(blob: Blob): Promise<boolean> {
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress } = options;
 
-  // Try native MP4 recording first (most compatible with WhatsApp)
+  // Always record as the best available format first
   const mp4Mime = pickSupportedMimeType([
     "video/mp4;codecs=avc1",
     "video/mp4",
   ]);
 
-  if (mp4Mime) {
-    console.log("[VideoEncoder] Using native MP4 recording:", mp4Mime);
-    onProgress?.(0.1);
-    const mp4 = await withTimeout(
-      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
-      240_000,
-      "gerar MP4 (nativo)"
-    );
-    
-    // Verify it's actually MP4
-    if (await isValidMP4(mp4)) {
-      console.log("[VideoEncoder] Native MP4 is valid! Size:", mp4.size);
-      onProgress?.(1);
-      return mp4;
-    }
-    console.warn("[VideoEncoder] Native MP4 recording produced invalid file, falling back to FFmpeg");
-  }
+  const recordMime = mp4Mime || pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) || "video/webm";
+  const isNativeMP4 = recordMime.startsWith("video/mp4");
 
-  // Record as WebM, then convert with FFmpeg
-  console.log("[VideoEncoder] Recording as WebM for FFmpeg conversion");
+  console.log("[VideoEncoder] Recording with MIME:", recordMime);
   onProgress?.(0.1);
-  const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
-  console.log("[VideoEncoder] WebM recorded, size:", webmBlob.size);
 
-  // Try FFmpeg conversion to real MP4
+  const recordedBlob = await withTimeout(
+    encodeVideoSimple(pages, options, isNativeMP4 ? { mimeType: recordMime, outputType: "video/mp4" } : undefined),
+    240_000,
+    "gravar vídeo"
+  );
+  console.log("[VideoEncoder] Recorded blob size:", recordedBlob.size, "type:", recordedBlob.type);
+
+  // ALWAYS re-mux through FFmpeg to ensure WhatsApp-compatible MP4
+  // Chrome's native MP4 uses major_brand=mp42 which WhatsApp rejects
   try {
     onProgress?.(0.35);
     const ff = await loadFFmpeg();
 
     onProgress?.(0.55);
-    const webmData = await fetchFile(webmBlob);
-    await ff.writeFile("input.webm", webmData);
+    const inputData = await fetchFile(recordedBlob);
+    const inputName = isNativeMP4 ? "input.mp4" : "input.webm";
+    await ff.writeFile(inputName, inputData);
 
-    console.log("[VideoEncoder] Starting FFmpeg conversion...");
+    console.log("[VideoEncoder] Starting FFmpeg re-mux for WhatsApp compatibility...");
+
+    // For native MP4: just re-mux to fix brand (much faster, no re-encoding)
+    // For WebM: full re-encode to H.264
+    const ffmpegArgs = isNativeMP4
+      ? [
+          "-i", inputName,
+          "-c:v", "copy",           // No re-encoding needed, just re-mux
+          "-brand", "isom",         // WhatsApp-compatible brand
+          "-movflags", "+faststart",
+          "-an",
+          "output.mp4",
+        ]
+      : [
+          "-i", inputName,
+          "-c:v", "libx264",
+          "-profile:v", "baseline",
+          "-level", "3.1",
+          "-preset", "fast",
+          "-crf", "23",
+          "-pix_fmt", "yuv420p",
+          "-brand", "isom",
+          "-movflags", "+faststart",
+          "-an",
+          "output.mp4",
+        ];
+
     await withTimeout(
-      ff.exec([
-        "-i",
-        "input.webm",
-        "-c:v",
-        "libx264",
-        "-profile:v",
-        "baseline",
-        "-level",
-        "3.1",
-        "-preset",
-        "fast",
-        "-crf",
-        "23",
-        "-pix_fmt",
-        "yuv420p",
-        "-movflags",
-        "+faststart",
-        "-an",
-        "output.mp4",
-      ]),
+      ff.exec(ffmpegArgs),
       360_000,
-      "converter para MP4"
+      "converter para MP4 compatível"
     );
 
     onProgress?.(0.9);
@@ -171,23 +169,23 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       type: "video/mp4",
     });
 
-    await ff.deleteFile("input.webm");
+    await ff.deleteFile(inputName);
     await ff.deleteFile("output.mp4");
 
-    // Verify the converted file is valid MP4
     if (await isValidMP4(mp4Blob)) {
-      console.log("[VideoEncoder] FFmpeg MP4 is valid! Size:", mp4Blob.size);
+      console.log("[VideoEncoder] WhatsApp-compatible MP4 ready! Size:", mp4Blob.size);
       onProgress?.(1);
       return mp4Blob;
     }
 
-    console.warn("[VideoEncoder] FFmpeg produced invalid MP4, returning WebM as fallback");
+    console.warn("[VideoEncoder] FFmpeg output is not valid MP4, using recorded blob");
     onProgress?.(1);
-    return new Blob([webmBlob], { type: "video/webm" });
+    return recordedBlob;
   } catch (ffmpegError) {
-    console.error("[VideoEncoder] FFmpeg conversion failed:", ffmpegError);
+    console.error("[VideoEncoder] FFmpeg failed:", ffmpegError);
     onProgress?.(1);
-    return new Blob([webmBlob], { type: "video/webm" });
+    // Return the native recording as fallback
+    return recordedBlob;
   }
 }
 
