@@ -93,6 +93,7 @@ interface CanvasElement {
   animated?: boolean; // Whether this layer participates in video animations (default true)
   animationType?: string; // Specific animation for this element
   animDuration?: number; // Animation duration in seconds
+  animLoop?: boolean; // Whether animation loops continuously
 }
 
 interface VideoTemplate {
@@ -210,35 +211,69 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const leftSidebarRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Animation preview state
+  // Animation preview state - captures actual element snapshot
   const [animPreview, setAnimPreview] = useState<{
-    elId: string;
     type: string;
     x: number;
     y: number;
     width: number;
     height: number;
-    color: string;
+    imageDataUrl: string;
     key: number;
+    loop: boolean;
   } | null>(null);
+  const animPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const triggerAnimPreview = (el: CanvasElement, animType: string) => {
+  const triggerAnimPreview = (el: CanvasElement, animType: string, loop?: boolean) => {
     if (!animType || animType === "none") {
       setAnimPreview(null);
       return;
     }
-    setAnimPreview({
-      elId: el.id,
-      type: animType,
-      x: el.x * SCALE,
-      y: el.y * SCALE,
-      width: el.width * SCALE,
-      height: el.height * SCALE,
-      color: el.color || currentColor,
-      key: Date.now(),
-    });
-    // Auto-clear after animation
-    setTimeout(() => setAnimPreview(null), 2000);
+    // Capture the element region from the canvas
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Get image data of the element area from the full-res canvas
+    const sx = Math.max(0, Math.floor(el.x));
+    const sy = Math.max(0, Math.floor(el.y));
+    const sw = Math.min(Math.ceil(el.width), CANVAS_WIDTH - sx);
+    const sh = Math.min(Math.ceil(el.height), CANVAS_HEIGHT - sy);
+    
+    try {
+      const imgData = ctx.getImageData(sx, sy, sw, sh);
+      const tmpCanvas = document.createElement("canvas");
+      tmpCanvas.width = sw;
+      tmpCanvas.height = sh;
+      const tmpCtx = tmpCanvas.getContext("2d")!;
+      tmpCtx.putImageData(imgData, 0, 0);
+      const dataUrl = tmpCanvas.toDataURL();
+
+      if (animPreviewTimerRef.current) clearTimeout(animPreviewTimerRef.current);
+
+      setAnimPreview({
+        type: animType,
+        x: el.x * SCALE,
+        y: el.y * SCALE,
+        width: el.width * SCALE,
+        height: el.height * SCALE,
+        imageDataUrl: dataUrl,
+        key: Date.now(),
+        loop: !!loop,
+      });
+
+      if (!loop) {
+        animPreviewTimerRef.current = setTimeout(() => setAnimPreview(null), 2500);
+      }
+    } catch (e) {
+      console.error("Failed to capture element for preview", e);
+    }
+  };
+
+  const stopAnimPreview = () => {
+    if (animPreviewTimerRef.current) clearTimeout(animPreviewTimerRef.current);
+    setAnimPreview(null);
   };
 
   // Handle background removal for selected image
@@ -2098,22 +2133,26 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           />
-          {/* Animation preview overlay */}
+          {/* Animation preview overlay - shows actual element snapshot animating */}
           {animPreview && (
             <div
               key={animPreview.key}
-              className={`absolute pointer-events-none rounded-md border-2 border-primary bg-primary/30 shadow-lg shadow-primary/20 anim-preview-${animPreview.type}`}
+              className={`absolute pointer-events-none anim-preview-${animPreview.type}`}
               style={{
                 left: animPreview.x,
                 top: animPreview.y,
                 width: animPreview.width,
                 height: animPreview.height,
                 zIndex: 50,
+                animationIterationCount: animPreview.loop ? 'infinite' : 1,
               }}
             >
-              <div className="w-full h-full flex items-center justify-center text-xs text-primary-foreground font-bold uppercase bg-primary/40 rounded">
-                ✨ {animPreview.type.replace(/-/g, ' ')}
-              </div>
+              <img
+                src={animPreview.imageDataUrl}
+                alt=""
+                className="w-full h-full object-fill"
+                style={{ borderRadius: 4 }}
+              />
             </div>
           )}
         </div>
@@ -2382,7 +2421,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   newElements[idx] = { ...newElements[idx], animationType: v === "none" ? undefined : v };
                                   setElements(newElements);
                                   setSelectedElement(el.id);
-                                  triggerAnimPreview(el, v);
+                                  triggerAnimPreview(el, v, el.animLoop);
                                 }
                               }}
                             >
@@ -2399,7 +2438,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                             </Select>
                           </div>
                           {el.animationType && el.animationType !== "none" && (
-                            <div className="space-y-1">
+                            <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <Label className="text-[10px] text-muted-foreground">
                                   Duração: {(el.animDuration || 0.8).toFixed(1)}s
@@ -2410,7 +2449,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   className="h-6 px-2 text-[10px] gap-1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    triggerAnimPreview(el, el.animationType!);
+                                    triggerAnimPreview(el, el.animationType!, el.animLoop);
                                   }}
                                 >
                                   <Play className="h-3 w-3" />
@@ -2431,6 +2470,23 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                 max={5}
                                 step={0.1}
                               />
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={!!el.animLoop}
+                                  onCheckedChange={(checked) => {
+                                    const newElements = [...elements];
+                                    const idx = elements.findIndex((e) => e.id === el.id);
+                                    if (idx >= 0) {
+                                      newElements[idx] = { ...newElements[idx], animLoop: !!checked };
+                                      setElements(newElements);
+                                    }
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <Label className="text-[10px] text-muted-foreground cursor-pointer">
+                                  Loop contínuo
+                                </Label>
+                              </div>
                             </div>
                           )}
                         </div>
