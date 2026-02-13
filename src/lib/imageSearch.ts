@@ -1,4 +1,5 @@
-// Multi-source image search with Pexels, Unsplash, and fallback options
+// Multi-source image search with Pexels, Unsplash, Pixabay and fallback options
+import { supabase } from "@/integrations/supabase/client";
 
 export interface SearchImage {
   id: string;
@@ -145,6 +146,7 @@ export interface SearchVideo {
   videoUrl: string; // direct video file URL (SD quality for background use)
   photographer: string;
   description: string;
+  source?: 'pexels' | 'pixabay';
 }
 
 export const searchPexelsVideos = async (query: string, perPage: number = 5, page: number = 1): Promise<SearchVideo[]> => {
@@ -192,13 +194,55 @@ export const searchPexelsVideos = async (query: string, perPage: number = 5, pag
         duration: video.duration,
         videoUrl: hdFile?.link || '',
         photographer: video.user?.name || 'Pexels',
-        description: query,
-      };
+      description: query,
+      source: 'pexels' as const,
+    };
     }).filter((v: SearchVideo) => v.image && v.videoUrl);
   } catch (error) {
     console.error('Error fetching Pexels videos:', error);
     return [];
   }
+};
+
+// Pixabay Video search (via edge function since API key is a secret)
+export const searchPixabayVideos = async (query: string, perPage: number = 5, page: number = 1): Promise<SearchVideo[]> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('search-pixabay-videos', {
+      body: { query, perPage, page },
+    });
+
+    if (error) {
+      console.error('Pixabay video search error:', error);
+      return [];
+    }
+
+    return (data?.videos || []).map((v: any) => ({
+      ...v,
+      source: 'pixabay' as const,
+    }));
+  } catch (error) {
+    console.error('Error fetching Pixabay videos:', error);
+    return [];
+  }
+};
+
+// Combined video search - searches Pexels and Pixabay in parallel and merges results
+export const searchVideos = async (query: string, perPage: number = 5, page: number = 1): Promise<SearchVideo[]> => {
+  const [pexelsResults, pixabayResults] = await Promise.all([
+    searchPexelsVideos(query, perPage, page),
+    searchPixabayVideos(query, perPage, page),
+  ]);
+
+  // Interleave results: pexels1, pixabay1, pexels2, pixabay2, ...
+  const combined: SearchVideo[] = [];
+  const maxLen = Math.max(pexelsResults.length, pixabayResults.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < pexelsResults.length) combined.push(pexelsResults[i]);
+    if (i < pixabayResults.length) combined.push(pixabayResults[i]);
+  }
+
+  console.log(`[Video Search] Combined: ${pexelsResults.length} Pexels + ${pixabayResults.length} Pixabay = ${combined.length} total`);
+  return combined;
 };
 
 // Check which APIs are configured

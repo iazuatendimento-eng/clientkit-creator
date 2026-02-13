@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
-import { searchImages, SearchImage, searchPexelsVideos } from "@/lib/imageSearch";
+import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem } from "@/lib/batchHistory";
 import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
@@ -865,14 +865,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         // Try search - fetch enough results for all content pages
         const contentPageCount = video.pageTexts.length;
         const fetchCount = Math.max(contentPageCount, 5);
-        let results = await searchPexelsVideos(searchTerms, fetchCount);
+        let results = await searchVideos(searchTerms, fetchCount);
         if (results.length === 0) {
           const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
-          results = await searchPexelsVideos(simpleTerms, fetchCount);
+          results = await searchVideos(simpleTerms, fetchCount);
         }
         if (results.length === 0) {
-          // Generic fallback
-          results = await searchPexelsVideos("business technology", fetchCount);
+          results = await searchVideos("business technology", fetchCount);
         }
 
         if (results.length > 0) {
@@ -1780,13 +1779,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
             // Search Pexels videos with multiple fallback strategies
             let foundVideo = false;
-            let videos = await searchPexelsVideos(searchTerms, 3);
+            let videos = await searchVideos(searchTerms, 3);
             if (videos.length === 0) {
               const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
-              videos = await searchPexelsVideos(simpleTerms, 3);
+              videos = await searchVideos(simpleTerms, 3);
             }
             if (videos.length === 0) {
-              videos = await searchPexelsVideos("business technology", 3);
+              videos = await searchVideos("business technology", 3);
             }
             if (videos.length > 0) {
               searchedImages.push(videos[0].image);
@@ -1913,7 +1912,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setVideoSearchPage(1);
     try {
       // Search Pexels videos first, fallback to images
-      const videos = await searchPexelsVideos(searchQuery, 12, 1);
+      const videos = await searchVideos(searchQuery, 12, 1);
       if (videos.length > 0) {
         // Convert video results to SearchImage format using thumbnails
         const videoUrlMap: Record<string, string> = {};
@@ -1953,7 +1952,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     const nextPage = videoSearchPage + 1;
     setIsLoadingMore(true);
     try {
-      const videos = await searchPexelsVideos(searchQuery, 12, nextPage);
+      const videos = await searchVideos(searchQuery, 12, nextPage);
       if (videos.length > 0) {
         const newVideoUrlMap: Record<string, string> = {};
         const videoAsImages: SearchImage[] = videos.map(v => {
