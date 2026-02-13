@@ -2071,7 +2071,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             photographer: v.photographer,
             photographerUrl: '',
             description: v.description,
-            source: 'pexels' as const,
+            source: (v.source || 'pexels') as any,
           };
         });
         setSearchVideoUrlMap(videoUrlMap);
@@ -2110,7 +2110,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             photographer: v.photographer,
             photographerUrl: '',
             description: v.description,
-            source: 'pexels' as const,
+            source: (v.source || 'pexels') as any,
           };
         });
         setSearchVideoUrlMap(prev => ({ ...prev, ...newVideoUrlMap }));
@@ -3029,8 +3029,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Play className="h-8 w-8 text-white/80 drop-shadow-lg" />
                       </div>
-                      <div className="absolute bottom-1 right-1 bg-background/80 text-[10px] px-1 rounded">
-                        Pexels
+                      <div className="absolute bottom-1 right-1 bg-background/80 text-[10px] px-1 rounded capitalize">
+                        {image.source === 'pixabay' ? 'Pixabay' : 'Pexels'}
                       </div>
                     </div>
                   ))}
