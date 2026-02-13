@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { drawNewShape } from "@/lib/canvasShapes";
-import { TemplatePreviewModal } from "@/components/TemplatePreviewModal";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -159,7 +159,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   // Team filter state
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<TeamFilter>(undefined);
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [animatingElementId, setAnimatingElementId] = useState<string | null>(null);
+  const [animKey, setAnimKey] = useState(0);
 
   useEffect(() => {
     supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
@@ -2110,9 +2111,17 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
           </Select>
           
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setShowPreviewModal(true)}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                // Play all animated elements on canvas
+                setAnimatingElementId("__all__");
+                setAnimKey((k) => k + 1);
+              }}
+            >
               <Play className="mr-1 h-4 w-4" />
-              Preview
+              Play Geral
             </Button>
             <Button className="flex-1 bg-gradient-primary" onClick={handleGenerateBatch}>
               <Play className="mr-1 h-4 w-4" />
@@ -2141,6 +2150,100 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           />
+          {/* Inline animation overlay */}
+          {animatingElementId && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ borderRadius: '0.5rem', overflow: 'hidden' }}
+              onClick={() => setAnimatingElementId(null)}
+            >
+              {elements
+                .filter((el) => {
+                  if (animatingElementId === "__all__") return el.animationType && el.animationType !== "none";
+                  return el.id === animatingElementId && el.animationType && el.animationType !== "none";
+                })
+                .map((el) => {
+                  const isLoop = el.animLoop;
+                  const duration = el.animDuration || 0.8;
+                  const animClass = `anim-preview-${el.animationType}`;
+                  const baseStyle: React.CSSProperties = {
+                    position: "absolute",
+                    left: el.x * SCALE,
+                    top: el.y * SCALE,
+                    width: el.width * SCALE,
+                    height: el.height * SCALE,
+                    opacity: (el.opacity ?? 100) / 100,
+                    transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+                    borderRadius: el.type === "circle" ? "50%" : el.borderRadius ? el.borderRadius * SCALE : undefined,
+                    animationDuration: `${duration}s`,
+                    animationIterationCount: isLoop ? "infinite" : undefined,
+                    animationDirection: isLoop ? "alternate" : undefined,
+                    pointerEvents: "none",
+                  };
+
+                  // Render based on type
+                  if (el.type === "text" || el.type === "contact") {
+                    return (
+                      <div
+                        key={`anim-${el.id}-${animKey}`}
+                        className={animClass}
+                        style={{
+                          ...baseStyle,
+                          color: el.color || "#ffffff",
+                          fontSize: (el.fontSize || 48) * SCALE,
+                          lineHeight: el.lineHeight || 1.2,
+                          textAlign: el.textAlign || "left",
+                          display: "flex",
+                          alignItems: "center",
+                          fontWeight: "bold",
+                          overflow: "hidden",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {el.text || (el.type === "contact" ? "Contato" : "Texto")}
+                      </div>
+                    );
+                  }
+
+                  // Gradient
+                  const gradient = el.gradient;
+                  if (gradient) {
+                    const hexToRgba = (hex: string, op: number) => {
+                      const r = parseInt(hex.slice(1, 3), 16);
+                      const g = parseInt(hex.slice(3, 5), 16);
+                      const b = parseInt(hex.slice(5, 7), 16);
+                      return `rgba(${r},${g},${b},${op / 100})`;
+                    };
+                    const { type, color1, color2, opacity1 = 100, opacity2 = 100, angle = 0 } = gradient;
+                    baseStyle.background = type === "radial"
+                      ? `radial-gradient(circle, ${hexToRgba(color1, opacity1)}, ${hexToRgba(color2, opacity2)})`
+                      : `linear-gradient(${angle}deg, ${hexToRgba(color1, opacity1)}, ${hexToRgba(color2, opacity2)})`;
+                  } else if (el.color && (el.type as string) !== "text" && (el.type as string) !== "contact") {
+                    baseStyle.backgroundColor = el.color;
+                  }
+
+                  if (el.type === "image" && el.imageUrl) {
+                    return (
+                      <div
+                        key={`anim-${el.id}-${animKey}`}
+                        className={animClass}
+                        style={{ ...baseStyle, overflow: "hidden" }}
+                      >
+                        <img src={el.imageUrl} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={`anim-${el.id}-${animKey}`}
+                      className={animClass}
+                      style={baseStyle}
+                    />
+                  );
+                })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2435,7 +2538,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   className="h-6 px-2 text-[10px] gap-1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShowPreviewModal(true);
+                                    setAnimatingElementId(el.id);
+                                    setAnimKey((k) => k + 1);
                                   }}
                                 >
                                   <Play className="h-3 w-3" />
@@ -2486,17 +2590,6 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         </Tabs>
       </div>
 
-      {/* Template Preview Modal */}
-      <TemplatePreviewModal
-        open={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
-        contentElements={contentElements}
-        signatureElements={signatureElements}
-        backgroundColor={backgroundColor}
-        pageDuration={pageDuration}
-        canvasWidth={CANVAS_WIDTH}
-        canvasHeight={CANVAS_HEIGHT}
-      />
     </div>
   );
 };
