@@ -2188,13 +2188,20 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   const isLoop = el.animLoop;
                   const duration = el.animDuration || 0.8;
                   const animClass = `anim-preview-${el.animationType}`;
+                  const elOpacity = (el.opacity ?? 100) / 100;
+                  const hexToRgba = (hex: string, op: number) => {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    return `rgba(${r},${g},${b},${op})`;
+                  };
+
                   const baseStyle: React.CSSProperties = {
                     position: "absolute",
                     left: el.x * SCALE,
                     top: el.y * SCALE,
                     width: el.width * SCALE,
                     height: el.height * SCALE,
-                    opacity: (el.opacity ?? 100) / 100,
                     transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
                     borderRadius: el.type === "circle" ? "50%" : el.borderRadius ? el.borderRadius * SCALE : undefined,
                     borderWidth: el.borderWidth ? el.borderWidth * SCALE : undefined,
@@ -2215,7 +2222,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                         className={animClass}
                         style={{
                           ...baseStyle,
-                          color: el.color || "#ffffff",
+                          color: el.color ? hexToRgba(el.color, elOpacity) : `rgba(255,255,255,${elOpacity})`,
                           fontSize: (el.fontSize || 48) * SCALE,
                           lineHeight: el.lineHeight || 1.2,
                           textAlign: el.textAlign || "left",
@@ -2231,21 +2238,15 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                     );
                   }
 
-                  // Gradient
+                  // Apply fill: gradient or solid color with opacity baked in (border stays full opacity)
                   const gradient = el.gradient;
                   if (gradient) {
-                    const hexToRgba = (hex: string, op: number) => {
-                      const r = parseInt(hex.slice(1, 3), 16);
-                      const g = parseInt(hex.slice(3, 5), 16);
-                      const b = parseInt(hex.slice(5, 7), 16);
-                      return `rgba(${r},${g},${b},${op / 100})`;
-                    };
                     const { type, color1, color2, opacity1 = 100, opacity2 = 100, angle = 0 } = gradient;
                     baseStyle.background = type === "radial"
-                      ? `radial-gradient(circle, ${hexToRgba(color1, opacity1)}, ${hexToRgba(color2, opacity2)})`
-                      : `linear-gradient(${angle}deg, ${hexToRgba(color1, opacity1)}, ${hexToRgba(color2, opacity2)})`;
+                      ? `radial-gradient(circle, ${hexToRgba(color1, (opacity1 / 100) * elOpacity)}, ${hexToRgba(color2, (opacity2 / 100) * elOpacity)})`
+                      : `linear-gradient(${angle}deg, ${hexToRgba(color1, (opacity1 / 100) * elOpacity)}, ${hexToRgba(color2, (opacity2 / 100) * elOpacity)})`;
                   } else if (el.color && (el.type as string) !== "text" && (el.type as string) !== "contact") {
-                    baseStyle.backgroundColor = el.color;
+                    baseStyle.backgroundColor = hexToRgba(el.color, elOpacity);
                   }
 
                   if (el.type === "image" && el.imageUrl) {
