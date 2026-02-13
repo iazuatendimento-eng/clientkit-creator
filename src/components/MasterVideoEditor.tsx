@@ -1232,16 +1232,15 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="p-4 space-y-6">
+          <div className="p-3 space-y-3">
             {/* Template Load/Save */}
-            <div className="space-y-2">
-              <Label>Carregar Template</Label>
+            <div className="space-y-1">
               <div className="flex gap-2">
                 <Select
                   value={currentTemplateId || ""}
                   onValueChange={(value) => value && loadTemplate(value)}
                 >
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="flex-1 h-8 text-xs">
                     <SelectValue placeholder="Selecionar template" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1252,66 +1251,64 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="icon" onClick={newTemplate}>
-                  <FolderOpen className="h-4 w-4" />
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={newTemplate}>
+                  <FolderOpen className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
 
             {/* Template Name */}
-            <div className="space-y-2">
-              <Label>Nome do Template</Label>
+            <div className="space-y-1">
               <div className="flex gap-2">
                 <Input
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder="Nome do template"
-                  className="flex-1"
+                  className="flex-1 h-8 text-xs"
                 />
                 <Button 
                   variant="outline" 
                   size="icon" 
+                  className="h-8 w-8"
                   onClick={saveTemplate}
                   disabled={isSaving}
                 >
                   {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Save className="h-4 w-4" />
+                    <Save className="h-3.5 w-3.5" />
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {currentTemplateId ? "Atualizar template existente" : "Salvar novo template"}
+              <p className="text-[10px] text-muted-foreground">
+                {currentTemplateId ? "Atualizar existente" : "Salvar novo"}
               </p>
             </div>
 
-            {/* Page Selector */}
-            <div className="space-y-2">
-              <Label>Página</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={currentPage === "content" ? "default" : "outline"}
-                  onClick={() => setCurrentPage("content")}
-                  className="text-xs"
-                >
-                  <Film className="mr-1 h-3 w-3" />
-                  Conteúdo
-                </Button>
-                <Button
-                  variant={currentPage === "signature" ? "default" : "outline"}
-                  onClick={() => setCurrentPage("signature")}
-                  className="text-xs"
-                >
-                  <User className="mr-1 h-3 w-3" />
-                  Assinatura
-                </Button>
-              </div>
+            {/* Page Selector + Duration - inline */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={currentPage === "content" ? "default" : "outline"}
+                onClick={() => setCurrentPage("content")}
+                size="sm"
+                className="text-xs h-7 flex-1"
+              >
+                <Film className="mr-1 h-3 w-3" />
+                Conteúdo
+              </Button>
+              <Button
+                variant={currentPage === "signature" ? "default" : "outline"}
+                onClick={() => setCurrentPage("signature")}
+                size="sm"
+                className="text-xs h-7 flex-1"
+              >
+                <User className="mr-1 h-3 w-3" />
+                Assinatura
+              </Button>
             </div>
 
-            {/* Page Duration */}
-            <div className="space-y-2">
-              <Label>Duração por Página: {pageDuration}s</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Duração: {pageDuration}s/página</Label>
               <Slider
                 value={[pageDuration]}
                 onValueChange={(v) => setPageDuration(v[0])}
@@ -1322,18 +1319,18 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             </div>
 
             {/* Tools */}
-            <div className="space-y-2">
-              <Label>Ferramentas</Label>
-              <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Ferramentas</Label>
+              <div className="grid grid-cols-4 gap-1">
                 {tools.map((tool) => (
                   <Button
                     key={tool.id}
                     variant={selectedTool === tool.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => setSelectedTool(tool.id)}
-                    className="flex flex-col h-16 text-xs"
+                    className="flex flex-col h-12 text-[10px] px-1"
                   >
-                    <tool.icon className="h-4 w-4 mb-1" />
+                    <tool.icon className="h-3.5 w-3.5 mb-0.5" />
                     {tool.label}
                   </Button>
                 ))}
@@ -1341,56 +1338,39 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             </div>
 
             {/* Placeholders */}
-            <div className="space-y-2">
-              <Label>Elementos de Marca</Label>
-              <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Elementos de Marca</Label>
+              <div className="grid grid-cols-3 gap-1">
                 {placeholders.map((p) => (
                   <Button
                     key={p.id}
                     variant="outline"
                     size="sm"
                     onClick={() => addPlaceholder(p.type)}
-                    className="flex flex-col h-16 text-xs"
+                    className="flex flex-col h-12 text-[10px] px-1"
                   >
-                    <p.icon className="h-4 w-4 mb-1" />
+                    <p.icon className="h-3.5 w-3.5 mb-0.5" />
                     {p.label}
                   </Button>
                 ))}
               </div>
             </div>
 
-            {/* Colors */}
-            <div className="space-y-2">
-              <Label>Cor do Fundo</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="color"
-                  value={backgroundColor}
-                  onChange={(e) => setBackgroundColor(e.target.value)}
-                  className="w-12 h-10 p-1"
-                />
-                <Input
-                  value={backgroundColor}
-                  onChange={(e) => setBackgroundColor(e.target.value)}
-                  className="flex-1"
-                />
+            {/* Colors - inline */}
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <Label className="text-[10px]">Cor Fundo</Label>
+                <div className="flex gap-1">
+                  <Input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="w-8 h-7 p-0.5" />
+                  <Input value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="flex-1 h-7 text-[10px]" />
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Cor do Elemento</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="color"
-                  value={currentColor}
-                  onChange={(e) => setCurrentColor(e.target.value)}
-                  className="w-12 h-10 p-1"
-                />
-                <Input
-                  value={currentColor}
-                  onChange={(e) => setCurrentColor(e.target.value)}
-                  className="flex-1"
-                />
+              <div className="flex-1 space-y-1">
+                <Label className="text-[10px]">Cor Elemento</Label>
+                <div className="flex gap-1">
+                  <Input type="color" value={currentColor} onChange={(e) => setCurrentColor(e.target.value)} className="w-8 h-7 p-0.5" />
+                  <Input value={currentColor} onChange={(e) => setCurrentColor(e.target.value)} className="flex-1 h-7 text-[10px]" />
+                </div>
               </div>
             </div>
 
