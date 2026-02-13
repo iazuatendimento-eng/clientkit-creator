@@ -568,6 +568,7 @@ const CardCoverPreview = memo(({
 
 export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchVideoGeneratorProps) => {
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<string>("");
@@ -2223,7 +2224,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
       await Promise.all([
         clearArtGenerationTags(),
-        saveBatchGeneration("video", snapshotWithTeam, batchItems, initialBatch?.id).catch((e) =>
+        saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined).then((id) => {
+          if (id) setCurrentBatchId(id);
+        }).catch((e) =>
           console.error("Batch history save failed (non-critical):", e)
         ),
       ]);
@@ -2277,7 +2280,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         previewVideoUrls: video.previewVideoUrls,
       }));
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
-      await saveBatchGeneration("video", snapshotWithTeam, batchItems, initialBatch?.id);
+      const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
+      if (savedId) setCurrentBatchId(savedId);
 
       await clearArtGenerationTags();
 
