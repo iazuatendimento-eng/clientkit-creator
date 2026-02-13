@@ -567,15 +567,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       }
     };
 
-    // Draw elements
+    // Draw elements (always draw all — animation overlay sits on top)
     elements.forEach((el) => {
-      // Skip elements currently being animated via the HTML overlay
-      if (animatingElementId) {
-        const isAnimating = animatingElementId === "__all__"
-          ? (el.animationType && el.animationType !== "none")
-          : (el.id === animatingElementId && el.animationType && el.animationType !== "none");
-        if (isAnimating) return;
-      }
       ctx.save();
       
       // Apply rotation
@@ -2172,12 +2165,11 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           />
-          {/* Inline animation overlay */}
+          {/* Inline animation overlay — uses canvas snapshot for pixel-perfect fidelity */}
           {animatingElementId && (
             <div
               className="absolute inset-0 pointer-events-none"
               style={{ borderRadius: '0.5rem', overflow: 'hidden' }}
-              onClick={() => setAnimatingElementId(null)}
             >
               {elements
                 .filter((el) => {
@@ -2188,85 +2180,56 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   const isLoop = el.animLoop;
                   const duration = el.animDuration || 0.8;
                   const animClass = `anim-preview-${el.animationType}`;
-                  const elOpacity = (el.opacity ?? 100) / 100;
-                  const hexToRgba = (hex: string, op: number) => {
-                    const r = parseInt(hex.slice(1, 3), 16);
-                    const g = parseInt(hex.slice(3, 5), 16);
-                    const b = parseInt(hex.slice(5, 7), 16);
-                    return `rgba(${r},${g},${b},${op})`;
-                  };
 
-                  const baseStyle: React.CSSProperties = {
-                    position: "absolute",
-                    left: el.x * SCALE,
-                    top: el.y * SCALE,
-                    width: el.width * SCALE,
-                    height: el.height * SCALE,
-                    transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
-                    borderRadius: el.type === "circle" ? "50%" : el.borderRadius ? el.borderRadius * SCALE : undefined,
-                    borderWidth: el.borderWidth ? el.borderWidth * SCALE : undefined,
-                    borderColor: el.borderColor || undefined,
-                    borderStyle: el.borderWidth ? "solid" : undefined,
-                    animationDuration: `${duration}s`,
-                    animationIterationCount: isLoop ? "infinite" : undefined,
-                    animationDirection: isLoop ? "alternate" : undefined,
-                    pointerEvents: "none",
-                    boxSizing: "border-box",
-                  };
-
-                  // Render based on type
-                  if (el.type === "text" || el.type === "contact") {
-                    return (
-                      <div
-                        key={`anim-${el.id}-${animKey}`}
-                        className={animClass}
-                        style={{
-                          ...baseStyle,
-                          color: el.color ? hexToRgba(el.color, elOpacity) : `rgba(255,255,255,${elOpacity})`,
-                          fontSize: (el.fontSize || 48) * SCALE,
-                          lineHeight: el.lineHeight || 1.2,
-                          textAlign: el.textAlign || "left",
-                          display: "flex",
-                          alignItems: "center",
-                          fontWeight: "bold",
-                          overflow: "hidden",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {el.text || (el.type === "contact" ? "Contato" : "Texto")}
-                      </div>
-                    );
-                  }
-
-                  // Apply fill: gradient or solid color with opacity baked in (border stays full opacity)
-                  const gradient = el.gradient;
-                  if (gradient) {
-                    const { type, color1, color2, opacity1 = 100, opacity2 = 100, angle = 0 } = gradient;
-                    baseStyle.background = type === "radial"
-                      ? `radial-gradient(circle, ${hexToRgba(color1, (opacity1 / 100) * elOpacity)}, ${hexToRgba(color2, (opacity2 / 100) * elOpacity)})`
-                      : `linear-gradient(${angle}deg, ${hexToRgba(color1, (opacity1 / 100) * elOpacity)}, ${hexToRgba(color2, (opacity2 / 100) * elOpacity)})`;
-                  } else if (el.color && (el.type as string) !== "text" && (el.type as string) !== "contact") {
-                    baseStyle.backgroundColor = hexToRgba(el.color, elOpacity);
-                  }
-
-                  if (el.type === "image" && el.imageUrl) {
-                    return (
-                      <div
-                        key={`anim-${el.id}-${animKey}`}
-                        className={animClass}
-                        style={{ ...baseStyle, overflow: "hidden" }}
-                      >
-                        <img src={el.imageUrl} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    );
+                  // Snapshot: crop the element region from the canvas
+                  let snapshotUrl: string | null = null;
+                  const canvas = canvasRef.current;
+                  if (canvas) {
+                    try {
+                      const sx = Math.max(0, Math.floor(el.x * SCALE));
+                      const sy = Math.max(0, Math.floor(el.y * SCALE));
+                      const sw = Math.min(Math.ceil(el.width * SCALE), canvas.width - sx);
+                      const sh = Math.min(Math.ceil(el.height * SCALE), canvas.height - sy);
+                      if (sw > 0 && sh > 0) {
+                        const offscreen = document.createElement("canvas");
+                        offscreen.width = sw;
+                        offscreen.height = sh;
+                        const octx = offscreen.getContext("2d");
+                        if (octx) {
+                          octx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+                          snapshotUrl = offscreen.toDataURL();
+                        }
+                      }
+                    } catch (e) {
+                      // fallback: no snapshot
+                    }
                   }
 
                   return (
                     <div
                       key={`anim-${el.id}-${animKey}`}
                       className={animClass}
-                      style={baseStyle}
-                    />
+                      style={{
+                        position: "absolute",
+                        left: el.x * SCALE,
+                        top: el.y * SCALE,
+                        width: el.width * SCALE,
+                        height: el.height * SCALE,
+                        animationDuration: `${duration}s`,
+                        animationIterationCount: isLoop ? "infinite" : undefined,
+                        animationDirection: isLoop ? "alternate" : undefined,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {snapshotUrl && (
+                        <img
+                          src={snapshotUrl}
+                          alt=""
+                          className="w-full h-full"
+                          style={{ display: "block" }}
+                        />
+                      )}
+                    </div>
                   );
                 })}
             </div>
