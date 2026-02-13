@@ -19,6 +19,8 @@ export interface BatchItem {
     mascotScale?: { x: number; y: number };
     mascotOffset?: { x: number; y: number };
   };
+  pageTextAdjustments?: { textScale: number; textX: number; textY: number }[];
+  pageImageAdjustments?: { imageX: number; imageY: number; imageScale: number }[];
 }
 
 export interface BatchGeneration {
