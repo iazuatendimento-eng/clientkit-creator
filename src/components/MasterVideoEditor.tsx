@@ -1832,28 +1832,31 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                             </div>
                             
                             <div className="p-2 bg-muted/30 rounded space-y-2">
-                              <Label className="text-[10px] text-muted-foreground">Direção do Fade</Label>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant={(selectedEl.gradient.opacity1 ?? 100) === 100 ? "default" : "outline"}
-                                  size="sm"
-                                  className="flex-1 h-7 text-xs"
-                                  onClick={() => updateSelectedElement({ 
-                                    gradient: { ...selectedEl.gradient!, opacity1: 100, opacity2: 0 }
-                                  })}
-                                >
-                                  Cor → Trans
-                                </Button>
-                                <Button
-                                  variant={(selectedEl.gradient.opacity1 ?? 100) === 0 ? "default" : "outline"}
-                                  size="sm"
-                                  className="flex-1 h-7 text-xs"
-                                  onClick={() => updateSelectedElement({ 
-                                    gradient: { ...selectedEl.gradient!, opacity1: 0, opacity2: 100 }
-                                  })}
-                                >
-                                  Trans → Cor
-                                </Button>
+                              <Label className="text-[10px] text-muted-foreground">Direção da Transparência</Label>
+                              <div className="grid grid-cols-4 gap-1">
+                                {[
+                                  { label: "↓", angle: 90, title: "Opaco em cima → Transparente embaixo" },
+                                  { label: "↑", angle: 270, title: "Opaco embaixo → Transparente em cima" },
+                                  { label: "→", angle: 0, title: "Opaco esquerda → Transparente direita" },
+                                  { label: "←", angle: 180, title: "Opaco direita → Transparente esquerda" },
+                                  { label: "↘", angle: 135, title: "Diagonal ↘" },
+                                  { label: "↗", angle: 315, title: "Diagonal ↗" },
+                                  { label: "↙", angle: 225, title: "Diagonal ↙" },
+                                  { label: "↖", angle: 45, title: "Diagonal ↖" },
+                                ].map((dir) => (
+                                  <Button
+                                    key={dir.angle}
+                                    variant={(selectedEl.gradient?.angle || 0) === dir.angle ? "default" : "outline"}
+                                    size="sm"
+                                    className="h-7 text-xs px-1"
+                                    title={dir.title}
+                                    onClick={() => updateSelectedElement({ 
+                                      gradient: { ...selectedEl.gradient!, angle: dir.angle, opacity1: 100, opacity2: 0 }
+                                    })}
+                                  >
+                                    {dir.label}
+                                  </Button>
+                                ))}
                               </div>
                             </div>
                           </div>
