@@ -33,11 +33,30 @@ export interface BatchGeneration {
 export async function saveBatchGeneration(
   type: "art" | "video",
   templateSnapshot: any,
-  items: BatchItem[]
+  items: BatchItem[],
+  existingId?: string
 ): Promise<string | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
+
+    // If existingId provided, update instead of insert
+    if (existingId) {
+      const { error } = await supabase
+        .from("batch_generations")
+        .update({
+          template_snapshot: templateSnapshot,
+          items: items as any,
+        })
+        .eq("id", existingId);
+
+      if (error) {
+        console.error("Error updating batch:", error);
+        return null;
+      }
+
+      return existingId;
+    }
 
     const { data, error } = await supabase
       .from("batch_generations")
