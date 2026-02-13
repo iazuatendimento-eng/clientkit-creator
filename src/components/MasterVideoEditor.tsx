@@ -162,6 +162,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const [animatingElementId, setAnimatingElementId] = useState<string | null>(null);
   const [animKey, setAnimKey] = useState(0);
   const animSnapshotsRef = useRef<Record<string, string>>({});
+  const animBoundsRef = useRef<Record<string, { x: number; y: number; w: number; h: number }>>({});
 
   // Helper: draw element in isolation on offscreen canvas for snapshot
   const drawSingleElementRef = useRef<((ctx: CanvasRenderingContext2D, el: CanvasElement) => void) | null>(null);
@@ -172,38 +173,48 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       ? currentEls.filter(e => e.animationType && e.animationType !== "none")
       : currentEls.filter(e => e.id === elId && e.animationType && e.animationType !== "none");
 
+    if (targetEls.length === 0) return;
+
     const drawFn = drawSingleElementRef.current;
     if (!drawFn) return;
 
     const snaps: Record<string, string> = {};
+    const bounds: Record<string, { x: number; y: number; w: number; h: number }> = {};
+
     for (const el of targetEls) {
-      const fullW = CANVAS_WIDTH;
-      const fullH = CANVAS_HEIGHT;
+      // Draw ONLY this element on an isolated offscreen canvas
       const off = document.createElement("canvas");
-      off.width = fullW;
-      off.height = fullH;
+      off.width = CANVAS_WIDTH;
+      off.height = CANVAS_HEIGHT;
       const octx = off.getContext("2d");
-      if (octx) {
-        drawFn(octx, el);
-        // Crop to element bounds at full resolution (with padding for borders/shadows)
-        const pad = (el.borderWidth || 0) + (el.shadowBlur || 0) + 4;
-        const sx = Math.max(0, Math.floor(el.x) - pad);
-        const sy = Math.max(0, Math.floor(el.y) - pad);
-        const sw = Math.min(Math.ceil(el.width) + pad * 2, fullW - sx);
-        const sh = Math.min(Math.ceil(el.height) + pad * 2, fullH - sy);
-        if (sw > 0 && sh > 0) {
-          const crop = document.createElement("canvas");
-          crop.width = sw;
-          crop.height = sh;
-          const cctx = crop.getContext("2d");
-          if (cctx) {
-            cctx.drawImage(off, sx, sy, sw, sh, 0, 0, sw, sh);
-            snaps[el.id] = crop.toDataURL();
-          }
+      if (!octx) continue;
+
+      drawFn(octx, el);
+
+      // Calculate crop bounds with padding
+      const pad = (el.borderWidth || 0) + (el.shadowBlur || 0) + 6;
+      const sx = Math.max(0, Math.floor(el.x - pad));
+      const sy = Math.max(0, Math.floor(el.y - pad));
+      const ex = Math.min(CANVAS_WIDTH, Math.ceil(el.x + el.width + pad));
+      const ey = Math.min(CANVAS_HEIGHT, Math.ceil(el.y + el.height + pad));
+      const sw = ex - sx;
+      const sh = ey - sy;
+
+      if (sw > 0 && sh > 0) {
+        const crop = document.createElement("canvas");
+        crop.width = sw;
+        crop.height = sh;
+        const cctx = crop.getContext("2d");
+        if (cctx) {
+          cctx.drawImage(off, sx, sy, sw, sh, 0, 0, sw, sh);
+          snaps[el.id] = crop.toDataURL();
+          bounds[el.id] = { x: sx, y: sy, w: sw, h: sh };
         }
       }
     }
+
     animSnapshotsRef.current = snaps;
+    animBoundsRef.current = bounds;
     setAnimatingElementId(elId);
     setAnimKey(k => k + 1);
   }, [currentPage, contentElements, signatureElements]);
@@ -2526,7 +2537,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   const duration = el.animDuration || 0.8;
                   const animClass = `anim-preview-${el.animationType}`;
                   const snap = animSnapshotsRef.current[el.id];
-                  const pad = (el.borderWidth || 0) + (el.shadowBlur || 0) + 4;
+                  const b = animBoundsRef.current[el.id];
+                  if (!snap || !b) return null;
 
                   return (
                     <div
@@ -2534,23 +2546,21 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                       className={animClass}
                       style={{
                         position: "absolute",
-                        left: (el.x - pad) * SCALE,
-                        top: (el.y - pad) * SCALE,
-                        width: (el.width + pad * 2) * SCALE,
-                        height: (el.height + pad * 2) * SCALE,
+                        left: b.x * SCALE,
+                        top: b.y * SCALE,
+                        width: b.w * SCALE,
+                        height: b.h * SCALE,
                         animationDuration: `${duration}s`,
                         animationIterationCount: isLoop ? "infinite" : undefined,
                         animationDirection: isLoop ? "alternate" : undefined,
                         pointerEvents: "none",
                       }}
                     >
-                      {snap && (
-                        <img
-                          src={snap}
-                          alt=""
-                          style={{ display: "block", width: "100%", height: "100%" }}
-                        />
-                      )}
+                      <img
+                        src={snap}
+                        alt=""
+                        style={{ display: "block", width: "100%", height: "100%" }}
+                      />
                     </div>
                   );
                 })}
