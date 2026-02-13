@@ -91,6 +91,8 @@ interface CanvasElement {
     color2Role?: "background" | "text" | "accessory1" | "accessory2";
   };
   animated?: boolean; // Whether this layer participates in video animations (default true)
+  animationType?: string; // Specific animation for this element
+  animDuration?: number; // Animation duration in seconds
 }
 
 interface VideoTemplate {
@@ -2160,120 +2162,222 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   const isFirst = actualIndex === elements.length - 1;
                   const isLast = actualIndex === 0;
                   const isEditing = editingLayerId === el.id;
+                  const isSelected = selectedElement === el.id;
+                  const isAnimated = el.animated !== false;
+
+                  const getAnimOptions = (type: string) => {
+                    if (type === "logo" || type === "mascot") {
+                      return [
+                        { value: "none", label: "Nenhuma" },
+                        { value: "fade-in", label: "Fade In" },
+                        { value: "slide-up", label: "Subir" },
+                        { value: "slide-down", label: "Descer" },
+                        { value: "slide-left", label: "← Esquerda" },
+                        { value: "slide-right", label: "→ Direita" },
+                        { value: "scale-in", label: "Escalar" },
+                        { value: "bounce-in", label: "Quicar" },
+                        { value: "spin-in", label: "Girar" },
+                        { value: "flip-in", label: "Virar" },
+                        { value: "swing", label: "Balançar" },
+                      ];
+                    }
+                    if (type === "text" || type === "contact") {
+                      return [
+                        { value: "none", label: "Nenhuma" },
+                        { value: "fade-in", label: "Fade In" },
+                        { value: "slide-up", label: "Subir" },
+                        { value: "slide-down", label: "Descer" },
+                        { value: "slide-left", label: "← Esquerda" },
+                        { value: "slide-right", label: "→ Direita" },
+                        { value: "scale-in", label: "Escalar" },
+                        { value: "typewriter", label: "Máquina" },
+                        { value: "bounce-in", label: "Quicar" },
+                        { value: "rotate-in", label: "Rotacionar" },
+                        { value: "blur-in", label: "Desfoque" },
+                        { value: "drop-in", label: "Cair" },
+                        { value: "swing-in", label: "Balançar" },
+                        { value: "elastic-in", label: "Elástico" },
+                        { value: "flip-in", label: "Virar" },
+                      ];
+                    }
+                    return [
+                      { value: "none", label: "Nenhuma" },
+                      { value: "fade-in", label: "Fade In" },
+                      { value: "scale-in", label: "Escalar" },
+                      { value: "slide-up", label: "Subir" },
+                      { value: "slide-down", label: "Descer" },
+                      { value: "bounce-in", label: "Quicar" },
+                    ];
+                  };
+
+                  const animOptions = getAnimOptions(el.type);
 
                   return (
-                    <div
-                      key={el.id}
-                      className={`p-2 rounded border cursor-pointer flex items-center gap-2 ${
-                        selectedElement === el.id ? "border-primary bg-primary/10" : "border-border"
-                      }`}
-                      onClick={() => setSelectedElement(el.id)}
-                    >
-                      <Checkbox
-                        checked={el.animated !== false}
-                        onCheckedChange={(checked) => {
-                          const newElements = [...elements];
-                          const idx = elements.findIndex((e) => e.id === el.id);
-                          if (idx >= 0) {
-                            newElements[idx] = { ...newElements[idx], animated: !!checked };
-                            setElements(newElements);
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="shrink-0"
-                        title="Anima este elemento no vídeo"
-                      />
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {el.type === "rect" && <Square className="h-4 w-4 shrink-0" />}
-                        {el.type === "circle" && <Circle className="h-4 w-4 shrink-0" />}
-                        {el.type === "text" && <Type className="h-4 w-4 shrink-0" />}
-                        {el.type === "image" && <ImageIcon className="h-4 w-4 shrink-0" />}
-                        {el.type === "logo" && <User className="h-4 w-4 shrink-0" />}
-                        {el.type === "contact" && <Phone className="h-4 w-4 shrink-0" />}
-                        {el.type === "mascot" && <Sparkles className="h-4 w-4 shrink-0" />}
-                        {el.type === "triangle" && <Triangle className="h-4 w-4 shrink-0" />}
-                        {el.type === "star" && <Star className="h-4 w-4 shrink-0" />}
-                        {el.type === "diamond" && <Diamond className="h-4 w-4 shrink-0" />}
-                        {el.type === "hexagon" && <Hexagon className="h-4 w-4 shrink-0" />}
-                        {el.type === "pentagon" && <Pentagon className="h-4 w-4 shrink-0" />}
-                        {el.type === "line" && <Minus className="h-4 w-4 shrink-0" />}
-                        {isEditing ? (
-                          <Input
-                            value={editingLayerName}
-                            onChange={(e) => setEditingLayerName(e.target.value)}
-                            onBlur={saveLayerName}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") saveLayerName();
-                              if (e.key === "Escape") {
-                                setEditingLayerId(null);
-                                setEditingLayerName("");
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-6 text-xs flex-1 bg-background text-foreground"
-                            autoFocus
-                          />
-                        ) : (
-                          <span className="text-sm truncate flex-1">
-                            {getDefaultLayerName(el)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-1 shrink-0">
-                        {!isEditing && (
+                    <div key={el.id} className="space-y-0">
+                      <div
+                        className={`p-2 rounded-t border cursor-pointer flex items-center gap-2 ${
+                          isSelected ? "border-primary bg-primary/10" : "border-border"
+                        } ${!isAnimated || !isSelected ? "rounded-b" : ""}`}
+                        onClick={() => setSelectedElement(el.id)}
+                      >
+                        <Checkbox
+                          checked={isAnimated}
+                          onCheckedChange={(checked) => {
+                            const newElements = [...elements];
+                            const idx = elements.findIndex((e) => e.id === el.id);
+                            if (idx >= 0) {
+                              newElements[idx] = { ...newElements[idx], animated: !!checked };
+                              setElements(newElements);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="shrink-0"
+                          title="Anima este elemento no vídeo"
+                        />
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {el.type === "rect" && <Square className="h-4 w-4 shrink-0" />}
+                          {el.type === "circle" && <Circle className="h-4 w-4 shrink-0" />}
+                          {el.type === "text" && <Type className="h-4 w-4 shrink-0" />}
+                          {el.type === "image" && <ImageIcon className="h-4 w-4 shrink-0" />}
+                          {el.type === "logo" && <User className="h-4 w-4 shrink-0" />}
+                          {el.type === "contact" && <Phone className="h-4 w-4 shrink-0" />}
+                          {el.type === "mascot" && <Sparkles className="h-4 w-4 shrink-0" />}
+                          {el.type === "triangle" && <Triangle className="h-4 w-4 shrink-0" />}
+                          {el.type === "star" && <Star className="h-4 w-4 shrink-0" />}
+                          {el.type === "diamond" && <Diamond className="h-4 w-4 shrink-0" />}
+                          {el.type === "hexagon" && <Hexagon className="h-4 w-4 shrink-0" />}
+                          {el.type === "pentagon" && <Pentagon className="h-4 w-4 shrink-0" />}
+                          {el.type === "line" && <Minus className="h-4 w-4 shrink-0" />}
+                          {isEditing ? (
+                            <Input
+                              value={editingLayerName}
+                              onChange={(e) => setEditingLayerName(e.target.value)}
+                              onBlur={saveLayerName}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveLayerName();
+                                if (e.key === "Escape") {
+                                  setEditingLayerId(null);
+                                  setEditingLayerName("");
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-6 text-xs flex-1 bg-background text-foreground"
+                              autoFocus
+                            />
+                          ) : (
+                            <span className="text-sm truncate flex-1">
+                              {getDefaultLayerName(el)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          {!isEditing && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEditingLayerName(el);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0"
+                            disabled={isFirst}
                             onClick={(e) => {
                               e.stopPropagation();
-                              startEditingLayerName(el);
+                              const idx = elements.findIndex((e) => e.id === el.id);
+                              if (idx < elements.length - 1) {
+                                const newElements = [...elements];
+                                [newElements[idx], newElements[idx + 1]] = [
+                                  newElements[idx + 1],
+                                  newElements[idx],
+                                ];
+                                setElements(newElements);
+                              }
                             }}
                           >
-                            <Pencil className="h-3 w-3" />
+                            <ChevronUp className="h-3 w-3" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          disabled={isFirst}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const idx = elements.findIndex((e) => e.id === el.id);
-                            if (idx < elements.length - 1) {
-                              const newElements = [...elements];
-                              [newElements[idx], newElements[idx + 1]] = [
-                                newElements[idx + 1],
-                                newElements[idx],
-                              ];
-                              setElements(newElements);
-                            }
-                          }}
-                        >
-                          <ChevronUp className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          disabled={isLast}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const idx = elements.findIndex((e) => e.id === el.id);
-                            if (idx > 0) {
-                              const newElements = [...elements];
-                              [newElements[idx], newElements[idx - 1]] = [
-                                newElements[idx - 1],
-                                newElements[idx],
-                              ];
-                              setElements(newElements);
-                            }
-                          }}
-                        >
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            disabled={isLast}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const idx = elements.findIndex((e) => e.id === el.id);
+                              if (idx > 0) {
+                                const newElements = [...elements];
+                                [newElements[idx], newElements[idx - 1]] = [
+                                  newElements[idx - 1],
+                                  newElements[idx],
+                                ];
+                                setElements(newElements);
+                              }
+                            }}
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
+                      {/* Animation controls - shown when animated + selected */}
+                      {isAnimated && isSelected && (
+                        <div className="border border-t-0 border-primary/30 rounded-b bg-primary/5 p-2 space-y-2">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground">Animação</Label>
+                            <Select
+                              value={el.animationType || "none"}
+                              onValueChange={(v) => {
+                                const newElements = [...elements];
+                                const idx = elements.findIndex((e) => e.id === el.id);
+                                if (idx >= 0) {
+                                  newElements[idx] = { ...newElements[idx], animationType: v === "none" ? undefined : v };
+                                  setElements(newElements);
+                                  setSelectedElement(el.id);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {animOptions.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {el.animationType && el.animationType !== "none" && (
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">
+                                Duração: {(el.animDuration || 0.8).toFixed(1)}s
+                              </Label>
+                              <Slider
+                                value={[el.animDuration || 0.8]}
+                                onValueChange={([v]) => {
+                                  const newElements = [...elements];
+                                  const idx = elements.findIndex((e) => e.id === el.id);
+                                  if (idx >= 0) {
+                                    newElements[idx] = { ...newElements[idx], animDuration: v };
+                                    setElements(newElements);
+                                  }
+                                }}
+                                min={0.2}
+                                max={5}
+                                step={0.1}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
