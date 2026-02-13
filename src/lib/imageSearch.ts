@@ -11,7 +11,7 @@ export interface SearchImage {
   photographer: string;
   photographerUrl: string;
   description: string | null;
-  source: 'pexels' | 'unsplash' | 'picsum';
+  source: 'pexels' | 'unsplash' | 'picsum' | 'pixabay';
 }
 
 // Pexels API search (free, excellent quality)
