@@ -695,8 +695,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           searchedImages: item.backgroundImages,
           previewVideoUrls: item.previewVideoUrls || undefined,
           adjustments: item.adjustments ? { ...defaultAdjustments, ...item.adjustments } : { ...defaultAdjustments },
-          pageTextAdjustments: pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
-          pageImageAdjustments: pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
+          pageTextAdjustments: item.pageTextAdjustments && item.pageTextAdjustments.length > 0
+            ? item.pageTextAdjustments.map((a: any) => ({ ...defaultPageTextAdjustment, ...a }))
+            : pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
+          pageImageAdjustments: item.pageImageAdjustments && item.pageImageAdjustments.length > 0
+            ? item.pageImageAdjustments.map((a: any) => ({ ...defaultPageImageAdjustment, ...a }))
+            : pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
           imageType: imageTypeMap[item.clientId] || undefined,
           particularityType: particularityMap[item.clientId] || undefined,
         };
@@ -2245,6 +2249,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         files: [], // Don't store base64 pages in DB - they're already in Storage
         backgroundImages: video.searchedImages,
         previewVideoUrls: video.previewVideoUrls,
+        adjustments: video.adjustments as any,
+        pageTextAdjustments: video.pageTextAdjustments,
+        pageImageAdjustments: video.pageImageAdjustments,
       }));
 
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
@@ -2304,6 +2311,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         files: [], // Don't store base64 pages in DB to avoid payload bloat / timeouts
         backgroundImages: video.searchedImages,
         previewVideoUrls: video.previewVideoUrls,
+        adjustments: video.adjustments as any,
+        pageTextAdjustments: video.pageTextAdjustments,
+        pageImageAdjustments: video.pageImageAdjustments,
       }));
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
       const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
