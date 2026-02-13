@@ -981,11 +981,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           : el.gradient.color1Role === "accessory1" ? accessoryColor1
           : el.gradient.color1Role === "accessory2" ? accessoryColor2
           : el.gradient.color1;
-        const color2 = el.gradient.color2Role === "background" ? bgColor
+        // In fade mode, color2 should match color1 (only opacity differs) to avoid color bleeding
+        const color2Raw = el.gradient.color2Role === "background" ? bgColor
           : el.gradient.color2Role === "text" ? textColor
           : el.gradient.color2Role === "accessory1" ? accessoryColor1
           : el.gradient.color2Role === "accessory2" ? accessoryColor2
           : el.gradient.color2;
+        const color2 = el.gradient.fadeMode && !el.gradient.color2Role && el.gradient.color1Role ? color1 : color2Raw;
         gradient.addColorStop(0, hexToRgba(color1, el.gradient.opacity1 ?? 100));
         gradient.addColorStop(1, hexToRgba(color2, el.gradient.opacity2 ?? 100));
         return gradient;
