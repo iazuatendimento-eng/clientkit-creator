@@ -1087,64 +1087,73 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
       }
-      // For frame-only overlay: render image element border/frame but not the fill
-      if (transparentBackground && excludeText && el.type === "image") {
-        // Draw just the border of the image frame on the frame overlay
-        if (el.borderWidth && el.borderWidth > 0) {
-          ctx.save();
-          applyElementStyles(el);
-          if (el.rotation) {
-            const cx = el.x + el.width / 2;
-            const cy = el.y + el.height / 2;
-            ctx.translate(cx, cy);
-            ctx.rotate((el.rotation * Math.PI) / 180);
-            ctx.translate(-cx, -cy);
-          }
-          ctx.globalAlpha = 1; // Border always fully opaque
-          ctx.strokeStyle = getBorderColor(el);
-          ctx.lineWidth = el.borderWidth;
-          const shape = el.clipShape || "rect";
-          ctx.beginPath();
-          if (shape === "circle") {
-            ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
-          } else if (shape === "triangle") {
-            ctx.moveTo(el.x + el.width / 2, el.y);
-            ctx.lineTo(el.x + el.width, el.y + el.height);
-            ctx.lineTo(el.x, el.y + el.height);
-            ctx.closePath();
-          } else if (shape === "diamond") {
-            ctx.moveTo(el.x + el.width / 2, el.y);
-            ctx.lineTo(el.x + el.width, el.y + el.height / 2);
-            ctx.lineTo(el.x + el.width / 2, el.y + el.height);
-            ctx.lineTo(el.x, el.y + el.height / 2);
-            ctx.closePath();
-          } else if (shape === "hexagon") {
-            const hcx = el.x + el.width / 2, hcy = el.y + el.height / 2, hr = Math.min(el.width, el.height) / 2;
-            for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
-            ctx.closePath();
-          } else if (shape === "pentagon") {
-            const pcx = el.x + el.width / 2, pcy = el.y + el.height / 2, pr = Math.min(el.width, el.height) / 2;
-            for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
-            ctx.closePath();
-          } else if (shape === "star") {
-            const scx = el.x + el.width / 2, scy = el.y + el.height / 2;
-            const outerR = Math.min(el.width, el.height) / 2, innerR = outerR * 0.4;
-            for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
-            ctx.closePath();
-          } else {
-            if (el.borderRadius && el.borderRadius > 0) {
-              ctx.roundRect(el.x, el.y, el.width, el.height, el.borderRadius);
-            } else {
-              ctx.rect(el.x, el.y, el.width, el.height);
+      // For frame-only overlay: render shapes and image borders on top of video
+      if (transparentBackground && excludeText) {
+        // Skip non-visual elements
+        if (["text", "contact", "logo"].includes(el.type)) continue;
+        
+        // For image elements, draw just the border
+        if (el.type === "image") {
+          if (el.borderWidth && el.borderWidth > 0) {
+            ctx.save();
+            applyElementStyles(el);
+            if (el.rotation) {
+              const cx = el.x + el.width / 2;
+              const cy = el.y + el.height / 2;
+              ctx.translate(cx, cy);
+              ctx.rotate((el.rotation * Math.PI) / 180);
+              ctx.translate(-cx, -cy);
             }
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = getBorderColor(el);
+            ctx.lineWidth = el.borderWidth;
+            const shape = el.clipShape || "rect";
+            ctx.beginPath();
+            if (shape === "circle") {
+              ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
+            } else if (shape === "triangle") {
+              ctx.moveTo(el.x + el.width / 2, el.y);
+              ctx.lineTo(el.x + el.width, el.y + el.height);
+              ctx.lineTo(el.x, el.y + el.height);
+              ctx.closePath();
+            } else if (shape === "diamond") {
+              ctx.moveTo(el.x + el.width / 2, el.y);
+              ctx.lineTo(el.x + el.width, el.y + el.height / 2);
+              ctx.lineTo(el.x + el.width / 2, el.y + el.height);
+              ctx.lineTo(el.x, el.y + el.height / 2);
+              ctx.closePath();
+            } else if (shape === "hexagon") {
+              const hcx = el.x + el.width / 2, hcy = el.y + el.height / 2, hr = Math.min(el.width, el.height) / 2;
+              for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
+              ctx.closePath();
+            } else if (shape === "pentagon") {
+              const pcx = el.x + el.width / 2, pcy = el.y + el.height / 2, pr = Math.min(el.width, el.height) / 2;
+              for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
+              ctx.closePath();
+            } else if (shape === "star") {
+              const scx = el.x + el.width / 2, scy = el.y + el.height / 2;
+              const outerR = Math.min(el.width, el.height) / 2, innerR = outerR * 0.4;
+              for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
+              ctx.closePath();
+            } else {
+              if (el.borderRadius && el.borderRadius > 0) {
+                ctx.roundRect(el.x, el.y, el.width, el.height, el.borderRadius);
+              } else {
+                ctx.rect(el.x, el.y, el.width, el.height);
+              }
+            }
+            ctx.stroke();
+            ctx.restore();
           }
-          ctx.stroke();
-          ctx.restore();
+          continue;
         }
-        continue;
+        
+        // For shape elements (rect, circle, triangle, etc.), render them fully on the frame overlay
+        // so they appear on top of the video background
+        // Fall through to normal rendering below
       }
-      // For text-only overlay: skip image elements
-      if (transparentBackground && !excludeText && el.type === "image") continue;
+      // For text-only overlay: skip image and shape elements
+      if (transparentBackground && !excludeText && !["text", "contact"].includes(el.type)) continue;
       ctx.save();
       applyElementStyles(el);
       
