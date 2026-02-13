@@ -182,8 +182,25 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
     const bounds: Record<string, { x: number; y: number; w: number; h: number }> = {};
 
     for (const el of targetEls) {
-      // Draw ONLY this element on an isolated offscreen canvas
-      // Use a larger offscreen canvas to capture elements that extend beyond bounds
+      // Calculate rotated bounding box to capture full element including rotation
+      const rot = (el.rotation || 0) * Math.PI / 180;
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      const hw = el.width / 2;
+      const hh = el.height / 2;
+      // 4 corners rotated around center
+      const corners = [
+        { x: cx + hw * Math.cos(rot) - hh * Math.sin(rot), y: cy + hw * Math.sin(rot) + hh * Math.cos(rot) },
+        { x: cx - hw * Math.cos(rot) - hh * Math.sin(rot), y: cy - hw * Math.sin(rot) + hh * Math.cos(rot) },
+        { x: cx + hw * Math.cos(rot) + hh * Math.sin(rot), y: cy + hw * Math.sin(rot) - hh * Math.cos(rot) },
+        { x: cx - hw * Math.cos(rot) + hh * Math.sin(rot), y: cy - hw * Math.sin(rot) - hh * Math.cos(rot) },
+      ];
+      const minX = Math.min(...corners.map(c => c.x));
+      const minY = Math.min(...corners.map(c => c.y));
+      const maxX = Math.max(...corners.map(c => c.x));
+      const maxY = Math.max(...corners.map(c => c.y));
+
+      const pad = (el.borderWidth || 0) + (el.shadowBlur || 0) + 10;
       const extraMargin = 200;
       const offW = CANVAS_WIDTH + extraMargin * 2;
       const offH = CANVAS_HEIGHT + extraMargin * 2;
@@ -193,18 +210,16 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       const octx = off.getContext("2d");
       if (!octx) continue;
 
-      // Translate so element coords map to (el.x + extraMargin, el.y + extraMargin)
       octx.translate(extraMargin, extraMargin);
       drawFn(octx, el);
 
-      // Calculate crop bounds with padding — allow negative coords (captured via extraMargin)
-      const pad = (el.borderWidth || 0) + (el.shadowBlur || 0) + 6;
-      const sx = Math.max(0, Math.floor(el.x - pad) + extraMargin);
-      const sy = Math.max(0, Math.floor(el.y - pad) + extraMargin);
-      const ex = Math.min(offW, Math.ceil(el.x + el.width + pad) + extraMargin);
-      const ey = Math.min(offH, Math.ceil(el.y + el.height + pad) + extraMargin);
-      const sw = ex - sx;
-      const sh = ey - sy;
+      // Use rotated bounding box for crop
+      const sx = Math.max(0, Math.floor(minX - pad) + extraMargin);
+      const sy = Math.max(0, Math.floor(minY - pad) + extraMargin);
+      const ex2 = Math.min(offW, Math.ceil(maxX + pad) + extraMargin);
+      const ey2 = Math.min(offH, Math.ceil(maxY + pad) + extraMargin);
+      const sw = ex2 - sx;
+      const sh = ey2 - sy;
 
       if (sw > 0 && sh > 0) {
         const crop = document.createElement("canvas");
@@ -214,7 +229,6 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         if (cctx) {
           cctx.drawImage(off, sx, sy, sw, sh, 0, 0, sw, sh);
           snaps[el.id] = crop.toDataURL();
-          // Store bounds in original canvas coordinates
           bounds[el.id] = { x: sx - extraMargin, y: sy - extraMargin, w: sw, h: sh };
         }
       }
