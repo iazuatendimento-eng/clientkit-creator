@@ -1116,6 +1116,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (excludeLogo && el.type === "logo" && isAnimated) continue;
       // Skip text/contact if excludeText is set AND element is animated (non-animated text stays on base)
       if (excludeText && ["text", "contact"].includes(el.type) && isAnimated) continue;
+      // Skip fadeMode gradient shapes from base page - they only render on the frame overlay
+      // so the fade-to-transparent effect reveals the video behind instead of the same background color
+      if (!transparentBackground && el.gradient?.fadeMode) continue;
       // For text-only overlay (transparent + !excludeText): only render animated text/contact
       if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
@@ -1125,7 +1128,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (transparentBackground && excludeText) {
         // Skip non-visual elements
         if (["text", "contact", "logo"].includes(el.type)) continue;
-        if (!isAnimated) continue; // Non-animated shapes stay on base
+        if (!isAnimated && !el.gradient?.fadeMode) continue; // Non-animated shapes stay on base, but fadeMode gradients always render on overlay
         
         // For image elements, draw just the border
         if (el.type === "image") {
