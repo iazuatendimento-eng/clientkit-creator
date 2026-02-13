@@ -75,6 +75,7 @@ interface CanvasElement {
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
+  borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
@@ -1976,7 +1977,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                 </div>
 
                 {/* Border */}
-                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon", "image", "line", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent"].includes(selectedEl.type)) && (
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Borda</Label>
                     <div className="flex gap-2">
@@ -1990,16 +1991,45 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                           step={1}
                         />
                       </div>
-                      <div className="w-10">
-                        <Label className="text-[10px] text-muted-foreground">Cor</Label>
-                        <Input
-                          type="color"
-                          value={selectedEl.borderColor || "#000000"}
-                          onChange={(e) => updateSelectedElement({ borderColor: e.target.value })}
-                          className="w-10 h-8 p-1"
-                        />
-                      </div>
                     </div>
+                    {(selectedEl.borderWidth || 0) > 0 && (
+                      <>
+                        <div>
+                          <Label className="text-[10px] text-muted-foreground">Papel da Cor da Borda</Label>
+                          <Select
+                            value={selectedEl.borderColorRole || "none"}
+                            onValueChange={(v) => updateSelectedElement({ borderColorRole: v === "none" ? undefined : v as any })}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Cor fixa" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Cor fixa (não muda)</SelectItem>
+                              <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                              <SelectItem value="text">Texto (Cor 2)</SelectItem>
+                              <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
+                              <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] text-muted-foreground">Cor da Borda {selectedEl.borderColorRole ? "(preview)" : ""}</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="color"
+                              value={selectedEl.borderColor || "#000000"}
+                              onChange={(e) => updateSelectedElement({ borderColor: e.target.value })}
+                              className="w-10 h-8 p-1"
+                            />
+                            <Input
+                              value={selectedEl.borderColor || "#000000"}
+                              onChange={(e) => updateSelectedElement({ borderColor: e.target.value })}
+                              className="flex-1 h-8 text-xs"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
