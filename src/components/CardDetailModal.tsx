@@ -22,18 +22,15 @@ const getMimeFromName = (name: string): string => {
 
 const downloadFile = async (url: string, fileName: string) => {
   try {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    const mimeType = getMimeFromName(fileName);
-    const blob = new Blob([arrayBuffer], { type: mimeType });
-    const downloadUrl = window.URL.createObjectURL(blob);
+    // Direct download from storage URL - preserves original file integrity
     const link = document.createElement('a');
-    link.href = downloadUrl;
+    link.href = url;
     link.download = fileName;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
     toast.success("Download iniciado!");
   } catch (error) {
     console.error("Error downloading file:", error);
