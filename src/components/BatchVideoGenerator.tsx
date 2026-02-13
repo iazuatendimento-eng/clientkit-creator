@@ -593,11 +593,28 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [videoSearchPage, setVideoSearchPage] = useState(1);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
+  // Extract animation settings from template elements
+  const getTemplateTextAnimation = (): TextAnimation => {
+    const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
+    const textEl = allEls.find(e => (e.type === "text" || e.type === "contact") && e.animationType && e.animationType !== "none");
+    return (textEl?.animationType as TextAnimation) || "none";
+  };
+  const getTemplateLogoAnimation = (): LogoAnimation => {
+    const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
+    const logoEl = allEls.find(e => (e.type === "logo" || e.type === "mascot") && e.animationType && e.animationType !== "none");
+    return (logoEl?.animationType as LogoAnimation) || "none";
+  };
+  const getTemplateTextAnimDuration = (): number => {
+    const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
+    const textEl = allEls.find(e => (e.type === "text" || e.type === "contact") && e.animationType && e.animationType !== "none");
+    return textEl?.animDuration || 2.5;
+  };
+
   const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
-  const [textAnimation, setTextAnimation] = useState<TextAnimation>("fade-in");
-  const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>("fade-in");
-  const [textAnimDuration, setTextAnimDuration] = useState(2.5); // seconds
+  const [textAnimation, setTextAnimation] = useState<TextAnimation>(getTemplateTextAnimation);
+  const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>(getTemplateLogoAnimation);
+  const [textAnimDuration, setTextAnimDuration] = useState(getTemplateTextAnimDuration);
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
