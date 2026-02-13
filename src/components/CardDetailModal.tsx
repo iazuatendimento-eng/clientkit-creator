@@ -22,17 +22,34 @@ const getMimeFromName = (name: string): string => {
 
 const downloadFile = async (url: string, fileName: string) => {
   try {
-    // Direct download from storage URL - preserves original file integrity
+    toast.loading("Preparando arquivo...", { id: "download-prep" });
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Fetch failed");
+    
+    // Get raw bytes and force correct MIME from original filename extension
+    const arrayBuffer = await response.arrayBuffer();
+    const mimeType = getMimeFromName(fileName);
+    
+    // Ensure filename has proper extension
+    if (!fileName.match(/\.\w{2,5}$/)) {
+      if (mimeType.startsWith('video/')) fileName += '.mp4';
+      else if (mimeType === 'image/png') fileName += '.png';
+      else fileName += '.jpg';
+    }
+    
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+    const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
+    link.href = downloadUrl;
     link.download = fileName;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Download iniciado!");
+    setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
+    toast.dismiss("download-prep");
+    toast.success("Download concluído!");
   } catch (error) {
+    toast.dismiss("download-prep");
     console.error("Error downloading file:", error);
     toast.error("Erro ao baixar arquivo");
   }
