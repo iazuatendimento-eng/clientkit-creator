@@ -506,9 +506,11 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         let gradient;
         if (el.gradient.type === "linear") {
           const angle = (el.gradient.angle || 0) * Math.PI / 180;
-          const dx = Math.cos(angle) * el.width;
-          const dy = Math.sin(angle) * el.height;
-          gradient = ctx.createLinearGradient(el.x, el.y, el.x + dx, el.y + dy);
+          const cx = el.x + el.width / 2;
+          const cy = el.y + el.height / 2;
+          const dx = Math.cos(angle) * el.width / 2;
+          const dy = Math.sin(angle) * el.height / 2;
+          gradient = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
         } else {
           gradient = ctx.createRadialGradient(
             el.x + el.width / 2, el.y + el.height / 2, 0,
