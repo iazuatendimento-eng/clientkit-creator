@@ -87,7 +87,6 @@ async function isValidMP4(blob: Blob): Promise<boolean> {
   try {
     const header = await blob.slice(0, 12).arrayBuffer();
     const view = new Uint8Array(header);
-    // MP4 files have "ftyp" at bytes 4-7
     const ftyp = String.fromCharCode(view[4], view[5], view[6], view[7]);
     console.log("[VideoEncoder] File header check:", ftyp, "size:", blob.size);
     return ftyp === "ftyp";
@@ -96,97 +95,95 @@ async function isValidMP4(blob: Blob): Promise<boolean> {
   }
 }
 
+// Patch MP4 ftyp box: change major_brand to "isom" for WhatsApp compatibility
+async function patchMP4Brand(blob: Blob): Promise<Blob> {
+  try {
+    const buffer = await blob.arrayBuffer();
+    const view = new Uint8Array(buffer);
+    
+    const ftyp = String.fromCharCode(view[4], view[5], view[6], view[7]);
+    if (ftyp !== "ftyp") return blob;
+    
+    const currentBrand = String.fromCharCode(view[8], view[9], view[10], view[11]);
+    console.log("[VideoEncoder] Current major brand:", currentBrand);
+    
+    if (currentBrand === "isom") return blob;
+    
+    // Patch major brand to "isom" (bytes 8-11)
+    view[8] = 105; view[9] = 115; view[10] = 111; view[11] = 109;
+    
+    console.log("[VideoEncoder] Patched brand from", currentBrand, "to isom");
+    return new Blob([view], { type: "video/mp4" });
+  } catch (err) {
+    console.error("[VideoEncoder] Failed to patch brand:", err);
+    return blob;
+  }
+}
+
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress } = options;
 
-  // Always record as the best available format first
+  // Use native MP4 recording (Chrome 114+ supports it)
   const mp4Mime = pickSupportedMimeType([
     "video/mp4;codecs=avc1",
     "video/mp4",
   ]);
 
-  const recordMime = mp4Mime || pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) || "video/webm";
-  const isNativeMP4 = recordMime.startsWith("video/mp4");
+  if (mp4Mime) {
+    console.log("[VideoEncoder] Using native MP4:", mp4Mime);
+    onProgress?.(0.1);
+    const mp4 = await withTimeout(
+      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
+      240_000,
+      "gerar MP4"
+    );
+    onProgress?.(0.8);
+    
+    // Patch brand for WhatsApp compatibility (mp42 -> isom)
+    const patched = await patchMP4Brand(mp4);
+    onProgress?.(1);
+    return patched;
+  }
 
-  console.log("[VideoEncoder] Recording with MIME:", recordMime);
+  // Fallback: WebM -> FFmpeg -> MP4
+  console.log("[VideoEncoder] No native MP4, recording WebM for FFmpeg conversion");
   onProgress?.(0.1);
+  const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
 
-  const recordedBlob = await withTimeout(
-    encodeVideoSimple(pages, options, isNativeMP4 ? { mimeType: recordMime, outputType: "video/mp4" } : undefined),
-    240_000,
-    "gravar vídeo"
-  );
-  console.log("[VideoEncoder] Recorded blob size:", recordedBlob.size, "type:", recordedBlob.type);
-
-  // ALWAYS re-mux through FFmpeg to ensure WhatsApp-compatible MP4
-  // Chrome's native MP4 uses major_brand=mp42 which WhatsApp rejects
   try {
     onProgress?.(0.35);
     const ff = await loadFFmpeg();
-
     onProgress?.(0.55);
-    const inputData = await fetchFile(recordedBlob);
-    const inputName = isNativeMP4 ? "input.mp4" : "input.webm";
-    await ff.writeFile(inputName, inputData);
-
-    console.log("[VideoEncoder] Starting FFmpeg re-mux for WhatsApp compatibility...");
-
-    // For native MP4: just re-mux to fix brand (much faster, no re-encoding)
-    // For WebM: full re-encode to H.264
-    const ffmpegArgs = isNativeMP4
-      ? [
-          "-i", inputName,
-          "-c:v", "copy",           // No re-encoding needed, just re-mux
-          "-brand", "isom",         // WhatsApp-compatible brand
-          "-movflags", "+faststart",
-          "-an",
-          "output.mp4",
-        ]
-      : [
-          "-i", inputName,
-          "-c:v", "libx264",
-          "-profile:v", "baseline",
-          "-level", "3.1",
-          "-preset", "fast",
-          "-crf", "23",
-          "-pix_fmt", "yuv420p",
-          "-brand", "isom",
-          "-movflags", "+faststart",
-          "-an",
-          "output.mp4",
-        ];
+    await ff.writeFile("input.webm", await fetchFile(webmBlob));
 
     await withTimeout(
-      ff.exec(ffmpegArgs),
+      ff.exec([
+        "-i", "input.webm",
+        "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1",
+        "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart", "-an", "output.mp4",
+      ]),
       360_000,
-      "converter para MP4 compatível"
+      "converter para MP4"
     );
 
     onProgress?.(0.9);
-
     const mp4Data = await ff.readFile("output.mp4");
-    const mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], {
-      type: "video/mp4",
-    });
-
-    await ff.deleteFile(inputName);
+    let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
+    await ff.deleteFile("input.webm");
     await ff.deleteFile("output.mp4");
+    mp4Blob = await patchMP4Brand(mp4Blob);
 
     if (await isValidMP4(mp4Blob)) {
-      console.log("[VideoEncoder] WhatsApp-compatible MP4 ready! Size:", mp4Blob.size);
       onProgress?.(1);
       return mp4Blob;
     }
-
-    console.warn("[VideoEncoder] FFmpeg output is not valid MP4, using recorded blob");
-    onProgress?.(1);
-    return recordedBlob;
-  } catch (ffmpegError) {
-    console.error("[VideoEncoder] FFmpeg failed:", ffmpegError);
-    onProgress?.(1);
-    // Return the native recording as fallback
-    return recordedBlob;
+  } catch (err) {
+    console.error("[VideoEncoder] FFmpeg failed:", err);
   }
+
+  onProgress?.(1);
+  return webmBlob;
 }
 
 // Calculate motion transform based on effect and progress (0-1)
