@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { drawNewShape } from "@/lib/canvasShapes";
+import { TemplatePreviewModal } from "@/components/TemplatePreviewModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,6 +159,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   // Team filter state
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<TeamFilter>(undefined);
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   useEffect(() => {
     supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
@@ -2107,10 +2109,16 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             </SelectContent>
           </Select>
           
-          <Button className="w-full bg-gradient-primary" onClick={handleGenerateBatch}>
-            <Play className="mr-2 h-4 w-4" />
-            Gerar Vídeos em Lote
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowPreviewModal(true)}>
+              <Play className="mr-1 h-4 w-4" />
+              Preview
+            </Button>
+            <Button className="flex-1 bg-gradient-primary" onClick={handleGenerateBatch}>
+              <Play className="mr-1 h-4 w-4" />
+              Gerar Lote
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -2133,28 +2141,6 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           />
-          {/* Animation preview overlay - shows actual element snapshot animating */}
-          {animPreview && (
-            <div
-              key={animPreview.key}
-              className={`absolute pointer-events-none anim-preview-${animPreview.type}`}
-              style={{
-                left: animPreview.x,
-                top: animPreview.y,
-                width: animPreview.width,
-                height: animPreview.height,
-                zIndex: 50,
-                animationIterationCount: animPreview.loop ? 'infinite' : 1,
-              }}
-            >
-              <img
-                src={animPreview.imageDataUrl}
-                alt=""
-                className="w-full h-full object-fill"
-                style={{ borderRadius: 4 }}
-              />
-            </div>
-          )}
         </div>
       </div>
 
@@ -2421,7 +2407,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   newElements[idx] = { ...newElements[idx], animationType: v === "none" ? undefined : v };
                                   setElements(newElements);
                                   setSelectedElement(el.id);
-                                  triggerAnimPreview(el, v, el.animLoop);
+                                  // Preview opens via Play button or bottom Preview button
                                 }
                               }}
                             >
@@ -2449,7 +2435,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   className="h-6 px-2 text-[10px] gap-1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    triggerAnimPreview(el, el.animationType!, el.animLoop);
+                                    setShowPreviewModal(true);
                                   }}
                                 >
                                   <Play className="h-3 w-3" />
@@ -2499,6 +2485,18 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Template Preview Modal */}
+      <TemplatePreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        contentElements={contentElements}
+        signatureElements={signatureElements}
+        backgroundColor={backgroundColor}
+        pageDuration={pageDuration}
+        canvasWidth={CANVAS_WIDTH}
+        canvasHeight={CANVAS_HEIGHT}
+      />
     </div>
   );
 };
