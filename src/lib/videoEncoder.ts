@@ -112,22 +112,27 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   const webmData = await fetchFile(webmBlob);
   await ff.writeFile("input.webm", webmData);
 
-  await withTimeout(
-    ff.exec([
-      "-i",
-      "input.webm",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "slow",
-      "-crf",
-      "18",
-      "-pix_fmt",
-      "yuv420p",
-      "-movflags",
-      "+faststart",
-      "output.mp4",
-    ]),
+    await withTimeout(
+      ff.exec([
+        "-i",
+        "input.webm",
+        "-c:v",
+        "libx264",
+        "-profile:v",
+        "baseline",
+        "-level",
+        "3.1",
+        "-preset",
+        "slow",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-an",
+        "output.mp4",
+      ]),
     360_000,
     "converter para MP4"
   );
