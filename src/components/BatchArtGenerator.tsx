@@ -508,8 +508,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           : el.gradient.color2;
         // In fade mode, color2 should match color1 (only opacity differs) to avoid color bleeding
         const color2 = el.gradient.fadeMode ? color1 : color2Raw;
-        gradient.addColorStop(0, hexToRgba(color1, el.gradient.opacity1 ?? 100));
-        gradient.addColorStop(1, hexToRgba(color2, el.gradient.opacity2 ?? 100));
+        const op1 = el.gradient.opacity1 ?? 100;
+        const op2 = el.gradient.opacity2 ?? (el.gradient.fadeMode ? 0 : 100);
+        gradient.addColorStop(0, hexToRgba(color1, op1));
+        gradient.addColorStop(1, hexToRgba(color2, op2));
         return gradient;
       }
       return getElementColor(el, defaultColor);
