@@ -74,6 +74,8 @@ interface CanvasElement {
     opacity2?: number;
     angle?: number;
     fadeMode?: boolean;
+    color1Role?: "background" | "text" | "accessory1" | "accessory2";
+    color2Role?: "background" | "text" | "accessory1" | "accessory2";
   };
 }
 
@@ -491,9 +493,17 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             x + w / 2, y + h / 2, Math.max(w, h) / 2
           );
         }
-        // Gradient colors are always fixed (never overridden by colorRole)
-        const color1 = el.gradient.color1;
-        const color2 = el.gradient.color2;
+        // Apply gradient color roles from brand kit, or use fixed colors
+        const color1 = el.gradient.color1Role === "background" ? bgColor
+          : el.gradient.color1Role === "text" ? textColor
+          : el.gradient.color1Role === "accessory1" ? accessoryColor1
+          : el.gradient.color1Role === "accessory2" ? accessoryColor2
+          : el.gradient.color1;
+        const color2 = el.gradient.color2Role === "background" ? bgColor
+          : el.gradient.color2Role === "text" ? textColor
+          : el.gradient.color2Role === "accessory1" ? accessoryColor1
+          : el.gradient.color2Role === "accessory2" ? accessoryColor2
+          : el.gradient.color2;
         gradient.addColorStop(0, hexToRgba(color1, el.gradient.opacity1 ?? 100));
         gradient.addColorStop(1, hexToRgba(color2, el.gradient.opacity2 ?? 100));
         return gradient;

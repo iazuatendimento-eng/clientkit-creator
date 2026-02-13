@@ -86,6 +86,8 @@ interface CanvasElement {
     opacity2?: number; // 0-100
     angle?: number;
     fadeMode?: boolean; // Single color to transparent mode
+    color1Role?: "background" | "text" | "accessory1" | "accessory2";
+    color2Role?: "background" | "text" | "accessory1" | "accessory2";
   };
 }
 
@@ -1827,8 +1829,25 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   })}
                                   className="w-10 h-8 p-1"
                                 />
-                                <Label className="text-[10px] text-muted-foreground flex-1">Cor</Label>
+                                <Label className="text-[10px] text-muted-foreground flex-1">Cor {selectedEl.gradient.color1Role ? "(preview)" : ""}</Label>
                               </div>
+                              <Select
+                                value={selectedEl.gradient.color1Role || "none"}
+                                onValueChange={(v) => updateSelectedElement({ 
+                                  gradient: { ...selectedEl.gradient!, color1Role: v === "none" ? undefined : v as any, color2Role: v === "none" ? undefined : v as any }
+                                })}
+                              >
+                                <SelectTrigger className="h-7">
+                                  <SelectValue placeholder="Cor fixa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Cor fixa (não muda)</SelectItem>
+                                  <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                                  <SelectItem value="text">Texto (Cor 2)</SelectItem>
+                                  <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
+                                  <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                             
                             <div className="p-2 bg-muted/30 rounded space-y-2">
@@ -1874,8 +1893,25 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   })}
                                   className="w-10 h-8 p-1"
                                 />
-                                <Label className="text-[10px] text-muted-foreground flex-1">Cor 1</Label>
+                                <Label className="text-[10px] text-muted-foreground flex-1">Cor 1 {selectedEl.gradient.color1Role ? "(preview)" : ""}</Label>
                               </div>
+                              <Select
+                                value={selectedEl.gradient.color1Role || "none"}
+                                onValueChange={(v) => updateSelectedElement({ 
+                                  gradient: { ...selectedEl.gradient!, color1Role: v === "none" ? undefined : v as any }
+                                })}
+                              >
+                                <SelectTrigger className="h-7">
+                                  <SelectValue placeholder="Cor fixa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Cor fixa (não muda)</SelectItem>
+                                  <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                                  <SelectItem value="text">Texto (Cor 2)</SelectItem>
+                                  <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
+                                  <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <div>
                                 <Label className="text-[10px] text-muted-foreground">
                                   Transparência: {100 - (selectedEl.gradient.opacity1 ?? 100)}%
@@ -1903,8 +1939,25 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   })}
                                   className="w-10 h-8 p-1"
                                 />
-                                <Label className="text-[10px] text-muted-foreground flex-1">Cor 2</Label>
+                                <Label className="text-[10px] text-muted-foreground flex-1">Cor 2 {selectedEl.gradient.color2Role ? "(preview)" : ""}</Label>
                               </div>
+                              <Select
+                                value={selectedEl.gradient.color2Role || "none"}
+                                onValueChange={(v) => updateSelectedElement({ 
+                                  gradient: { ...selectedEl.gradient!, color2Role: v === "none" ? undefined : v as any }
+                                })}
+                              >
+                                <SelectTrigger className="h-7">
+                                  <SelectValue placeholder="Cor fixa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Cor fixa (não muda)</SelectItem>
+                                  <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                                  <SelectItem value="text">Texto (Cor 2)</SelectItem>
+                                  <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
+                                  <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <div>
                                 <Label className="text-[10px] text-muted-foreground">
                                   Transparência: {100 - (selectedEl.gradient.opacity2 ?? 100)}%
