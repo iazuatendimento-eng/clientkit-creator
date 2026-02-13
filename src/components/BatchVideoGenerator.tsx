@@ -2223,7 +2223,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
       await Promise.all([
         clearArtGenerationTags(),
-        saveBatchGeneration("video", snapshotWithTeam, batchItems).catch((e) =>
+        saveBatchGeneration("video", snapshotWithTeam, batchItems, initialBatch?.id).catch((e) =>
           console.error("Batch history save failed (non-critical):", e)
         ),
       ]);
@@ -2277,7 +2277,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         previewVideoUrls: video.previewVideoUrls,
       }));
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
-      await saveBatchGeneration("video", snapshotWithTeam, batchItems);
+      await saveBatchGeneration("video", snapshotWithTeam, batchItems, initialBatch?.id);
 
       await clearArtGenerationTags();
 
