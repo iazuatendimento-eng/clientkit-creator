@@ -80,6 +80,7 @@ interface CanvasElement {
   animated?: boolean;
   animationType?: string;
   animDuration?: number;
+  animLoop?: boolean;
 }
 
 interface VideoTemplate {
