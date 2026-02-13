@@ -309,7 +309,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   // Canvas dimensions for vertical video (9:16 aspect ratio)
   const CANVAS_WIDTH = 1080;
   const CANVAS_HEIGHT = 1920;
-  const SCALE = 0.35; // Scale for display
+  const SCALE = 0.28; // Scale for display
 
   const elements = currentPage === "content" ? contentElements : signatureElements;
   const setElements = currentPage === "content" ? setContentElements : setSignatureElements;

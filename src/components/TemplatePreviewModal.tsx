@@ -63,7 +63,7 @@ export function TemplatePreviewModal({
   const [playing, setPlaying] = useState(true);
   const [animKey, setAnimKey] = useState(0);
 
-  const PREVIEW_SCALE = 0.4;
+  const PREVIEW_SCALE = 0.28;
   const previewW = canvasWidth * PREVIEW_SCALE;
   const previewH = canvasHeight * PREVIEW_SCALE;
 
@@ -273,7 +273,7 @@ export function TemplatePreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-[520px] p-0 bg-card border-primary/30 overflow-hidden">
+      <DialogContent className="max-w-[380px] p-0 bg-card border-primary/30 overflow-hidden">
         <div className="p-3 border-b border-primary/20 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-foreground">Preview Template</span>
