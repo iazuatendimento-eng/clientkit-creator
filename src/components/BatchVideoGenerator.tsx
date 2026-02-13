@@ -841,6 +841,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     const updatedVideos = [...videos];
     for (let i = 0; i < updatedVideos.length; i++) {
       const video = updatedVideos[i];
+      // Skip videos that already have valid previewVideoUrls (user-chosen videos)
+      if (video.previewVideoUrls && video.previewVideoUrls.some(u => u && u !== "")) continue;
       // Combine ALL page texts, card title, imageType, briefing and company for a complete search query
       const allTexts = [...video.pageTexts, video.cardTitle, video.imageType, video.briefing, video.company].filter(Boolean).join(" ");
       const firstText = allTexts || "";
