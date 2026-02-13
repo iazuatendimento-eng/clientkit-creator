@@ -85,16 +85,35 @@ function pickSupportedMimeType(candidates: string[]): string | null {
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress } = options;
 
-  // Fallback: WebM first, then convert to MP4 with FFmpeg
+  // Try native MP4 recording first (most compatible with WhatsApp)
+  const mp4Mime = pickSupportedMimeType([
+    "video/mp4;codecs=avc1",
+    "video/mp4",
+  ]);
+
+  if (mp4Mime) {
+    onProgress?.(0.1);
+    const mp4 = await withTimeout(
+      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
+      240_000,
+      "gerar MP4 (nativo)"
+    );
+    onProgress?.(1);
+    return mp4;
+  }
+
+  // Fallback: WebM first, then try FFmpeg conversion
   onProgress?.(0.1);
   const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
 
-  onProgress?.(0.35);
-  const ff = await loadFFmpeg();
+  // Try FFmpeg conversion to MP4
+  try {
+    onProgress?.(0.35);
+    const ff = await loadFFmpeg();
 
-  onProgress?.(0.55);
-  const webmData = await fetchFile(webmBlob);
-  await ff.writeFile("input.webm", webmData);
+    onProgress?.(0.55);
+    const webmData = await fetchFile(webmBlob);
+    await ff.writeFile("input.webm", webmData);
 
     await withTimeout(
       ff.exec([
@@ -107,9 +126,9 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         "-level",
         "3.1",
         "-preset",
-        "slow",
+        "fast",
         "-crf",
-        "18",
+        "23",
         "-pix_fmt",
         "yuv420p",
         "-movflags",
@@ -117,23 +136,28 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         "-an",
         "output.mp4",
       ]),
-    360_000,
-    "converter para MP4"
-  );
+      360_000,
+      "converter para MP4"
+    );
 
-  onProgress?.(0.9);
+    onProgress?.(0.9);
 
-  const mp4Data = await ff.readFile("output.mp4");
-  const mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], {
-    type: "video/mp4",
-  });
+    const mp4Data = await ff.readFile("output.mp4");
+    const mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], {
+      type: "video/mp4",
+    });
 
-  await ff.deleteFile("input.webm");
-  await ff.deleteFile("output.mp4");
+    await ff.deleteFile("input.webm");
+    await ff.deleteFile("output.mp4");
 
-  onProgress?.(1);
-
-  return mp4Blob;
+    onProgress?.(1);
+    return mp4Blob;
+  } catch (ffmpegError) {
+    console.warn("FFmpeg conversion failed, returning WebM:", ffmpegError);
+    onProgress?.(1);
+    // Return WebM as last resort
+    return webmBlob;
+  }
 }
 
 // Calculate motion transform based on effect and progress (0-1)
