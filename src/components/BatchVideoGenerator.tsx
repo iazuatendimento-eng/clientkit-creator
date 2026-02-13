@@ -1033,9 +1033,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Helper to apply element styles (opacity, shadow)
     const applyElementStyles = (el: CanvasElement) => {
-      // For fadeMode gradient elements, opacity is already embedded in the RGBA gradient stops
-      // so we don't multiply globalAlpha again to avoid double-reducing opacity
-      if (el.gradient?.fadeMode) {
+      // For fadeMode gradient elements on the transparent overlay, use full globalAlpha
+      // because the opacity is already embedded in the RGBA gradient stops.
+      // On the base page (non-transparent), use el.opacity to match the template editor behavior.
+      if (el.gradient?.fadeMode && transparentBackground) {
         ctx.globalAlpha = 1;
       } else {
         ctx.globalAlpha = (el.opacity ?? 100) / 100;
@@ -1139,9 +1140,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (excludeLogo && el.type === "logo" && isAnimated) continue;
       // Skip text/contact if excludeText is set AND element is animated (non-animated text stays on base)
       if (excludeText && ["text", "contact"].includes(el.type) && isAnimated) continue;
-      // Skip fadeMode gradient shapes from base page - they only render on the frame overlay
-      // so the fade-to-transparent effect reveals the video behind instead of the same background color
-      if (!transparentBackground && el.gradient?.fadeMode) continue;
+      // FadeMode gradient shapes render on BOTH base page AND frame overlay:
+      // - Base page: matches template editor behavior (gradient on opaque background = full intensity)
+      // - Frame overlay: ensures gradient appears over the video layer too
       // For text-only overlay (transparent + !excludeText): only render animated text/contact
       if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
