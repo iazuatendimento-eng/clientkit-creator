@@ -187,8 +187,13 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
     toast.loading("Preparando arquivo...", { id: "download-loading" });
 
+    // Force original format from Supabase Storage (prevents WebP conversion)
+    const fetchUrl = url.includes('supabase')
+      ? `${url}?download=${encodeURIComponent(filename)}`
+      : url;
+
     try {
-      const res = await fetch(url, { cache: "no-cache" });
+      const res = await fetch(fetchUrl, { cache: "no-cache" });
       if (!res.ok) throw new Error("Fetch failed: " + res.status);
       const arrayBuffer = await res.arrayBuffer();
       toast.dismiss("download-loading");

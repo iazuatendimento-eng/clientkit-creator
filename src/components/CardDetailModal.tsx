@@ -23,29 +23,18 @@ const getMimeFromName = (name: string): string => {
 const downloadFile = async (url: string, fileName: string) => {
   try {
     toast.loading("Preparando arquivo...", { id: "download-prep" });
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Fetch failed");
     
-    // Get raw bytes and force correct MIME from original filename extension
-    const arrayBuffer = await response.arrayBuffer();
-    const mimeType = getMimeFromName(fileName);
+    // Force original format by adding ?download param to Supabase Storage URL
+    const downloadUrl = url.includes('supabase') 
+      ? `${url}?download=${encodeURIComponent(fileName)}`
+      : url;
     
-    // Ensure filename has proper extension
-    if (!fileName.match(/\.\w{2,5}$/)) {
-      if (mimeType.startsWith('video/')) fileName += '.mp4';
-      else if (mimeType === 'image/png') fileName += '.png';
-      else fileName += '.jpg';
-    }
-    
-    const blob = new Blob([arrayBuffer], { type: mimeType });
-    const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
     toast.dismiss("download-prep");
     toast.success("Download concluído!");
   } catch (error) {
