@@ -206,7 +206,40 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   };
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
+  const leftSidebarRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Animation preview state
+  const [animPreview, setAnimPreview] = useState<{
+    elId: string;
+    type: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    color: string;
+    key: number;
+  } | null>(null);
+
+  const triggerAnimPreview = (el: CanvasElement, animType: string) => {
+    if (!animType || animType === "none") {
+      setAnimPreview(null);
+      return;
+    }
+    setAnimPreview({
+      elId: el.id,
+      type: animType,
+      x: el.x * SCALE,
+      y: el.y * SCALE,
+      width: el.width * SCALE,
+      height: el.height * SCALE,
+      color: el.color || currentColor,
+      key: Date.now(),
+    });
+    // Auto-clear after animation
+    setTimeout(() => setAnimPreview(null), 2000);
+  };
 
   // Handle background removal for selected image
   const handleRemoveBackground = async () => {
@@ -1231,7 +1264,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
           </Button>
         </div>
 
-        <ScrollArea className="flex-1">
+        <div ref={leftSidebarRef} className="flex-1 overflow-y-auto">
           <div className="p-3 space-y-3">
             {/* Template Load/Save */}
             <div className="space-y-1">
@@ -2012,7 +2045,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Generate Button */}
         <div className="p-4 border-t space-y-2">
@@ -2048,7 +2081,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
       {/* Canvas Area */}
       <div className="flex-1 flex items-center justify-center bg-muted/30 p-8 overflow-auto">
-        <div className="relative shadow-2xl rounded-lg overflow-hidden">
+        <div ref={canvasWrapperRef} className="relative shadow-2xl rounded-lg overflow-hidden">
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
@@ -2064,6 +2097,23 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           />
+          {/* Animation preview overlay */}
+          {animPreview && (
+            <div
+              key={animPreview.key}
+              className={`absolute pointer-events-none rounded border-2 border-primary/60 bg-primary/20 anim-preview-${animPreview.type}`}
+              style={{
+                left: animPreview.x,
+                top: animPreview.y,
+                width: animPreview.width,
+                height: animPreview.height,
+              }}
+            >
+              <div className="w-full h-full flex items-center justify-center text-[10px] text-primary font-bold uppercase opacity-80">
+                {animPreview.type}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2198,7 +2248,17 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                         className={`p-2 rounded-t border cursor-pointer flex items-center gap-2 ${
                           isSelected ? "border-primary bg-primary/10" : "border-border"
                         } ${!isAnimated || !isSelected ? "rounded-b" : ""}`}
-                        onClick={() => setSelectedElement(el.id)}
+                        onClick={() => {
+                          // Preserve left sidebar scroll position
+                          const sidebar = leftSidebarRef.current;
+                          const scrollTop = sidebar?.scrollTop || 0;
+                          setSelectedElement(el.id);
+                          if (sidebar) {
+                            requestAnimationFrame(() => {
+                              sidebar.scrollTop = scrollTop;
+                            });
+                          }
+                        }}
                       >
                         <Checkbox
                           checked={isAnimated}
@@ -2320,6 +2380,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   newElements[idx] = { ...newElements[idx], animationType: v === "none" ? undefined : v };
                                   setElements(newElements);
                                   setSelectedElement(el.id);
+                                  triggerAnimPreview(el, v);
                                 }
                               }}
                             >

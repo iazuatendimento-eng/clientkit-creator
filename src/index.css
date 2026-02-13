@@ -324,3 +324,37 @@ All colors MUST be HSL.
   from { width: 0%; }
   to { width: 100%; }
 }
+
+/* Animation preview classes for template editor */
+.anim-preview-fade-in { animation: ap-fade-in 1.2s ease-out forwards; }
+.anim-preview-slide-up { animation: ap-slide-up 1.2s ease-out forwards; }
+.anim-preview-slide-down { animation: ap-slide-down 1.2s ease-out forwards; }
+.anim-preview-slide-left { animation: ap-slide-left 1.2s ease-out forwards; }
+.anim-preview-slide-right { animation: ap-slide-right 1.2s ease-out forwards; }
+.anim-preview-scale-in { animation: ap-scale-in 1.2s ease-out forwards; }
+.anim-preview-bounce-in { animation: ap-bounce-in 1.2s ease-out forwards; }
+.anim-preview-typewriter { animation: ap-typewriter 1.2s steps(10) forwards; }
+.anim-preview-rotate-in { animation: ap-rotate-in 1.2s ease-out forwards; }
+.anim-preview-blur-in { animation: ap-blur-in 1.2s ease-out forwards; }
+.anim-preview-drop-in { animation: ap-drop-in 1.2s ease-out forwards; }
+.anim-preview-swing-in { animation: ap-swing 1.2s ease-out forwards; }
+.anim-preview-swing { animation: ap-swing 1.2s ease-out forwards; }
+.anim-preview-elastic-in { animation: ap-elastic 1.2s ease-out forwards; }
+.anim-preview-flip-in { animation: ap-flip 1.2s ease-out forwards; }
+.anim-preview-spin-in { animation: ap-spin 1.2s ease-out forwards; }
+
+@keyframes ap-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ap-slide-up { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ap-slide-down { from { opacity: 0; transform: translateY(-40px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ap-slide-left { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes ap-slide-right { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes ap-scale-in { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+@keyframes ap-bounce-in { 0% { opacity: 0; transform: scale(0.3); } 50% { transform: scale(1.15); } 70% { transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes ap-typewriter { from { clip-path: inset(0 100% 0 0); opacity: 1; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+@keyframes ap-rotate-in { from { opacity: 0; transform: rotate(-180deg) scale(0.5); } to { opacity: 1; transform: rotate(0) scale(1); } }
+@keyframes ap-blur-in { from { opacity: 0; filter: blur(20px); } to { opacity: 1; filter: blur(0); } }
+@keyframes ap-drop-in { from { opacity: 0; transform: translateY(-80px); } 60% { transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ap-swing { 0% { transform: rotate(0); } 20% { transform: rotate(15deg); } 40% { transform: rotate(-10deg); } 60% { transform: rotate(5deg); } 80% { transform: rotate(-2deg); } 100% { transform: rotate(0); } }
+@keyframes ap-elastic { 0% { opacity: 0; transform: scaleX(0.3); } 40% { transform: scaleX(1.1); } 60% { transform: scaleX(0.95); } 80% { transform: scaleX(1.02); } 100% { opacity: 1; transform: scaleX(1); } }
+@keyframes ap-flip { from { opacity: 0; transform: perspective(400px) rotateY(90deg); } to { opacity: 1; transform: perspective(400px) rotateY(0); } }
+@keyframes ap-spin { from { opacity: 0; transform: rotate(-360deg) scale(0.5); } to { opacity: 1; transform: rotate(0) scale(1); } }
