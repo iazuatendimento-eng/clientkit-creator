@@ -858,20 +858,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           if (!error && data?.translatedText) searchTerms = data.translatedText;
         } catch {}
 
-        // Try search, retry with simpler terms if needed
-        let results = await searchPexelsVideos(searchTerms, 3);
+        // Try search - fetch enough results for all content pages
+        const contentPageCount = video.pageTexts.length;
+        const fetchCount = Math.max(contentPageCount, 5);
+        let results = await searchPexelsVideos(searchTerms, fetchCount);
         if (results.length === 0) {
           const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
-          results = await searchPexelsVideos(simpleTerms, 3);
+          results = await searchPexelsVideos(simpleTerms, fetchCount);
         }
         if (results.length === 0) {
           // Generic fallback
-          results = await searchPexelsVideos("business technology", 3);
+          results = await searchPexelsVideos("business technology", fetchCount);
         }
 
         if (results.length > 0) {
-          // Set the same video URL for ALL content pages (not just page 0)
-          const pexelsVideoUrls = video.pageTexts.map(() => results[0].videoUrl as string | null);
+          // Assign different videos to each content page when possible
+          const pexelsVideoUrls = video.pageTexts.map((_, pageIdx) => {
+            const resultIdx = pageIdx % results.length;
+            return results[resultIdx].videoUrl as string | null;
+          });
           updatedVideos[i] = {
             ...updatedVideos[i],
             searchedImages: [results[0].image, ...(updatedVideos[i].searchedImages?.slice(1) || [])],
