@@ -1124,11 +1124,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         if (!["text", "contact"].includes(el.type)) continue;
         if (!isAnimated) continue; // Non-animated text stays on base, not on animated overlay
       }
-      // For frame-only overlay: render animated shapes and image borders on top of video
+      // For frame-only overlay: render only truly animated shapes, fadeMode gradients, and image borders
       if (transparentBackground && excludeText) {
         // Skip non-visual elements
         if (["text", "contact", "logo"].includes(el.type)) continue;
-        if (!isAnimated && !el.gradient?.fadeMode) continue; // Non-animated shapes stay on base, but fadeMode gradients always render on overlay
+        // Only render elements that are TRULY animated (have explicit animationType) or have fadeMode gradient
+        // Elements without animationType are static shapes that belong on the base layer
+        const hasTrueAnimation = el.animationType && el.animationType !== "none";
+        if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
         
         // For image elements, draw just the border
         if (el.type === "image") {
