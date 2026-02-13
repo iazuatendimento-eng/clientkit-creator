@@ -161,6 +161,38 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
   const [animatingElementId, setAnimatingElementId] = useState<string | null>(null);
   const [animKey, setAnimKey] = useState(0);
+  const animSnapshotsRef = useRef<Record<string, string>>({});
+
+  // Helper: capture element snapshots from canvas before starting animation
+  const startAnimation = useCallback((elId: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const currentEls = currentPage === "content" ? contentElements : signatureElements;
+    const targetEls = elId === "__all__"
+      ? currentEls.filter(e => e.animationType && e.animationType !== "none")
+      : currentEls.filter(e => e.id === elId && e.animationType && e.animationType !== "none");
+
+    const snaps: Record<string, string> = {};
+    for (const el of targetEls) {
+      const sx = Math.max(0, Math.floor(el.x * SCALE));
+      const sy = Math.max(0, Math.floor(el.y * SCALE));
+      const sw = Math.min(Math.ceil(el.width * SCALE), canvas.width - sx);
+      const sh = Math.min(Math.ceil(el.height * SCALE), canvas.height - sy);
+      if (sw > 0 && sh > 0) {
+        const off = document.createElement("canvas");
+        off.width = sw;
+        off.height = sh;
+        const octx = off.getContext("2d");
+        if (octx) {
+          octx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+          snaps[el.id] = off.toDataURL();
+        }
+      }
+    }
+    animSnapshotsRef.current = snaps;
+    setAnimatingElementId(elId);
+    setAnimKey(k => k + 1);
+  }, [currentPage, contentElements, signatureElements]);
 
 
   useEffect(() => {
@@ -567,8 +599,14 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       }
     };
 
-    // Draw elements (always draw all — animation overlay sits on top)
+    // Draw elements — skip animating ones (they show via snapshot overlay)
     elements.forEach((el) => {
+      if (animatingElementId) {
+        const isAnimating = animatingElementId === "__all__"
+          ? (el.animationType && el.animationType !== "none")
+          : (el.id === animatingElementId && el.animationType && el.animationType !== "none");
+        if (isAnimating) return;
+      }
       ctx.save();
       
       // Apply rotation
@@ -2131,8 +2169,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
               className="flex-1"
               onClick={() => {
                 // Play all animated elements on canvas
-                setAnimatingElementId("__all__");
-                setAnimKey((k) => k + 1);
+                startAnimation("__all__");
               }}
             >
               <Play className="mr-1 h-4 w-4" />
@@ -2165,7 +2202,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           />
-          {/* Inline animation overlay — same rendering as TemplatePreviewModal */}
+          {/* Inline animation overlay — uses canvas snapshots for pixel-perfect fidelity */}
           {animatingElementId && (
             <div
               className="absolute inset-0 pointer-events-none"
@@ -2180,110 +2217,33 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   const isLoop = el.animLoop;
                   const duration = el.animDuration || 0.8;
                   const animClass = `anim-preview-${el.animationType}`;
+                  const snap = animSnapshotsRef.current[el.id];
 
-                  const hexToRgba = (hex: string, op: number) => {
-                    const r = parseInt(hex.slice(1, 3), 16);
-                    const g = parseInt(hex.slice(3, 5), 16);
-                    const b = parseInt(hex.slice(5, 7), 16);
-                    return `rgba(${r},${g},${b},${op / 100})`;
-                  };
-
-                  const baseStyle: React.CSSProperties = {
-                    position: "absolute",
-                    left: el.x * SCALE,
-                    top: el.y * SCALE,
-                    width: el.width * SCALE,
-                    height: el.height * SCALE,
-                    opacity: (el.opacity ?? 100) / 100,
-                    transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
-                    borderRadius: el.borderRadius ? el.borderRadius * SCALE : undefined,
-                    borderWidth: el.borderWidth ? el.borderWidth * SCALE : undefined,
-                    borderColor: el.borderColor,
-                    borderStyle: el.borderWidth ? "solid" : undefined,
-                    animationDuration: `${duration}s`,
-                    animationIterationCount: isLoop ? "infinite" : undefined,
-                    animationDirection: isLoop ? "alternate" : undefined,
-                    pointerEvents: "none",
-                  };
-
-                  const grad = el.gradient;
-                  if (grad) {
-                    const { type, color1, color2, opacity1 = 100, opacity2 = 100, angle = 0 } = grad;
-                    baseStyle.background = type === "radial"
-                      ? `radial-gradient(circle, ${hexToRgba(color1, opacity1)}, ${hexToRgba(color2, opacity2)})`
-                      : `linear-gradient(${angle}deg, ${hexToRgba(color1, opacity1)}, ${hexToRgba(color2, opacity2)})`;
-                  } else if (el.color) {
-                    baseStyle.backgroundColor = el.color;
-                  }
-
-                  if (el.type === "text" || el.type === "contact") {
-                    return (
-                      <div key={`anim-${el.id}-${animKey}`} className={animClass} style={{
-                        ...baseStyle, color: el.color || "#ffffff",
-                        fontSize: (el.fontSize || 48) * SCALE, lineHeight: el.lineHeight || 1.2,
-                        textAlign: el.textAlign || "left", display: "flex", alignItems: "center",
-                        backgroundColor: "transparent", background: undefined,
-                        fontWeight: "bold", overflow: "hidden", wordBreak: "break-word",
-                      }}>
-                        {el.text || (el.type === "contact" ? "Contato" : "Texto")}
-                      </div>
-                    );
-                  }
-
-                  if (el.type === "circle") baseStyle.borderRadius = "50%";
-
-                  if (el.type === "triangle") {
-                    const w = el.width * SCALE;
-                    const h = el.height * SCALE;
-                    return (
-                      <div key={`anim-${el.id}-${animKey}`} className={animClass} style={{
-                        ...baseStyle, backgroundColor: "transparent", background: "transparent",
-                        width: 0, height: 0,
-                        borderLeft: `${w / 2}px solid transparent`,
-                        borderRight: `${w / 2}px solid transparent`,
-                        borderBottom: `${h}px solid ${el.color || "#3B82F6"}`,
-                        borderRadius: 0, borderWidth: undefined, borderColor: undefined, borderStyle: undefined,
-                      }} />
-                    );
-                  }
-
-                  if (el.type === "logo" || el.type === "mascot") {
-                    return (
-                      <div key={`anim-${el.id}-${animKey}`} className={animClass} style={{
-                        ...baseStyle, backgroundColor: "rgba(255,255,255,0.1)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 10 * SCALE, color: "rgba(255,255,255,0.6)",
-                        border: "1px dashed rgba(255,255,255,0.3)",
-                      }}>
-                        {el.type === "logo" ? "LOGO" : "MASCOTE"}
-                      </div>
-                    );
-                  }
-
-                  if (el.type === "image") {
-                    return (
-                      <div key={`anim-${el.id}-${animKey}`} className={animClass} style={{
-                        ...baseStyle, overflow: "hidden",
-                        backgroundColor: el.imageUrl ? undefined : "rgba(255,255,255,0.05)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 10 * SCALE, color: "rgba(255,255,255,0.4)",
-                        border: el.imageUrl ? undefined : "1px dashed rgba(255,255,255,0.2)",
-                      }}>
-                        {el.imageUrl ? <img src={el.imageUrl} alt="" className="w-full h-full object-cover" /> : "IMG"}
-                      </div>
-                    );
-                  }
-
-                  if (el.type === "line") {
-                    return (
-                      <div key={`anim-${el.id}-${animKey}`} className={animClass} style={{
-                        ...baseStyle, height: Math.max(2, (el.height || 4) * SCALE),
-                        backgroundColor: el.color || "#3B82F6", borderRadius: 999,
-                      }} />
-                    );
-                  }
-
-                  return <div key={`anim-${el.id}-${animKey}`} className={animClass} style={baseStyle} />;
+                  return (
+                    <div
+                      key={`anim-${el.id}-${animKey}`}
+                      className={animClass}
+                      style={{
+                        position: "absolute",
+                        left: el.x * SCALE,
+                        top: el.y * SCALE,
+                        width: el.width * SCALE,
+                        height: el.height * SCALE,
+                        animationDuration: `${duration}s`,
+                        animationIterationCount: isLoop ? "infinite" : undefined,
+                        animationDirection: isLoop ? "alternate" : undefined,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {snap && (
+                        <img
+                          src={snap}
+                          alt=""
+                          style={{ display: "block", width: "100%", height: "100%" }}
+                        />
+                      )}
+                    </div>
+                  );
                 })}
             </div>
           )}
@@ -2581,8 +2541,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                                   className="h-6 px-2 text-[10px] gap-1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setAnimatingElementId(el.id);
-                                    setAnimKey((k) => k + 1);
+                                    startAnimation(el.id);
                                   }}
                                 >
                                   <Play className="h-3 w-3" />
