@@ -2197,10 +2197,14 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                     opacity: (el.opacity ?? 100) / 100,
                     transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
                     borderRadius: el.type === "circle" ? "50%" : el.borderRadius ? el.borderRadius * SCALE : undefined,
+                    borderWidth: el.borderWidth ? el.borderWidth * SCALE : undefined,
+                    borderColor: el.borderColor || undefined,
+                    borderStyle: el.borderWidth ? "solid" : undefined,
                     animationDuration: `${duration}s`,
                     animationIterationCount: isLoop ? "infinite" : undefined,
                     animationDirection: isLoop ? "alternate" : undefined,
                     pointerEvents: "none",
+                    boxSizing: "border-box",
                   };
 
                   // Render based on type
