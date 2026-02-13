@@ -692,6 +692,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           status: savedPages.length > 0 ? ("approved" as const) : ("pending" as const),
           pageTexts,
           searchedImages: item.backgroundImages,
+          previewVideoUrls: item.previewVideoUrls || undefined,
           adjustments: item.adjustments ? { ...defaultAdjustments, ...item.adjustments } : { ...defaultAdjustments },
           pageTextAdjustments: pageTexts.map(() => ({ ...defaultPageTextAdjustment })),
           pageImageAdjustments: pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
@@ -2216,6 +2217,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         brandKit: video.brandKit,
         files: [], // Don't store base64 pages in DB - they're already in Storage
         backgroundImages: video.searchedImages,
+        previewVideoUrls: video.previewVideoUrls,
       }));
 
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
@@ -2272,6 +2274,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         brandKit: video.brandKit,
         files: video.pages,
         backgroundImages: video.searchedImages,
+        previewVideoUrls: video.previewVideoUrls,
       }));
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
       await saveBatchGeneration("video", snapshotWithTeam, batchItems);

@@ -10,6 +10,7 @@ export interface BatchItem {
   brandKit: any;
   files: string[]; // URLs of generated images/pages
   backgroundImages?: string[];
+  previewVideoUrls?: (string | null)[];
   adjustments?: {
     logoScale?: { x: number; y: number };
     logoOffset?: { x: number; y: number };
