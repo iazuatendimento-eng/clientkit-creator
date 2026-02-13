@@ -41,6 +41,12 @@ import {
   Scissors,
   Pencil,
   Sparkles,
+  Heart,
+  CloudIcon,
+  Zap,
+  Shield,
+  Moon,
+  MessageCircle,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
@@ -50,7 +56,7 @@ import { ImageEraserModal } from "./ImageEraserModal";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent";
   x: number;
   y: number;
   width: number;
@@ -202,6 +208,13 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
       splatter: "Splash",
       zigzag: "Zigzag",
       spiral: "Espiral",
+      heart: "Coração",
+      cross: "Cruz",
+      cloud: "Nuvem",
+      speechBubble: "Balão de Fala",
+      lightning: "Raio",
+      shield: "Escudo",
+      crescent: "Lua",
     };
     return el.name || typeNames[el.type] || el.type;
   };
@@ -413,6 +426,13 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     { id: "splatter", icon: Circle, label: "Splash" },
     { id: "zigzag", icon: Minus, label: "Zigzag" },
     { id: "spiral", icon: Circle, label: "Espiral" },
+    { id: "heart", icon: Heart, label: "Coração" },
+    { id: "cross", icon: Plus, label: "Cruz" },
+    { id: "cloud", icon: CloudIcon, label: "Nuvem" },
+    { id: "speechBubble", icon: MessageCircle, label: "Balão" },
+    { id: "lightning", icon: Zap, label: "Raio" },
+    { id: "shield", icon: Shield, label: "Escudo" },
+    { id: "crescent", icon: Moon, label: "Lua" },
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
   ];
@@ -506,12 +526,14 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
       return el.color || "#cccccc";
     };
 
-    // Helper to draw border
+    // Helper to draw border (always at full opacity)
     const drawBorder = (el: CanvasElement) => {
       if (el.borderWidth && el.borderWidth > 0) {
+        ctx.globalAlpha = 1; // Borders are always fully opaque
         ctx.strokeStyle = el.borderColor || "#000000";
         ctx.lineWidth = el.borderWidth;
         ctx.stroke();
+        ctx.globalAlpha = (el.opacity ?? 100) / 100; // Restore element opacity
       }
     };
 
@@ -541,9 +563,11 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         } else {
           ctx.fillRect(el.x, el.y, el.width, el.height);
           if (el.borderWidth && el.borderWidth > 0) {
+            ctx.globalAlpha = 1; // Borders always fully opaque
             ctx.strokeStyle = el.borderColor || "#000000";
             ctx.lineWidth = el.borderWidth;
             ctx.strokeRect(el.x, el.y, el.width, el.height);
+            ctx.globalAlpha = (el.opacity ?? 100) / 100;
           }
         }
       } else if (el.type === "circle") {
@@ -890,6 +914,104 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
+        drawBorder(el);
+      } else if (el.type === "heart") {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height * 0.35;
+        const w = el.width / 2;
+        const h = el.height;
+        ctx.beginPath();
+        ctx.moveTo(cx, el.y + h * 0.85);
+        ctx.bezierCurveTo(cx - w * 1.5, cy - h * 0.1, cx - w * 0.3, el.y - h * 0.1, cx, cy + h * 0.15);
+        ctx.bezierCurveTo(cx + w * 0.3, el.y - h * 0.1, cx + w * 1.5, cy - h * 0.1, cx, el.y + h * 0.85);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "cross") {
+        const arm = Math.min(el.width, el.height) * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width / 2 - arm, el.y);
+        ctx.lineTo(el.x + el.width / 2 + arm, el.y);
+        ctx.lineTo(el.x + el.width / 2 + arm, el.y + el.height / 2 - arm);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2 - arm);
+        ctx.lineTo(el.x + el.width, el.y + el.height / 2 + arm);
+        ctx.lineTo(el.x + el.width / 2 + arm, el.y + el.height / 2 + arm);
+        ctx.lineTo(el.x + el.width / 2 + arm, el.y + el.height);
+        ctx.lineTo(el.x + el.width / 2 - arm, el.y + el.height);
+        ctx.lineTo(el.x + el.width / 2 - arm, el.y + el.height / 2 + arm);
+        ctx.lineTo(el.x, el.y + el.height / 2 + arm);
+        ctx.lineTo(el.x, el.y + el.height / 2 - arm);
+        ctx.lineTo(el.x + el.width / 2 - arm, el.y + el.height / 2 - arm);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "cloud") {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height * 0.6;
+        ctx.beginPath();
+        ctx.arc(cx - el.width * 0.25, cy, el.height * 0.3, 0, Math.PI * 2);
+        ctx.arc(cx, cy - el.height * 0.15, el.height * 0.38, 0, Math.PI * 2);
+        ctx.arc(cx + el.width * 0.25, cy, el.height * 0.3, 0, Math.PI * 2);
+        ctx.arc(cx - el.width * 0.12, cy + el.height * 0.05, el.height * 0.28, 0, Math.PI * 2);
+        ctx.arc(cx + el.width * 0.12, cy + el.height * 0.05, el.height * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "speechBubble") {
+        const r = 20;
+        const tailH = el.height * 0.2;
+        const bodyH = el.height - tailH;
+        ctx.beginPath();
+        ctx.moveTo(el.x + r, el.y);
+        ctx.lineTo(el.x + el.width - r, el.y);
+        ctx.quadraticCurveTo(el.x + el.width, el.y, el.x + el.width, el.y + r);
+        ctx.lineTo(el.x + el.width, el.y + bodyH - r);
+        ctx.quadraticCurveTo(el.x + el.width, el.y + bodyH, el.x + el.width - r, el.y + bodyH);
+        ctx.lineTo(el.x + el.width * 0.35, el.y + bodyH);
+        ctx.lineTo(el.x + el.width * 0.15, el.y + el.height);
+        ctx.lineTo(el.x + el.width * 0.25, el.y + bodyH);
+        ctx.lineTo(el.x + r, el.y + bodyH);
+        ctx.quadraticCurveTo(el.x, el.y + bodyH, el.x, el.y + bodyH - r);
+        ctx.lineTo(el.x, el.y + r);
+        ctx.quadraticCurveTo(el.x, el.y, el.x + r, el.y);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "lightning") {
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width * 0.55, el.y);
+        ctx.lineTo(el.x + el.width * 0.15, el.y + el.height * 0.5);
+        ctx.lineTo(el.x + el.width * 0.45, el.y + el.height * 0.45);
+        ctx.lineTo(el.x + el.width * 0.35, el.y + el.height);
+        ctx.lineTo(el.x + el.width * 0.85, el.y + el.height * 0.4);
+        ctx.lineTo(el.x + el.width * 0.55, el.y + el.height * 0.45);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "shield") {
+        const cx = el.x + el.width / 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, el.y);
+        ctx.lineTo(el.x + el.width, el.y + el.height * 0.2);
+        ctx.lineTo(el.x + el.width, el.y + el.height * 0.55);
+        ctx.quadraticCurveTo(el.x + el.width, el.y + el.height * 0.85, cx, el.y + el.height);
+        ctx.quadraticCurveTo(el.x, el.y + el.height * 0.85, el.x, el.y + el.height * 0.55);
+        ctx.lineTo(el.x, el.y + el.height * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        drawBorder(el);
+      } else if (el.type === "crescent") {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const r = Math.min(el.width, el.height) / 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        // Cut out inner circle to create crescent
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.beginPath();
+        ctx.arc(cx + r * 0.35, cy - r * 0.1, r * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
         drawBorder(el);
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#000000";
@@ -1245,6 +1367,20 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         height: 150,
         color: "#f97316",
       });
+    } else if (selectedTool === "heart") {
+      addElement({ type: "heart", x: x - 75, y: y - 75, width: 150, height: 150, color: "#ef4444" });
+    } else if (selectedTool === "cross") {
+      addElement({ type: "cross", x: x - 60, y: y - 60, width: 120, height: 120, color: "#6366f1" });
+    } else if (selectedTool === "cloud") {
+      addElement({ type: "cloud", x: x - 100, y: y - 60, width: 200, height: 120, color: "#94a3b8" });
+    } else if (selectedTool === "speechBubble") {
+      addElement({ type: "speechBubble", x: x - 100, y: y - 75, width: 200, height: 150, color: "#ffffff" });
+    } else if (selectedTool === "lightning") {
+      addElement({ type: "lightning", x: x - 40, y: y - 75, width: 80, height: 150, color: "#facc15" });
+    } else if (selectedTool === "shield") {
+      addElement({ type: "shield", x: x - 60, y: y - 75, width: 120, height: 150, color: "#3b82f6" });
+    } else if (selectedTool === "crescent") {
+      addElement({ type: "crescent", x: x - 60, y: y - 60, width: 120, height: 120, color: "#fbbf24" });
     }
   };
 
@@ -1261,7 +1397,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     const element = elements.find((el) => el.id === selectedElement);
     if (!element) return;
 
-    const handleSize = 30; // Larger hit area for handles (matches visual size)
+    const handleSize = 30;
     const handles = [
       { id: 'nw', x: element.x, y: element.y },
       { id: 'ne', x: element.x + element.width, y: element.y },
@@ -1727,7 +1863,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                 )}
 
                 {/* Color Role for shapes */}
-                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
                   <div>
                     <Label className="text-xs">Papel da Cor (Kit de Marca)</Label>
                     <Select
@@ -1749,7 +1885,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                 )}
 
                 {/* Color picker */}
-                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
                   <div>
                     <Label className="text-xs">Cor {selectedEl.colorRole ? "(preview)" : ""}</Label>
                     <div className="flex gap-2">

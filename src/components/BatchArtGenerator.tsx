@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { drawNewShape } from "@/lib/canvasShapes";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +44,7 @@ import { ImageEraserModal } from "./ImageEraserModal";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon";
   x: number;
   y: number;
   width: number;
@@ -827,6 +828,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           else ctx.lineTo(px, py);
         }
         ctx.stroke();
+      } else if (drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, ctx.fillStyle as string)) {
+        // New shape drawn by helper
       } else if (el.type === "text") {
         // Text uses color 2 and client's font
         ctx.fillStyle = textColor;
