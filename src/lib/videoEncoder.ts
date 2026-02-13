@@ -85,22 +85,6 @@ function pickSupportedMimeType(candidates: string[]): string | null {
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress } = options;
 
-  const mp4Mime = pickSupportedMimeType([
-    "video/mp4;codecs=avc1",
-    "video/mp4",
-  ]);
-
-  if (mp4Mime) {
-    onProgress?.(0.1);
-    const mp4 = await withTimeout(
-      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
-      240_000,
-      "gerar MP4 (nativo)"
-    );
-    onProgress?.(1);
-    return mp4;
-  }
-
   // Fallback: WebM first, then convert to MP4 with FFmpeg
   onProgress?.(0.1);
   const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
