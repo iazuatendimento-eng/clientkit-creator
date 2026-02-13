@@ -22,19 +22,36 @@ const getMimeFromName = (name: string): string => {
 
 const downloadFile = async (url: string, fileName: string) => {
   try {
-    toast.loading("Preparando arquivo...", { id: "download-prep" });
+    toast.loading("Baixando arquivo original...", { id: "download-prep" });
     
-    // Force original format by adding ?download param to Supabase Storage URL
-    const downloadUrl = url.includes('supabase') 
-      ? `${url}?download=${encodeURIComponent(fileName)}`
-      : url;
+    // Fetch raw bytes directly from storage
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Fetch failed: " + response.status);
+    const arrayBuffer = await response.arrayBuffer();
     
+    // Force correct MIME type based on original file extension
+    const mimeType = getMimeFromName(fileName);
+    
+    // Ensure filename has proper extension
+    if (!fileName.match(/\.\w{2,5}$/)) {
+      if (mimeType.startsWith('video/')) fileName += '.mp4';
+      else if (mimeType === 'image/png') fileName += '.png';
+      else fileName += '.jpg';
+    }
+    
+    console.log("[Download]", fileName, "MIME:", mimeType, "Size:", arrayBuffer.byteLength);
+    
+    // Create blob with explicit MIME type and download via blob URL (same-origin, so download attr works)
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+    const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = downloadUrl;
+    link.href = blobUrl;
     link.download = fileName;
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     toast.dismiss("download-prep");
     toast.success("Download concluído!");
   } catch (error) {

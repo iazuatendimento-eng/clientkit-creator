@@ -185,20 +185,16 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       filename = filename + '.mp4';
     }
 
-    toast.loading("Preparando arquivo...", { id: "download-loading" });
-
-    // Force original format from Supabase Storage (prevents WebP conversion)
-    const fetchUrl = url.includes('supabase')
-      ? `${url}?download=${encodeURIComponent(filename)}`
-      : url;
+    toast.loading("Baixando arquivo original...", { id: "download-loading" });
 
     try {
-      const res = await fetch(fetchUrl, { cache: "no-cache" });
+      const res = await fetch(url, { cache: "no-cache" });
       if (!res.ok) throw new Error("Fetch failed: " + res.status);
       const arrayBuffer = await res.arrayBuffer();
       toast.dismiss("download-loading");
 
       const mimeType = getMimeType(filename);
+      console.log("[Download]", filename, "MIME:", mimeType, "Size:", arrayBuffer.byteLength);
       const blob = new Blob([arrayBuffer], { type: mimeType });
 
       // iOS: use Web Share API — shows "Save Video/Image" option
