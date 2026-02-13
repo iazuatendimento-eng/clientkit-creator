@@ -1922,19 +1922,45 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                         
                         {/* Angle for linear gradient */}
                         {selectedEl.gradient.type === "linear" && (
-                          <div>
-                            <Label className="text-[10px] text-muted-foreground">
-                              Ângulo: {selectedEl.gradient.angle || 0}°
-                            </Label>
-                            <Slider
-                              value={[selectedEl.gradient.angle || 0]}
-                              onValueChange={([v]) => updateSelectedElement({ 
-                                gradient: { ...selectedEl.gradient!, angle: v }
-                              })}
-                              min={0}
-                              max={360}
-                              step={15}
-                            />
+                          <div className="space-y-2">
+                            <Label className="text-[10px] text-muted-foreground">Direção do Gradiente</Label>
+                            <div className="grid grid-cols-4 gap-1">
+                              {[
+                                { label: "↓", angle: 90, title: "Cima → Baixo" },
+                                { label: "↑", angle: 270, title: "Baixo → Cima" },
+                                { label: "→", angle: 0, title: "Esquerda → Direita" },
+                                { label: "←", angle: 180, title: "Direita → Esquerda" },
+                                { label: "↘", angle: 135, title: "Diagonal ↘" },
+                                { label: "↗", angle: 315, title: "Diagonal ↗" },
+                                { label: "↙", angle: 225, title: "Diagonal ↙" },
+                                { label: "↖", angle: 45, title: "Diagonal ↖" },
+                              ].map((dir) => (
+                                <Button
+                                  key={dir.angle}
+                                  variant={(selectedEl.gradient?.angle || 0) === dir.angle ? "default" : "outline"}
+                                  size="sm"
+                                  className="h-7 text-xs px-1"
+                                  title={dir.title}
+                                  onClick={() => updateSelectedElement({ 
+                                    gradient: { ...selectedEl.gradient!, angle: dir.angle }
+                                  })}
+                                >
+                                  {dir.label}
+                                </Button>
+                              ))}
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-muted-foreground">Ângulo personalizado: {selectedEl.gradient.angle || 0}°</Label>
+                              <Slider
+                                value={[selectedEl.gradient.angle || 0]}
+                                onValueChange={([v]) => updateSelectedElement({ 
+                                  gradient: { ...selectedEl.gradient!, angle: v }
+                                })}
+                                min={0}
+                                max={360}
+                                step={5}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
