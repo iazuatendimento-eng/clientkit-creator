@@ -8,10 +8,24 @@ import { toast } from "sonner";
 import { createCardUpload, getCardUploads, deleteCardUpload } from "@/lib/clientDatabase";
 import { supabase } from "@/integrations/supabase/client";
 
+const getMimeFromName = (name: string): string => {
+  const ext = name.split('.').pop()?.toLowerCase();
+  if (ext === 'mp4' || ext === 'mpg' || ext === 'mpeg') return 'video/mp4';
+  if (ext === 'mov') return 'video/quicktime';
+  if (ext === 'webm') return 'video/webm';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'gif') return 'image/gif';
+  return 'application/octet-stream';
+};
+
 const downloadFile = async (url: string, fileName: string) => {
   try {
     const response = await fetch(url);
-    const blob = await response.blob();
+    const arrayBuffer = await response.arrayBuffer();
+    const mimeType = getMimeFromName(fileName);
+    const blob = new Blob([arrayBuffer], { type: mimeType });
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = downloadUrl;
@@ -105,7 +119,10 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
 
       const { error: storageError } = await supabase.storage
         .from("card-uploads")
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: false,
+        });
 
       if (storageError) {
         console.error("Storage upload error:", storageError);
