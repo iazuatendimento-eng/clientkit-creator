@@ -65,6 +65,7 @@ interface CanvasElement {
   borderWidth?: number;
   borderColor?: string;
   borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
+  clipShape?: "rect" | "circle";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
@@ -1048,9 +1049,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           sx = Math.max(0, Math.min(sx, img.width - sw));
           sy = Math.max(0, Math.min(sy, img.height - sh));
 
-          // Apply border radius clipping if present
+          // Apply clip shape (circle or rounded rect)
+          const clipShape = (el as any).clipShape || "rect";
           const radius = el.borderRadius || 0;
-          if (radius > 0) {
+          
+          if (clipShape === "circle") {
+            ctx.save();
+            ctx.beginPath();
+            ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
+            ctx.restore();
+          } else if (radius > 0) {
             ctx.save();
             ctx.beginPath();
             ctx.roundRect(frameX, frameY, frameW, frameH, radius);
