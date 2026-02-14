@@ -24,9 +24,12 @@ import {
   Eraser,
   Save,
   ClipboardPaste,
+  MessageSquareWarning,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
@@ -131,6 +134,8 @@ interface ClientArt {
   pageIndex?: number; // For carousel - which page this is (0-based)
   totalPages?: number; // For carousel - total pages in this card
   imageType?: string; // Tipo de imagem do cadastro do cliente
+  note?: string; // Anotação do operador
+  noteRead?: boolean; // Se a anotação foi marcada como lida
 }
 
 // Image cache to avoid reloading
@@ -419,6 +424,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       backgroundImage: item.backgroundImages?.[0],
       imageType: (item as any).imageType || imageTypeMap[item.clientId] || undefined,
       status: "pending" as const,
+      note: item.note,
+      noteRead: item.noteRead,
     }));
     setClientArts(arts);
     setIsLoading(false);
@@ -1195,6 +1202,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             brandKit: art.brandKit,
             files: [art.imageUrl!],
             backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
+            note: art.note,
+            noteRead: art.noteRead,
           }));
           const savedId = await saveBatchGeneration("art", template, batchItems, currentBatchId || undefined);
           if (savedId) setCurrentBatchId(savedId);
@@ -1556,6 +1565,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         brandKit: art.brandKit,
         files: [art.imageUrl!],
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
+        note: art.note,
+        noteRead: art.noteRead,
       }));
 
       // Merge with existing batch items to preserve non-edited items
@@ -1655,6 +1666,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         brandKit: art.brandKit,
         files: [art.imageUrl!],
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
+        note: art.note,
+        noteRead: art.noteRead,
       }));
       const savedId = await saveBatchGeneration("art", template, batchItems, currentBatchId || undefined);
       if (savedId) setCurrentBatchId(savedId);
@@ -1869,8 +1882,64 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                     >
                       <Check className="h-4 w-4" />
                     </Button>
-                  </div>
-                )}
+                   </div>
+                 )}
+
+                 {/* Note button */}
+                 <div className="pt-1">
+                   <Popover>
+                     <PopoverTrigger asChild>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         className="w-full relative"
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           if (art.note && !art.noteRead) {
+                             const updated = [...clientArts];
+                             updated[index] = { ...updated[index], noteRead: true };
+                             setClientArts(updated);
+                           }
+                         }}
+                       >
+                         <MessageSquareWarning className="h-4 w-4 mr-1" />
+                         <span className="text-xs">Anotação</span>
+                         {art.note && !art.noteRead && (
+                           <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+                         )}
+                       </Button>
+                     </PopoverTrigger>
+                     <PopoverContent className="w-64 p-3" onClick={(e) => e.stopPropagation()}>
+                       <div className="space-y-2">
+                         <p className="text-xs font-medium text-foreground">Anotação</p>
+                         <Textarea
+                           placeholder="Escreva uma observação..."
+                           className="text-xs min-h-[60px] resize-none"
+                           value={art.note || ""}
+                           onChange={(e) => {
+                             const updated = [...clientArts];
+                             updated[index] = { ...updated[index], note: e.target.value, noteRead: false };
+                             setClientArts(updated);
+                           }}
+                         />
+                         {art.note && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="w-full text-xs"
+                             onClick={() => {
+                               const updated = [...clientArts];
+                               updated[index] = { ...updated[index], note: "", noteRead: true };
+                               setClientArts(updated);
+                             }}
+                           >
+                             <Check className="h-3 w-3 mr-1" /> Marcar como resolvido
+                           </Button>
+                         )}
+                       </div>
+                     </PopoverContent>
+                   </Popover>
+                 </div>
 
                 {art.status === "approved" && (
                   <div className="mt-3 text-center">
