@@ -2379,6 +2379,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
           imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
           pageImageAdjustments: video.pageImageAdjustments,
+          audioUrl: (() => {
+            const sel = video.selectedAudio || 1;
+            return sel === 2 ? template.audioUrl2 : template.audioUrl1;
+          })(),
           onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
         });
 
