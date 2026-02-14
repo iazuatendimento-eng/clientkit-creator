@@ -25,6 +25,7 @@ export interface VideoEncoderOptions {
   imageRect?: { left: number; top: number; width: number; height: number } | null; // Image placeholder rect as percentages
   pageImageAdjustments?: { imageX: number; imageY: number; imageScale: number }[]; // Per-page image position/scale adjustments
   imageClipShape?: string; // Geometric clip shape for image placeholder (circle, triangle, diamond, etc.)
+  audioUrl?: string; // URL of background audio to mix into the video
   onProgress?: (progress: number) => void;
 }
 
@@ -121,7 +122,7 @@ async function patchMP4Brand(blob: Blob): Promise<Blob> {
 }
 
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
-  const { onProgress } = options;
+  const { onProgress, audioUrl } = options;
 
   // Strategy: Record native MP4 (H.264 via Chrome's MediaRecorder), then REMUX
   // through FFmpeg to add faststart (moov atom at beginning) for WhatsApp compatibility.
@@ -141,23 +142,51 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     );
     onProgress?.(0.6);
 
-    // Remux through FFmpeg to add faststart (moov atom at beginning)
+    // Remux through FFmpeg to add faststart (moov atom at beginning) + audio if provided
     try {
       const ff = await loadFFmpeg();
       onProgress?.(0.7);
       await ff.writeFile("input.mp4", await fetchFile(nativeMp4));
 
-      // -c:v copy = no re-encoding (doesn't need libx264)
-      // -movflags +faststart = move moov atom to beginning for streaming/WhatsApp
+      // Prepare audio file if provided
+      let hasAudio = false;
+      if (audioUrl) {
+        try {
+          console.log("[VideoEncoder] Fetching audio:", audioUrl.substring(0, 80));
+          const audioResponse = await fetch(audioUrl);
+          if (audioResponse.ok) {
+            const audioBlob = await audioResponse.blob();
+            const audioExt = audioUrl.includes(".wav") ? "wav" : audioUrl.includes(".ogg") ? "ogg" : "mp3";
+            await ff.writeFile(`audio.${audioExt}`, await fetchFile(audioBlob));
+            hasAudio = true;
+            console.log("[VideoEncoder] Audio file loaded, size:", audioBlob.size);
+          }
+        } catch (audioErr) {
+          console.warn("[VideoEncoder] Failed to fetch audio, proceeding without:", audioErr);
+        }
+      }
+
+      const ffmpegArgs = hasAudio
+        ? [
+            "-i", "input.mp4",
+            "-i", `audio.${audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : "mp3"}`,
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "128k",
+            "-shortest",
+            "-movflags", "+faststart",
+            "-f", "mp4", "output.mp4",
+          ]
+        : [
+            "-i", "input.mp4",
+            "-c:v", "copy", "-c:a", "copy",
+            "-movflags", "+faststart",
+            "-f", "mp4", "output.mp4",
+          ];
+
       await withTimeout(
-        ff.exec([
-          "-i", "input.mp4",
-          "-c:v", "copy", "-c:a", "copy",
-          "-movflags", "+faststart",
-          "-f", "mp4", "output.mp4",
-        ]),
-        120_000,
-        "remux faststart"
+        ff.exec(ffmpegArgs),
+        180_000,
+        hasAudio ? "muxar vídeo + áudio" : "remux faststart"
       );
 
       onProgress?.(0.9);
@@ -165,10 +194,14 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
       await ff.deleteFile("input.mp4");
       await ff.deleteFile("output.mp4");
+      if (hasAudio) {
+        const audioExt = audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : "mp3";
+        await ff.deleteFile(`audio.${audioExt}`).catch(() => {});
+      }
       mp4Blob = await patchMP4Brand(mp4Blob);
 
       if (await isValidMP4(mp4Blob)) {
-        console.log("[VideoEncoder] Remuxed MP4 with faststart, size:", mp4Blob.size);
+        console.log("[VideoEncoder] Remuxed MP4 with faststart" + (hasAudio ? " + audio" : "") + ", size:", mp4Blob.size);
         onProgress?.(1);
         return mp4Blob;
       }
@@ -176,7 +209,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       console.error("[VideoEncoder] FFmpeg remux failed, using native MP4:", err);
     }
 
-    // Fallback: return native MP4 with brand patch
+    // Fallback: return native MP4 with brand patch (no audio in this case)
     const patched = await patchMP4Brand(nativeMp4);
     onProgress?.(1);
     return patched;
