@@ -286,7 +286,7 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                     {file.fileType === "image" ? (
                       <img src={file.url} alt={file.name} className="w-full h-28 object-cover rounded-lg opacity-80" />
                     ) : (
-                      <video src={file.url} className="w-full h-28 object-cover rounded-lg opacity-80" muted />
+                      <video src={file.url} className="w-full h-28 object-cover rounded-lg opacity-80" muted autoPlay loop playsInline />
                     )}
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => downloadFile(file.url, file.name)} title="Baixar">
@@ -347,7 +347,7 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                     {file.fileType === "image" ? (
                       <img src={file.url} alt={file.name} className="w-full h-28 object-cover rounded-lg" />
                     ) : (
-                      <video src={file.url} className="w-full h-28 object-cover rounded-lg" muted />
+                      <video src={file.url} className="w-full h-28 object-cover rounded-lg" muted autoPlay loop playsInline />
                     )}
                     {isLast && (
                       <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded">
