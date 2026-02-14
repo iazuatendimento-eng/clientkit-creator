@@ -858,16 +858,44 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       ctx.textAlign = "center";
       ctx.fillText("MASCOTE", el.x + el.width / 2, el.y + el.height / 2 + 12);
     } else if (el.type === "image") {
-      // Image placeholder
-      ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
+      // Image placeholder with visible reference
+      ctx.fillStyle = "rgba(139, 92, 246, 0.15)";
       const shape = el.clipShape || "rect";
       if (shape === "circle") {
         ctx.beginPath();
         ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = "rgba(139, 92, 246, 0.6)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 6]);
+        ctx.stroke();
+        ctx.setLineDash([]);
       } else {
         ctx.fillRect(el.x, el.y, el.width, el.height);
+        ctx.strokeStyle = "rgba(139, 92, 246, 0.6)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 6]);
+        ctx.strokeRect(el.x, el.y, el.width, el.height);
+        ctx.setLineDash([]);
       }
+      // Draw image icon and label
+      ctx.fillStyle = "rgba(139, 92, 246, 0.7)";
+      ctx.font = "bold 28px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const iconSize = Math.min(el.width, el.height) * 0.15;
+      const centerX = el.x + el.width / 2;
+      const centerY = el.y + el.height / 2;
+      // Simple mountain/image icon
+      ctx.beginPath();
+      ctx.moveTo(centerX - iconSize, centerY + iconSize * 0.3);
+      ctx.lineTo(centerX - iconSize * 0.3, centerY - iconSize * 0.5);
+      ctx.lineTo(centerX + iconSize * 0.1, centerY + iconSize * 0.1);
+      ctx.lineTo(centerX + iconSize * 0.4, centerY - iconSize * 0.2);
+      ctx.lineTo(centerX + iconSize, centerY + iconSize * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillText("IMAGEM", centerX, centerY + iconSize + 20);
     } else {
       drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, ctx.fillStyle as string);
     }
