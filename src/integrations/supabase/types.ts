@@ -342,6 +342,8 @@ export type Database = {
       }
       master_video_templates: {
         Row: {
+          audio_url_1: string | null
+          audio_url_2: string | null
           background_color: string
           content_elements: Json
           created_at: string
@@ -355,6 +357,8 @@ export type Database = {
           width: number
         }
         Insert: {
+          audio_url_1?: string | null
+          audio_url_2?: string | null
           background_color?: string
           content_elements?: Json
           created_at?: string
@@ -368,6 +372,8 @@ export type Database = {
           width?: number
         }
         Update: {
+          audio_url_1?: string | null
+          audio_url_2?: string | null
           background_color?: string
           content_elements?: Json
           created_at?: string
