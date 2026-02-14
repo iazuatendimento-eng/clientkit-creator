@@ -361,6 +361,13 @@ export const BatchHistoryEditor = ({
         overlayPages: (selectedItem as any).overlayPages || undefined,
         logoOverlayPages: (selectedItem as any).logoOverlayPages || undefined,
         frameOverlayPages: (selectedItem as any).frameOverlayPages || undefined,
+        audioUrl: (() => {
+          const t = template as any;
+          const sel = (selectedItem as any).selectedAudio || 1;
+          const url1 = t.audioUrl1 || t.audio_url_1;
+          const url2 = t.audioUrl2 || t.audio_url_2;
+          return sel === 2 ? url2 : url1;
+        })(),
         onProgress: (p) => setExportProgress(Math.round(p * 100)),
       });
 
