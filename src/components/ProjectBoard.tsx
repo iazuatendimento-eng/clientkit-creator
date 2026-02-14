@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder } from "@/lib/clientDatabase";
@@ -178,7 +178,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     return 'application/octet-stream';
   };
 
-  const handleDownload = async (url: string, filename: string) => {
+  const handleDownload = async (url: string, filename: string, stripAudio?: boolean) => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isVideo = /\.(mp4|mpg|mpeg|mov|webm)$/i.test(filename) || getMimeType(filename).startsWith('video/');
 
@@ -214,7 +214,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             if (p < 0.3) toast.loading("Carregando conversor...", { id: "download-loading" });
             else if (p < 0.85) toast.loading("Convertendo vídeo...", { id: "download-loading" });
             else toast.loading("Finalizando...", { id: "download-loading" });
-          });
+          }, { stripAudio: !!stripAudio });
           // Ensure .mp4 extension
           filename = filename.replace(/\.[^.]+$/, '') + '.mp4';
           console.log("[Download] Re-encoded for WhatsApp, size:", blob.size);
@@ -404,57 +404,81 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               {finalArtworks.length > 0 ? (
                 <>
                   {finalArtworks.length === 1 ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const artwork = finalArtworks[0];
-                        handleDownload(artwork.url, artwork.name);
-                      }}
-                      className="text-xs px-2 py-1 h-auto w-full"
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Baixar {finalArtworks[0].fileType.startsWith("video") ? 'Vídeo' : 'Arte'}
-                    </Button>
+                    finalArtworks[0].fileType.startsWith("video") ? (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); handleDownload(finalArtworks[0].url, finalArtworks[0].name, false); }}
+                          className="text-xs px-2 py-1 h-auto flex-1"
+                        >
+                          <Volume2 className="h-3 w-3 mr-1" />
+                          Com Áudio
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); handleDownload(finalArtworks[0].url, finalArtworks[0].name, true); }}
+                          className="text-xs px-2 py-1 h-auto flex-1"
+                        >
+                          <VolumeX className="h-3 w-3 mr-1" />
+                          Sem Áudio
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); handleDownload(finalArtworks[0].url, finalArtworks[0].name); }}
+                        className="text-xs px-2 py-1 h-auto w-full"
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Baixar Arte
+                      </Button>
+                    )
                   ) : (
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground font-medium">Baixar:</p>
                       {finalArtworks.map((artwork, index) => (
-                        <Button
-                          key={artwork.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(artwork.url, artwork.name);
-                          }}
-                          className="text-xs px-2 py-1 h-auto w-full"
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          {artwork.fileType.startsWith("video") ? 'Vídeo' : 'Arte'} {index + 1}
-                        </Button>
+                        artwork.fileType.startsWith("video") ? (
+                          <div key={artwork.id} className="flex gap-1">
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name, false); }} className="text-xs px-2 py-1 h-auto flex-1">
+                              <Volume2 className="h-3 w-3 mr-1" />
+                              Vídeo {index + 1}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name, true); }} className="text-xs px-2 py-1 h-auto flex-1">
+                              <VolumeX className="h-3 w-3 mr-1" />
+                              S/ Áudio
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button key={artwork.id} variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name); }} className="text-xs px-2 py-1 h-auto w-full">
+                            <Download className="h-3 w-3 mr-1" />
+                            Arte {index + 1}
+                          </Button>
+                        )
                       ))}
                     </div>
                   )}
                 </>
               ) : (brief.coverImage || brief.coverVideo) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (brief.coverVideo) {
-                      handleDownload(brief.coverVideo, `${brief.clientName}-${brief.id}.mp4`);
-                    } else if (brief.coverImage) {
-                      handleDownload(brief.coverImage, `${brief.clientName}-${brief.id}.png`);
-                    }
-                  }}
-                  className="text-xs px-2 py-1 h-auto w-full"
-                >
-                  <Download className="h-3 w-3 mr-1" />
-                  {brief.coverVideo ? "Baixar MP4" : "Baixar Arte"}
-                </Button>
+                brief.coverVideo ? (
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); }} className="text-xs px-2 py-1 h-auto flex-1">
+                      <Volume2 className="h-3 w-3 mr-1" />
+                      Com Áudio
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, true); }} className="text-xs px-2 py-1 h-auto flex-1">
+                      <VolumeX className="h-3 w-3 mr-1" />
+                      Sem Áudio
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverImage!, `${brief.clientName}-${brief.id}.png`); }} className="text-xs px-2 py-1 h-auto w-full">
+                    <Download className="h-3 w-3 mr-1" />
+                    Baixar Arte
+                  </Button>
+                )
               )}
               <Button
                 variant="outline"
@@ -506,96 +530,97 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               {finalArtworks.length > 0 ? (
                 <>
                   {finalArtworks.length === 1 ? (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload(finalArtworks[0].url, finalArtworks[0].name);
-                        }}
-                        className="text-xs px-2 py-1 h-auto flex-1"
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Baixar {finalArtworks[0].fileType.startsWith("video") ? 'Vídeo' : 'Arte'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleView(finalArtworks[0].url);
-                        }}
-                        className="text-xs px-2 py-1 h-auto flex-1"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        Ver
-                      </Button>
-                    </div>
+                    finalArtworks[0].fileType.startsWith("video") ? (
+                      <div className="space-y-1">
+                        <div className="flex gap-1">
+                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(finalArtworks[0].url, finalArtworks[0].name, false); }} className="text-xs px-2 py-1 h-auto flex-1">
+                            <Volume2 className="h-3 w-3 mr-1" />
+                            Com Áudio
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(finalArtworks[0].url, finalArtworks[0].name, true); }} className="text-xs px-2 py-1 h-auto flex-1">
+                            <VolumeX className="h-3 w-3 mr-1" />
+                            Sem Áudio
+                          </Button>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleView(finalArtworks[0].url); }} className="text-xs px-2 py-1 h-auto w-full">
+                          <Eye className="h-3 w-3 mr-1" />
+                          Ver
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(finalArtworks[0].url, finalArtworks[0].name); }} className="text-xs px-2 py-1 h-auto flex-1">
+                          <Download className="h-3 w-3 mr-1" />
+                          Baixar Arte
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleView(finalArtworks[0].url); }} className="text-xs px-2 py-1 h-auto flex-1">
+                          <Eye className="h-3 w-3 mr-1" />
+                          Ver
+                        </Button>
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground font-medium">Arquivos:</p>
                       {finalArtworks.map((artwork, index) => (
-                        <div key={artwork.id} className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(artwork.url, artwork.name);
-                            }}
-                            className="text-xs px-2 py-1 h-auto flex-1"
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            Baixar {artwork.fileType.startsWith("video") ? 'Vídeo' : 'Arte'} {index + 1}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleView(artwork.url);
-                            }}
-                            className="text-xs px-2 py-1 h-auto"
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        artwork.fileType.startsWith("video") ? (
+                          <div key={artwork.id} className="space-y-1">
+                            <div className="flex gap-1">
+                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name, false); }} className="text-xs px-2 py-1 h-auto flex-1">
+                                <Volume2 className="h-3 w-3 mr-1" />
+                                Vídeo {index + 1}
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name, true); }} className="text-xs px-2 py-1 h-auto flex-1">
+                                <VolumeX className="h-3 w-3 mr-1" />
+                                S/ Áudio
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div key={artwork.id} className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name); }} className="text-xs px-2 py-1 h-auto flex-1">
+                              <Download className="h-3 w-3 mr-1" />
+                              Arte {index + 1}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleView(artwork.url); }} className="text-xs px-2 py-1 h-auto">
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )
                       ))}
                     </div>
                   )}
                 </>
               ) : (brief.coverVideo || brief.coverImage) ? (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (brief.coverVideo) {
-                        handleDownload(brief.coverVideo, `${brief.clientName || 'video'}-${brief.id}.mp4`);
-                      } else if (brief.coverImage) {
-                        handleDownload(brief.coverImage, `${brief.clientName || 'arte'}-${brief.id}.png`);
-                      }
-                    }}
-                    className="text-xs px-2 py-1 h-auto flex-1"
-                  >
-                    <Download className="h-3 w-3 mr-1" />
-                    Baixar {brief.coverVideo ? 'Vídeo' : 'Arte'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleView(brief.coverVideo || brief.coverImage || '');
-                    }}
-                    className="text-xs px-2 py-1 h-auto flex-1"
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    Ver
-                  </Button>
-                </div>
+                brief.coverVideo ? (
+                  <div className="space-y-1">
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverVideo!, `${brief.clientName || 'video'}-${brief.id}.mp4`, false); }} className="text-xs px-2 py-1 h-auto flex-1">
+                        <Volume2 className="h-3 w-3 mr-1" />
+                        Com Áudio
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverVideo!, `${brief.clientName || 'video'}-${brief.id}.mp4`, true); }} className="text-xs px-2 py-1 h-auto flex-1">
+                        <VolumeX className="h-3 w-3 mr-1" />
+                        Sem Áudio
+                      </Button>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleView(brief.coverVideo!); }} className="text-xs px-2 py-1 h-auto w-full">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Ver
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverImage!, `${brief.clientName || 'arte'}-${brief.id}.png`); }} className="text-xs px-2 py-1 h-auto flex-1">
+                      <Download className="h-3 w-3 mr-1" />
+                      Baixar Arte
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleView(brief.coverImage!); }} className="text-xs px-2 py-1 h-auto flex-1">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Ver
+                    </Button>
+                  </div>
+                )
               ) : null}
               {(finalArtworks.length > 0 || brief.coverVideo || brief.coverImage) && (
                 <div className="text-sm sm:text-base text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg p-3 sm:p-4 leading-relaxed mt-2">

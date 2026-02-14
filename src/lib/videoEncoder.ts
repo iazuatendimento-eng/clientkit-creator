@@ -1066,7 +1066,8 @@ export async function encodeVideoSimple(
  */
 export async function reencodeForWhatsApp(
   inputBlob: Blob,
-  onProgress?: (p: number) => void
+  onProgress?: (p: number) => void,
+  options?: { stripAudio?: boolean }
 ): Promise<Blob> {
   onProgress?.(0.1);
   const ff = await loadFFmpeg();
@@ -1074,12 +1075,18 @@ export async function reencodeForWhatsApp(
 
   await ff.writeFile("input.mp4", await fetchFile(inputBlob));
 
-  // Try strategies in order: copy (fastest), libx264 (best quality), mpeg4 (fallback)
-  const strategies = [
-    { name: "copy", args: ["-c:v", "copy", "-c:a", "copy"] },
-    { name: "libx264", args: ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-an"] },
-    { name: "mpeg4", args: ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-an"] },
-  ];
+  const stripAudio = options?.stripAudio ?? false;
+  const strategies = stripAudio
+    ? [
+        { name: "copy-noaudio", args: ["-c:v", "copy", "-an"] },
+        { name: "libx264-noaudio", args: ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-an"] },
+        { name: "mpeg4-noaudio", args: ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-an"] },
+      ]
+    : [
+        { name: "copy", args: ["-c:v", "copy", "-c:a", "copy"] },
+        { name: "libx264", args: ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-an"] },
+        { name: "mpeg4", args: ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-an"] },
+      ];
 
   for (const strategy of strategies) {
     try {
