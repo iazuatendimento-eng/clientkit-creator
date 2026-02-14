@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { reencodeForWhatsApp } from "@/lib/videoEncoder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -179,26 +180,51 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   const handleDownload = async (url: string, filename: string) => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isVideo = /\.(mp4|mpg|mpeg|mov|webm)$/i.test(filename) || getMimeType(filename).startsWith('video/');
 
     // Ensure filename has proper extension for videos
     if (!filename.match(/\.\w+$/)) {
       filename = filename + '.mp4';
     }
 
-    // Use edge function proxy to guarantee correct headers
-    const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`;
-
-    toast.loading("Baixando arquivo original...", { id: "download-loading" });
+    toast.loading(isVideo ? "Convertendo vídeo para WhatsApp..." : "Baixando arquivo...", { id: "download-loading" });
 
     try {
-      const res = await fetch(proxyUrl, { cache: "no-cache" });
-      if (!res.ok) throw new Error("Fetch failed: " + res.status);
-      const arrayBuffer = await res.arrayBuffer();
-      toast.dismiss("download-loading");
+      // Fetch the original file
+      const res = await fetch(url, { mode: 'cors', cache: "no-cache" });
+      if (!res.ok) {
+        // Fallback: try through proxy
+        const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`;
+        const proxyRes = await fetch(proxyUrl, { cache: "no-cache" });
+        if (!proxyRes.ok) throw new Error("Fetch failed: " + proxyRes.status);
+        var arrayBuffer = await proxyRes.arrayBuffer();
+      } else {
+        var arrayBuffer = await res.arrayBuffer();
+      }
 
       const mimeType = getMimeType(filename);
       console.log("[Download]", filename, "MIME:", mimeType, "Size:", arrayBuffer.byteLength);
-      const blob = new Blob([arrayBuffer], { type: mimeType });
+      let blob = new Blob([arrayBuffer], { type: mimeType });
+
+      // For videos: re-encode through FFmpeg for WhatsApp compatibility
+      if (isVideo) {
+        try {
+          toast.loading("Processando vídeo para WhatsApp...", { id: "download-loading" });
+          blob = await reencodeForWhatsApp(blob, (p) => {
+            if (p < 0.3) toast.loading("Carregando conversor...", { id: "download-loading" });
+            else if (p < 0.85) toast.loading("Convertendo vídeo...", { id: "download-loading" });
+            else toast.loading("Finalizando...", { id: "download-loading" });
+          });
+          // Ensure .mp4 extension
+          filename = filename.replace(/\.[^.]+$/, '') + '.mp4';
+          console.log("[Download] Re-encoded for WhatsApp, size:", blob.size);
+        } catch (encErr) {
+          console.error("[Download] FFmpeg re-encode failed:", encErr);
+          // Continue with original blob
+        }
+      }
+
+      toast.dismiss("download-loading");
 
       // iOS: use Web Share API
       if (isIOS && navigator.share && navigator.canShare) {
@@ -231,7 +257,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast.success("Download iniciado!");
+      toast.success(isVideo ? "Vídeo WhatsApp baixado! ✓" : "Download iniciado!");
       setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 30000);
     } catch (error) {
       toast.dismiss("download-loading");
