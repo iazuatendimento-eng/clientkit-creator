@@ -72,7 +72,7 @@ const downloadFile = async (url: string, fileName: string) => {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
 
       toast.dismiss("download-prep");
-      toast.success("Vídeo convertido e baixado! Compatível com WhatsApp ✓");
+      toast.success("Vídeo baixado! ✓");
       return;
     }
 
