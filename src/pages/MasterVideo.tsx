@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { MasterVideoEditor } from "@/components/MasterVideoEditor";
 import { BatchVideoGenerator } from "@/components/BatchVideoGenerator";
 import { BatchHistory } from "@/components/BatchHistory";
@@ -44,9 +45,29 @@ const MasterVideo = () => {
     setView("history");
   };
 
-  const handleEditBatch = (batch: BatchGeneration) => {
+  const handleEditBatch = async (batch: BatchGeneration) => {
     // Extract template from batch snapshot and open in BatchVideoGenerator
     const snap = batch.template_snapshot as any;
+    let audioUrl1 = snap.audioUrl1 || snap.audio_url_1 || undefined;
+    let audioUrl2 = snap.audioUrl2 || snap.audio_url_2 || undefined;
+
+    // If no audio in snapshot, try to load from the master video template
+    if (!audioUrl1 && !audioUrl2 && snap.id) {
+      try {
+        const { data } = await supabase
+          .from("master_video_templates")
+          .select("audio_url_1, audio_url_2")
+          .eq("id", snap.id)
+          .maybeSingle();
+        if (data) {
+          audioUrl1 = (data as any).audio_url_1 || undefined;
+          audioUrl2 = (data as any).audio_url_2 || undefined;
+        }
+      } catch (e) {
+        console.error("Failed to load master template audio:", e);
+      }
+    }
+
     const batchTemplate: VideoTemplate = {
       id: snap.id || batch.id,
       name: snap.name || "Template",
@@ -56,8 +77,8 @@ const MasterVideo = () => {
       height: snap.height || 1920,
       backgroundColor: snap.backgroundColor || snap.background_color || "#ffffff",
       pageDuration: snap.pageDuration || snap.page_duration || 3,
-      audioUrl1: snap.audioUrl1 || snap.audio_url_1 || undefined,
-      audioUrl2: snap.audioUrl2 || snap.audio_url_2 || undefined,
+      audioUrl1,
+      audioUrl2,
     };
     setTemplate(batchTemplate);
     setTeamFilter(snap.teamFilter || undefined);

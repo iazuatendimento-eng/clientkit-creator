@@ -481,6 +481,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         height: CANVAS_HEIGHT,
         background_color: backgroundColor,
         page_duration: pageDuration,
+        audio_url_1: audioUrl1 || null,
+        audio_url_2: audioUrl2 || null,
         created_by: user.id,
       };
 
@@ -539,6 +541,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       setSignatureElements(data.signature_elements as unknown as CanvasElement[]);
       setBackgroundColor(data.background_color);
       setPageDuration(data.page_duration);
+      setAudioUrl1((data as any).audio_url_1 || "");
+      setAudioUrl2((data as any).audio_url_2 || "");
       
       toast({
         title: "Template carregado!",
