@@ -7,6 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { createCardUpload, getCardUploads, deleteCardUpload } from "@/lib/clientDatabase";
 import { supabase } from "@/integrations/supabase/client";
+import { reencodeForWhatsApp } from "@/lib/videoEncoder";
 
 const getMimeFromName = (name: string): string => {
   const ext = name.split('.').pop()?.toLowerCase();
@@ -20,13 +21,54 @@ const getMimeFromName = (name: string): string => {
   return 'application/octet-stream';
 };
 
+const isVideoFile = (name: string): boolean => {
+  const ext = name.split('.').pop()?.toLowerCase() || '';
+  return ['mp4', 'mpg', 'mpeg', 'mov', 'webm'].includes(ext);
+};
+
 const downloadFile = async (url: string, fileName: string) => {
   try {
-    toast.loading("Baixando arquivo original...", { id: "download-prep" });
-    
-    // Use edge function proxy to guarantee correct Content-Type and Content-Disposition
+    // For videos, re-encode through FFmpeg for WhatsApp compatibility
+    if (isVideoFile(fileName)) {
+      toast.loading("Convertendo vídeo para formato WhatsApp...", { id: "download-prep" });
+
+      // Fetch the original file as blob
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+      const originalBlob = await res.blob();
+
+      // Re-encode with H.264 baseline + faststart
+      const whatsappBlob = await reencodeForWhatsApp(originalBlob, (p) => {
+        if (p < 0.3) {
+          toast.loading("Carregando conversor...", { id: "download-prep" });
+        } else if (p < 0.85) {
+          toast.loading("Convertendo vídeo...", { id: "download-prep" });
+        } else {
+          toast.loading("Finalizando...", { id: "download-prep" });
+        }
+      });
+
+      // Ensure .mp4 extension
+      const safeName = fileName.replace(/\.[^.]+$/, '') + '.mp4';
+
+      const blobUrl = URL.createObjectURL(whatsappBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = safeName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+
+      toast.dismiss("download-prep");
+      toast.success("Vídeo convertido e baixado! Compatível com WhatsApp ✓");
+      return;
+    }
+
+    // For images, use the edge function proxy directly
+    toast.loading("Baixando arquivo...", { id: "download-prep" });
     const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(fileName)}`;
-    
     const link = document.createElement('a');
     link.href = proxyUrl;
     link.download = fileName;

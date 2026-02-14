@@ -969,3 +969,38 @@ export async function encodeVideoSimple(
     requestAnimationFrame(tick);
   });
 }
+
+/**
+ * Re-encode any video blob to a WhatsApp-compatible MP4:
+ * H.264 baseline profile, yuv420p, faststart moov atom, isom brand.
+ */
+export async function reencodeForWhatsApp(
+  inputBlob: Blob,
+  onProgress?: (p: number) => void
+): Promise<Blob> {
+  onProgress?.(0.1);
+  const ff = await loadFFmpeg();
+  onProgress?.(0.3);
+
+  await ff.writeFile("input.mp4", await fetchFile(inputBlob));
+
+  await withTimeout(
+    ff.exec([
+      "-i", "input.mp4",
+      "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1",
+      "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p",
+      "-movflags", "+faststart", "-an", "output.mp4",
+    ]),
+    360_000,
+    "re-encode para WhatsApp"
+  );
+
+  onProgress?.(0.85);
+  const mp4Data = await ff.readFile("output.mp4");
+  let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
+  await ff.deleteFile("input.mp4");
+  await ff.deleteFile("output.mp4");
+  mp4Blob = await patchMP4Brand(mp4Blob);
+  onProgress?.(1);
+  return mp4Blob;
+}
