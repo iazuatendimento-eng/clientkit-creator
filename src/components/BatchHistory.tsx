@@ -50,7 +50,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   const loadBatches = async () => {
     setIsLoading(true);
     // Only fetch video batches
-    const data = await getBatchGenerations("video");
+    const data = await getBatchGenerations(filterType || "video");
     setBatches(data);
     setIsLoading(false);
   };
