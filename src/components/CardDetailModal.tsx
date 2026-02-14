@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Image as ImageIcon, FileVideo, X, Download, Loader2, FolderOpen, Clock } from "lucide-react";
+import { Image as ImageIcon, FileVideo, X, Download, Loader2, FolderOpen, Clock, Volume2, VolumeX } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ const isVideoFile = (name: string): boolean => {
   return ['mp4', 'mpg', 'mpeg', 'mov', 'webm'].includes(ext);
 };
 
-const downloadFile = async (url: string, fileName: string) => {
+const downloadFile = async (url: string, fileName: string, stripAudio?: boolean) => {
   try {
     // For videos, re-encode through FFmpeg for WhatsApp compatibility
     if (isVideoFile(fileName)) {
@@ -50,7 +50,7 @@ const downloadFile = async (url: string, fileName: string) => {
           } else {
             toast.loading("Finalizando...", { id: "download-prep" });
           }
-        });
+        }, { stripAudio: !!stripAudio });
         console.log("[Download] Re-encoded blob size:", finalBlob.size, "type:", finalBlob.type);
       } catch (encodeErr) {
         console.error("[Download] FFmpeg re-encode failed, downloading original:", encodeErr);
@@ -290,11 +290,22 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                     ) : (
                       <video src={file.url} className="w-full h-28 object-cover rounded-lg opacity-80" muted autoPlay loop playsInline />
                     )}
-                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => downloadFile(file.url, file.name)} title="Baixar">
-                        <Download className="h-3 w-3" />
-                      </Button>
-                      <Button variant="destructive" size="icon" className="h-6 w-6" onClick={() => handleRemoveFile(file.id)}>
+                    <div className="absolute top-1 right-1 flex gap-1">
+                      {file.fileType === "video" ? (
+                        <>
+                          <Button variant="secondary" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => downloadFile(file.url, file.name, false)} title="Com Áudio">
+                            <Volume2 className="h-3 w-3" />
+                          </Button>
+                          <Button variant="secondary" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => downloadFile(file.url, file.name, true)} title="Sem Áudio">
+                            <VolumeX className="h-3 w-3" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button variant="secondary" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => downloadFile(file.url, file.name)} title="Baixar">
+                          <Download className="h-3 w-3" />
+                        </Button>
+                      )}
+                      <Button variant="destructive" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveFile(file.id)}>
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
@@ -357,9 +368,20 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
                       </div>
                     )}
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => downloadFile(file.url, file.name)} title="Baixar">
-                        <Download className="h-3 w-3" />
-                      </Button>
+                      {file.fileType === "video" ? (
+                        <>
+                          <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => downloadFile(file.url, file.name, false)} title="Com Áudio">
+                            <Volume2 className="h-3 w-3" />
+                          </Button>
+                          <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => downloadFile(file.url, file.name, true)} title="Sem Áudio">
+                            <VolumeX className="h-3 w-3" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => downloadFile(file.url, file.name)} title="Baixar">
+                          <Download className="h-3 w-3" />
+                        </Button>
+                      )}
                       <Button variant="destructive" size="icon" className="h-6 w-6" onClick={() => handleRemoveFile(file.id)}>
                         <X className="h-3 w-3" />
                       </Button>
