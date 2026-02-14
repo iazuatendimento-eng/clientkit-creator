@@ -1882,64 +1882,60 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                     >
                       <Check className="h-4 w-4" />
                     </Button>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="relative px-2"
+                          title="Anotação"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (art.note && !art.noteRead) {
+                              const updated = [...clientArts];
+                              updated[index] = { ...updated[index], noteRead: true };
+                              setClientArts(updated);
+                            }
+                          }}
+                        >
+                          <MessageSquareWarning className="h-4 w-4" />
+                          {art.note && !art.noteRead && (
+                            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse" />
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-foreground">Anotação</p>
+                          <Textarea
+                            placeholder="Escreva uma observação..."
+                            className="text-xs min-h-[60px] resize-none"
+                            value={art.note || ""}
+                            onChange={(e) => {
+                              const updated = [...clientArts];
+                              updated[index] = { ...updated[index], note: e.target.value, noteRead: false };
+                              setClientArts(updated);
+                            }}
+                          />
+                          {art.note && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full text-xs"
+                              onClick={() => {
+                                const updated = [...clientArts];
+                                updated[index] = { ...updated[index], note: "", noteRead: true };
+                                setClientArts(updated);
+                              }}
+                            >
+                              <Check className="h-3 w-3 mr-1" /> Resolvido
+                            </Button>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                    </div>
                  )}
-
-                 {/* Note button */}
-                 <div className="pt-1">
-                   <Popover>
-                     <PopoverTrigger asChild>
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         className="w-full relative"
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           if (art.note && !art.noteRead) {
-                             const updated = [...clientArts];
-                             updated[index] = { ...updated[index], noteRead: true };
-                             setClientArts(updated);
-                           }
-                         }}
-                       >
-                         <MessageSquareWarning className="h-4 w-4 mr-1" />
-                         <span className="text-xs">Anotação</span>
-                         {art.note && !art.noteRead && (
-                           <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
-                         )}
-                       </Button>
-                     </PopoverTrigger>
-                     <PopoverContent className="w-64 p-3" onClick={(e) => e.stopPropagation()}>
-                       <div className="space-y-2">
-                         <p className="text-xs font-medium text-foreground">Anotação</p>
-                         <Textarea
-                           placeholder="Escreva uma observação..."
-                           className="text-xs min-h-[60px] resize-none"
-                           value={art.note || ""}
-                           onChange={(e) => {
-                             const updated = [...clientArts];
-                             updated[index] = { ...updated[index], note: e.target.value, noteRead: false };
-                             setClientArts(updated);
-                           }}
-                         />
-                         {art.note && (
-                           <Button
-                             size="sm"
-                             variant="outline"
-                             className="w-full text-xs"
-                             onClick={() => {
-                               const updated = [...clientArts];
-                               updated[index] = { ...updated[index], note: "", noteRead: true };
-                               setClientArts(updated);
-                             }}
-                           >
-                             <Check className="h-3 w-3 mr-1" /> Marcar como resolvido
-                           </Button>
-                         )}
-                       </div>
-                     </PopoverContent>
-                   </Popover>
-                 </div>
 
                 {art.status === "approved" && (
                   <div className="mt-3 text-center">

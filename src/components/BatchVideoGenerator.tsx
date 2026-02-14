@@ -2736,70 +2736,43 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     <p className="text-xs text-yellow-500 truncate">⚠ cliente tem foto no card</p>
                   )}
 
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      title="Atualizar cores do cadastro e regenerar"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        refreshBrandKitAndRegenerate(index);
-                      }}
-                      disabled={isGenerating}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={video.status === "approved" ? "default" : "outline"}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleApprove(index)}
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={video.status === "rejected" ? "destructive" : "outline"}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleReject(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Audio selector */}
-                  {(template.audioUrl1 || template.audioUrl2) && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <span className="text-[10px] text-muted-foreground">🎵</span>
-                      <select
-                        className="flex-1 h-7 text-xs rounded border border-border bg-background px-2"
-                        value={video.selectedAudio || 1}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          const val = Number(e.target.value) as 1 | 2;
-                          setClientVideos((prev) =>
-                            prev.map((v, i) =>
-                              i === index ? { ...v, selectedAudio: val } : v
-                            )
-                          );
-                        }}
-                      >
-                        {template.audioUrl1 && <option value={1}>Áudio 1</option>}
-                        {template.audioUrl2 && <option value={2}>Áudio 2</option>}
-                      </select>
-                    </div>
-                   )}
-
-                   {/* Note button */}
-                   <div className="pt-1">
+                   {/* Actions */}
+                   <div className="flex gap-2 pt-2">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       title="Atualizar cores do cadastro e regenerar"
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         refreshBrandKitAndRegenerate(index);
+                       }}
+                       disabled={isGenerating}
+                     >
+                       <RefreshCw className="h-4 w-4" />
+                     </Button>
+                     <Button
+                       variant={video.status === "approved" ? "default" : "outline"}
+                       size="sm"
+                       className="flex-1"
+                       onClick={() => handleApprove(index)}
+                     >
+                       <Check className="h-4 w-4" />
+                     </Button>
+                     <Button
+                       variant={video.status === "rejected" ? "destructive" : "outline"}
+                       size="sm"
+                       className="flex-1"
+                       onClick={() => handleReject(index)}
+                     >
+                       <X className="h-4 w-4" />
+                     </Button>
                      <Popover>
                        <PopoverTrigger asChild>
                          <Button
                            variant="ghost"
                            size="sm"
-                           className="w-full relative"
+                           className="relative px-2"
+                           title="Anotação"
                            onClick={(e) => {
                              e.stopPropagation();
                              if (video.note && !video.noteRead) {
@@ -2809,10 +2782,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                              }
                            }}
                          >
-                           <MessageSquareWarning className="h-4 w-4 mr-1" />
-                           <span className="text-xs">Anotação</span>
+                           <MessageSquareWarning className="h-4 w-4" />
                            {video.note && !video.noteRead && (
-                             <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+                             <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse" />
                            )}
                          </Button>
                        </PopoverTrigger>
@@ -2841,13 +2813,37 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                                  );
                                }}
                              >
-                               <Check className="h-3 w-3 mr-1" /> Marcar como resolvido
+                               <Check className="h-3 w-3 mr-1" /> Resolvido
                              </Button>
                            )}
                          </div>
                        </PopoverContent>
                      </Popover>
                    </div>
+
+                  {/* Audio selector */}
+                  {(template.audioUrl1 || template.audioUrl2) && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] text-muted-foreground">🎵</span>
+                      <select
+                        className="flex-1 h-7 text-xs rounded border border-border bg-background px-2"
+                        value={video.selectedAudio || 1}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          const val = Number(e.target.value) as 1 | 2;
+                          setClientVideos((prev) =>
+                            prev.map((v, i) =>
+                              i === index ? { ...v, selectedAudio: val } : v
+                            )
+                          );
+                        }}
+                      >
+                        {template.audioUrl1 && <option value={1}>Áudio 1</option>}
+                        {template.audioUrl2 && <option value={2}>Áudio 2</option>}
+                      </select>
+                    </div>
+                   )}
                 </div>
               </div>
             ))}
