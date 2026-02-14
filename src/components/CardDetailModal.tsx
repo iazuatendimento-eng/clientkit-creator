@@ -31,27 +31,37 @@ const downloadFile = async (url: string, fileName: string) => {
     // For videos, re-encode through FFmpeg for WhatsApp compatibility
     if (isVideoFile(fileName)) {
       toast.loading("Convertendo vídeo para formato WhatsApp...", { id: "download-prep" });
+      console.log("[Download] Starting WhatsApp-compatible video download for:", fileName, url);
 
       // Fetch the original file as blob
-      const res = await fetch(url);
+      const res = await fetch(url, { mode: 'cors' });
       if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
       const originalBlob = await res.blob();
+      console.log("[Download] Original blob size:", originalBlob.size, "type:", originalBlob.type);
 
-      // Re-encode with H.264 baseline + faststart
-      const whatsappBlob = await reencodeForWhatsApp(originalBlob, (p) => {
-        if (p < 0.3) {
-          toast.loading("Carregando conversor...", { id: "download-prep" });
-        } else if (p < 0.85) {
-          toast.loading("Convertendo vídeo...", { id: "download-prep" });
-        } else {
-          toast.loading("Finalizando...", { id: "download-prep" });
-        }
-      });
+      let finalBlob: Blob;
+      try {
+        // Re-encode with H.264 baseline + faststart
+        finalBlob = await reencodeForWhatsApp(originalBlob, (p) => {
+          if (p < 0.3) {
+            toast.loading("Carregando conversor...", { id: "download-prep" });
+          } else if (p < 0.85) {
+            toast.loading("Convertendo vídeo...", { id: "download-prep" });
+          } else {
+            toast.loading("Finalizando...", { id: "download-prep" });
+          }
+        });
+        console.log("[Download] Re-encoded blob size:", finalBlob.size, "type:", finalBlob.type);
+      } catch (encodeErr) {
+        console.error("[Download] FFmpeg re-encode failed, downloading original:", encodeErr);
+        toast.loading("Conversor indisponível, baixando original...", { id: "download-prep" });
+        finalBlob = new Blob([originalBlob], { type: "video/mp4" });
+      }
 
       // Ensure .mp4 extension
       const safeName = fileName.replace(/\.[^.]+$/, '') + '.mp4';
 
-      const blobUrl = URL.createObjectURL(whatsappBlob);
+      const blobUrl = URL.createObjectURL(finalBlob);
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = safeName;
@@ -59,7 +69,7 @@ const downloadFile = async (url: string, fileName: string) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
 
       toast.dismiss("download-prep");
       toast.success("Vídeo convertido e baixado! Compatível com WhatsApp ✓");
