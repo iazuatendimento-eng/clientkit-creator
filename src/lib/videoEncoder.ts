@@ -156,7 +156,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           const audioResponse = await fetch(audioUrl);
           if (audioResponse.ok) {
             const audioBlob = await audioResponse.blob();
-            const audioExt = audioUrl.includes(".wav") ? "wav" : audioUrl.includes(".ogg") ? "ogg" : "mp3";
+            const audioExt = audioUrl.includes(".wav") ? "wav" : audioUrl.includes(".ogg") ? "ogg" : audioUrl.includes(".m4a") ? "m4a" : "mp3";
             await ff.writeFile(`audio.${audioExt}`, await fetchFile(audioBlob));
             hasAudio = true;
             console.log("[VideoEncoder] Audio file loaded, size:", audioBlob.size);
@@ -195,7 +195,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       await ff.deleteFile("input.mp4");
       await ff.deleteFile("output.mp4");
       if (hasAudio) {
-        const audioExt = audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : "mp3";
+        const audioExt = audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : audioUrl?.includes(".m4a") ? "m4a" : "mp3";
         await ff.deleteFile(`audio.${audioExt}`).catch(() => {});
       }
       mp4Blob = await patchMP4Brand(mp4Blob);
