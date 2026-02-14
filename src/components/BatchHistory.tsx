@@ -12,6 +12,7 @@ import {
   Calendar,
   Search,
   Users,
+  MessageSquareWarning,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -154,7 +155,9 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
         ) : (
           <div className="grid gap-4">
             {filteredBatches.map((batch) => {
-              const teamName = (batch.template_snapshot as any)?.teamFilter;
+              const snap = batch.template_snapshot as any;
+              const teamName = snap?.teamFilter;
+              const hasUnresolvedNotes = snap?.hasUnresolvedNotes === true;
               return (
               <div
                 key={batch.id}
@@ -178,6 +181,12 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                       <Badge variant="outline" className="text-xs">
                         <Users className="mr-1 h-3 w-3" />
                         {teamName}
+                      </Badge>
+                    )}
+                    {hasUnresolvedNotes && (
+                      <Badge variant="destructive" className="text-xs">
+                        <MessageSquareWarning className="mr-1 h-3 w-3" />
+                        Anotações
                       </Badge>
                     )}
                     <span className="text-sm text-muted-foreground flex items-center gap-1">

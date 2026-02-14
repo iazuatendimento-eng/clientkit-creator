@@ -1205,7 +1205,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             note: art.note,
             noteRead: art.noteRead,
           }));
-          const savedId = await saveBatchGeneration("art", template, batchItems, currentBatchId || undefined);
+          const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
+          const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
+          const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
           if (savedId) setCurrentBatchId(savedId);
           console.log("Auto-saved batch draft after generation:", savedId);
         }
@@ -1584,7 +1586,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         }
       }
 
-      const savedId = await saveBatchGeneration("art", template, batchItems, currentBatchId || undefined);
+      const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
+      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
+      const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
       if (savedId) setCurrentBatchId(savedId);
 
       // Clear the art generation tags so they can regenerate later
@@ -1669,7 +1673,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         note: art.note,
         noteRead: art.noteRead,
       }));
-      const savedId = await saveBatchGeneration("art", template, batchItems, currentBatchId || undefined);
+      const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
+      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
+      const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
       if (savedId) setCurrentBatchId(savedId);
 
       // Dispatch event to notify all ProjectBoard instances to reload
