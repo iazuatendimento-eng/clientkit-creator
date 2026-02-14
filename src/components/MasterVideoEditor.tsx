@@ -107,6 +107,8 @@ interface VideoTemplate {
   height: number;
   backgroundColor: string;
   pageDuration: number;
+  audioUrl1?: string;
+  audioUrl2?: string;
 }
 
 interface SavedVideoTemplate {
@@ -140,6 +142,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
   const [backgroundColor, setBackgroundColor] = useState("#1a1a2e");
   const [templateName, setTemplateName] = useState("Novo Template de Vídeo");
   const [pageDuration, setPageDuration] = useState(10);
+  const [audioUrl1, setAudioUrl1] = useState<string>("");
+  const [audioUrl2, setAudioUrl2] = useState<string>("");
   
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
@@ -557,6 +561,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
     setSignatureElements([]);
     setBackgroundColor("#1a1a2e");
     setPageDuration(10);
+    setAudioUrl1("");
+    setAudioUrl2("");
     setSelectedElement(null);
   };
 
@@ -1678,9 +1684,26 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       height: CANVAS_HEIGHT,
       backgroundColor,
       pageDuration,
+      audioUrl1: audioUrl1 || undefined,
+      audioUrl2: audioUrl2 || undefined,
     };
 
     onGenerateBatch(template, selectedTeamFilter);
+  };
+
+  const handleAudioUpload = async (slot: 1 | 2, file: File) => {
+    try {
+      const fileName = `audio-${slot}-${Date.now()}-${file.name}`;
+      const { data, error } = await supabase.storage.from("card-uploads").upload(fileName, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(data.path);
+      if (slot === 1) setAudioUrl1(urlData.publicUrl);
+      else setAudioUrl2(urlData.publicUrl);
+      toast({ title: `Áudio ${slot} carregado!` });
+    } catch (error) {
+      console.error("Error uploading audio:", error);
+      toast({ title: "Erro ao carregar áudio", variant: "destructive" });
+    }
   };
 
   const selectedEl = elements.find((el) => el.id === selectedElement);
@@ -2507,6 +2530,44 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
               </div>
             )}
           </div>
+        </div>
+
+        {/* Audio Upload Section */}
+        <div className="p-3 border-t space-y-2">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">🎵 Áudios de Fundo</Label>
+          {[1, 2].map((slot) => {
+            const url = slot === 1 ? audioUrl1 : audioUrl2;
+            const setUrl = slot === 1 ? setAudioUrl1 : setAudioUrl2;
+            return (
+              <div key={slot} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Áudio {slot}</Label>
+                  {url && (
+                    <Button variant="ghost" size="sm" className="h-5 px-1 text-[10px] text-destructive" onClick={() => setUrl("")}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+                {url ? (
+                  <audio src={url} controls className="w-full h-8" style={{ maxHeight: 32 }} />
+                ) : (
+                  <label className="flex items-center justify-center h-8 border border-dashed border-border rounded cursor-pointer hover:bg-muted/50 transition-colors">
+                    <span className="text-xs text-muted-foreground">Clique para enviar</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleAudioUpload(slot as 1 | 2, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Generate Button */}
