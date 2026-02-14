@@ -92,6 +92,8 @@ interface VideoTemplate {
   height: number;
   backgroundColor: string;
   pageDuration: number;
+  audioUrl1?: string;
+  audioUrl2?: string;
 }
 
 interface PageTextAdjustment {
@@ -206,6 +208,7 @@ interface ClientVideo {
   particularityType?: string;
   briefing?: string;
   hasMaterialUploads?: boolean;
+  selectedAudio?: 1 | 2;
 }
 
 interface BatchVideoGeneratorProps {
@@ -2720,6 +2723,30 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
+
+                  {/* Audio selector */}
+                  {(template.audioUrl1 || template.audioUrl2) && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] text-muted-foreground">🎵</span>
+                      <select
+                        className="flex-1 h-7 text-xs rounded border border-border bg-background px-2"
+                        value={video.selectedAudio || 1}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          const val = Number(e.target.value) as 1 | 2;
+                          setClientVideos((prev) =>
+                            prev.map((v, i) =>
+                              i === index ? { ...v, selectedAudio: val } : v
+                            )
+                          );
+                        }}
+                      >
+                        {template.audioUrl1 && <option value={1}>Áudio 1</option>}
+                        {template.audioUrl2 && <option value={2}>Áudio 2</option>}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -2755,7 +2782,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       }`}>
                         {currentPreviewPage === selectedVideo.pages.length - 1 ? "Assinatura" : "Conteúdo"}
                       </span>
-                    </div>
+                  </div>
 
                     {/* Page text */}
                     {currentPreviewPage < selectedVideo.pageTexts.length ? (

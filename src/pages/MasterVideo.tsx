@@ -14,6 +14,8 @@ interface VideoTemplate {
   height: number;
   backgroundColor: string;
   pageDuration: number; // in seconds
+  audioUrl1?: string;
+  audioUrl2?: string;
 }
 
 const MasterVideo = () => {
