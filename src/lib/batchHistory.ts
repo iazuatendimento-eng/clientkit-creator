@@ -21,6 +21,8 @@ export interface BatchItem {
   };
   pageTextAdjustments?: { textScale: number; textX: number; textY: number }[];
   pageImageAdjustments?: { imageX: number; imageY: number; imageScale: number }[];
+  note?: string;
+  noteRead?: boolean;
 }
 
 export interface BatchGeneration {

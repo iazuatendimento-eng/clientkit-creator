@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Check,
@@ -24,6 +25,7 @@ import {
   Save,
   ChevronLeft,
   ChevronRight,
+  MessageSquareWarning,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
@@ -209,6 +211,8 @@ interface ClientVideo {
   briefing?: string;
   hasMaterialUploads?: boolean;
   selectedAudio?: 1 | 2;
+  note?: string;
+  noteRead?: boolean;
 }
 
 interface BatchVideoGeneratorProps {
@@ -748,6 +752,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             : pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
           imageType: imageTypeMap[item.clientId] || undefined,
           particularityType: particularityMap[item.clientId] || undefined,
+          note: item.note,
+          noteRead: item.noteRead,
         };
       });
 
@@ -2028,6 +2034,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             adjustments: video.adjustments as any,
             pageTextAdjustments: video.pageTextAdjustments,
             pageImageAdjustments: video.pageImageAdjustments,
+            note: video.note,
+            noteRead: video.noteRead,
           }));
           const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
           const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
@@ -2483,6 +2491,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         adjustments: video.adjustments as any,
         pageTextAdjustments: video.pageTextAdjustments,
         pageImageAdjustments: video.pageImageAdjustments,
+        note: video.note,
+        noteRead: video.noteRead,
       }));
 
       // Merge with existing batch items to preserve non-edited items
@@ -2560,6 +2570,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         adjustments: video.adjustments as any,
         pageTextAdjustments: video.pageTextAdjustments,
         pageImageAdjustments: video.pageImageAdjustments,
+        note: video.note,
+        noteRead: video.noteRead,
       }));
 
       // Merge with existing batch items to preserve non-edited items
@@ -2778,7 +2790,64 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         {template.audioUrl2 && <option value={2}>Áudio 2</option>}
                       </select>
                     </div>
-                  )}
+                   )}
+
+                   {/* Note button */}
+                   <div className="pt-1">
+                     <Popover>
+                       <PopoverTrigger asChild>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           className="w-full relative"
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             if (video.note && !video.noteRead) {
+                               setClientVideos((prev) =>
+                                 prev.map((v, i) => i === index ? { ...v, noteRead: true } : v)
+                               );
+                             }
+                           }}
+                         >
+                           <MessageSquareWarning className="h-4 w-4 mr-1" />
+                           <span className="text-xs">Anotação</span>
+                           {video.note && !video.noteRead && (
+                             <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+                           )}
+                         </Button>
+                       </PopoverTrigger>
+                       <PopoverContent className="w-64 p-3" onClick={(e) => e.stopPropagation()}>
+                         <div className="space-y-2">
+                           <p className="text-xs font-medium text-foreground">Anotação</p>
+                           <Textarea
+                             placeholder="Escreva uma observação..."
+                             className="text-xs min-h-[60px] resize-none"
+                             value={video.note || ""}
+                             onChange={(e) => {
+                               const val = e.target.value;
+                               setClientVideos((prev) =>
+                                 prev.map((v, i) => i === index ? { ...v, note: val, noteRead: false } : v)
+                               );
+                             }}
+                           />
+                           {video.note && (
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               className="w-full text-xs"
+                               onClick={() => {
+                                 setClientVideos((prev) =>
+                                   prev.map((v, i) => i === index ? { ...v, note: "", noteRead: true } : v)
+                                 );
+                               }}
+                             >
+                               <Check className="h-3 w-3 mr-1" /> Marcar como resolvido
+                             </Button>
+                           )}
+                         </div>
+                       </PopoverContent>
+                     </Popover>
+                   </div>
                 </div>
               </div>
             ))}
