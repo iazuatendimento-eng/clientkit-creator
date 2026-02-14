@@ -270,7 +270,7 @@ export const BatchHistoryEditor = ({
           }
         }
       } else if (el.type === "mascot") {
-        const mascotUrl = brandKit?.pngs?.[2];
+        const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
         if (mascotUrl) {
           const img = await loadImage(mascotUrl);
           if (img) {
@@ -291,12 +291,46 @@ export const BatchHistoryEditor = ({
     return canvas.toDataURL("image/png");
   };
 
-  const loadImage = (url: string): Promise<HTMLImageElement | null> => {
+  const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
+    if (!url) return null;
+    
+    // Data URIs: load directly
+    if (url.startsWith("data:")) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+    
+    // Strategy 1: fetch-as-blob (bypasses CORS)
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = objectUrl;
+        });
+      }
+    } catch { /* fallback */ }
+    
+    // Strategy 2: Image with crossOrigin
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
+      img.onerror = () => {
+        // Strategy 3: without crossOrigin
+        const img2 = new Image();
+        img2.onload = () => resolve(img2);
+        img2.onerror = () => resolve(null);
+        img2.src = url;
+      };
       img.src = url;
     });
   };

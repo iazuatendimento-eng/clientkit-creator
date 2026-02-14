@@ -104,6 +104,10 @@ interface ElementOverrides {
   contactScale?: number;
   contactScaleX?: number;
   contactScaleY?: number;
+  mascotX?: number;
+  mascotY?: number;
+  mascotScaleX?: number;
+  mascotScaleY?: number;
   photoScale?: number;
   // When set, resizes/moves the photo placeholder frame (instead of zooming the crop)
   photoFrame?: ShapeOverride;
@@ -129,23 +133,91 @@ interface ClientArt {
   imageType?: string; // Tipo de imagem do cadastro do cliente
 }
 
-// Helper to load image - handles both base64 data URLs and HTTP URLs
-const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
+// Image cache to avoid reloading
+const imageCache = new Map<string, HTMLImageElement>();
+
+// Resilient image loader: fetch-as-blob (PRIMARY) → CORS → no-CORS (FALLBACK)
+const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | null> => {
   if (!url) return null;
   
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      console.log("Image loaded successfully:", url.substring(0, 50));
-      resolve(img);
-    };
-    img.onerror = (e) => {
-      console.error("Error loading image:", url.substring(0, 50), e);
-      resolve(null);
-    };
-    img.src = url;
+  const cacheKey = url.length > 200 ? url.substring(0, 100) + url.length : url;
+  const cached = imageCache.get(cacheKey);
+  if (cached) return cached;
+  
+  // Data URIs: load directly
+  if (url.startsWith("data:")) {
+    const img = await new Promise<HTMLImageElement | null>((resolve) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => resolve(null);
+      el.src = url;
+    });
+    if (img) imageCache.set(cacheKey, img);
+    return img;
+  }
+  
+  // Strategy 1 (PRIMARY): fetch → blob → objectURL (bypasses CORS entirely for canvas)
+  for (let attempt = 0; attempt <= 1; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (response.ok) {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const img = await new Promise<HTMLImageElement | null>((resolve) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => resolve(null);
+          el.src = objectUrl;
+        });
+        if (img) {
+          imageCache.set(cacheKey, img);
+          console.log(`[loadImage-art] ✅ blob OK: ${url.substring(0, 80)}`);
+          return img;
+        }
+      } else {
+        console.warn(`[loadImage-art] fetch status ${response.status}: ${url.substring(0, 80)}`);
+      }
+    } catch (e) {
+      console.warn(`[loadImage-art] fetch failed (attempt ${attempt + 1}): ${url.substring(0, 80)}`, e instanceof Error ? e.message : e);
+    }
+  }
+  
+  // Strategy 2: Image with crossOrigin (works if server sends CORS headers)
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const img = await new Promise<HTMLImageElement | null>((resolve) => {
+        const el = new Image();
+        el.crossOrigin = "anonymous";
+        el.onload = () => resolve(el);
+        el.onerror = () => resolve(null);
+        el.src = url;
+      });
+      if (img) {
+        imageCache.set(cacheKey, img);
+        console.log(`[loadImage-art] ✅ CORS OK: ${url.substring(0, 80)}`);
+        return img;
+      }
+    } catch (e) { /* retry */ }
+  }
+  
+  // Strategy 3: Image without crossOrigin (canvas tainted but visible)
+  const img = await new Promise<HTMLImageElement | null>((resolve) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => resolve(null);
+    el.src = url;
   });
+  if (img) {
+    imageCache.set(cacheKey, img);
+    console.warn(`[loadImage-art] ⚠️ no-CORS (tainted): ${url.substring(0, 80)}`);
+    return img;
+  }
+  
+  console.error(`[loadImage-art] ❌ ALL failed: ${url.substring(0, 80)}`);
+  return null;
 };
 
 // System fonts that don't need Google Fonts loading
@@ -1019,14 +1091,25 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           }
         }
       } else if (el.type === "mascot") {
-        // Mascot uses PNG[2] from brand kit
+        // Mascot uses PNG[2] from brand kit with optional overrides
         const mascotUrl = art.brandKit?.pngs?.[2] || art.brandKit?.mascot;
-        console.log("Loading mascot from:", mascotUrl?.substring(0, 50));
+        console.log("[mascot] Loading from:", mascotUrl ? mascotUrl.substring(0, 80) : "EMPTY/NULL");
         if (mascotUrl) {
           const img = await loadImage(mascotUrl);
           if (img) {
-            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+            const mascotOffsetX = art.elementOverrides?.mascotX || 0;
+            const mascotOffsetY = art.elementOverrides?.mascotY || 0;
+            const mascotScaleXMult = (art.elementOverrides?.mascotScaleX || 100) / 100;
+            const mascotScaleYMult = (art.elementOverrides?.mascotScaleY || 100) / 100;
+            const newWidth = el.width * mascotScaleXMult;
+            const newHeight = el.height * mascotScaleYMult;
+            ctx.drawImage(img, el.x + mascotOffsetX, el.y + mascotOffsetY, newWidth, newHeight);
+            console.log("[mascot] ✅ Drew mascot at", el.x + mascotOffsetX, el.y + mascotOffsetY, newWidth, newHeight);
+          } else {
+            console.warn("[mascot] ❌ Image failed to load");
           }
+        } else {
+          console.warn("[mascot] ⚠️ No mascot URL in brand kit for", art.clientName);
         }
       }
       ctx.restore();
