@@ -1433,6 +1433,53 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
         ctx.font = "bold 32px Arial";
         ctx.textAlign = "center";
         ctx.fillText("MASCOTE", el.x + el.width / 2, el.y + el.height / 2 + 12);
+      } else if (el.type === "image") {
+        // Image placeholder with high-contrast reference in drawCanvas
+        ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+        const shape = el.clipShape || "rect";
+        if (shape === "circle") {
+          ctx.beginPath();
+          ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 6]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else {
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 6]);
+          ctx.strokeRect(el.x, el.y, el.width, el.height);
+          ctx.setLineDash([]);
+        }
+        // Draw icon and label
+        const centerX = el.x + el.width / 2;
+        const centerY = el.y + el.height / 2;
+        const iconSize = Math.min(el.width, el.height) * 0.2;
+        ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.font = `bold ${Math.max(24, Math.min(el.width * 0.12, 48))}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.beginPath();
+        ctx.moveTo(centerX - iconSize, centerY + iconSize * 0.3);
+        ctx.lineTo(centerX - iconSize * 0.3, centerY - iconSize * 0.5);
+        ctx.lineTo(centerX + iconSize * 0.1, centerY + iconSize * 0.1);
+        ctx.lineTo(centerX + iconSize * 0.4, centerY - iconSize * 0.2);
+        ctx.lineTo(centerX + iconSize, centerY + iconSize * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillText("IMAGEM", centerX, centerY + iconSize + 20);
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.textBaseline = "alphabetic";
       }
 
       ctx.restore();
