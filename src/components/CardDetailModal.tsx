@@ -143,8 +143,10 @@ export const CardDetailModal = ({ isOpen, onClose, cardId, cardTitle, onCoverUpd
 
   const updateCover = (newUploads: UploadedFile[]) => {
     const finalUps = newUploads.filter(u => u.type === "final");
-    if (finalUps.length === 0) return;
-    // Last uploaded final file is the cover
+    if (finalUps.length === 0) {
+      onCoverUpdate("", false);
+      return;
+    }
     const sorted = [...finalUps].sort((a, b) => new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime());
     const lastFinal = sorted[sorted.length - 1];
     const isVideo = lastFinal.fileType === "video";
