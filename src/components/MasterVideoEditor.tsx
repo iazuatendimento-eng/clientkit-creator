@@ -1693,16 +1693,22 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
   const handleAudioUpload = async (slot: 1 | 2, file: File) => {
     try {
-      const fileName = `audio-${slot}-${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage.from("card-uploads").upload(fileName, file);
+      // Sanitize filename: remove special chars, keep extension
+      const ext = file.name.split(".").pop()?.toLowerCase() || "mp3";
+      const safeName = `audio-${slot}-${Date.now()}.${ext}`;
+      const contentType = file.type || (ext === "m4a" ? "audio/mp4" : ext === "mp3" ? "audio/mpeg" : "audio/mpeg");
+      const { data, error } = await supabase.storage.from("card-uploads").upload(safeName, file, {
+        contentType,
+        upsert: true,
+      });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(data.path);
       if (slot === 1) setAudioUrl1(urlData.publicUrl);
       else setAudioUrl2(urlData.publicUrl);
       toast({ title: `Áudio ${slot} carregado!` });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading audio:", error);
-      toast({ title: "Erro ao carregar áudio", variant: "destructive" });
+      toast({ title: "Erro ao carregar áudio", description: error?.message || "", variant: "destructive" });
     }
   };
 
