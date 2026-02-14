@@ -1,16 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BatchHistory } from "@/components/BatchHistory";
 import { BatchVideoGenerator } from "@/components/BatchVideoGenerator";
 import { BatchGeneration } from "@/lib/batchHistory";
+import { supabase } from "@/integrations/supabase/client";
 
 const BatchHistoryPage = () => {
   const navigate = useNavigate();
   const [view, setView] = useState<"list" | "edit">("list");
   const [selectedBatch, setSelectedBatch] = useState<BatchGeneration | null>(null);
+  const [resolvedTemplate, setResolvedTemplate] = useState<any>(null);
 
-  const handleEditBatch = (batch: BatchGeneration) => {
+  const handleEditBatch = async (batch: BatchGeneration) => {
     setSelectedBatch(batch);
+
+    const snap = batch.template_snapshot as any;
+    let audioUrl1 = snap.audioUrl1 || snap.audio_url_1 || undefined;
+    let audioUrl2 = snap.audioUrl2 || snap.audio_url_2 || undefined;
+
+    // If no audio in snapshot, try to load from the master video template
+    if (!audioUrl1 && !audioUrl2 && snap.id) {
+      try {
+        const { data } = await supabase
+          .from("master_video_templates")
+          .select("*")
+          .eq("id", snap.id)
+          .maybeSingle();
+        if (data) {
+          const masterSnap = data as any;
+          audioUrl1 = masterSnap.audio_url_1 || masterSnap.audioUrl1 || undefined;
+          audioUrl2 = masterSnap.audio_url_2 || masterSnap.audioUrl2 || undefined;
+        }
+      } catch (e) {
+        console.error("Failed to load master template audio:", e);
+      }
+    }
+
+    setResolvedTemplate({
+      ...snap,
+      audioUrl1,
+      audioUrl2,
+    });
     setView("edit");
   };
 
@@ -18,6 +48,7 @@ const BatchHistoryPage = () => {
     if (view === "edit") {
       setView("list");
       setSelectedBatch(null);
+      setResolvedTemplate(null);
     } else {
       navigate("/");
     }
@@ -26,18 +57,13 @@ const BatchHistoryPage = () => {
   const handleSaved = () => {
     setView("list");
     setSelectedBatch(null);
+    setResolvedTemplate(null);
   };
 
-  if (view === "edit" && selectedBatch) {
-    const snap = selectedBatch.template_snapshot as any;
-    const template = {
-      ...snap,
-      audioUrl1: snap.audioUrl1 || snap.audio_url_1 || undefined,
-      audioUrl2: snap.audioUrl2 || snap.audio_url_2 || undefined,
-    };
+  if (view === "edit" && selectedBatch && resolvedTemplate) {
     return (
       <BatchVideoGenerator
-        template={template}
+        template={resolvedTemplate}
         initialBatch={selectedBatch}
         onBack={handleBack}
         onComplete={handleSaved}
