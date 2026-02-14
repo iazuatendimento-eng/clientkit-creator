@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { saveBatchGeneration, getBatchById, BatchItem } from "@/lib/batchHistory";
+import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem } from "@/lib/batchHistory";
 import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
@@ -2805,20 +2805,42 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                                );
                              }}
                            />
-                           {video.note && (
-                             <Button
-                               size="sm"
-                               variant="outline"
-                               className="w-full text-xs"
-                               onClick={() => {
-                                 setClientVideos((prev) =>
-                                   prev.map((v, i) => i === index ? { ...v, note: "", noteRead: true } : v)
-                                 );
-                               }}
-                             >
-                               <Check className="h-3 w-3 mr-1" /> Resolvido
-                             </Button>
-                           )}
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="w-full text-xs"
+                              onClick={async () => {
+                                if (currentBatchId) {
+                                  const success = await updateBatchItem(currentBatchId, index, { note: video.note || "", noteRead: !video.note ? true : false });
+                                  if (success) {
+                                    toast({ title: "Anotação salva" });
+                                  } else {
+                                    toast({ title: "Erro ao salvar anotação", variant: "destructive" });
+                                  }
+                                } else {
+                                  toast({ title: "Salve o lote primeiro (gere ou aprove)", variant: "destructive" });
+                                }
+                              }}
+                            >
+                              <Save className="h-3 w-3 mr-1" /> Salvar
+                            </Button>
+                            {video.note && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full text-xs"
+                                onClick={async () => {
+                                  setClientVideos((prev) =>
+                                    prev.map((v, i) => i === index ? { ...v, note: "", noteRead: true } : v)
+                                  );
+                                  if (currentBatchId) {
+                                    await updateBatchItem(currentBatchId, index, { note: "", noteRead: true });
+                                  }
+                                }}
+                              >
+                                <Check className="h-3 w-3 mr-1" /> Resolvido
+                              </Button>
+                            )}
                          </div>
                        </PopoverContent>
                      </Popover>

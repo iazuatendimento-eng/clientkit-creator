@@ -34,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { saveBatchGeneration, getBatchById, BatchItem } from "@/lib/batchHistory";
+import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem } from "@/lib/batchHistory";
 import {
   Dialog,
   DialogContent,
@@ -1923,15 +1923,37 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                               setClientArts(updated);
                             }}
                           />
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="w-full text-xs"
+                            onClick={async () => {
+                              if (currentBatchId) {
+                                const success = await updateBatchItem(currentBatchId, index, { note: art.note || "", noteRead: !art.note ? true : false });
+                                if (success) {
+                                  toast({ title: "Anotação salva" });
+                                } else {
+                                  toast({ title: "Erro ao salvar anotação", variant: "destructive" });
+                                }
+                              } else {
+                                toast({ title: "Salve o lote primeiro (gere ou aprove)", variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <Save className="h-3 w-3 mr-1" /> Salvar
+                          </Button>
                           {art.note && (
                             <Button
                               size="sm"
                               variant="outline"
                               className="w-full text-xs"
-                              onClick={() => {
+                              onClick={async () => {
                                 const updated = [...clientArts];
                                 updated[index] = { ...updated[index], note: "", noteRead: true };
                                 setClientArts(updated);
+                                if (currentBatchId) {
+                                  await updateBatchItem(currentBatchId, index, { note: "", noteRead: true });
+                                }
                               }}
                             >
                               <Check className="h-3 w-3 mr-1" /> Resolvido
