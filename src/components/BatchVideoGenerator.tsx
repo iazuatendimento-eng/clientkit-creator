@@ -2037,7 +2037,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             note: video.note,
             noteRead: video.noteRead,
           }));
-          const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
+          const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
+          const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
           const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
           if (savedId) setCurrentBatchId(savedId);
           console.log("Auto-saved batch draft after generation:", savedId);
@@ -2510,7 +2511,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         }
       }
 
-      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
+      const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
+      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
       await Promise.all([
         clearArtGenerationTags(),
         saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined).then((id) => {
@@ -2589,7 +2591,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         }
       }
 
-      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
+      const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
+      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
       const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
       if (savedId) setCurrentBatchId(savedId);
 
