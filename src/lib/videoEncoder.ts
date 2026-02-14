@@ -123,10 +123,67 @@ async function patchMP4Brand(blob: Blob): Promise<Blob> {
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress } = options;
 
-  // ALWAYS record as WebM and convert through FFmpeg to ensure WhatsApp-compatible MP4
-  // (proper H.264 baseline profile, faststart moov atom, yuv420p pixel format).
-  // Native MediaRecorder MP4 lacks faststart and uses incompatible profiles.
-  console.log("[VideoEncoder] Recording WebM for FFmpeg conversion (WhatsApp-compatible)");
+  // Strategy: Record native MP4 (H.264 via Chrome's MediaRecorder), then REMUX
+  // through FFmpeg to add faststart (moov atom at beginning) for WhatsApp compatibility.
+  // We use -c:v copy (no re-encoding) so we don't need libx264 in the WASM build.
+  const mp4Mime = pickSupportedMimeType([
+    "video/mp4;codecs=avc1",
+    "video/mp4",
+  ]);
+
+  if (mp4Mime) {
+    console.log("[VideoEncoder] Recording native MP4:", mp4Mime);
+    onProgress?.(0.1);
+    const nativeMp4 = await withTimeout(
+      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
+      240_000,
+      "gerar MP4"
+    );
+    onProgress?.(0.6);
+
+    // Remux through FFmpeg to add faststart (moov atom at beginning)
+    try {
+      const ff = await loadFFmpeg();
+      onProgress?.(0.7);
+      await ff.writeFile("input.mp4", await fetchFile(nativeMp4));
+
+      // -c:v copy = no re-encoding (doesn't need libx264)
+      // -movflags +faststart = move moov atom to beginning for streaming/WhatsApp
+      await withTimeout(
+        ff.exec([
+          "-i", "input.mp4",
+          "-c:v", "copy", "-c:a", "copy",
+          "-movflags", "+faststart",
+          "-f", "mp4", "output.mp4",
+        ]),
+        120_000,
+        "remux faststart"
+      );
+
+      onProgress?.(0.9);
+      const mp4Data = await ff.readFile("output.mp4");
+      let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
+      await ff.deleteFile("input.mp4");
+      await ff.deleteFile("output.mp4");
+      mp4Blob = await patchMP4Brand(mp4Blob);
+
+      if (await isValidMP4(mp4Blob)) {
+        console.log("[VideoEncoder] Remuxed MP4 with faststart, size:", mp4Blob.size);
+        onProgress?.(1);
+        return mp4Blob;
+      }
+    } catch (err) {
+      console.error("[VideoEncoder] FFmpeg remux failed, using native MP4:", err);
+    }
+
+    // Fallback: return native MP4 with brand patch
+    const patched = await patchMP4Brand(nativeMp4);
+    onProgress?.(1);
+    return patched;
+  }
+
+  // No native MP4 support - try WebM → FFmpeg full encode
+  console.log("[VideoEncoder] No native MP4, recording WebM for FFmpeg conversion");
   onProgress?.(0.1);
   const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
 
@@ -136,44 +193,43 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     onProgress?.(0.55);
     await ff.writeFile("input.webm", await fetchFile(webmBlob));
 
-    await withTimeout(
-      ff.exec([
-        "-i", "input.webm",
-        "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1",
-        "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart", "-an", "output.mp4",
-      ]),
-      360_000,
-      "converter para MP4"
-    );
+    // Try libx264 first, fallback to mpeg4 if not available
+    const encoders = [
+      ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p"],
+      ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p"],
+    ];
 
-    onProgress?.(0.9);
-    const mp4Data = await ff.readFile("output.mp4");
-    let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
-    await ff.deleteFile("input.webm");
-    await ff.deleteFile("output.mp4");
-    mp4Blob = await patchMP4Brand(mp4Blob);
+    for (const encoderArgs of encoders) {
+      try {
+        await withTimeout(
+          ff.exec([
+            "-i", "input.webm",
+            ...encoderArgs,
+            "-movflags", "+faststart", "-an", "-y", "output.mp4",
+          ]),
+          360_000,
+          "converter para MP4"
+        );
 
-    if (await isValidMP4(mp4Blob)) {
-      onProgress?.(1);
-      return mp4Blob;
+        const mp4Data = await ff.readFile("output.mp4");
+        let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
+        mp4Blob = await patchMP4Brand(mp4Blob);
+
+        if (await isValidMP4(mp4Blob)) {
+          console.log("[VideoEncoder] Converted WebM→MP4 with encoder:", encoderArgs[1], "size:", mp4Blob.size);
+          await ff.deleteFile("input.webm");
+          await ff.deleteFile("output.mp4");
+          onProgress?.(1);
+          return mp4Blob;
+        }
+      } catch (encErr) {
+        console.warn("[VideoEncoder] Encoder", encoderArgs[1], "failed:", encErr);
+      }
     }
+
+    await ff.deleteFile("input.webm").catch(() => {});
   } catch (err) {
     console.error("[VideoEncoder] FFmpeg failed:", err);
-  }
-
-  // Last resort fallback: try native MP4 if FFmpeg failed
-  const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
-  if (mp4Mime) {
-    console.log("[VideoEncoder] FFmpeg failed, falling back to native MP4:", mp4Mime);
-    const mp4 = await withTimeout(
-      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
-      240_000,
-      "gerar MP4 nativo"
-    );
-    const patched = await patchMP4Brand(mp4);
-    onProgress?.(1);
-    return patched;
   }
 
   onProgress?.(1);
@@ -971,8 +1027,9 @@ export async function encodeVideoSimple(
 }
 
 /**
- * Re-encode any video blob to a WhatsApp-compatible MP4:
- * H.264 baseline profile, yuv420p, faststart moov atom, isom brand.
+ * Remux any video blob to a WhatsApp-compatible MP4:
+ * Uses -c:v copy (no re-encoding, no libx264 needed) + faststart moov atom + isom brand.
+ * Falls back to libx264 re-encode if copy fails, then mpeg4 as last resort.
  */
 export async function reencodeForWhatsApp(
   inputBlob: Blob,
@@ -984,23 +1041,47 @@ export async function reencodeForWhatsApp(
 
   await ff.writeFile("input.mp4", await fetchFile(inputBlob));
 
-  await withTimeout(
-    ff.exec([
-      "-i", "input.mp4",
-      "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1",
-      "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p",
-      "-movflags", "+faststart", "-an", "output.mp4",
-    ]),
-    360_000,
-    "re-encode para WhatsApp"
-  );
+  // Try strategies in order: copy (fastest), libx264 (best quality), mpeg4 (fallback)
+  const strategies = [
+    { name: "copy", args: ["-c:v", "copy", "-c:a", "copy"] },
+    { name: "libx264", args: ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-an"] },
+    { name: "mpeg4", args: ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-an"] },
+  ];
 
-  onProgress?.(0.85);
-  const mp4Data = await ff.readFile("output.mp4");
-  let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
-  await ff.deleteFile("input.mp4");
-  await ff.deleteFile("output.mp4");
-  mp4Blob = await patchMP4Brand(mp4Blob);
+  for (const strategy of strategies) {
+    try {
+      console.log(`[reencodeForWhatsApp] Trying strategy: ${strategy.name}`);
+      await withTimeout(
+        ff.exec([
+          "-i", "input.mp4",
+          ...strategy.args,
+          "-movflags", "+faststart",
+          "-y", "output.mp4",
+        ]),
+        360_000,
+        `re-encode (${strategy.name})`
+      );
+
+      onProgress?.(0.85);
+      const mp4Data = await ff.readFile("output.mp4");
+      let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
+      await ff.deleteFile("output.mp4");
+
+      if (await isValidMP4(mp4Blob)) {
+        mp4Blob = await patchMP4Brand(mp4Blob);
+        await ff.deleteFile("input.mp4");
+        console.log(`[reencodeForWhatsApp] Success with ${strategy.name}, size: ${mp4Blob.size}`);
+        onProgress?.(1);
+        return mp4Blob;
+      }
+    } catch (err) {
+      console.warn(`[reencodeForWhatsApp] Strategy ${strategy.name} failed:`, err);
+    }
+  }
+
+  // All strategies failed - return original with brand patch
+  await ff.deleteFile("input.mp4").catch(() => {});
+  console.error("[reencodeForWhatsApp] All strategies failed, returning original");
   onProgress?.(1);
-  return mp4Blob;
+  return await patchMP4Brand(inputBlob);
 }
