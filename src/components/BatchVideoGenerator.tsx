@@ -2009,6 +2009,34 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         title: "Vídeos gerados!",
         description: `${updatedVideos.length} vídeos foram gerados com sucesso.`,
       });
+
+      // Auto-save as draft immediately after generation
+      try {
+        const videosToSave = updatedVideos.filter((v) => v.pages.length > 0);
+        if (videosToSave.length > 0) {
+          const batchItems: BatchItem[] = videosToSave.map((video) => ({
+            cardId: video.cardId,
+            clientId: video.clientId,
+            clientName: video.clientName,
+            company: video.company,
+            cardTitle: video.cardTitle,
+            cardText: video.cardText,
+            brandKit: video.brandKit,
+            files: [],
+            backgroundImages: video.searchedImages,
+            previewVideoUrls: video.previewVideoUrls,
+            adjustments: video.adjustments as any,
+            pageTextAdjustments: video.pageTextAdjustments,
+            pageImageAdjustments: video.pageImageAdjustments,
+          }));
+          const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null };
+          const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
+          if (savedId) setCurrentBatchId(savedId);
+          console.log("Auto-saved batch draft after generation:", savedId);
+        }
+      } catch (autoSaveError) {
+        console.error("Auto-save draft failed (non-critical):", autoSaveError);
+      }
     } catch (error) {
       console.error("Error generating videos:", error);
       toast({

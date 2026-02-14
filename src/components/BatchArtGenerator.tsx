@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { saveBatchGeneration, BatchItem } from "@/lib/batchHistory";
+import { saveBatchGeneration, getBatchById, BatchItem } from "@/lib/batchHistory";
 import {
   Dialog,
   DialogContent,
@@ -252,6 +252,7 @@ interface BatchArtGeneratorProps {
 
 export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchArtGeneratorProps) => {
   const [clientArts, setClientArts] = useState<ClientArt[]>([]);
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedArt, setSelectedArt] = useState<ClientArt | null>(null);
@@ -1179,6 +1180,29 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         title: "Artes geradas!",
         description: `${updatedArts.length} artes foram geradas com sucesso.`,
       });
+
+      // Auto-save as draft immediately after generation
+      try {
+        const artsToSave = updatedArts.filter((a) => a.imageUrl);
+        if (artsToSave.length > 0) {
+          const batchItems: BatchItem[] = artsToSave.map((art) => ({
+            cardId: art.cardId,
+            clientId: art.clientId,
+            clientName: art.clientName,
+            company: art.company,
+            cardTitle: art.cardTitle,
+            cardText: art.cardText,
+            brandKit: art.brandKit,
+            files: [art.imageUrl!],
+            backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
+          }));
+          const savedId = await saveBatchGeneration("art", template, batchItems, currentBatchId || undefined);
+          if (savedId) setCurrentBatchId(savedId);
+          console.log("Auto-saved batch draft after generation:", savedId);
+        }
+      } catch (autoSaveError) {
+        console.error("Auto-save draft failed (non-critical):", autoSaveError);
+      }
     } catch (error) {
       console.error("Error generating arts:", error);
       toast({
@@ -1522,7 +1546,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     try {
       // Save batch to history as draft (not finalized)
-      const batchItems: BatchItem[] = artsWithImages.map((art) => ({
+      const newBatchItems: BatchItem[] = artsWithImages.map((art) => ({
         cardId: art.cardId,
         clientId: art.clientId,
         clientName: art.clientName,
@@ -1533,7 +1557,24 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         files: [art.imageUrl!],
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
       }));
-      await saveBatchGeneration("art", template, batchItems);
+
+      // Merge with existing batch items to preserve non-edited items
+      let batchItems = newBatchItems;
+      if (currentBatchId) {
+        try {
+          const existingBatch = await getBatchById(currentBatchId);
+          if (existingBatch && existingBatch.items.length > 0) {
+            const updatedCardIds = new Set(newBatchItems.map((i) => i.cardId));
+            const preservedItems = existingBatch.items.filter((i) => !updatedCardIds.has(i.cardId));
+            batchItems = [...preservedItems, ...newBatchItems];
+          }
+        } catch (e) {
+          console.warn("Could not merge with existing batch items:", e);
+        }
+      }
+
+      const savedId = await saveBatchGeneration("art", template, batchItems, currentBatchId || undefined);
+      if (savedId) setCurrentBatchId(savedId);
 
       // Clear the art generation tags so they can regenerate later
       await clearArtGenerationTags();
@@ -1615,7 +1656,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         files: [art.imageUrl!],
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
       }));
-      await saveBatchGeneration("art", template, batchItems);
+      const savedId = await saveBatchGeneration("art", template, batchItems, currentBatchId || undefined);
+      if (savedId) setCurrentBatchId(savedId);
 
       // Dispatch event to notify all ProjectBoard instances to reload
       window.dispatchEvent(new Event("bulkBriefsUpdated"));
