@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
@@ -697,6 +697,10 @@ const Index = () => {
             <Button size="sm" variant="outline" onClick={() => navigate("/master-video")}>
               <Video className="mr-1 h-4 w-4" />
               Vídeos
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate("/batch-history")}>
+              <History className="mr-1 h-4 w-4" />
+              Histórico
             </Button>
             <Button size="sm" variant="outline" onClick={() => navigate("/receivables")}>
               <FileDown className="mr-1 h-4 w-4" />
