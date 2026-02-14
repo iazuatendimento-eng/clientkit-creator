@@ -405,24 +405,24 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <>
                   {finalArtworks.length === 1 ? (
                     finalArtworks[0].fileType.startsWith("video") ? (
-                      <div className="flex gap-1">
+                      <div className="grid grid-cols-2 gap-1">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={(e) => { e.stopPropagation(); handleDownload(finalArtworks[0].url, finalArtworks[0].name, false); }}
-                          className="text-xs px-2 py-1 h-auto flex-1"
+                          className="text-[11px] px-1.5 py-1 h-auto min-w-0"
                         >
-                          <Volume2 className="h-3 w-3 mr-1" />
-                          Com Áudio
+                          <Volume2 className="h-3 w-3 shrink-0 mr-0.5" />
+                          <span className="truncate">Com Áudio</span>
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={(e) => { e.stopPropagation(); handleDownload(finalArtworks[0].url, finalArtworks[0].name, true); }}
-                          className="text-xs px-2 py-1 h-auto flex-1"
+                          className="text-[11px] px-1.5 py-1 h-auto min-w-0"
                         >
-                          <VolumeX className="h-3 w-3 mr-1" />
-                          Sem Áudio
+                          <VolumeX className="h-3 w-3 shrink-0 mr-0.5" />
+                          <span className="truncate">Sem Áudio</span>
                         </Button>
                       </div>
                     ) : (
@@ -441,14 +441,14 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       <p className="text-xs text-muted-foreground font-medium">Baixar:</p>
                       {finalArtworks.map((artwork, index) => (
                         artwork.fileType.startsWith("video") ? (
-                          <div key={artwork.id} className="flex gap-1">
-                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name, false); }} className="text-xs px-2 py-1 h-auto flex-1">
-                              <Volume2 className="h-3 w-3 mr-1" />
-                              Vídeo {index + 1}
+                          <div key={artwork.id} className="grid grid-cols-2 gap-1">
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name, false); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
+                              <Volume2 className="h-3 w-3 shrink-0 mr-0.5" />
+                              <span className="truncate">Vídeo {index + 1}</span>
                             </Button>
-                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name, true); }} className="text-xs px-2 py-1 h-auto flex-1">
-                              <VolumeX className="h-3 w-3 mr-1" />
-                              S/ Áudio
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(artwork.url, artwork.name, true); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
+                              <VolumeX className="h-3 w-3 shrink-0 mr-0.5" />
+                              <span className="truncate">S/ Áudio</span>
                             </Button>
                           </div>
                         ) : (
@@ -463,14 +463,14 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 </>
               ) : (brief.coverImage || brief.coverVideo) && (
                 brief.coverVideo ? (
-                  <div className="flex gap-1">
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); }} className="text-xs px-2 py-1 h-auto flex-1">
-                      <Volume2 className="h-3 w-3 mr-1" />
-                      Com Áudio
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
+                      <Volume2 className="h-3 w-3 shrink-0 mr-0.5" />
+                      <span className="truncate">Com Áudio</span>
                     </Button>
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, true); }} className="text-xs px-2 py-1 h-auto flex-1">
-                      <VolumeX className="h-3 w-3 mr-1" />
-                      Sem Áudio
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, true); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
+                      <VolumeX className="h-3 w-3 shrink-0 mr-0.5" />
+                      <span className="truncate">Sem Áudio</span>
                     </Button>
                   </div>
                 ) : (
