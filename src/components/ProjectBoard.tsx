@@ -257,7 +257,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast.success(isVideo ? "Vídeo WhatsApp baixado! ✓" : "Download iniciado!");
+      toast.success(isVideo ? "Vídeo baixado! ✓" : "Download iniciado!");
       setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 30000);
     } catch (error) {
       toast.dismiss("download-loading");
