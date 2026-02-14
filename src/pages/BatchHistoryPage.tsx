@@ -29,9 +29,15 @@ const BatchHistoryPage = () => {
   };
 
   if (view === "edit" && selectedBatch) {
+    const snap = selectedBatch.template_snapshot as any;
+    const template = {
+      ...snap,
+      audioUrl1: snap.audioUrl1 || snap.audio_url_1 || undefined,
+      audioUrl2: snap.audioUrl2 || snap.audio_url_2 || undefined,
+    };
     return (
       <BatchVideoGenerator
-        template={selectedBatch.template_snapshot as any}
+        template={template}
         initialBatch={selectedBatch}
         onBack={handleBack}
         onComplete={handleSaved}
