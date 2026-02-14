@@ -1137,8 +1137,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     // Draw elements
     for (const el of elements) {
       const isAnimated = el.animated !== false; // default true
-      // Skip logo if excludeLogo is set AND element is animated (non-animated logos stay on base)
-      if (excludeLogo && el.type === "logo" && isAnimated) continue;
+      // Skip logo/mascot if excludeLogo is set AND element is animated (non-animated logos/mascots stay on base)
+      if (excludeLogo && (el.type === "logo" || el.type === "mascot") && isAnimated) continue;
       // Skip text/contact if excludeText is set AND element is animated (non-animated text stays on base)
       if (excludeText && ["text", "contact"].includes(el.type) && isAnimated) continue;
       // FadeMode gradient shapes render ONLY on frame overlay (transparent), not on base page.
@@ -1152,7 +1152,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       // For frame-only overlay: render only truly animated shapes, fadeMode gradients, and image borders
       if (transparentBackground && excludeText) {
         // Skip non-visual elements
-        if (["text", "contact", "logo"].includes(el.type)) continue;
+        if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
         // Only render elements that are TRULY animated (have explicit animationType) or have fadeMode gradient
         // Elements without animationType are static shapes that belong on the base layer
         const hasTrueAnimation = el.animationType && el.animationType !== "none";
@@ -1568,7 +1568,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
-  // Generate a logo-only overlay (transparent PNG with only logo element)
+  // Generate a logo+mascot overlay (transparent PNG with logo and mascot elements)
   const generateLogoOverlay = async (
     elements: CanvasElement[],
     brandKit: any,
@@ -1576,18 +1576,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     adjustments: ElementAdjustments = defaultAdjustments
   ): Promise<string> => {
     const logoEl = elements.find((e) => e.type === "logo");
-    if (!logoEl) {
-      console.warn(`[generateLogoOverlay] No logo element found in ${isSignature ? 'signature' : 'content'} elements (${elements.length} elements, types: ${elements.map(e => e.type).join(',')})`);
+    const mascotEl = elements.find((e) => e.type === "mascot");
+    
+    if (!logoEl && !mascotEl) {
+      console.warn(`[generateLogoOverlay] No logo or mascot element found in ${isSignature ? 'signature' : 'content'} elements`);
       return "";
     }
-    // If logo is marked as non-animated, skip overlay (it stays on base page)
-    if (logoEl.animated === false) return "";
 
-    const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
-    if (!logoUrl) {
-      console.warn(`[generateLogoOverlay] No logo URL in brandKit for ${isSignature ? 'signature' : 'content'} page`);
-      return "";
-    }
+    // If both logo and mascot are non-animated, skip overlay
+    const logoAnimated = logoEl ? logoEl.animated !== false : false;
+    const mascotAnimated = mascotEl ? mascotEl.animated !== false : false;
+    if (!logoAnimated && !mascotAnimated) return "";
 
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -1595,21 +1594,43 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     const ctx = canvas.getContext("2d")!;
     // transparent background
 
-    const img = await loadImage(logoUrl);
-    if (!img) {
-      console.error(`[generateLogoOverlay] Failed to load logo image for ${isSignature ? 'signature' : 'content'} page`);
-      return "";
+    // Draw logo if present and animated
+    if (logoEl && logoAnimated) {
+      const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
+      if (logoUrl) {
+        const img = await loadImage(logoUrl);
+        if (img) {
+          const logoX = isSignature ? (adjustments.sigLogoX ?? adjustments.logoX) : adjustments.logoX;
+          const logoY = isSignature ? (adjustments.sigLogoY ?? adjustments.logoY) : adjustments.logoY;
+          const logoScaleX = isSignature ? (adjustments.sigLogoScaleX ?? adjustments.logoScaleX) : adjustments.logoScaleX;
+          const logoScaleY = isSignature ? (adjustments.sigLogoScaleY ?? adjustments.logoScaleY) : adjustments.logoScaleY;
+          const adjustedX = logoEl.x + logoX;
+          const adjustedY = logoEl.y + logoY;
+          const adjustedW = logoEl.width * (logoScaleX / 100);
+          const adjustedH = logoEl.height * (logoScaleY / 100);
+          ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
+        }
+      }
     }
 
-    const logoX = isSignature ? (adjustments.sigLogoX ?? adjustments.logoX) : adjustments.logoX;
-    const logoY = isSignature ? (adjustments.sigLogoY ?? adjustments.logoY) : adjustments.logoY;
-    const logoScaleX = isSignature ? (adjustments.sigLogoScaleX ?? adjustments.logoScaleX) : adjustments.logoScaleX;
-    const logoScaleY = isSignature ? (adjustments.sigLogoScaleY ?? adjustments.logoScaleY) : adjustments.logoScaleY;
-    const adjustedX = logoEl.x + logoX;
-    const adjustedY = logoEl.y + logoY;
-    const adjustedW = logoEl.width * (logoScaleX / 100);
-    const adjustedH = logoEl.height * (logoScaleY / 100);
-    ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
+    // Draw mascot if present and animated
+    if (mascotEl && mascotAnimated) {
+      const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
+      if (mascotUrl) {
+        const img = await loadImage(mascotUrl);
+        if (img) {
+          const mascotX = isSignature ? (adjustments.sigMascotX ?? adjustments.mascotX) : adjustments.mascotX;
+          const mascotY = isSignature ? (adjustments.sigMascotY ?? adjustments.mascotY) : adjustments.mascotY;
+          const mascotScaleX = isSignature ? (adjustments.sigMascotScaleX ?? adjustments.mascotScaleX) : adjustments.mascotScaleX;
+          const mascotScaleY = isSignature ? (adjustments.sigMascotScaleY ?? adjustments.mascotScaleY) : adjustments.mascotScaleY;
+          const adjustedX = mascotEl.x + mascotX;
+          const adjustedY = mascotEl.y + mascotY;
+          const adjustedW = mascotEl.width * (mascotScaleX / 100);
+          const adjustedH = mascotEl.height * (mascotScaleY / 100);
+          ctx.drawImage(img, adjustedX, adjustedY, adjustedW, adjustedH);
+        }
+      }
+    }
 
     return canvas.toDataURL("image/png");
   };
