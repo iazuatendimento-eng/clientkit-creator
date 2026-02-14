@@ -1070,78 +1070,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Draw background image if provided (skip if transparent for video overlay)
-    if (backgroundImage && !transparentBackground) {
-      console.log(`[generatePageImage] Loading background image: ${backgroundImage.substring(0, 80)}`);
-      const bgImg = await loadImage(backgroundImage);
-      if (bgImg) {
-        // Find image placeholder element to constrain background
-        const imageEl = elements.find(e => e.type === "image");
-        const destX = imageEl ? imageEl.x : 0;
-        const destY = imageEl ? imageEl.y : 0;
-        const destW = imageEl ? imageEl.width : w;
-        const destH = imageEl ? imageEl.height : h;
-
-        console.log(`[generatePageImage] Drawing bg image: dest=(${destX},${destY},${destW},${destH}), imgSize=${bgImg.width}x${bgImg.height}, imageEl=${imageEl ? 'found' : 'NOT FOUND'}`);
-
-        // Cover the destination area with the image, applying adjustments
-        const scale = imageAdjustment.imageScale / 100;
-        const imgAspect = bgImg.width / bgImg.height;
-        const destAspect = destW / destH;
-        let drawWidth, drawHeight, drawX, drawY;
-
-        if (imgAspect > destAspect) {
-          drawHeight = destH * scale;
-          drawWidth = drawHeight * imgAspect;
-          drawX = destX + (destW - drawWidth) / 2 + imageAdjustment.imageX;
-          drawY = destY + (destH - drawHeight) / 2 + imageAdjustment.imageY;
-        } else {
-          drawWidth = destW * scale;
-          drawHeight = drawWidth / imgAspect;
-          drawX = destX + (destW - drawWidth) / 2 + imageAdjustment.imageX;
-          drawY = destY + (destH - drawHeight) / 2 + imageAdjustment.imageY;
-        }
-
-        // Clip to the image placeholder area using clipShape
-        ctx.save();
-        ctx.beginPath();
-        const clipShape = imageEl?.clipShape || "rect";
-        if (clipShape === "circle") {
-          ctx.ellipse(destX + destW / 2, destY + destH / 2, destW / 2, destH / 2, 0, 0, Math.PI * 2);
-        } else if (clipShape === "triangle") {
-          ctx.moveTo(destX + destW / 2, destY);
-          ctx.lineTo(destX + destW, destY + destH);
-          ctx.lineTo(destX, destY + destH);
-          ctx.closePath();
-        } else if (clipShape === "diamond") {
-          ctx.moveTo(destX + destW / 2, destY);
-          ctx.lineTo(destX + destW, destY + destH / 2);
-          ctx.lineTo(destX + destW / 2, destY + destH);
-          ctx.lineTo(destX, destY + destH / 2);
-          ctx.closePath();
-        } else if (clipShape === "hexagon") {
-          const hcx = destX + destW / 2, hcy = destY + destH / 2, hr = Math.min(destW, destH) / 2;
-          for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
-          ctx.closePath();
-        } else if (clipShape === "pentagon") {
-          const pcx = destX + destW / 2, pcy = destY + destH / 2, pr = Math.min(destW, destH) / 2;
-          for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
-          ctx.closePath();
-        } else if (clipShape === "star") {
-          const scx = destX + destW / 2, scy = destY + destH / 2;
-          const outerR = Math.min(destW, destH) / 2, innerR = outerR * 0.4;
-          for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
-          ctx.closePath();
-        } else {
-          ctx.rect(destX, destY, destW, destH);
-        }
-        ctx.clip();
-        ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
-        ctx.restore();
-      } else {
-        console.error(`[generatePageImage] FAILED to load background image: ${backgroundImage.substring(0, 80)}`);
-      }
-    }
+    // Background image drawing is deferred to the elements loop (when el.type === "image" is encountered)
+    // to respect z-order. This prevents shapes below the image from being covered.
 
     // Draw elements
     for (const el of elements) {
@@ -1229,6 +1159,74 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
       // For text-only overlay: skip image and shape elements
       if (transparentBackground && !excludeText && !["text", "contact"].includes(el.type)) continue;
+
+      // Draw background image at the image element's z-position (respects layer order)
+      if (el.type === "image" && !transparentBackground && backgroundImage) {
+        const bgImg = await loadImage(backgroundImage);
+        if (bgImg) {
+          const destX = el.x;
+          const destY = el.y;
+          const destW = el.width;
+          const destH = el.height;
+
+          const scale = imageAdjustment.imageScale / 100;
+          const imgAspect = bgImg.width / bgImg.height;
+          const destAspect = destW / destH;
+          let drawWidth, drawHeight, drawX, drawY;
+
+          if (imgAspect > destAspect) {
+            drawHeight = destH * scale;
+            drawWidth = drawHeight * imgAspect;
+            drawX = destX + (destW - drawWidth) / 2 + imageAdjustment.imageX;
+            drawY = destY + (destH - drawHeight) / 2 + imageAdjustment.imageY;
+          } else {
+            drawWidth = destW * scale;
+            drawHeight = drawWidth / imgAspect;
+            drawX = destX + (destW - drawWidth) / 2 + imageAdjustment.imageX;
+            drawY = destY + (destH - drawHeight) / 2 + imageAdjustment.imageY;
+          }
+
+          ctx.save();
+          ctx.beginPath();
+          const clipShape = el.clipShape || "rect";
+          if (clipShape === "circle") {
+            ctx.ellipse(destX + destW / 2, destY + destH / 2, destW / 2, destH / 2, 0, 0, Math.PI * 2);
+          } else if (clipShape === "triangle") {
+            ctx.moveTo(destX + destW / 2, destY);
+            ctx.lineTo(destX + destW, destY + destH);
+            ctx.lineTo(destX, destY + destH);
+            ctx.closePath();
+          } else if (clipShape === "diamond") {
+            ctx.moveTo(destX + destW / 2, destY);
+            ctx.lineTo(destX + destW, destY + destH / 2);
+            ctx.lineTo(destX + destW / 2, destY + destH);
+            ctx.lineTo(destX, destY + destH / 2);
+            ctx.closePath();
+          } else if (clipShape === "hexagon") {
+            const hcx = destX + destW / 2, hcy = destY + destH / 2, hr = Math.min(destW, destH) / 2;
+            for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
+            ctx.closePath();
+          } else if (clipShape === "pentagon") {
+            const pcx = destX + destW / 2, pcy = destY + destH / 2, pr = Math.min(destW, destH) / 2;
+            for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
+            ctx.closePath();
+          } else if (clipShape === "star") {
+            const scx = destX + destW / 2, scy = destY + destH / 2;
+            const outerR = Math.min(destW, destH) / 2, innerR = outerR * 0.4;
+            for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
+            ctx.closePath();
+          } else {
+            ctx.rect(destX, destY, destW, destH);
+          }
+          ctx.clip();
+          ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
+          ctx.restore();
+        }
+        continue;
+      } else if (el.type === "image") {
+        continue;
+      }
+
       ctx.save();
       applyElementStyles(el);
       
