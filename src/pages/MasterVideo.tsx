@@ -56,6 +56,8 @@ const MasterVideo = () => {
       height: snap.height || 1920,
       backgroundColor: snap.backgroundColor || snap.background_color || "#ffffff",
       pageDuration: snap.pageDuration || snap.page_duration || 3,
+      audioUrl1: snap.audioUrl1 || snap.audio_url_1 || undefined,
+      audioUrl2: snap.audioUrl2 || snap.audio_url_2 || undefined,
     };
     setTemplate(batchTemplate);
     setTeamFilter(snap.teamFilter || undefined);
