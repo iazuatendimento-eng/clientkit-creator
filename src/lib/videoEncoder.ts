@@ -123,30 +123,10 @@ async function patchMP4Brand(blob: Blob): Promise<Blob> {
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress } = options;
 
-  // Use native MP4 recording (Chrome 114+ supports it)
-  const mp4Mime = pickSupportedMimeType([
-    "video/mp4;codecs=avc1",
-    "video/mp4",
-  ]);
-
-  if (mp4Mime) {
-    console.log("[VideoEncoder] Using native MP4:", mp4Mime);
-    onProgress?.(0.1);
-    const mp4 = await withTimeout(
-      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
-      240_000,
-      "gerar MP4"
-    );
-    onProgress?.(0.8);
-    
-    // Patch brand for WhatsApp compatibility (mp42 -> isom)
-    const patched = await patchMP4Brand(mp4);
-    onProgress?.(1);
-    return patched;
-  }
-
-  // Fallback: WebM -> FFmpeg -> MP4
-  console.log("[VideoEncoder] No native MP4, recording WebM for FFmpeg conversion");
+  // ALWAYS record as WebM and convert through FFmpeg to ensure WhatsApp-compatible MP4
+  // (proper H.264 baseline profile, faststart moov atom, yuv420p pixel format).
+  // Native MediaRecorder MP4 lacks faststart and uses incompatible profiles.
+  console.log("[VideoEncoder] Recording WebM for FFmpeg conversion (WhatsApp-compatible)");
   onProgress?.(0.1);
   const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
 
@@ -180,6 +160,20 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     }
   } catch (err) {
     console.error("[VideoEncoder] FFmpeg failed:", err);
+  }
+
+  // Last resort fallback: try native MP4 if FFmpeg failed
+  const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
+  if (mp4Mime) {
+    console.log("[VideoEncoder] FFmpeg failed, falling back to native MP4:", mp4Mime);
+    const mp4 = await withTimeout(
+      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
+      240_000,
+      "gerar MP4 nativo"
+    );
+    const patched = await patchMP4Brand(mp4);
+    onProgress?.(1);
+    return patched;
   }
 
   onProgress?.(1);
