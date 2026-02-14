@@ -169,7 +169,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       const ffmpegArgs = hasAudio
         ? [
             "-i", "input.mp4",
-            "-i", `audio.${audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : "mp3"}`,
+            "-i", `audio.${audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : audioUrl?.includes(".m4a") ? "m4a" : "mp3"}`,
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
             "-shortest",
