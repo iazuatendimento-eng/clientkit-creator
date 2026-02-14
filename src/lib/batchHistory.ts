@@ -157,9 +157,13 @@ export async function updateBatchItem(
     const items = [...batch.items];
     items[itemIndex] = { ...items[itemIndex], ...updates };
 
+    // Recalculate hasUnresolvedNotes flag in template_snapshot
+    const hasUnresolvedNotes = items.some(i => i.note && !i.noteRead);
+    const updatedSnapshot = { ...(batch.template_snapshot as any), hasUnresolvedNotes };
+
     const { error } = await supabase
       .from("batch_generations")
-      .update({ items: items as any })
+      .update({ items: items as any, template_snapshot: updatedSnapshot as any })
       .eq("id", batchId);
 
     if (error) {
