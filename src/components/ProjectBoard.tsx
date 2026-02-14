@@ -187,7 +187,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       filename = filename + '.mp4';
     }
 
-    toast.loading(isVideo ? "Convertendo vídeo para WhatsApp..." : "Baixando arquivo...", { id: "download-loading" });
+    toast.loading(isVideo ? "Preparando vídeo..." : "Baixando arquivo...", { id: "download-loading" });
 
     try {
       // Fetch the original file
@@ -209,7 +209,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       // For videos: re-encode through FFmpeg for WhatsApp compatibility
       if (isVideo) {
         try {
-          toast.loading("Processando vídeo para WhatsApp...", { id: "download-loading" });
+          toast.loading("Processando vídeo...", { id: "download-loading" });
           blob = await reencodeForWhatsApp(blob, (p) => {
             if (p < 0.3) toast.loading("Carregando conversor...", { id: "download-loading" });
             else if (p < 0.85) toast.loading("Convertendo vídeo...", { id: "download-loading" });

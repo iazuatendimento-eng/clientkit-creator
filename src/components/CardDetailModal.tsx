@@ -30,7 +30,7 @@ const downloadFile = async (url: string, fileName: string) => {
   try {
     // For videos, re-encode through FFmpeg for WhatsApp compatibility
     if (isVideoFile(fileName)) {
-      toast.loading("Convertendo vídeo para formato WhatsApp...", { id: "download-prep" });
+      toast.loading("Preparando vídeo...", { id: "download-prep" });
       console.log("[Download] Starting WhatsApp-compatible video download for:", fileName, url);
 
       // Fetch the original file as blob
