@@ -2742,7 +2742,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             {clientVideos.map((video, index) => (
               <div
                 key={`${video.cardId}-${index}`}
-                className={`bg-card rounded-lg border overflow-hidden transition-all flex flex-col h-[520px] ${
+                className={`bg-card rounded-lg border overflow-hidden transition-all flex flex-col ${
                   video.status === "approved"
                     ? "border-green-500 ring-2 ring-green-500/30"
                     : video.status === "rejected"
