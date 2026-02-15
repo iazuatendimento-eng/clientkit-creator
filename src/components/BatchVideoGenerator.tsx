@@ -3279,6 +3279,34 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     ))}
                   </div>
 
+                  {/* Page text + copy button */}
+                  {selectedVideo.pageTexts[currentPreviewPage] && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-muted-foreground font-medium">Texto da Página {currentPreviewPage + 1}:</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-[10px]"
+                          onClick={() => {
+                            const parts = [
+                              selectedVideo.pageTexts[currentPreviewPage],
+                              selectedVideo.imageType,
+                            ].filter(Boolean).join("\n");
+                            navigator.clipboard.writeText(parts);
+                            toast({ title: "Copiado!", description: "Texto da página + tipo de imagem copiados." });
+                          }}
+                        >
+                          <ClipboardCopy className="h-3 w-3 mr-1" />
+                          Copiar
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-foreground whitespace-pre-wrap bg-background/50 rounded p-1.5 border border-border/50 max-h-24 overflow-y-auto">
+                        {selectedVideo.pageTexts[currentPreviewPage]}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Video preview playback */}
                   {selectedVideo.previewVideoUrls?.[currentPreviewPage] && (
                     <div className="space-y-2">
