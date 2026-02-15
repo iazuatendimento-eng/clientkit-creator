@@ -507,21 +507,71 @@ const CardCoverPreview = memo(({
             videoTransform.transform = `scale(${scale}) translate(${xPct}%, ${yPct}%)`;
             videoTransform.transformOrigin = 'center center';
           }
-          const isCircle = (imageClipShape || "rect") === "circle";
-          const containerStyle: React.CSSProperties = {
-            left: `${imageRect.left}%`, top: `${imageRect.top}%`,
-            width: `${imageRect.width}%`, height: `${imageRect.height}%`,
-          };
-          if (isCircle) {
-            containerStyle.borderRadius = '50%';
-          } else {
-            const cp = getCSSClipPath(imageClipShape || "rect");
-            if (cp) containerStyle.clipPath = cp;
+
+          // Compute clip-path in CARD-relative coordinates (0-100%)
+          // This avoids issues with containers extending beyond card boundaries
+          const shape = imageClipShape || "rect";
+          const cx = imageRect.left + imageRect.width / 2;
+          const cy = imageRect.top + imageRect.height / 2;
+          const rx = imageRect.width / 2;
+          const ry = imageRect.height / 2;
+
+          let cardClipPath: string | undefined;
+          if (shape === "circle") {
+            cardClipPath = `ellipse(${rx}% ${ry}% at ${cx}% ${cy}%)`;
+          } else if (shape === "triangle") {
+            const x1 = imageRect.left + imageRect.width / 2;
+            const y1 = imageRect.top;
+            const x2 = imageRect.left + imageRect.width;
+            const y2 = imageRect.top + imageRect.height;
+            const x3 = imageRect.left;
+            const y3 = imageRect.top + imageRect.height;
+            cardClipPath = `polygon(${x1}% ${y1}%, ${x2}% ${y2}%, ${x3}% ${y3}%)`;
+          } else if (shape === "diamond") {
+            cardClipPath = `polygon(${cx}% ${imageRect.top}%, ${imageRect.left + imageRect.width}% ${cy}%, ${cx}% ${imageRect.top + imageRect.height}%, ${imageRect.left}% ${cy}%)`;
           }
+          // For "rect" and others, use overflow-hidden on the positioned container
+
+          if (cardClipPath) {
+            // Full-card container with clip-path in card-relative coords
+            return (
+              <div
+                className="absolute inset-0 overflow-hidden z-[2]"
+                style={{ clipPath: cardClipPath }}
+              >
+                <video
+                  key={`card-vid-${video.cardId}-${activeVideoUrl}`}
+                  src={activeVideoUrl!}
+                  className="absolute object-cover"
+                  style={{
+                    left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+                    width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+                    ...videoTransform,
+                  }}
+                  muted
+                  loop
+                  autoPlay
+                  playsInline
+                  onError={() => {
+                    console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
+                    setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+                  }}
+                  onLoadedData={() => {
+                    console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
+                  }}
+                />
+              </div>
+            );
+          }
+
+          // Fallback for rect: positioned container with overflow-hidden
           return (
             <div
               className="absolute overflow-hidden z-[2]"
-              style={containerStyle}
+              style={{
+                left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+                width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+              }}
             >
               <video
                 key={`card-vid-${video.cardId}-${activeVideoUrl}`}
