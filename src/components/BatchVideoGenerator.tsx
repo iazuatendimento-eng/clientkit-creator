@@ -2742,7 +2742,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             {clientVideos.map((video, index) => (
               <div
                 key={`${video.cardId}-${index}`}
-                className={`bg-card rounded-lg border overflow-hidden transition-all ${
+                className={`bg-card rounded-lg border overflow-hidden transition-all flex flex-col h-[520px] ${
                   video.status === "approved"
                     ? "border-green-500 ring-2 ring-green-500/30"
                     : video.status === "rejected"
@@ -2750,6 +2750,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     : "border-border"
                 }`}
               >
+                {/* Checkbox to send to end */}
+                <div className="px-3 pt-2 flex items-center gap-2">
+                  <button
+                    className="h-5 w-5 rounded border border-primary flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0"
+                    title="Enviar para o final da lista"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setClientVideos((prev) => {
+                        const item = prev[index];
+                        const rest = prev.filter((_, i) => i !== index);
+                        return [...rest, item];
+                      });
+                    }}
+                  >
+                    <Check className="h-3 w-3 text-primary" />
+                  </button>
+                  <h3 className="font-medium truncate text-sm flex-1">{video.clientName}</h3>
+                </div>
+
                 {/* Video Preview with page cycling */}
                 <CardCoverPreview
                   video={video}
@@ -2772,16 +2791,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                 />
 
                 {/* Info */}
-                <div className="p-3 space-y-2">
+                <div className="p-3 space-y-1 flex-1 overflow-y-auto min-h-0">
                   <div>
-                    <h3 className="font-medium truncate">{video.clientName}</h3>
                     <p className="text-xs text-muted-foreground truncate">{video.company}</p>
                     {video.team && (
                       <p className="text-xs text-primary/70 truncate">{video.team}</p>
                     )}
                   </div>
 
-                  <p className="text-xs line-clamp-2">{video.cardTitle}</p>
+                  <p className="text-xs whitespace-pre-wrap break-words">{video.cardTitle}</p>
                   {video.imageType && (
                     <p className="text-xs text-primary/70 truncate">{video.imageType}</p>
                   )}
