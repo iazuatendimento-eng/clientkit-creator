@@ -711,8 +711,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [cardTypeFilter, setCardTypeFilter] = useState<"all" | "post" | "carousel">("all");
   const filteredVideos = useMemo(() => {
     if (cardTypeFilter === "all") return clientVideos;
-    if (cardTypeFilter === "post") return clientVideos.filter(v => v.pages.length <= 1);
-    return clientVideos.filter(v => v.pages.length > 1);
+    if (cardTypeFilter === "post") return clientVideos.filter(v => v.pageTexts.length <= 1);
+    return clientVideos.filter(v => v.pageTexts.length > 1);
   }, [clientVideos, cardTypeFilter]);
   const filteredVideoIds = useMemo(() => filteredVideos.map((v) => {
     const i = clientVideos.indexOf(v);
