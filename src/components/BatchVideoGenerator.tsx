@@ -405,6 +405,8 @@ const CardCoverPreview = memo(({
   imageRect,
   imageElSize,
   imageClipShape,
+  templateWidth,
+  templateHeight,
 }: {
   video: ClientVideo;
   motionEffect: MotionEffect;
@@ -419,6 +421,8 @@ const CardCoverPreview = memo(({
   imageRect?: { left: number; top: number; width: number; height: number } | null;
   imageElSize?: { width: number; height: number } | null;
   imageClipShape?: string;
+  templateWidth?: number;
+  templateHeight?: number;
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -461,7 +465,8 @@ const CardCoverPreview = memo(({
 
   return (
     <div
-      className="aspect-[9/16] bg-muted relative group cursor-pointer overflow-hidden"
+      className="bg-muted relative group cursor-pointer overflow-hidden"
+      style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
       onClick={onClick}
     >
       <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${transitionClass} ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}>
@@ -2872,6 +2877,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    imageRect={getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height)}
                    imageElSize={getImageElSize(template.contentElements as CanvasElement[])}
                    imageClipShape={getImageClipShape(template.contentElements as CanvasElement[])}
+                   templateWidth={template.width}
+                   templateHeight={template.height}
                    onClick={() => {
                     setSelectedVideo(video);
                     setCurrentPreviewPage(0);
