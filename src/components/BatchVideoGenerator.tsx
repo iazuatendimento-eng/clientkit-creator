@@ -2723,10 +2723,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       toast({
         title: "Rascunho salvo!",
-        description: `${videosWithPages.length} vídeos salvos no histórico. Você pode continuar editando depois.`,
+        description: `${videosWithPages.length} vídeos salvos no histórico.`,
       });
-
-      onComplete();
     } catch (error) {
       console.error("Error saving draft:", error);
       toast({
