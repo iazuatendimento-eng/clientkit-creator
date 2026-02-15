@@ -22,6 +22,7 @@ import {
   Film,
   Upload,
   ClipboardPaste,
+  ClipboardCopy,
   Save,
   ChevronLeft,
   ChevronRight,
@@ -2792,11 +2793,32 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
                 {/* Info */}
                 <div className="p-3 space-y-1 flex-1 overflow-y-auto min-h-0">
-                  <div>
-                    <p className="text-xs text-muted-foreground truncate">{video.company}</p>
-                    {video.team && (
-                      <p className="text-xs text-primary/70 truncate">{video.team}</p>
-                    )}
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground truncate">{video.company}</p>
+                      {video.team && (
+                        <p className="text-xs text-primary/70 truncate">{video.team}</p>
+                      )}
+                    </div>
+                    <button
+                      className="shrink-0 p-1 rounded hover:bg-muted transition-colors"
+                      title="Copiar texto do card"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const parts = [
+                          video.clientName,
+                          video.company,
+                          video.team,
+                          video.cardTitle,
+                          video.imageType,
+                          video.particularityType ? `⚠️ ${video.particularityType}` : null,
+                        ].filter(Boolean).join("\n");
+                        navigator.clipboard.writeText(parts);
+                        toast({ title: "Texto copiado!" });
+                      }}
+                    >
+                      <ClipboardCopy className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
                   </div>
 
                   <p className="text-xs whitespace-pre-wrap break-words">{video.cardTitle}</p>
