@@ -507,14 +507,21 @@ const CardCoverPreview = memo(({
             videoTransform.transform = `scale(${scale}) translate(${xPct}%, ${yPct}%)`;
             videoTransform.transformOrigin = 'center center';
           }
+          const isCircle = (imageClipShape || "rect") === "circle";
+          const containerStyle: React.CSSProperties = {
+            left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+            width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+          };
+          if (isCircle) {
+            containerStyle.borderRadius = '50%';
+          } else {
+            const cp = getCSSClipPath(imageClipShape || "rect");
+            if (cp) containerStyle.clipPath = cp;
+          }
           return (
             <div
               className="absolute overflow-hidden z-[2]"
-              style={{
-                left: `${imageRect.left}%`, top: `${imageRect.top}%`,
-                width: `${imageRect.width}%`, height: `${imageRect.height}%`,
-                clipPath: getCSSClipPath(imageClipShape || "rect"),
-              }}
+              style={containerStyle}
             >
               <video
                 key={`card-vid-${video.cardId}-${activeVideoUrl}`}
