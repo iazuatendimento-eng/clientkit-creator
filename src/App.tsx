@@ -13,11 +13,18 @@ import MasterVideo from "./pages/MasterVideo";
 import Receivables from "./pages/Receivables";
 import BatchHistoryPage from "./pages/BatchHistoryPage";
 import ExportDatabase from "./pages/ExportDatabase";
+import { useKeepAlive } from "@/hooks/useKeepAlive";
 import "./App.css";
 
 const queryClient = new QueryClient();
 
+const KeepAliveProvider = ({ children }: { children: React.ReactNode }) => {
+  useKeepAlive();
+  return <>{children}</>;
+};
+
 const App = () => (
+  <KeepAliveProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -38,6 +45,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </KeepAliveProvider>
 );
 
 export default App;
