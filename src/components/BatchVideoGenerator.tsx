@@ -900,7 +900,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           status: savedPages.length > 0 ? ("approved" as const) : ("pending" as const),
           pageTexts,
           searchedImages: item.backgroundImages,
-          previewVideoUrls: item.previewVideoUrls || undefined,
+          // Filter out blob: URLs — they only exist in the browser session that created them
+          // and will fail on other computers. The auto-fetch logic below will re-fetch them.
+          previewVideoUrls: item.previewVideoUrls
+            ? item.previewVideoUrls.map((u: string | null) => u && !u.startsWith("blob:") ? u : null)
+            : undefined,
           adjustments: item.adjustments ? { ...defaultAdjustments, ...item.adjustments } : { ...defaultAdjustments },
           pageTextAdjustments: item.pageTextAdjustments && item.pageTextAdjustments.length > 0
             ? item.pageTextAdjustments.map((a: any) => ({ ...defaultPageTextAdjustment, ...a }))
@@ -2228,7 +2232,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             brandKit: video.brandKit,
             files: [],
             backgroundImages: video.searchedImages,
-            previewVideoUrls: video.previewVideoUrls,
+            previewVideoUrls: video.previewVideoUrls?.map(u => u && !u.startsWith("blob:") ? u : null),
             adjustments: video.adjustments as any,
             pageTextAdjustments: video.pageTextAdjustments,
             pageImageAdjustments: video.pageImageAdjustments,
@@ -2686,7 +2690,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         brandKit: video.brandKit,
         files: [], // Don't store base64 pages in DB - they're already in Storage
         backgroundImages: video.searchedImages,
-        previewVideoUrls: video.previewVideoUrls,
+        previewVideoUrls: video.previewVideoUrls?.map(u => u && !u.startsWith("blob:") ? u : null),
         adjustments: video.adjustments as any,
         pageTextAdjustments: video.pageTextAdjustments,
         pageImageAdjustments: video.pageImageAdjustments,
@@ -2766,7 +2770,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         brandKit: video.brandKit,
         files: [], // Don't store base64 pages in DB to avoid payload bloat / timeouts
         backgroundImages: video.searchedImages,
-        previewVideoUrls: video.previewVideoUrls,
+        previewVideoUrls: video.previewVideoUrls?.map(u => u && !u.startsWith("blob:") ? u : null),
         adjustments: video.adjustments as any,
         pageTextAdjustments: video.pageTextAdjustments,
         pageImageAdjustments: video.pageImageAdjustments,
