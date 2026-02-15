@@ -1,5 +1,20 @@
-import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import { drawNewShape } from "@/lib/canvasShapes";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +42,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquareWarning,
+  GripVertical,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
@@ -600,6 +616,33 @@ const CardCoverPreview = memo(({
     </div>
   );
 });
+// Sortable wrapper for video cards
+const SortableVideoCard = ({ id, status, children }: { id: string; status: string; children: React.ReactNode }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-card rounded-lg border overflow-hidden transition-all flex flex-col ${
+        status === "approved"
+          ? "border-green-500 ring-2 ring-green-500/30"
+          : status === "rejected"
+          ? "border-red-500 ring-2 ring-red-500/30"
+          : "border-border"
+      }`}
+    >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing flex items-center justify-center py-1 hover:bg-muted/50 transition-colors">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
+      {children}
+    </div>
+  );
+};
 
 export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchVideoGeneratorProps) => {
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
@@ -659,6 +702,22 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
+
+  // DnD for card reordering
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+  const videoIds = useMemo(() => clientVideos.map((v, i) => `${v.cardId}-${i}`), [clientVideos]);
+  const handleDndEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setClientVideos((prev) => {
+      const oldIndex = prev.findIndex((_, i) => `${prev[i].cardId}-${i}` === active.id);
+      const newIndex = prev.findIndex((_, i) => `${prev[i].cardId}-${i}` === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  }, []);
 
   useEffect(() => {
     selectedVideoRef.current = selectedVideo;
@@ -2739,18 +2798,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             <p className="text-muted-foreground">{generationStatus || "Gerando vídeos..."}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {clientVideos.map((video, index) => (
-              <div
-                key={`${video.cardId}-${index}`}
-                className={`bg-card rounded-lg border overflow-hidden transition-all flex flex-col ${
-                  video.status === "approved"
-                    ? "border-green-500 ring-2 ring-green-500/30"
-                    : video.status === "rejected"
-                    ? "border-red-500 ring-2 ring-red-500/30"
-                    : "border-border"
-                }`}
-              >
+          <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDndEnd}>
+            <SortableContext items={videoIds} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {clientVideos.map((video, index) => (
+                  <SortableVideoCard key={`${video.cardId}-${index}`} id={`${video.cardId}-${index}`} status={video.status}>
                 {/* Checkbox to send to end */}
                 <div className="px-3 pt-2 flex items-center gap-2">
                   <button
@@ -2963,9 +3015,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     </div>
                    )}
                 </div>
+                  </SortableVideoCard>
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         )}
       </ScrollArea>
 
