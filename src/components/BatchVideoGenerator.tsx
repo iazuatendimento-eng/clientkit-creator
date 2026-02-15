@@ -471,7 +471,7 @@ const CardCoverPreview = memo(({
             key={`card-base-${video.cardId}-${currentPage}`}
             src={video.pages[currentPage]}
             alt={video.clientName}
-            className="absolute inset-0 w-full h-full object-contain z-0"
+            className="absolute inset-0 w-full h-full object-fill z-0"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center z-0">
@@ -485,7 +485,7 @@ const CardCoverPreview = memo(({
             key={`pre-img-${video.cardId}-${currentPage}-${shapeAnimation}`}
             src={preImageOverlay}
             alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
+            className={`absolute inset-0 w-full h-full object-fill z-[1] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
             style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined}
             draggable={false}
           />
@@ -538,7 +538,7 @@ const CardCoverPreview = memo(({
             key={`frame-${video.cardId}-${currentPage}-${shapeAnimation}`}
             src={frameOverlay}
             alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
+            className={`absolute inset-0 w-full h-full object-fill z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
             style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined}
             draggable={false}
           />
@@ -550,7 +550,7 @@ const CardCoverPreview = memo(({
             key={`overlay-${video.cardId}-${currentPage}-${textAnimation}`}
             src={overlayPage}
             alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
+            className={`absolute inset-0 w-full h-full object-fill z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
             style={{ animationDuration: `${textAnimDuration}s` }}
             draggable={false}
           />
@@ -562,7 +562,7 @@ const CardCoverPreview = memo(({
             key={`logo-${video.cardId}-${currentPage}-${logoAnimation}`}
             src={logoOverlay}
             alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
+            className={`absolute inset-0 w-full h-full object-fill z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
             draggable={false}
           />
         )}
