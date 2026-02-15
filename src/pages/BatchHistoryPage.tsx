@@ -37,9 +37,17 @@ const BatchHistoryPage = () => {
     }
 
     setResolvedTemplate({
-      ...snap,
+      id: snap.id || batch.id,
+      name: snap.name || "Template",
+      contentElements: snap.contentElements || snap.content_elements || [],
+      signatureElements: snap.signatureElements || snap.signature_elements || [],
+      width: snap.width || 1080,
+      height: snap.height || 1920,
+      backgroundColor: snap.backgroundColor || snap.background_color || "#ffffff",
+      pageDuration: snap.pageDuration || snap.page_duration || 3,
       audioUrl1,
       audioUrl2,
+      teamFilter: snap.teamFilter || undefined,
     });
     setView("edit");
   };
