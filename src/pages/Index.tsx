@@ -81,11 +81,6 @@ const Index = () => {
       if (data) setAvailableTeams(data);
     });
 
-    // Keepalive: ping DB every 4 min to prevent cold-start timeouts
-    const keepalive = window.setInterval(() => {
-      supabase.from("teams").select("id").limit(1).maybeSingle().then(() => {});
-    }, 4 * 60 * 1000);
-    return () => window.clearInterval(keepalive);
   }, []);
 
   // Load clients without text in todo cards (deferred to avoid blocking initial render)
