@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft,
   Check,
@@ -712,6 +713,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
   const [isLoading, setIsLoading] = useState(true);
+  const [teamFilter, setTeamFilter] = useState<string | undefined>(initialTeamFilter);
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
@@ -796,6 +799,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   useEffect(() => {
     selectedVideoRef.current = selectedVideo;
   }, [selectedVideo]);
+
+  useEffect(() => {
+    // Load teams list
+    supabase.from("teams").select("id, name").order("name").then(({ data }) => {
+      if (data) setTeams(data);
+    });
+  }, []);
 
   useEffect(() => {
     if (initialBatch) {
@@ -964,11 +974,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
-  const loadTaggedCards = async () => {
+  const loadTaggedCards = async (filterOverride?: string) => {
     try {
       setIsLoading(true);
       
-      await autoTagFirstCardsForAllActiveClients(initialTeamFilter);
+      const activeFilter = filterOverride !== undefined ? filterOverride : teamFilter;
+      await autoTagFirstCardsForAllActiveClients(activeFilter || undefined);
       const taggedCards = await getTaggedCardsForArtGeneration();
 
       const videos: ClientVideo[] = taggedCards.map((card: any) => {
@@ -2225,7 +2236,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             noteRead: video.noteRead,
           }));
           const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
-          const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || (template as any).teamFilter || null, hasUnresolvedNotes };
+          const snapshotWithTeam = { ...template, teamFilter: teamFilter || (template as any).teamFilter || null, hasUnresolvedNotes };
           const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
           if (savedId) setCurrentBatchId(savedId);
           console.log("Auto-saved batch draft after generation:", savedId);
@@ -2699,7 +2710,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
 
       const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
-      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || (template as any).teamFilter || null, hasUnresolvedNotes };
+      const snapshotWithTeam = { ...template, teamFilter: teamFilter || (template as any).teamFilter || null, hasUnresolvedNotes };
       await Promise.all([
         clearArtGenerationTags(),
         saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined).then((id) => {
@@ -2779,7 +2790,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
 
       const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
-      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || (template as any).teamFilter || null, hasUnresolvedNotes };
+      const snapshotWithTeam = { ...template, teamFilter: teamFilter || (template as any).teamFilter || null, hasUnresolvedNotes };
       const savedId = await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
       if (savedId) setCurrentBatchId(savedId);
 
@@ -2828,6 +2839,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               {template.name} • {template.pageDuration}s/página
             </p>
           </div>
+          {/* Team selector */}
+          <Select
+            value={teamFilter || "__all__"}
+            onValueChange={(val) => {
+              const newFilter = val === "__all__" ? undefined : val;
+              setTeamFilter(newFilter);
+              loadTaggedCards(newFilter ?? "");
+            }}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Todas as equipes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas as equipes</SelectItem>
+              {teams.map((t) => (
+                <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-4">
