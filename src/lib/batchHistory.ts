@@ -1,5 +1,32 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Strip base64 data and blob URLs from a brandKit object before persisting to DB.
+ * Keeps only remote URLs (http/https) to avoid bloating the JSONB column.
+ */
+export function sanitizeBrandKitForStorage(brandKit: any): any {
+  if (!brandKit) return brandKit;
+
+  const isRemoteUrl = (v: any): boolean =>
+    typeof v === "string" && (v.startsWith("http://") || v.startsWith("https://"));
+
+  const clean = (val: any): any => {
+    if (typeof val !== "string") return val;
+    if (isRemoteUrl(val)) return val;
+    if (val.startsWith("data:") || val.startsWith("blob:")) return "";
+    return val;
+  };
+
+  const sanitized = { ...brandKit };
+  for (const key of ["logo", "contactInfo", "mascot"]) {
+    if (sanitized[key]) sanitized[key] = clean(sanitized[key]);
+  }
+  if (Array.isArray(sanitized.pngs)) {
+    sanitized.pngs = sanitized.pngs.map((p: any) => clean(p));
+  }
+  return sanitized;
+}
+
 export interface BatchItem {
   cardId: string;
   clientId: string;

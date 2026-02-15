@@ -34,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem } from "@/lib/batchHistory";
+import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage } from "@/lib/batchHistory";
 import {
   Dialog,
   DialogContent,
@@ -1209,7 +1209,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             company: art.company,
             cardTitle: art.cardTitle,
             cardText: art.cardText,
-            brandKit: art.brandKit,
+            brandKit: sanitizeBrandKitForStorage(art.brandKit),
             files: [art.imageUrl!],
             backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
             note: art.note,
@@ -1574,7 +1574,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         company: art.company,
         cardTitle: art.cardTitle,
         cardText: art.cardText,
-        brandKit: art.brandKit,
+        brandKit: sanitizeBrandKitForStorage(art.brandKit),
         files: [art.imageUrl!],
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
         note: art.note,
@@ -1677,7 +1677,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         company: art.company,
         cardTitle: art.cardTitle,
         cardText: art.cardText,
-        brandKit: art.brandKit,
+        brandKit: sanitizeBrandKitForStorage(art.brandKit),
         files: [art.imageUrl!],
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
         note: art.note,

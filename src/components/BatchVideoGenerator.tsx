@@ -49,7 +49,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem } from "@/lib/batchHistory";
+import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage } from "@/lib/batchHistory";
 import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
@@ -2229,7 +2229,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             company: video.company,
             cardTitle: video.cardTitle,
             cardText: video.cardText,
-            brandKit: video.brandKit,
+            brandKit: sanitizeBrandKitForStorage(video.brandKit),
             files: [],
             backgroundImages: video.searchedImages,
             previewVideoUrls: video.previewVideoUrls?.map(u => u && !u.startsWith("blob:") ? u : null),
@@ -2687,7 +2687,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         company: video.company,
         cardTitle: video.cardTitle,
         cardText: video.cardText,
-        brandKit: video.brandKit,
+        brandKit: sanitizeBrandKitForStorage(video.brandKit),
         files: [], // Don't store base64 pages in DB - they're already in Storage
         backgroundImages: video.searchedImages,
         previewVideoUrls: video.previewVideoUrls?.map(u => u && !u.startsWith("blob:") ? u : null),
@@ -2767,7 +2767,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         company: video.company,
         cardTitle: video.cardTitle,
         cardText: video.cardText,
-        brandKit: video.brandKit,
+        brandKit: sanitizeBrandKitForStorage(video.brandKit),
         files: [], // Don't store base64 pages in DB to avoid payload bloat / timeouts
         backgroundImages: video.searchedImages,
         previewVideoUrls: video.previewVideoUrls?.map(u => u && !u.startsWith("blob:") ? u : null),
