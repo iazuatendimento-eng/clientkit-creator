@@ -2896,12 +2896,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       onClick={(e) => {
                         e.stopPropagation();
                         const parts = [
-                          video.clientName,
-                          video.company,
-                          video.team,
                           video.cardTitle,
                           video.imageType,
-                          video.particularityType ? `⚠️ ${video.particularityType}` : null,
                         ].filter(Boolean).join("\n");
                         navigator.clipboard.writeText(parts);
                         toast({ title: "Texto copiado!" });
