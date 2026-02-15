@@ -708,6 +708,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
   const videoIds = useMemo(() => clientVideos.map((v, i) => `${v.cardId}-${i}`), [clientVideos]);
+  const [cardTypeFilter, setCardTypeFilter] = useState<"all" | "post" | "carousel">("all");
+  const filteredVideos = useMemo(() => {
+    if (cardTypeFilter === "all") return clientVideos;
+    if (cardTypeFilter === "post") return clientVideos.filter(v => v.pages.length <= 1);
+    return clientVideos.filter(v => v.pages.length > 1);
+  }, [clientVideos, cardTypeFilter]);
+  const filteredVideoIds = useMemo(() => filteredVideos.map((v) => {
+    const i = clientVideos.indexOf(v);
+    return `${v.cardId}-${i}`;
+  }), [filteredVideos, clientVideos]);
   const handleDndEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -2726,6 +2736,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
+
   const approvedCount = clientVideos.filter((v) => v.status === "approved").length;
   const pendingCount = clientVideos.filter((v) => v.status === "pending").length;
 
@@ -2758,6 +2769,31 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Card type filter */}
+          <div className="flex gap-1">
+            <Button
+              variant={cardTypeFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCardTypeFilter("all")}
+            >
+              Todos
+            </Button>
+            <Button
+              variant={cardTypeFilter === "post" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCardTypeFilter("post")}
+            >
+              Post
+            </Button>
+            <Button
+              variant={cardTypeFilter === "carousel" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCardTypeFilter("carousel")}
+            >
+              Carrossel
+            </Button>
+          </div>
+
           <div className="flex gap-2">
             <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500">
               Pendentes: {pendingCount}
@@ -2799,9 +2835,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           </div>
         ) : (
           <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDndEnd}>
-            <SortableContext items={videoIds} strategy={rectSortingStrategy}>
+            <SortableContext items={filteredVideoIds} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {clientVideos.map((video, index) => (
+                {filteredVideos.map((video) => {
+                  const index = clientVideos.indexOf(video);
+                  return (
                   <SortableVideoCard key={`${video.cardId}-${index}`} id={`${video.cardId}-${index}`} status={video.status}>
                 {/* Checkbox to send to end */}
                 <div className="px-3 pt-2 flex items-center gap-2">
@@ -3016,7 +3054,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    )}
                 </div>
                   </SortableVideoCard>
-                ))}
+                  );
+                })}
               </div>
             </SortableContext>
           </DndContext>
