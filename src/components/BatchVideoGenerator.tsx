@@ -534,9 +534,11 @@ const CardCoverPreview = memo(({
 
           if (cardClipPath) {
             // Full-card container with clip-path in card-relative coords
+            // NO overflow-hidden here — clip-path handles clipping; overflow-hidden would
+            // cut off video parts positioned with negative offsets before clip-path applies
             return (
               <div
-                className="absolute inset-0 overflow-hidden z-[2]"
+                className="absolute inset-0 z-[2]"
                 style={{ clipPath: cardClipPath }}
               >
                 <video
