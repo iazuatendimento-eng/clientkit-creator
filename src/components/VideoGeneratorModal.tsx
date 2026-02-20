@@ -25,6 +25,8 @@ import { VideoAdjustOverlay } from "@/components/VideoAdjustOverlay";
 import { searchVideos } from "@/lib/imageSearch";
 import { encodeVideoToMP4, reencodeForWhatsApp, type MotionEffect, type TransitionEffect, type TextAnimation, type LogoAnimation } from "@/lib/videoEncoder";
 
+import type { PreloadedVideoData } from "@/hooks/useVideoPregenerate";
+
 interface VideoGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -34,6 +36,7 @@ interface VideoGeneratorModalProps {
   brandKit: any;
   clientName: string;
   cardIndex: number;
+  preloadedData?: PreloadedVideoData | null;
 }
 
 export function VideoGeneratorModal({
@@ -45,6 +48,7 @@ export function VideoGeneratorModal({
   brandKit,
   clientName,
   cardIndex,
+  preloadedData,
 }: VideoGeneratorModalProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "exporting" | "error">("loading");
   const [template, setTemplate] = useState<VideoTemplateData | null>(null);
@@ -192,12 +196,26 @@ export function VideoGeneratorModal({
 
   useEffect(() => {
     if (isOpen) {
-      setAdjustments({ ...defaultAdjustments });
-      setPageTextAdjustments([]);
-      setPageImageAdjustments([]);
       setIsEditing(false);
       setCurrentEditPage(0);
-      generateVideo();
+      setExportedBlob(null);
+
+      if (preloadedData) {
+        // Use pre-generated data — open instantly in ready state
+        setTemplate(preloadedData.template);
+        setVideoPages(preloadedData.videoPages);
+        setVideoUrls(preloadedData.videoUrls);
+        setPageTexts(preloadedData.pageTexts);
+        setPageTextAdjustments(preloadedData.pageTextAdjustments);
+        setPageImageAdjustments(preloadedData.pageImageAdjustments);
+        setAdjustments(preloadedData.adjustments);
+        setStatus("ready");
+      } else {
+        setAdjustments({ ...defaultAdjustments });
+        setPageTextAdjustments([]);
+        setPageImageAdjustments([]);
+        generateVideo();
+      }
     } else {
       setStatus("loading");
       setVideoPages(null);
@@ -206,7 +224,7 @@ export function VideoGeneratorModal({
       setTemplate(null);
       setIsEditing(false);
     }
-  }, [isOpen, generateVideo]);
+  }, [isOpen]);
 
   const applyAdjustments = async () => {
     if (!template) return;
