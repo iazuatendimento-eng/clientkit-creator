@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
+import { VideoSwapModal } from "@/components/VideoSwapModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder } from "@/lib/clientDatabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -110,6 +111,7 @@ interface SortableCardProps {
 const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue, cardIndex = 0 }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isVideoGenOpen, setIsVideoGenOpen] = useState(false);
+  const [isVideoSwapOpen, setIsVideoSwapOpen] = useState(false);
   const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
   const [copiedLink, setCopiedLink] = useState(false);
   
@@ -650,6 +652,19 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <Film className="h-3 w-3 mr-1" />
                 Gerar Vídeo
               </Button>
+              {/* Trocar Vídeo button - public view */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsVideoSwapOpen(true);
+                }}
+                className="text-xs px-2 py-1 h-auto w-full"
+              >
+                <Film className="h-3 w-3 mr-1" />
+                Trocar Vídeo
+              </Button>
               {(finalArtworks.length > 0 || brief.coverVideo || brief.coverImage) && (
                 <div className="text-sm sm:text-base text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg p-3 sm:p-4 leading-relaxed mt-2">
                   <p className="font-semibold mb-1">🎵 Dica importante:</p>
@@ -678,6 +693,15 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         brandKit={brandKit}
         clientName={brief.clientName}
         cardIndex={cardIndex}
+      />
+      <VideoSwapModal
+        isOpen={isVideoSwapOpen}
+        onClose={() => setIsVideoSwapOpen(false)}
+        cardId={brief.id}
+        cardTitle={brief.title}
+        onVideoSwapped={(videoUrl) => {
+          onCoverUpdate(brief.id, videoUrl, true);
+        }}
       />
     </Card>
   );
