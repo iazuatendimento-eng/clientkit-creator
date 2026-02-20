@@ -194,7 +194,7 @@ export function VideoPreviewPlayer({
         {/* Background layer: video or static image */}
         <div
           className={cn(
-            "absolute inset-0 transition-all duration-300 ease-out",
+            "absolute inset-0 transition-all duration-300 ease-out overflow-hidden",
             getTransitionClass()
           )}
         >
