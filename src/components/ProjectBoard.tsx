@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { reencodeForWhatsApp } from "@/lib/videoEncoder";
+import { useVideoPregenerate } from "@/hooks/useVideoPregenerate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2 } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { VideoSwapModal } from "@/components/VideoSwapModal";
@@ -114,6 +115,16 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   const [isVideoSwapOpen, setIsVideoSwapOpen] = useState(false);
   const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Pre-generate video in background so modal opens instantly
+  const { preloadedData, isPreloading } = useVideoPregenerate(
+    brief.description || brief.title,
+    brief.title,
+    brandKit,
+    brief.clientName,
+    cardIndex,
+    true
+  );
   
   const {
     attributes,
@@ -534,9 +545,14 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   setIsVideoGenOpen(true);
                 }}
                 className="text-xs px-2 py-1 h-auto w-full"
+                disabled={isPreloading}
               >
-                <Film className="h-3 w-3 mr-1" />
-                Gerar Vídeo
+                {isPreloading ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Film className="h-3 w-3 mr-1" />
+                )}
+                {isPreloading ? "Preparando..." : "Gerar Vídeo"}
               </Button>
               <Button
                 variant="outline"
@@ -572,6 +588,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         brandKit={brandKit}
         clientName={brief.clientName}
         cardIndex={cardIndex}
+        preloadedData={preloadedData}
       />
       <VideoSwapModal
         isOpen={isVideoSwapOpen}
