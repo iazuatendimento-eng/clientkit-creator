@@ -16,8 +16,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
+import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder } from "@/lib/clientDatabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -103,10 +104,12 @@ interface SortableCardProps {
   isPublicView?: boolean;
   isInactive?: boolean;
   isFirstInQueue?: boolean;
+  cardIndex?: number;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue, cardIndex = 0 }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isVideoGenOpen, setIsVideoGenOpen] = useState(false);
   const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
   const [copiedLink, setCopiedLink] = useState(false);
   
@@ -492,6 +495,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <Upload className="h-3 w-3 mr-1" />
                 Uploads
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsVideoGenOpen(true);
+                }}
+                className="text-xs px-2 py-1 h-auto w-full"
+              >
+                <Film className="h-3 w-3 mr-1" />
+                Gerar Vídeo
+              </Button>
             </div>
           )}
           
@@ -622,6 +637,19 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </div>
                 )
               ) : null}
+              {/* Gerar Vídeo button - public view */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsVideoGenOpen(true);
+                }}
+                className="text-xs px-2 py-1 h-auto w-full"
+              >
+                <Film className="h-3 w-3 mr-1" />
+                Gerar Vídeo
+              </Button>
               {(finalArtworks.length > 0 || brief.coverVideo || brief.coverImage) && (
                 <div className="text-sm sm:text-base text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg p-3 sm:p-4 leading-relaxed mt-2">
                   <p className="font-semibold mb-1">🎵 Dica importante:</p>
@@ -640,6 +668,16 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         cardId={brief.id}
         cardTitle={brief.title}
         onCoverUpdate={handleCoverUpdate}
+      />
+      <VideoGeneratorModal
+        isOpen={isVideoGenOpen}
+        onClose={() => setIsVideoGenOpen(false)}
+        cardId={brief.id}
+        cardTitle={brief.title}
+        cardText={brief.description || brief.title}
+        brandKit={brandKit}
+        clientName={brief.clientName}
+        cardIndex={cardIndex}
       />
     </Card>
   );
@@ -1445,6 +1483,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             isPublicView={isPublicView}
                             isInactive={isInactive}
                             isFirstInQueue={column.id === "todo" && index === 0}
+                            cardIndex={index}
                           />
                         ))}
                       </div>
