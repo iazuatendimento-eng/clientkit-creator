@@ -568,6 +568,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </div>
                 </div>
               )}
+              {brief.status !== "completed" && (
               <Button
                 variant="outline"
                 size="sm"
@@ -585,6 +586,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 )}
                 {isPreloading ? "Preparando..." : "Gerar Vídeo"}
               </Button>
+              )}
             </div>
           )}
           
