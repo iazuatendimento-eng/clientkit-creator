@@ -95,7 +95,7 @@ const VideoCountdown = ({ expiresAt }: { expiresAt: string }) => {
       if (diff <= 0) { setRemaining("Expirado"); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
-      setRemaining(`${h}h ${m}min restantes`);
+      setRemaining(`Tem ${h}h e ${m}min restantes para baixar`);
     };
     update();
     const interval = setInterval(update, 60000);
@@ -388,7 +388,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       <CardHeader className={`${isPublicView ? 'p-2.5 pb-1.5' : 'pb-2'} overflow-hidden`}>
         <div className="flex justify-between items-start">
           <div className="space-y-1 min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <User className="h-3 w-3 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
               {brief.artGenerationSelected && (
@@ -399,54 +399,23 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   Na Fila
                 </Badge>
               )}
-              {isFirstInQueue && !brief.artGenerationSelected && (
-                <Badge
-                  variant="outline"
-                  className="text-[11px] px-2 py-0.5 h-auto bg-accent/10 text-accent-foreground border-accent/30"
-                >
-                  Próximo
-                </Badge>
-              )}
             </div>
-            {isPublicView && brief.status !== "completed" && isEditingText ? (
-              <div className="space-y-1.5">
-                <Textarea
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  className="text-sm min-h-[60px] resize-y"
-                  autoFocus
-                />
-                <div className="flex gap-1.5">
-                  <Button
-                    size="sm"
-                    disabled={savingText}
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      setSavingText(true);
-                      try {
-                        await supabase.from("project_briefs").update({ title: editText }).eq("id", brief.id);
-                        brief.title = editText;
-                        setIsEditingText(false);
-                        toast.success("Texto salvo!");
-                      } catch { toast.error("Erro ao salvar"); }
-                      setSavingText(false);
-                    }}
-                    className="h-7 text-xs px-2"
-                  >
-                    {savingText ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                    Salvar
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditText(brief.title); setIsEditingText(false); }} className="h-7 text-xs px-2">
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
+            {isFirstInQueue && !brief.artGenerationSelected && (
+              <Badge
+                variant="outline"
+                className="text-[11px] px-2 py-0.5 h-auto bg-accent/10 text-accent-foreground border-accent/30 w-fit"
+              >
+                Próximo
+              </Badge>
+            )}
+            {isPublicView && !isPublicView && isEditingText ? (
+              null
             ) : (
               <div className="flex items-start gap-1.5">
                 <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed flex-1">
                   {(brief.title?.trim() ? brief.title : brief.description)}
                 </h4>
-                {isPublicView && brief.status !== "completed" && !isFirstInQueue && (
+                {!isPublicView && brief.status !== "completed" && !isFirstInQueue && (
                   <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditText(brief.title); setIsEditingText(true); }} className="h-6 w-6 p-0 shrink-0">
                     <Edit className="h-3 w-3" />
                   </Button>
@@ -636,13 +605,13 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       </span>
                     </div>
                     <div className="flex flex-col gap-2 min-w-0">
-                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-10 text-xs font-medium rounded-lg w-full overflow-hidden">
+                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
                         <Volume2 className="h-3.5 w-3.5 shrink-0" />
-                        <span>Com Áudio</span>
+                        <span>Baixar Com Áudio</span>
                       </Button>
-                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-10 text-xs font-medium rounded-lg w-full overflow-hidden">
+                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
                         <VolumeX className="h-3.5 w-3.5 shrink-0" />
-                        <span>Sem Áudio</span>
+                        <span>Baixar Sem Áudio</span>
                       </Button>
                     </div>
                     <Button
