@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw } from "lucide-react";
+import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -22,10 +22,109 @@ import {
 } from "@/lib/videoRenderer";
 import { VideoPreviewPlayer } from "@/components/VideoPreviewPlayer";
 import { VideoAdjustOverlay } from "@/components/VideoAdjustOverlay";
-import { searchVideos } from "@/lib/imageSearch";
+import { searchVideos, type SearchVideo } from "@/lib/imageSearch";
 import { encodeVideoToMP4, reencodeForWhatsApp, type MotionEffect, type TransitionEffect, type TextAnimation, type LogoAnimation } from "@/lib/videoEncoder";
+import { Input } from "@/components/ui/input";
 
 import type { PreloadedVideoData } from "@/hooks/useVideoPregenerate";
+
+function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }: {
+  videoUrls: (string | null)[];
+  currentEditPage: number;
+  cardId: string;
+  onVideoSwapped: (pageIdx: number, url: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchVideo[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      const results = await searchVideos(searchQuery, 6);
+      setSearchResults(results);
+      if (results.length === 0) toast.info("Nenhum vídeo encontrado.");
+    } catch { toast.error("Erro ao buscar vídeos"); }
+    finally { setSearching(false); }
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("video/")) { toast.error("Selecione um vídeo"); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${cardId}/${Date.now()}-swap.${ext}`;
+      const { error } = await supabase.storage.from("card-uploads").upload(path, file, { contentType: file.type });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+      onVideoSwapped(currentEditPage, urlData.publicUrl);
+      toast.success("Vídeo enviado! ✓");
+      setIsOpen(false);
+    } catch { toast.error("Erro ao enviar vídeo"); }
+    finally { setUploading(false); }
+  };
+
+  if (!isOpen) {
+    return (
+      <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)} className="w-full gap-2 text-muted-foreground">
+        <Film className="h-4 w-4" />
+        Trocar Vídeo (Página {currentEditPage + 1})
+      </Button>
+    );
+  }
+
+  return (
+    <div className="space-y-3 border rounded-lg p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium">Trocar Vídeo — Página {currentEditPage + 1}</span>
+        <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="h-6 px-2 text-xs">✕</Button>
+      </div>
+      <label className={`cursor-pointer block ${uploading ? "pointer-events-none opacity-50" : ""}`}>
+        <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-3 text-center hover:border-primary/50 transition-colors">
+          {uploading ? (
+            <div className="flex items-center justify-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-xs text-muted-foreground">Enviando...</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Enviar meu vídeo</span>
+            </div>
+          )}
+        </div>
+        <input type="file" accept="video/*" className="hidden" onChange={handleUpload} disabled={uploading} />
+      </label>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[10px] text-muted-foreground">ou buscar</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <div className="flex gap-2">
+        <Input placeholder="Buscar vídeos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} className="text-xs h-8" />
+        <Button size="sm" onClick={handleSearch} disabled={searching} className="h-8 px-2">
+          {searching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+        </Button>
+      </div>
+      {searchResults.length > 0 && (
+        <div className="grid grid-cols-3 gap-1.5">
+          {searchResults.map((video) => (
+            <div key={video.id} onClick={() => { onVideoSwapped(currentEditPage, video.videoUrl); toast.success("Vídeo trocado!"); setIsOpen(false); }} className="relative cursor-pointer rounded overflow-hidden border hover:border-primary transition-all">
+              <video src={video.videoUrl} poster={video.image} className="w-full h-16 object-cover" muted playsInline onMouseEnter={(e) => e.currentTarget.play()} onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }} />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
+                <span className="text-[8px] text-white">{video.source}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface VideoGeneratorModalProps {
   isOpen: boolean;
@@ -476,16 +575,24 @@ export function VideoGeneratorModal({
                 </Button>
               </div>
 
-              {/* Regenerate with new video */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setAdjustments({ ...defaultAdjustments }); setPageTextAdjustments([]); setPageImageAdjustments([]); generateVideo(); }}
-                className="w-full gap-2 text-muted-foreground"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Gerar com outro vídeo
-              </Button>
+              {/* Video swap section */}
+              <VideoSwapSection
+                videoUrls={videoUrls}
+                currentEditPage={currentEditPage}
+                cardId={cardId}
+                onVideoSwapped={(pageIdx, url) => {
+                  setVideoUrls(prev => {
+                    const next = [...prev];
+                    next[pageIdx] = url;
+                    return next;
+                  });
+                  // Re-render pages with new video
+                  if (template) {
+                    generateAllVideoPages(template, pageTexts, brandKit, [], adjustments, pageTextAdjustments, pageImageAdjustments)
+                      .then(pages => setVideoPages(pages));
+                  }
+                }}
+              />
             </>
           )}
         </div>
