@@ -467,9 +467,9 @@ export function VideoGeneratorModal({
           {status === "ready" && videoPages && template && (
             <>
               {/* Preview or Edit mode */}
-              <div className="rounded-lg overflow-hidden border bg-black flex justify-center" style={{ maxHeight: '45vh' }}>
+              <div className="rounded-lg overflow-hidden border bg-black flex justify-center items-center" style={{ height: '45vh' }}>
                 {isEditing ? (
-                  <div className="relative" style={{ aspectRatio: `${template.width}/${template.height}`, maxHeight: '45vh', width: 'auto' }}>
+                  <div className="relative h-full" style={{ aspectRatio: `${template.width}/${template.height}` }}>
                     <VideoAdjustOverlay
                       template={{
                         width: template.width,
@@ -564,7 +564,7 @@ export function VideoGeneratorModal({
                     imageElSize={getImageElSize(template.contentElements)}
                     imageClipShape={getImageClipShape(template.contentElements)}
                     pageImageAdjustments={pageImageAdjustments}
-                    className="w-full aspect-[9/16] max-h-[45vh]"
+                    className="h-full w-auto aspect-[9/16]"
                   />
                 )}
               </div>
