@@ -70,7 +70,7 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }
 
   if (!isOpen) {
     return (
-      <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)} className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border border-destructive/30">
+      <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)} className="w-full gap-2 bg-destructive text-white hover:bg-destructive/90 hover:text-white border-none">
         <Film className="h-4 w-4" />
         Vídeo Errado? Trocar (Página {currentEditPage + 1})
       </Button>
