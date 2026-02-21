@@ -453,7 +453,7 @@ export function VideoGeneratorModal({
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">
-                Exportando vídeo... {Math.round(exportProgress * 100)}%
+                Pegando vídeo... {Math.round(exportProgress * 100)}%
               </p>
               <div className="w-full bg-muted rounded-full h-2">
                 <div
