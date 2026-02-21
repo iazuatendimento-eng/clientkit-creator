@@ -665,7 +665,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     ) : (
                       <Film className="h-4 w-4 mr-2" />
                     )}
-                    <span>{isPreloading ? "Preparando..." : "Pegar Vídeo"}</span>
+                    <span>{isPreloading ? "Preparando..." : "Pegar Vídeo Feito"}</span>
                   </Button>
                 );
               })()}
