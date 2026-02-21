@@ -446,11 +446,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed flex-1">
                   {(brief.title?.trim() ? brief.title : brief.description)}
                 </h4>
-                {isPublicView && brief.status !== "completed" && (
-                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditText(brief.title); setIsEditingText(true); }} className="h-6 w-6 p-0 shrink-0">
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                )}
               </div>
             )}
           </div>
