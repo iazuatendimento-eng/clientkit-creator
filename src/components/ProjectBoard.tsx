@@ -385,9 +385,9 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         return null;
       })()}
 
-      <CardHeader className="pb-2">
+      <CardHeader className={`${isPublicView ? 'p-2.5 pb-1.5' : 'pb-2'}`}>
         <div className="flex justify-between items-start">
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <User className="h-3 w-3 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{brief.clientName}</span>
@@ -482,7 +482,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className={`pt-0 ${isPublicView ? 'p-2.5 pt-0' : ''}`}>
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs">
             <Calendar className="h-3 w-3" />
