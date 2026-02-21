@@ -531,6 +531,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsVideoGenOpen(true);
+                  onStatusChange(brief.id, "Concluído");
                 }}
                 className="text-xs px-2 py-1 h-auto w-full"
                 disabled={isPreloading}
