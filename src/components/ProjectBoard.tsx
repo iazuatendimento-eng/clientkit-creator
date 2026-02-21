@@ -606,10 +606,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     <div className="flex flex-col gap-2 min-w-0">
                       <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
                         <span>Baixar Com Áudio</span>
-                        <span>Baixar Com Áudio</span>
                       </Button>
                       <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
-                        <span>Baixar Sem Áudio</span>
                         <span>Baixar Sem Áudio</span>
                       </Button>
                     </div>
@@ -1483,7 +1481,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className={`grid ${isPublicView ? 'grid-cols-2 gap-1 px-0.5' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid ${isPublicView ? 'grid-cols-2 gap-0.5' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
