@@ -657,7 +657,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       e.stopPropagation();
                       setIsVideoGenOpen(true);
                     }}
-                    className="h-10 text-xs font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
+                    className="h-auto py-3 text-xs font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
                     disabled={isPreloading}
                   >
                     {isPreloading ? (
