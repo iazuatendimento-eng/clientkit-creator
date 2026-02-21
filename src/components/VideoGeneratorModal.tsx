@@ -430,7 +430,7 @@ export function VideoGeneratorModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Film className="h-5 w-5" />
-            Gerar Vídeo
+            Pegar Vídeo Feito
           </DialogTitle>
         </DialogHeader>
 
