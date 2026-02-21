@@ -882,9 +882,7 @@ export async function encodeVideoSimple(
       startVideoForPage(0);
     }
 
-    const frameInterval = 1000 / fps;
     let lastPageIdx = 0;
-    let lastFrameTime = performance.now();
 
     const tick = () => {
       if (globalFrame >= totalFrames) {
@@ -894,15 +892,7 @@ export async function encodeVideoSimple(
         return;
       }
 
-      const now = performance.now();
-      const elapsed = now - lastFrameTime;
-
-      // Throttle to target fps — only draw when enough time has passed
-      if (elapsed < frameInterval) {
-        requestAnimationFrame(tick);
-        return;
-      }
-      lastFrameTime = now - (elapsed % frameInterval); // account for drift
+      // No throttling - render frames as fast as possible for export speed
 
       const pageIdx = Math.floor(globalFrame / framesPerPage);
       const frameInPage = globalFrame - (pageIdx * framesPerPage);
@@ -1052,10 +1042,10 @@ export async function encodeVideoSimple(
 
       onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / totalFrames)));
 
-      requestAnimationFrame(tick);
+      setTimeout(tick, 0);
     };
 
-    requestAnimationFrame(tick);
+    setTimeout(tick, 0);
   });
 }
 
