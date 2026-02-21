@@ -693,14 +693,6 @@ const Index = () => {
               <Video className="mr-1 h-4 w-4" />
               Vídeos
             </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate("/batch-history")}>
-              <History className="mr-1 h-4 w-4" />
-              Histórico
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate("/receivables")}>
-              <FileDown className="mr-1 h-4 w-4" />
-              Recebimentos
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline">
