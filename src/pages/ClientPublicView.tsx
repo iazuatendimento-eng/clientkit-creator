@@ -96,7 +96,7 @@ const ClientPublicView = () => {
     <div className="min-h-screen bg-background">
       {/* Header - Modern & Clean */}
       <div className="sticky top-0 z-10 border-b border-border/50 bg-background/90 backdrop-blur-xl">
-        <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-5">
+        <div className="px-2 sm:px-6 py-4 sm:py-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-center sm:text-left">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -128,7 +128,7 @@ const ClientPublicView = () => {
       </div>
 
       {/* Content */}
-      <div className="py-3 sm:px-4 sm:py-8 w-full">
+      <div className="py-2 sm:px-4 sm:py-8 w-full">
         <ProjectBoard 
           brandKits={client.brand_kit ? [client.brand_kit as any] : []}
           onCreateProject={handleCreateProject}
