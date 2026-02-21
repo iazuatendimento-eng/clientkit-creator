@@ -1316,7 +1316,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-background via-background to-background/80 ${isPublicView ? 'p-0' : 'p-6'}`}>
-      <div className="container mx-auto">
+      <div className={isPublicView ? 'w-full' : 'container mx-auto'}>
         {!isPublicView && (
           <div className="flex justify-between items-center mb-8">
             <div>
