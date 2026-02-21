@@ -434,7 +434,7 @@ export function VideoGeneratorModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 flex-1 min-h-0">
+        <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
           {status === "loading" && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -564,7 +564,7 @@ export function VideoGeneratorModal({
                     imageElSize={getImageElSize(template.contentElements)}
                     imageClipShape={getImageClipShape(template.contentElements)}
                     pageImageAdjustments={pageImageAdjustments}
-                    className="w-full aspect-[9/16] max-h-[40vh]"
+                    className="w-full aspect-[9/16] max-h-[35vh]"
                   />
                 )}
               </div>
