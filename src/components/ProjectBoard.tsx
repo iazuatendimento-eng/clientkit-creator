@@ -70,6 +70,22 @@ const LinkifyText = ({ text }: { text: string }) => {
 };
 
 // Countdown timer for generated video expiry
+// Helper: daily video limit (resets at 8 AM local time)
+function getDailyWindowKey(): string {
+  const now = new Date();
+  const ref = new Date(now);
+  if (ref.getHours() < 8) ref.setDate(ref.getDate() - 1);
+  return `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, "0")}-${String(ref.getDate()).padStart(2, "0")}`;
+}
+function hasUsedDailyVideo(clientId: string): boolean {
+  try {
+    return localStorage.getItem(`daily-video-${clientId}`) === getDailyWindowKey();
+  } catch { return false; }
+}
+function markDailyVideoUsed(clientId: string) {
+  try { localStorage.setItem(`daily-video-${clientId}`, getDailyWindowKey()); } catch { /* */ }
+}
+
 const VideoCountdown = ({ expiresAt }: { expiresAt: string }) => {
   const [remaining, setRemaining] = useState("");
 
@@ -130,9 +146,10 @@ interface SortableCardProps {
   isInactive?: boolean;
   isFirstInQueue?: boolean;
   cardIndex?: number;
+  clientId?: string;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue, cardIndex = 0 }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue, cardIndex = 0, clientId }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isVideoGenOpen, setIsVideoGenOpen] = useState(false);
   const [isVideoSwapOpen, setIsVideoSwapOpen] = useState(false);
@@ -140,6 +157,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   const [copiedLink, setCopiedLink] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [editText, setEditText] = useState(brief.title || "");
+  const [savingText, setSavingText] = useState(false);
+  const [usedDailyVideo, setUsedDailyVideo] = useState(false);
 
   // Pre-generate video in background so modal opens instantly
   const { preloadedData, isPreloading } = useVideoPregenerate(
@@ -387,9 +408,51 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 </Badge>
               )}
             </div>
-            <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed">
-              {(brief.title?.trim() ? brief.title : brief.description)}
-            </h4>
+            {isPublicView && brief.status !== "completed" && isEditingText ? (
+              <div className="space-y-1.5">
+                <Textarea
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  className="text-sm min-h-[60px] resize-y"
+                  autoFocus
+                />
+                <div className="flex gap-1.5">
+                  <Button
+                    size="sm"
+                    disabled={savingText}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setSavingText(true);
+                      try {
+                        await supabase.from("project_briefs").update({ title: editText }).eq("id", brief.id);
+                        brief.title = editText;
+                        setIsEditingText(false);
+                        toast.success("Texto salvo!");
+                      } catch { toast.error("Erro ao salvar"); }
+                      setSavingText(false);
+                    }}
+                    className="h-7 text-xs px-2"
+                  >
+                    {savingText ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    Salvar
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditText(brief.title); setIsEditingText(false); }} className="h-7 text-xs px-2">
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-1.5">
+                <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed flex-1">
+                  {(brief.title?.trim() ? brief.title : brief.description)}
+                </h4>
+                {isPublicView && brief.status !== "completed" && (
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditText(brief.title); setIsEditingText(true); }} className="h-6 w-6 p-0 shrink-0">
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
           {!isPublicView && (
             <div className="flex gap-1">
@@ -615,24 +678,27 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </div>
                 </div>
               )}
-              {brief.status !== "completed" && (
-              <Button
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsVideoGenOpen(true);
-                }}
-                className="h-12 text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all"
-                disabled={isPreloading}
-              >
-                {isPreloading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Film className="h-4 w-4 mr-2" />
-                )}
-                {isPreloading ? "Preparando..." : "Pegar Vídeo Feito"}
-              </Button>
-              )}
+              {brief.status !== "completed" && (() => {
+                const alreadyUsed = clientId ? (hasUsedDailyVideo(clientId) || usedDailyVideo) : false;
+                return (
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsVideoGenOpen(true);
+                    }}
+                    className="h-12 text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all"
+                    disabled={isPreloading || alreadyUsed}
+                  >
+                    {isPreloading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Film className="h-4 w-4 mr-2" />
+                    )}
+                    {alreadyUsed ? "Já pegou vídeo hoje" : isPreloading ? "Preparando..." : "Pegar Vídeo Feito"}
+                  </Button>
+                );
+              })()}
             </div>
           )}
           
@@ -656,7 +722,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         clientName={brief.clientName}
         cardIndex={cardIndex}
         preloadedData={preloadedData}
-        onExported={() => onStatusChange(brief.id, "completed")}
+        onExported={() => {
+          onStatusChange(brief.id, "completed");
+          if (clientId) { markDailyVideoUsed(clientId); setUsedDailyVideo(true); }
+        }}
       />
       <VideoSwapModal
         isOpen={isVideoSwapOpen}
@@ -1486,6 +1555,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             isInactive={isInactive}
                             isFirstInQueue={column.id === "todo" && index === 0}
                             cardIndex={briefs.indexOf(brief)}
+                            clientId={clientId}
                           />
                         ))}
                       </div>
