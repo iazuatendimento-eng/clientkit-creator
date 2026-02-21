@@ -629,20 +629,20 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     />
                   </div>
                   <div className="p-3 space-y-2.5">
-                    <div className="flex items-center justify-center gap-2 py-1.5 px-3 bg-destructive/15 border border-destructive/30 rounded-lg">
-                      <Clock className="h-4 w-4 text-destructive" />
-                      <span className="text-sm font-semibold text-destructive">
-                        ⚠️ <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} /> — baixe agora!
+                    <div className="flex items-center justify-center gap-1.5 py-1 px-2 bg-destructive/15 border border-destructive/30 rounded-lg">
+                      <Clock className="h-3 w-3 text-destructive shrink-0" />
+                      <span className="text-xs font-semibold text-destructive truncate">
+                        ⚠️ <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} /> — baixe!
                       </span>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-11 text-sm font-medium rounded-lg w-full">
-                        <Volume2 className="h-4 w-4 mr-1.5 shrink-0" />
-                        Baixar Com Áudio
+                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-10 text-xs sm:text-sm font-medium rounded-lg w-full min-w-0">
+                        <Volume2 className="h-3.5 w-3.5 mr-1 shrink-0" />
+                        <span className="truncate">Baixar Com Áudio</span>
                       </Button>
-                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-11 text-sm font-medium rounded-lg w-full">
-                        <VolumeX className="h-4 w-4 mr-1.5 shrink-0" />
-                        Baixar Sem Áudio
+                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-10 text-xs sm:text-sm font-medium rounded-lg w-full min-w-0">
+                        <VolumeX className="h-3.5 w-3.5 mr-1 shrink-0" />
+                        <span className="truncate">Baixar Sem Áudio</span>
                       </Button>
                     </div>
                     <Button
@@ -688,7 +688,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       e.stopPropagation();
                       setIsVideoGenOpen(true);
                     }}
-                    className="h-12 text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all"
+                    className="h-10 text-xs sm:text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all min-w-0"
                     disabled={isPreloading}
                   >
                     {isPreloading ? (
@@ -1515,7 +1515,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className={`grid gap-4 sm:gap-6 ${isPublicView ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid gap-3 sm:gap-4 ${isPublicView ? 'grid-cols-2 max-w-3xl mx-auto' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
@@ -1531,7 +1531,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
               
               return (
                 <ColumnDroppable key={column.id} id={column.id}>
-                  <div className="space-y-4">
+                  <div className="space-y-4 min-w-0">
                     <div className={`p-4 rounded-lg border ${column.color} cursor-pointer`}>
                       <h3 className="font-semibold text-center">{column.title}</h3>
                       <div className="text-center text-sm text-muted-foreground mt-1">
