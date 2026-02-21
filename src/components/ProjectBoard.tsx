@@ -1439,7 +1439,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             isPublicView={isPublicView}
                             isInactive={isInactive}
                             isFirstInQueue={column.id === "todo" && index === 0}
-                            cardIndex={index}
+                            cardIndex={briefs.indexOf(brief)}
                           />
                         ))}
                       </div>
