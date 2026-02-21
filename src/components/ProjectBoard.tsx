@@ -1481,7 +1481,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className={`grid ${isPublicView ? 'grid-cols-2 gap-0.5' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid ${isPublicView ? 'grid-cols-2 gap-3' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
@@ -1498,7 +1498,14 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
               return (
                 <ColumnDroppable key={column.id} id={column.id}>
                   <div className={`${isPublicView ? 'space-y-2' : 'space-y-4'} min-w-0`}>
-                    {!isPublicView && (
+                    {isPublicView ? (
+                      <div className={`py-2 px-3 rounded-lg border ${column.color}`}>
+                        <h3 className="font-semibold text-center text-xs">{column.title}</h3>
+                        <div className="text-center text-[10px] text-muted-foreground">
+                          {columnBriefs.length} itens
+                        </div>
+                      </div>
+                    ) : (
                       <div className={`p-4 rounded-lg border ${column.color} cursor-pointer`}>
                         <h3 className="font-semibold text-center">{column.title}</h3>
                         <div className="text-center text-sm text-muted-foreground mt-1">
