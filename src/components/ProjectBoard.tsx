@@ -545,7 +545,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 className="text-xs px-2 py-1 h-auto w-full"
               >
                 <Film className="h-3 w-3 mr-1" />
-                Gerar Vídeo
+                Pegar Vídeo Feito
               </Button>
             </div>
           )}
@@ -584,7 +584,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 ) : (
                   <Film className="h-3 w-3 mr-1" />
                 )}
-                {isPreloading ? "Preparando..." : "Gerar Vídeo"}
+                {isPreloading ? "Preparando..." : "Pegar Vídeo Feito"}
               </Button>
               )}
             </div>
