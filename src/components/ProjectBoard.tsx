@@ -1411,7 +1411,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className={`grid gap-4 sm:gap-6 ${isPublicView ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid gap-4 sm:gap-6 ${isPublicView ? 'grid-cols-2 max-w-3xl mx-auto' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {(isPublicView ? [...columns].reverse() : columns).map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
