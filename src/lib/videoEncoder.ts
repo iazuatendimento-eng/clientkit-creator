@@ -883,13 +883,17 @@ export async function encodeVideoSimple(
     }
 
     let lastPageIdx = 0;
-    const FRAMES_PER_BATCH = 4; // Process N frames then yield to browser
+    // Mobile devices need smaller batches to avoid choking the encoder
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const FRAMES_PER_BATCH = isMobile ? 1 : 4;
+
+    let progressCounter = 0;
+    const PROGRESS_INTERVAL = isMobile ? 3 : 10; // Report progress less often on mobile
 
     const tick = () => {
       if (globalFrame >= totalFrames) {
-        // Stop all videos
         bgVideos.forEach(v => { if (v) v.pause(); });
-        setTimeout(() => mediaRecorder.stop(), 200);
+        setTimeout(() => mediaRecorder.stop(), 300);
         return;
       }
 
@@ -899,13 +903,21 @@ export async function encodeVideoSimple(
         framesThisBatch++;
       }
 
-      onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / totalFrames)));
+      progressCounter++;
+      if (progressCounter % PROGRESS_INTERVAL === 0) {
+        onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / totalFrames)));
+      }
 
       if (globalFrame < totalFrames) {
-        setTimeout(tick, 0);
+        // Use requestAnimationFrame on mobile to sync with display and avoid overwhelming the GPU
+        if (isMobile) {
+          requestAnimationFrame(tick);
+        } else {
+          setTimeout(tick, 0);
+        }
       } else {
         bgVideos.forEach(v => { if (v) v.pause(); });
-        setTimeout(() => mediaRecorder.stop(), 200);
+        setTimeout(() => mediaRecorder.stop(), 300);
       }
     };
 
