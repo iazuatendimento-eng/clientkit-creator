@@ -1836,6 +1836,28 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={newTemplate}>
                   <FolderOpen className="h-3.5 w-3.5" />
                 </Button>
+                {currentTemplateId && (
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={async () => {
+                      if (!currentTemplateId) return;
+                      const confirmed = window.confirm(`Excluir template "${templateName}"? Esta ação não pode ser desfeita.`);
+                      if (!confirmed) return;
+                      try {
+                        await supabase.from("master_video_templates").delete().eq("id", currentTemplateId);
+                        toast({ title: "Template excluído!" });
+                        setSavedTemplates(prev => prev.filter(t => t.id !== currentTemplateId));
+                        newTemplate();
+                      } catch {
+                        toast({ title: "Erro ao excluir", variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             </div>
 
