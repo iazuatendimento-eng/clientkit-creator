@@ -530,18 +530,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsDetailModalOpen(true);
-                }}
-                className="text-xs px-2 py-1 h-auto w-full"
-              >
-                <Upload className="h-3 w-3 mr-1" />
-                Uploads
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
                   setIsVideoGenOpen(true);
                 }}
                 className="text-xs px-2 py-1 h-auto w-full"
@@ -553,18 +541,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   <Film className="h-3 w-3 mr-1" />
                 )}
                 {isPreloading ? "Preparando..." : "Gerar Vídeo"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsVideoSwapOpen(true);
-                }}
-                className="text-xs px-2 py-1 h-auto w-full"
-              >
-                <Film className="h-3 w-3 mr-1" />
-                Trocar Vídeo
               </Button>
             </div>
           )}
