@@ -327,7 +327,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       ref={setNodeRef}
       style={style}
       id={`card-${brief.id}`}
-      className={`bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView && !isInactive ? 'cursor-move' : ''}`}
+      className={`${isPublicView ? 'bg-card border-border/40 rounded-xl shadow-lg' : 'bg-gradient-card border-primary/20'} hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView && !isInactive ? 'cursor-move' : ''}`}
       {...(!isPublicView && !isInactive ? attributes : {})}
       {...(!isPublicView && !isInactive ? listeners : {})}
     >
@@ -551,18 +551,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           )}
           
           {isPublicView && (
-            <div className="flex flex-col gap-2 mt-2">
+            <div className="flex flex-col gap-3 mt-3">
               {/* Show saved video download with countdown if available */}
               {brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
-                <div className="border border-primary/30 rounded-lg p-2 space-y-1.5">
+                <div className="border border-primary/20 rounded-xl p-3 space-y-2.5 bg-primary/5">
                   <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} />
-                  <div className="grid grid-cols-2 gap-1">
-                    <Button size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="text-[11px] px-1.5 py-1 h-auto">
-                      <Volume2 className="h-3 w-3 shrink-0 mr-0.5" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-11 text-sm font-medium rounded-lg">
+                      <Volume2 className="h-4 w-4 mr-1.5" />
                       Com Áudio
                     </Button>
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="text-[11px] px-1.5 py-1 h-auto">
-                      <VolumeX className="h-3 w-3 shrink-0 mr-0.5" />
+                    <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-11 text-sm font-medium rounded-lg">
+                      <VolumeX className="h-4 w-4 mr-1.5" />
                       Sem Áudio
                     </Button>
                   </div>
@@ -571,18 +571,17 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               {brief.status !== "completed" && (
               <Button
                 variant="outline"
-                size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsVideoGenOpen(true);
                 }}
-                className="text-xs px-2 py-1 h-auto w-full"
+                className="h-12 text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all"
                 disabled={isPreloading}
               >
                 {isPreloading ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
-                  <Film className="h-3 w-3 mr-1" />
+                  <Film className="h-4 w-4 mr-2" />
                 )}
                 {isPreloading ? "Preparando..." : "Pegar Vídeo Feito"}
               </Button>
@@ -1399,7 +1398,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className={`grid gap-4 sm:gap-6 ${isPublicView ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid gap-4 sm:gap-6 ${isPublicView ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {(isPublicView ? [...columns].reverse() : columns).map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
