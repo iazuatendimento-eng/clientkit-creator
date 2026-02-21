@@ -394,7 +394,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               {brief.artGenerationSelected && (
                 <Badge
                   variant="outline"
-                  className="text-[11px] px-2 py-0.5 h-auto whitespace-nowrap bg-primary/10 text-primary border-primary/30"
+                  className="text-[11px] px-2 py-0.5 h-auto bg-primary/10 text-primary border-primary/30"
                 >
                   Na Fila
                 </Badge>
@@ -402,7 +402,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               {isFirstInQueue && !brief.artGenerationSelected && (
                 <Badge
                   variant="outline"
-                  className="text-[11px] px-2 py-0.5 h-auto whitespace-nowrap bg-accent/10 text-accent-foreground border-accent/30"
+                  className="text-[11px] px-2 py-0.5 h-auto bg-accent/10 text-accent-foreground border-accent/30"
                 >
                   Próximo
                 </Badge>
@@ -489,7 +489,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
           </div>
           
-          {brandKit && (
+          {brandKit && !isPublicView && (
             <div className="flex items-center gap-2">
               <div className="flex gap-1">
                 {brandKit.colors.slice(0, 3).map((color: string, index: number) => (
@@ -631,7 +631,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   <div className="p-3 space-y-2.5 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-center gap-1 py-1 px-1.5 bg-destructive/15 border border-destructive/30 rounded-lg overflow-hidden">
                       <Clock className="h-3 w-3 text-destructive shrink-0" />
-                      <span className="text-[10px] font-semibold text-destructive truncate">
+                      <span className="text-[10px] font-semibold text-destructive">
                         <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} />
                       </span>
                     </div>
