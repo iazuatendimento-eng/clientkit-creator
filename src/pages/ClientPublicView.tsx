@@ -128,15 +128,7 @@ const ClientPublicView = () => {
       </div>
 
       {/* Content */}
-      <div className="px-1 sm:px-4 py-5 sm:py-8 w-full">
-        <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 sm:p-5 mb-6">
-          <h3 className="font-semibold text-primary mb-1 text-sm sm:text-base flex items-center gap-2">
-            📱 Portal do Cliente
-          </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Visualize e baixe suas artes. Toque no card para ver detalhes.
-          </p>
-        </div>
+      <div className="px-1 sm:px-4 py-3 sm:py-8 w-full">
         <ProjectBoard 
           brandKits={client.brand_kit ? [client.brand_kit as any] : []}
           onCreateProject={handleCreateProject}
