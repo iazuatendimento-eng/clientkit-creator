@@ -128,7 +128,7 @@ const ClientPublicView = () => {
       </div>
 
       {/* Content */}
-      <div className="px-1 sm:px-4 py-3 sm:py-8 w-full">
+      <div className="py-3 sm:px-4 sm:py-8 w-full">
         <ProjectBoard 
           brandKits={client.brand_kit ? [client.brand_kit as any] : []}
           onCreateProject={handleCreateProject}

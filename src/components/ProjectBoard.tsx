@@ -385,7 +385,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         return null;
       })()}
 
-      <CardHeader className={`${isPublicView ? 'p-2.5 pb-1.5' : 'pb-2'} overflow-hidden`}>
+      <CardHeader className={`${isPublicView ? 'p-1.5 pb-1' : 'pb-2'} overflow-hidden`}>
         <div className="flex justify-between items-start">
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -451,7 +451,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           )}
         </div>
       </CardHeader>
-      <CardContent className={`pt-0 ${isPublicView ? 'p-2.5 pt-0' : ''} overflow-hidden`}>
+      <CardContent className={`pt-0 ${isPublicView ? 'p-1.5 pt-0' : ''} overflow-hidden`}>
         <div className="space-y-2 min-w-0">
           <div className="flex items-center gap-2 text-xs">
             <Calendar className="h-3 w-3" />
@@ -1484,7 +1484,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className={`grid ${isPublicView ? 'grid-cols-2 gap-2' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid ${isPublicView ? 'grid-cols-2 gap-1 px-0.5' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
