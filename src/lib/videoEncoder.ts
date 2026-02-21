@@ -883,6 +883,7 @@ export async function encodeVideoSimple(
     }
 
     let lastPageIdx = 0;
+    const FRAMES_PER_BATCH = 4; // Process N frames then yield to browser
 
     const tick = () => {
       if (globalFrame >= totalFrames) {
@@ -892,7 +893,23 @@ export async function encodeVideoSimple(
         return;
       }
 
-      // No throttling - render frames as fast as possible for export speed
+      let framesThisBatch = 0;
+      while (framesThisBatch < FRAMES_PER_BATCH && globalFrame < totalFrames) {
+        renderOneFrame();
+        framesThisBatch++;
+      }
+
+      onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / totalFrames)));
+
+      if (globalFrame < totalFrames) {
+        setTimeout(tick, 0);
+      } else {
+        bgVideos.forEach(v => { if (v) v.pause(); });
+        setTimeout(() => mediaRecorder.stop(), 200);
+      }
+    };
+
+    const renderOneFrame = () => {
 
       const pageIdx = Math.floor(globalFrame / framesPerPage);
       const frameInPage = globalFrame - (pageIdx * framesPerPage);
@@ -1039,10 +1056,6 @@ export async function encodeVideoSimple(
       }
 
       globalFrame++;
-
-      onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / totalFrames)));
-
-      setTimeout(tick, 0);
     };
 
     setTimeout(tick, 0);
