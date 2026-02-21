@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { reencodeForWhatsApp } from "@/lib/videoEncoder";
 import { useVideoPregenerate } from "@/hooks/useVideoPregenerate";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { VideoSwapModal } from "@/components/VideoSwapModal";
@@ -137,6 +138,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   const [isVideoSwapOpen, setIsVideoSwapOpen] = useState(false);
   const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isDismissing, setIsDismissing] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   // Pre-generate video in background so modal opens instantly
   const { preloadedData, isPreloading } = useVideoPregenerate(
@@ -549,7 +552,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           {isPublicView && (
             <div className="flex flex-col gap-3 mt-3">
               {/* Show saved video download with countdown if available */}
-              {brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
+              {!dismissed && brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
                 <div className="border border-primary/20 rounded-xl overflow-hidden bg-primary/5">
                   {/* Video preview */}
                   <div className="w-full bg-black flex justify-center">
@@ -579,6 +582,36 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                         Baixar Sem Áudio
                       </Button>
                     </div>
+                    <Button
+                      variant="ghost"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setIsDismissing(true);
+                        try {
+                          // Delete from storage
+                          const url = brief.generatedVideoUrl!;
+                          const pathMatch = url.match(/card-uploads\/(.+)$/);
+                          if (pathMatch) {
+                            await supabase.storage.from("card-uploads").remove([pathMatch[1]]);
+                          }
+                          // Clear from DB
+                          await supabase
+                            .from("project_briefs")
+                            .update({ generated_video_url: null, generated_video_expires_at: null })
+                            .eq("id", brief.id);
+                          setDismissed(true);
+                          toast.success("Vídeo removido!");
+                        } catch {
+                          toast.error("Erro ao remover");
+                        }
+                        setIsDismissing(false);
+                      }}
+                      disabled={isDismissing}
+                      className="w-full h-9 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      {isDismissing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1.5" />}
+                      Já Baixei
+                    </Button>
                   </div>
                 </div>
               )}
