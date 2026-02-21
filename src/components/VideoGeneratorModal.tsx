@@ -136,6 +136,7 @@ interface VideoGeneratorModalProps {
   clientName: string;
   cardIndex: number;
   preloadedData?: PreloadedVideoData | null;
+  onExported?: () => void;
 }
 
 export function VideoGeneratorModal({
@@ -148,6 +149,7 @@ export function VideoGeneratorModal({
   clientName,
   cardIndex,
   preloadedData,
+  onExported,
 }: VideoGeneratorModalProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "exporting" | "error">("loading");
   const [template, setTemplate] = useState<VideoTemplateData | null>(null);
@@ -410,6 +412,7 @@ export function VideoGeneratorModal({
       }
 
       toast.success("Vídeo exportado! ✓");
+      onExported?.();
     } catch (err) {
       console.error("Export error:", err);
       toast.error("Erro ao exportar vídeo");

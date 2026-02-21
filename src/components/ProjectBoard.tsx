@@ -574,7 +574,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsVideoGenOpen(true);
-                  onStatusChange(brief.id, "completed");
                 }}
                 className="text-xs px-2 py-1 h-auto w-full"
                 disabled={isPreloading}
@@ -609,6 +608,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         clientName={brief.clientName}
         cardIndex={cardIndex}
         preloadedData={preloadedData}
+        onExported={() => onStatusChange(brief.id, "completed")}
       />
       <VideoSwapModal
         isOpen={isVideoSwapOpen}
