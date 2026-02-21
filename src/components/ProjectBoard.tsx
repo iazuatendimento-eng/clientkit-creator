@@ -599,18 +599,17 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </div>
                   <div className="p-3 space-y-2.5 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-center gap-1 py-1 px-1.5 bg-destructive/15 border border-destructive/30 rounded-lg overflow-hidden">
-                      <Clock className="h-3 w-3 text-destructive shrink-0" />
                       <span className="text-[10px] font-semibold text-destructive">
                         <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} />
                       </span>
                     </div>
                     <div className="flex flex-col gap-2 min-w-0">
                       <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
-                        <Volume2 className="h-3.5 w-3.5 shrink-0" />
+                        <span>Baixar Com Áudio</span>
                         <span>Baixar Com Áudio</span>
                       </Button>
                       <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
-                        <VolumeX className="h-3.5 w-3.5 shrink-0" />
+                        <span>Baixar Sem Áudio</span>
                         <span>Baixar Sem Áudio</span>
                       </Button>
                     </div>
