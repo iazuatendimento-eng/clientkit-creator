@@ -1500,16 +1500,18 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
               
               return (
                 <ColumnDroppable key={column.id} id={column.id}>
-                  <div className="space-y-4 min-w-0">
-                    <div className={`p-4 rounded-lg border ${column.color} cursor-pointer`}>
-                      <h3 className="font-semibold text-center">{column.title}</h3>
-                      <div className="text-center text-sm text-muted-foreground mt-1">
-                        {columnBriefs.length} itens
+                  <div className={`${isPublicView ? 'space-y-2' : 'space-y-4'} min-w-0`}>
+                    {!isPublicView && (
+                      <div className={`p-4 rounded-lg border ${column.color} cursor-pointer`}>
+                        <h3 className="font-semibold text-center">{column.title}</h3>
+                        <div className="text-center text-sm text-muted-foreground mt-1">
+                          {columnBriefs.length} itens
+                        </div>
                       </div>
-                    </div>
+                    )}
                     
                     <SortableContext items={columnBriefs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-3">
+                      <div className={isPublicView ? 'space-y-2' : 'space-y-3'}>
                         {columnBriefs.map((brief, index) => (
                           <SortableCard
                             key={brief.id}
