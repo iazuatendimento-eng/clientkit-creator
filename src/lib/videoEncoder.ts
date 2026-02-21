@@ -909,12 +909,10 @@ export async function encodeVideoSimple(
       }
 
       if (globalFrame < totalFrames) {
-        // Use requestAnimationFrame on mobile to sync with display and avoid overwhelming the GPU
-        if (isMobile) {
-          requestAnimationFrame(tick);
-        } else {
-          setTimeout(tick, 0);
-        }
+        // Always use setTimeout for encoding — requestAnimationFrame pauses when
+        // the tab/screen is inactive (common on mobile), causing the export to stall.
+        // A small delay (16ms on mobile) prevents CPU overload on weaker devices.
+        setTimeout(tick, isMobile ? 16 : 0);
       } else {
         bgVideos.forEach(v => { if (v) v.pause(); });
         setTimeout(() => mediaRecorder.stop(), 300);

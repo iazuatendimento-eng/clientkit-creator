@@ -166,8 +166,8 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               className="text-sm"
             />
-            <Button size="sm" onClick={handleSearch} disabled={searching}>
-              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            <Button size="sm" onClick={handleSearch} disabled={searching} className="px-3">
+              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
             </Button>
           </div>
 

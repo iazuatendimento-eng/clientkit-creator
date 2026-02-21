@@ -81,7 +81,7 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
     return (
       <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)} className="w-full gap-2 bg-destructive text-white hover:bg-destructive/90 hover:text-white border-none">
         <Film className="h-4 w-4" />
-        Trocar Fundo (Página {currentEditPage + 1})
+        Trocar Vídeo do Card (Página {currentEditPage + 1})
       </Button>
     );
   }
@@ -89,7 +89,7 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
   return (
     <div className="space-y-3 border rounded-lg p-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium">Trocar Fundo — Página {currentEditPage + 1}</span>
+        <span className="text-xs font-medium">Trocar Vídeo do Card — Página {currentEditPage + 1}</span>
         <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="h-6 px-2 text-xs">✕</Button>
       </div>
       <label className={`cursor-pointer block ${uploading ? "pointer-events-none opacity-50" : ""}`}>
@@ -136,8 +136,8 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
       </div>
       <div className="flex gap-2">
         <Input placeholder="Buscar vídeos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} className="text-xs h-8" />
-        <Button size="sm" onClick={handleSearch} disabled={searching} className="h-8 px-2">
-          {searching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+        <Button size="sm" onClick={handleSearch} disabled={searching} className="h-8 px-3">
+          {searching ? <Loader2 className="h-3 w-3 animate-spin" /> : "Buscar"}
         </Button>
       </div>
       {searchResults.length > 0 && (
