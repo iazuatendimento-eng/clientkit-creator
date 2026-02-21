@@ -385,7 +385,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         return null;
       })()}
 
-      <CardHeader className={`${isPublicView ? 'p-2.5 pb-1.5' : 'pb-2'}`}>
+      <CardHeader className={`${isPublicView ? 'p-2.5 pb-1.5' : 'pb-2'} overflow-hidden`}>
         <div className="flex justify-between items-start">
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -482,8 +482,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           )}
         </div>
       </CardHeader>
-      <CardContent className={`pt-0 ${isPublicView ? 'p-2.5 pt-0' : ''}`}>
-        <div className="space-y-2">
+      <CardContent className={`pt-0 ${isPublicView ? 'p-2.5 pt-0' : ''} overflow-hidden`}>
+        <div className="space-y-2 min-w-0">
           <div className="flex items-center gap-2 text-xs">
             <Calendar className="h-3 w-3" />
             <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
@@ -613,7 +613,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           )}
           
           {isPublicView && (
-            <div className="flex flex-col gap-3 mt-3">
+            <div className="flex flex-col gap-3 mt-3 min-w-0 overflow-hidden">
               {/* Show saved video download with countdown if available */}
               {!dismissed && brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
                 <div className="border border-primary/20 rounded-xl overflow-hidden bg-primary/5">
@@ -628,21 +628,21 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       playsInline
                     />
                   </div>
-                  <div className="p-3 space-y-2.5">
-                    <div className="flex items-center justify-center gap-1.5 py-1 px-2 bg-destructive/15 border border-destructive/30 rounded-lg">
+                  <div className="p-3 space-y-2.5 min-w-0 overflow-hidden">
+                    <div className="flex items-center justify-center gap-1 py-1 px-1.5 bg-destructive/15 border border-destructive/30 rounded-lg overflow-hidden">
                       <Clock className="h-3 w-3 text-destructive shrink-0" />
-                      <span className="text-xs font-semibold text-destructive truncate">
-                        ⚠️ <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} /> — baixe!
+                      <span className="text-[10px] font-semibold text-destructive truncate">
+                        <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} />
                       </span>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-10 text-xs sm:text-sm font-medium rounded-lg w-full min-w-0">
-                        <Volume2 className="h-3.5 w-3.5 mr-1 shrink-0" />
-                        <span className="truncate">Baixar Com Áudio</span>
+                    <div className="flex flex-col gap-2 min-w-0">
+                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-10 text-xs font-medium rounded-lg w-full overflow-hidden">
+                        <Volume2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Com Áudio</span>
                       </Button>
-                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-10 text-xs sm:text-sm font-medium rounded-lg w-full min-w-0">
-                        <VolumeX className="h-3.5 w-3.5 mr-1 shrink-0" />
-                        <span className="truncate">Baixar Sem Áudio</span>
+                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-10 text-xs font-medium rounded-lg w-full overflow-hidden">
+                        <VolumeX className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Sem Áudio</span>
                       </Button>
                     </div>
                     <Button
@@ -670,10 +670,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                         setIsDismissing(false);
                       }}
                       disabled={isDismissing}
-                      className="w-full h-9 text-sm text-muted-foreground hover:text-foreground"
+                      className="w-full h-9 text-xs text-muted-foreground hover:text-foreground overflow-hidden"
                     >
-                      {isDismissing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1.5" />}
-                      Já Baixei
+                       {isDismissing ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 shrink-0" />}
+                       <span className="truncate">Já Baixei</span>
                     </Button>
                   </div>
                 </div>
@@ -688,7 +688,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       e.stopPropagation();
                       setIsVideoGenOpen(true);
                     }}
-                    className="h-10 text-xs sm:text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all min-w-0"
+                    className="h-10 text-xs font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
                     disabled={isPreloading}
                   >
                     {isPreloading ? (
@@ -696,7 +696,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     ) : (
                       <Film className="h-4 w-4 mr-2" />
                     )}
-                    {isPreloading ? "Preparando..." : "Pegar Vídeo Feito"}
+                    <span className="truncate">{isPreloading ? "Preparando..." : "Pegar Vídeo"}</span>
                   </Button>
                 );
               })()}
