@@ -70,9 +70,9 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }
 
   if (!isOpen) {
     return (
-      <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)} className="w-full gap-2 text-muted-foreground">
+      <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)} className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border border-destructive/30">
         <Film className="h-4 w-4" />
-        Trocar Vídeo (Página {currentEditPage + 1})
+        Vídeo Errado? Trocar (Página {currentEditPage + 1})
       </Button>
     );
   }
@@ -434,7 +434,7 @@ export function VideoGeneratorModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-4 flex-1 min-h-0">
           {status === "loading" && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
