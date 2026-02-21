@@ -22,18 +22,40 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
   const [uploading, setUploading] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setSearching(true);
+    setSearchPage(1);
     try {
-      const results = await searchVideos(searchQuery, 6);
+      const results = await searchVideos(searchQuery, 6, 1);
       setSearchResults(results);
       if (results.length === 0) toast.info("Nenhum vídeo encontrado. Tente outro termo.");
     } catch {
       toast.error("Erro ao buscar vídeos");
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (!searchQuery.trim()) return;
+    const nextPage = searchPage + 1;
+    setIsLoadingMore(true);
+    try {
+      const results = await searchVideos(searchQuery, 6, nextPage);
+      if (results.length > 0) {
+        setSearchResults(prev => [...prev, ...results]);
+        setSearchPage(nextPage);
+      } else {
+        toast.info("Sem mais resultados");
+      }
+    } catch {
+      toast.error("Erro ao carregar mais vídeos");
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -194,6 +216,18 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
                   Usar este vídeo
                 </Button>
               )}
+
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Carregar Mais
+                </Button>
+              </div>
             </div>
           )}
         </div>
