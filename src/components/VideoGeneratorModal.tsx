@@ -378,8 +378,10 @@ export function VideoGeneratorModal({
       });
 
       let finalBlob = blob;
+      const numPages = videoPages.pages.length;
+      const expectedDuration = numPages * template.pageDuration;
       try {
-        finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio });
+        finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio, expectedDuration });
       } catch { /* use original */ }
 
       setExportedBlob(finalBlob);
