@@ -445,35 +445,36 @@ export function VideoGeneratorModal({
                 )}
               </div>
 
-              {/* Template info + edit toggle */}
+              {/* Template info + action buttons */}
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
                   Template: {template.name}
                 </p>
-                <Button
-                  variant={isEditing ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="gap-1.5"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  {isEditing ? "Voltar ao Preview" : "Editar"}
-                </Button>
+                {isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={applyAdjustments}
+                    disabled={isApplyingAdjustments}
+                    className="gap-1.5"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Aplicar Ajustes
+                  </Button>
+                )}
               </div>
 
-              {/* Download buttons */}
-              {!isEditing && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={() => handleExport(false)} className="gap-2">
-                    <Volume2 className="h-4 w-4" />
-                    Com Áudio
-                  </Button>
-                  <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
-                    <VolumeX className="h-4 w-4" />
-                    Sem Áudio
-                  </Button>
-                </div>
-              )}
+              {/* Download buttons - always visible */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button onClick={() => handleExport(false)} className="gap-2">
+                  <Volume2 className="h-4 w-4" />
+                  Com Áudio
+                </Button>
+                <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
+                  <VolumeX className="h-4 w-4" />
+                  Sem Áudio
+                </Button>
+              </div>
             </>
           )}
         </div>
