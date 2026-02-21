@@ -523,7 +523,7 @@ export function VideoGeneratorModal({
           {status === "ready" && videoPages && template && (
             <>
               {/* Preview or Edit mode */}
-              <div className="rounded-lg overflow-hidden border bg-black flex justify-center items-center" style={{ height: '45vh' }}>
+              <div className="rounded-lg overflow-hidden border bg-black flex justify-center items-center" style={{ height: 'min(35vh, 400px)' }}>
                 {isEditing ? (
                   <div className="relative h-full" style={{ aspectRatio: `${template.width}/${template.height}` }}>
                     <VideoAdjustOverlay
