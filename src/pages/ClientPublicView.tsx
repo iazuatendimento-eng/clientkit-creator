@@ -128,7 +128,7 @@ const ClientPublicView = () => {
       </div>
 
       {/* Content */}
-      <div className="px-2 sm:px-4 py-5 sm:py-8 max-w-4xl mx-auto">
+      <div className="px-2 sm:px-4 py-5 sm:py-8 max-w-5xl mx-auto">
         <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 sm:p-5 mb-6">
           <h3 className="font-semibold text-primary mb-1 text-sm sm:text-base flex items-center gap-2">
             📱 Portal do Cliente
