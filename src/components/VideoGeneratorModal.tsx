@@ -486,7 +486,7 @@ export function VideoGeneratorModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Film className="h-5 w-5" />
-            Pegar Vídeo Feito
+            Baixar Vídeo Feito
           </DialogTitle>
         </DialogHeader>
 
@@ -509,7 +509,7 @@ export function VideoGeneratorModal({
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">
-                Pegando vídeo... {Math.round(exportProgress * 100)}%
+                Baixando vídeo... {Math.round(exportProgress * 100)}%
               </p>
               <div className="w-full bg-muted rounded-full h-2">
                 <div

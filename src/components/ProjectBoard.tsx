@@ -576,7 +576,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 className="text-xs px-2 py-1 h-auto w-full"
               >
                 <Film className="h-3 w-3 mr-1" />
-                Pegar Vídeo Feito
+                Baixar Vídeo Feito
               </Button>
             </div>
           )}
@@ -662,7 +662,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     ) : (
                       <Film className="h-4 w-4 mr-2" />
                     )}
-                    <span>{isPreloading ? "Preparando..." : "Pegar Vídeo Feito"}</span>
+                    <span>{isPreloading ? "Preparando..." : "Baixar Vídeo Feito"}</span>
                   </Button>
                 );
               })()}
@@ -792,8 +792,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   );
 
   const columns = [
-    { id: "todo", title: "Pegar Vídeo", color: "bg-yellow-500/20 border-yellow-500/30" },
-    { id: "completed", title: "Vídeo que já Pegou", color: "bg-green-500/20 border-green-500/30" }
+    { id: "todo", title: "Vídeos para Baixar", color: "bg-yellow-500/20 border-yellow-500/30" },
+    { id: "completed", title: "Vídeos Baixados", color: "bg-green-500/20 border-green-500/30" }
   ];
 
   const ColumnDroppable = ({ id, children }: { id: string; children: React.ReactNode }) => {
