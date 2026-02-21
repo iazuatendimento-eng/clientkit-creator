@@ -636,13 +636,13 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-11 text-sm font-medium rounded-lg">
-                        <Volume2 className="h-4 w-4 mr-1.5" />
-                        Baixar Com Áudio
+                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-11 text-xs font-medium rounded-lg px-2">
+                        <Volume2 className="h-3.5 w-3.5 mr-1 shrink-0" />
+                        <span className="truncate">Com Áudio</span>
                       </Button>
-                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-11 text-sm font-medium rounded-lg">
-                        <VolumeX className="h-4 w-4 mr-1.5" />
-                        Baixar Sem Áudio
+                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-11 text-xs font-medium rounded-lg px-2">
+                        <VolumeX className="h-3.5 w-3.5 mr-1 shrink-0" />
+                        <span className="truncate">Sem Áudio</span>
                       </Button>
                     </div>
                     <Button
