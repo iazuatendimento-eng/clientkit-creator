@@ -648,11 +648,11 @@ export function VideoGeneratorModal({
               <div className="grid grid-cols-2 gap-2">
                 <Button onClick={() => handleExport(false)} className="gap-2">
                   <Download className="h-4 w-4" />
-                  Com Áudio
+                  Baixar Com Áudio
                 </Button>
                 <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
                   <Download className="h-4 w-4" />
-                  Sem Áudio
+                  Baixar Sem Áudio
                 </Button>
               </div>
 
