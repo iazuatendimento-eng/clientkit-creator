@@ -564,7 +564,7 @@ export function VideoGeneratorModal({
                     imageElSize={getImageElSize(template.contentElements)}
                     imageClipShape={getImageClipShape(template.contentElements)}
                     pageImageAdjustments={pageImageAdjustments}
-                    className="w-full aspect-[9/16] max-h-[35vh]"
+                    className="w-full aspect-[9/16] max-h-[28vh]"
                   />
                 )}
               </div>
