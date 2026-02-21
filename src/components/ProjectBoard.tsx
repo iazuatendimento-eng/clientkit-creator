@@ -1193,7 +1193,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   const getBrandKit = (brandKitId?: string) => {
-    return brandKits.find(bk => bk.id === brandKitId);
+    return brandKits.find(bk => bk.id === brandKitId) || (brandKits.length > 0 ? brandKits[0] : undefined);
   };
 
   return (

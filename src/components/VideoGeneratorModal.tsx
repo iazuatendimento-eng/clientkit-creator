@@ -196,11 +196,11 @@ export function VideoGeneratorModal({
 
   useEffect(() => {
     if (isOpen) {
-      setIsEditing(false);
       setCurrentEditPage(0);
       setExportedBlob(null);
 
       if (preloadedData) {
+        setIsEditing(true);
         // Use pre-generated data — open instantly in ready state
         setTemplate(preloadedData.template);
         setVideoPages(preloadedData.videoPages);
