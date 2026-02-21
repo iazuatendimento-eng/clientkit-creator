@@ -85,12 +85,7 @@ const VideoCountdown = ({ expiresAt }: { expiresAt: string }) => {
     return () => clearInterval(interval);
   }, [expiresAt]);
 
-  return (
-    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-      <Clock className="h-3 w-3" />
-      <span>{remaining}</span>
-    </div>
-  );
+  return <span>{remaining}</span>;
 };
 
 interface ProjectBrief {
@@ -554,17 +549,35 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             <div className="flex flex-col gap-3 mt-3">
               {/* Show saved video download with countdown if available */}
               {brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
-                <div className="border border-primary/20 rounded-xl p-3 space-y-2.5 bg-primary/5">
-                  <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-11 text-sm font-medium rounded-lg">
-                      <Volume2 className="h-4 w-4 mr-1.5" />
-                      Com Áudio
-                    </Button>
-                    <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-11 text-sm font-medium rounded-lg">
-                      <VolumeX className="h-4 w-4 mr-1.5" />
-                      Sem Áudio
-                    </Button>
+                <div className="border border-primary/20 rounded-xl overflow-hidden bg-primary/5">
+                  {/* Video preview */}
+                  <div className="w-full bg-black flex justify-center">
+                    <video
+                      src={brief.generatedVideoUrl}
+                      className="w-full max-h-64 object-contain"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                    />
+                  </div>
+                  <div className="p-3 space-y-2.5">
+                    <div className="flex items-center justify-center gap-2 py-1.5 px-3 bg-destructive/15 border border-destructive/30 rounded-lg">
+                      <Clock className="h-4 w-4 text-destructive" />
+                      <span className="text-sm font-semibold text-destructive">
+                        ⚠️ <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} /> — baixe agora!
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-11 text-sm font-medium rounded-lg">
+                        <Volume2 className="h-4 w-4 mr-1.5" />
+                        Com Áudio
+                      </Button>
+                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-11 text-sm font-medium rounded-lg">
+                        <VolumeX className="h-4 w-4 mr-1.5" />
+                        Sem Áudio
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
