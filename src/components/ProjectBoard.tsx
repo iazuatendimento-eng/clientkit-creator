@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { reencodeForWhatsApp } from "@/lib/videoEncoder";
 import { useVideoPregenerate } from "@/hooks/useVideoPregenerate";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2 } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { VideoSwapModal } from "@/components/VideoSwapModal";
@@ -68,6 +68,31 @@ const LinkifyText = ({ text }: { text: string }) => {
   );
 };
 
+// Countdown timer for generated video expiry
+const VideoCountdown = ({ expiresAt }: { expiresAt: string }) => {
+  const [remaining, setRemaining] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 0) { setRemaining("Expirado"); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setRemaining(`${h}h ${m}min restantes`);
+    };
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return (
+    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+      <Clock className="h-3 w-3" />
+      <span>{remaining}</span>
+    </div>
+  );
+};
+
 interface ProjectBrief {
   id: string;
   clientName: string;
@@ -83,6 +108,8 @@ interface ProjectBrief {
   generatedCaption?: string;
   published?: boolean;
   artGenerationSelected?: boolean;
+  generatedVideoUrl?: string;
+  generatedVideoExpiresAt?: string;
 }
 
 interface ProjectBoardProps {
@@ -525,6 +552,22 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
+              {/* Show saved video download with countdown if available */}
+              {brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
+                <div className="border border-primary/30 rounded-lg p-2 space-y-1.5">
+                  <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} />
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="text-[11px] px-1.5 py-1 h-auto">
+                      <Volume2 className="h-3 w-3 shrink-0 mr-0.5" />
+                      Com Áudio
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="text-[11px] px-1.5 py-1 h-auto">
+                      <VolumeX className="h-3 w-3 shrink-0 mr-0.5" />
+                      Sem Áudio
+                    </Button>
+                  </div>
+                </div>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -615,6 +658,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           generatedCaption: brief.generated_caption || "",
           published: brief.published || false,
           artGenerationSelected: brief.art_generation_selected || false,
+          generatedVideoUrl: (brief as any).generated_video_url || undefined,
+          generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
         }));
         setBriefs(mappedBriefs);
       } catch (error) {
@@ -812,6 +857,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
         artGenerationSelected: brief.art_generation_selected || false,
+        generatedVideoUrl: (brief as any).generated_video_url || undefined,
+        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -917,6 +964,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
         artGenerationSelected: brief.art_generation_selected || false,
+        generatedVideoUrl: (brief as any).generated_video_url || undefined,
+        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
       
@@ -1018,6 +1067,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
         artGenerationSelected: brief.art_generation_selected || false,
+        generatedVideoUrl: (brief as any).generated_video_url || undefined,
+        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
       
@@ -1063,6 +1114,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
+        generatedVideoUrl: (brief as any).generated_video_url || undefined,
+        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
       
@@ -1095,6 +1148,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
+        generatedVideoUrl: (brief as any).generated_video_url || undefined,
+        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
       
@@ -1159,6 +1214,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         coverVideo: brief.cover_video,
         generatedCaption: brief.generated_caption || "",
         published: brief.published || false,
+        generatedVideoUrl: (brief as any).generated_video_url || undefined,
+        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
       

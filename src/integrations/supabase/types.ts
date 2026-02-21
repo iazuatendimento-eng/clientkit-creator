@@ -430,6 +430,8 @@ export type Database = {
           deadline: string | null
           description: string | null
           generated_caption: string | null
+          generated_video_expires_at: string | null
+          generated_video_url: string | null
           id: string
           published: boolean
           sort_order: number
@@ -447,6 +449,8 @@ export type Database = {
           deadline?: string | null
           description?: string | null
           generated_caption?: string | null
+          generated_video_expires_at?: string | null
+          generated_video_url?: string | null
           id?: string
           published?: boolean
           sort_order?: number
@@ -464,6 +468,8 @@ export type Database = {
           deadline?: string | null
           description?: string | null
           generated_caption?: string | null
+          generated_video_expires_at?: string | null
+          generated_video_url?: string | null
           id?: string
           published?: boolean
           sort_order?: number
