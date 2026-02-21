@@ -302,7 +302,7 @@ export function VideoGeneratorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Film className="h-5 w-5" />
@@ -310,7 +310,7 @@ export function VideoGeneratorModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
           {status === "loading" && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -440,7 +440,7 @@ export function VideoGeneratorModal({
                     imageElSize={getImageElSize(template.contentElements)}
                     imageClipShape={getImageClipShape(template.contentElements)}
                     pageImageAdjustments={pageImageAdjustments}
-                    className="w-full aspect-[9/16] max-h-[50vh]"
+                    className="w-full aspect-[9/16] max-h-[40vh]"
                   />
                 )}
               </div>
@@ -467,14 +467,25 @@ export function VideoGeneratorModal({
               {/* Download buttons - always visible */}
               <div className="grid grid-cols-2 gap-2">
                 <Button onClick={() => handleExport(false)} className="gap-2">
-                  <Volume2 className="h-4 w-4" />
+                  <Download className="h-4 w-4" />
                   Com Áudio
                 </Button>
                 <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
-                  <VolumeX className="h-4 w-4" />
+                  <Download className="h-4 w-4" />
                   Sem Áudio
                 </Button>
               </div>
+
+              {/* Regenerate with new video */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setAdjustments({ ...defaultAdjustments }); setPageTextAdjustments([]); setPageImageAdjustments([]); generateVideo(); }}
+                className="w-full gap-2 text-muted-foreground"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Gerar com outro vídeo
+              </Button>
             </>
           )}
         </div>
