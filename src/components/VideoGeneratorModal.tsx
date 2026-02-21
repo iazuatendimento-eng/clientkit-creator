@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check } from "lucide-react";
+import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -28,11 +28,13 @@ import { Input } from "@/components/ui/input";
 
 import type { PreloadedVideoData } from "@/hooks/useVideoPregenerate";
 
-function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }: {
+function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, onVideoSwapped, onImageSwapped }: {
   videoUrls: (string | null)[];
   currentEditPage: number;
   cardId: string;
+  materialImages: string[];
   onVideoSwapped: (pageIdx: number, url: string) => void;
+  onImageSwapped: (pageIdx: number, imageUrl: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,7 +55,10 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("video/")) { toast.error("Selecione um vídeo"); return; }
+    if (!file) { toast.error("Selecione um arquivo"); return; }
+    const isVideo = file.type.startsWith("video/");
+    const isImage = file.type.startsWith("image/");
+    if (!isVideo && !isImage) { toast.error("Selecione uma imagem ou vídeo"); return; }
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
@@ -61,10 +66,14 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }
       const { error } = await supabase.storage.from("card-uploads").upload(path, file, { contentType: file.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
-      onVideoSwapped(currentEditPage, urlData.publicUrl);
-      toast.success("Vídeo enviado! ✓");
+      if (isVideo) {
+        onVideoSwapped(currentEditPage, urlData.publicUrl);
+      } else {
+        onImageSwapped(currentEditPage, urlData.publicUrl);
+      }
+      toast.success("Arquivo enviado! ✓");
       setIsOpen(false);
-    } catch { toast.error("Erro ao enviar vídeo"); }
+    } catch { toast.error("Erro ao enviar arquivo"); }
     finally { setUploading(false); }
   };
 
@@ -72,7 +81,7 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }
     return (
       <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)} className="w-full gap-2 bg-destructive text-white hover:bg-destructive/90 hover:text-white border-none">
         <Film className="h-4 w-4" />
-        Vídeo Errado? Trocar (Página {currentEditPage + 1})
+        Trocar Fundo (Página {currentEditPage + 1})
       </Button>
     );
   }
@@ -80,7 +89,7 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }
   return (
     <div className="space-y-3 border rounded-lg p-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium">Trocar Vídeo — Página {currentEditPage + 1}</span>
+        <span className="text-xs font-medium">Trocar Fundo — Página {currentEditPage + 1}</span>
         <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="h-6 px-2 text-xs">✕</Button>
       </div>
       <label className={`cursor-pointer block ${uploading ? "pointer-events-none opacity-50" : ""}`}>
@@ -93,15 +102,36 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, onVideoSwapped }
           ) : (
             <div className="flex items-center justify-center gap-2">
               <Upload className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Enviar meu vídeo</span>
+              <span className="text-xs text-muted-foreground">Enviar imagem ou vídeo</span>
             </div>
           )}
         </div>
-        <input type="file" accept="video/*" className="hidden" onChange={handleUpload} disabled={uploading} />
+        <input type="file" accept="image/*,video/*" className="hidden" onChange={handleUpload} disabled={uploading} />
       </label>
+      {/* Material images from card uploads */}
+      {materialImages.length > 0 && (
+        <>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[10px] text-muted-foreground">📷 Fotos do cliente</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {materialImages.map((imgUrl, idx) => (
+              <div
+                key={idx}
+                onClick={() => { onImageSwapped(currentEditPage, imgUrl); toast.success("Imagem aplicada!"); setIsOpen(false); }}
+                className="relative cursor-pointer rounded overflow-hidden border hover:border-primary transition-all"
+              >
+                <img src={imgUrl} alt={`Material ${idx + 1}`} className="w-full h-16 object-cover" />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       <div className="flex items-center gap-2">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10px] text-muted-foreground">ou buscar</span>
+        <span className="text-[10px] text-muted-foreground">ou buscar vídeo</span>
         <div className="flex-1 h-px bg-border" />
       </div>
       <div className="flex gap-2">
@@ -158,7 +188,8 @@ export function VideoGeneratorModal({
   const [exportProgress, setExportProgress] = useState(0);
   const [exportedBlob, setExportedBlob] = useState<Blob | null>(null);
   const [pageTexts, setPageTexts] = useState<string[]>([]);
-
+  const [materialImages, setMaterialImages] = useState<string[]>([]);
+  const [searchedImages, setSearchedImages] = useState<string[]>([]);
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
   const [currentEditPage, setCurrentEditPage] = useState(0);
@@ -259,33 +290,54 @@ export function VideoGeneratorModal({
         piAdj = initPi;
       }
 
-      // Search for background videos
-      let bgVideoUrls: (string | null)[] = texts.map(() => null);
+      // Fetch material uploads for this card
+      let matImages: string[] = [];
       try {
-        const searchTerms = fullText.split(" ").slice(0, 6).join(" ");
-        let translatedTerms = searchTerms;
+        const { data: uploads } = await supabase
+          .from("card_uploads")
+          .select("file_url, file_type")
+          .eq("card_id", cardId)
+          .eq("upload_type", "material");
+        matImages = (uploads || [])
+          .filter(u => u.file_type.startsWith("image"))
+          .map(u => u.file_url);
+        setMaterialImages(matImages);
+      } catch { /* ignore */ }
+
+      // Use material images as background images for pages, or search for videos
+      const bgImages: string[] = texts.map((_, idx) => matImages[idx % Math.max(matImages.length, 1)] || "");
+      setSearchedImages(bgImages);
+
+      let bgVideoUrls: (string | null)[] = texts.map(() => null);
+      if (matImages.length === 0) {
+        // No material uploads — search for stock videos
         try {
-          const { data: transData } = await Promise.race([
-            supabase.functions.invoke("translate-text", { body: { text: searchTerms } }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000)),
-          ]);
-          if (transData?.translatedText) translatedTerms = transData.translatedText;
-        } catch { /* use original */ }
+          const searchTerms = fullText.split(" ").slice(0, 6).join(" ");
+          let translatedTerms = searchTerms;
+          try {
+            const { data: transData } = await Promise.race([
+              supabase.functions.invoke("translate-text", { body: { text: searchTerms } }),
+              new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000)),
+            ]);
+            if (transData?.translatedText) translatedTerms = transData.translatedText;
+          } catch { /* use original */ }
 
-        let results = await searchVideos(translatedTerms, Math.max(texts.length, 3));
-        if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
-        if (results.length === 0) results = await searchVideos("business technology", 3);
+          let results = await searchVideos(translatedTerms, Math.max(texts.length, 3));
+          if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
+          if (results.length === 0) results = await searchVideos("business technology", 3);
 
-        if (results.length > 0) {
-          bgVideoUrls = texts.map((_, idx) => results[idx % results.length]?.videoUrl || null);
+          if (results.length > 0) {
+            bgVideoUrls = texts.map((_, idx) => results[idx % results.length]?.videoUrl || null);
+          }
+        } catch (err) {
+          console.error("Video search error:", err);
         }
-      } catch (err) {
-        console.error("Video search error:", err);
       }
       setVideoUrls(bgVideoUrls);
 
       const useAdj = adj || adjustments;
-      const pages = await generateAllVideoPages(tmpl, texts, brandKit, [], useAdj, ptAdj, piAdj);
+      const pages = await generateAllVideoPages(tmpl, texts, brandKit, matImages.length > 0 ? bgImages : [], useAdj, ptAdj, piAdj);
+      setVideoPages(pages);
       setVideoPages(pages);
       setStatus("ready");
     } catch (err) {
@@ -310,6 +362,8 @@ export function VideoGeneratorModal({
         setPageTextAdjustments(preloadedData.pageTextAdjustments);
         setPageImageAdjustments(preloadedData.pageImageAdjustments);
         setAdjustments(preloadedData.adjustments);
+        setSearchedImages(preloadedData.searchedImages || []);
+        setMaterialImages(preloadedData.materialImages || []);
         setStatus("ready");
       } else {
         setAdjustments({ ...defaultAdjustments });
@@ -324,6 +378,8 @@ export function VideoGeneratorModal({
       setExportedBlob(null);
       setTemplate(null);
       setIsEditing(false);
+      setMaterialImages([]);
+      setSearchedImages([]);
     }
   }, [isOpen]);
 
@@ -331,7 +387,7 @@ export function VideoGeneratorModal({
     if (!template) return;
     setIsApplyingAdjustments(true);
     try {
-      const pages = await generateAllVideoPages(template, pageTexts, brandKit, [], adjustments, pageTextAdjustments, pageImageAdjustments);
+      const pages = await generateAllVideoPages(template, pageTexts, brandKit, searchedImages, adjustments, pageTextAdjustments, pageImageAdjustments);
       setVideoPages(pages);
       toast.success("Ajustes aplicados!");
     } catch (err) {
@@ -605,15 +661,44 @@ export function VideoGeneratorModal({
                 videoUrls={videoUrls}
                 currentEditPage={currentEditPage}
                 cardId={cardId}
+                materialImages={materialImages}
                 onVideoSwapped={(pageIdx, url) => {
+                  // Clear the searched image for this page so video takes priority
+                  setSearchedImages(prev => {
+                    const next = [...prev];
+                    next[pageIdx] = "";
+                    return next;
+                  });
                   setVideoUrls(prev => {
                     const next = [...prev];
                     next[pageIdx] = url;
                     return next;
                   });
-                  // Re-render pages with new video
+                  // Re-render pages without bg image for this page
                   if (template) {
-                    generateAllVideoPages(template, pageTexts, brandKit, [], adjustments, pageTextAdjustments, pageImageAdjustments)
+                    const newImages = [...searchedImages];
+                    newImages[pageIdx] = "";
+                    generateAllVideoPages(template, pageTexts, brandKit, newImages, adjustments, pageTextAdjustments, pageImageAdjustments)
+                      .then(pages => setVideoPages(pages));
+                  }
+                }}
+                onImageSwapped={(pageIdx, imageUrl) => {
+                  // Use image as background, clear video for this page
+                  setVideoUrls(prev => {
+                    const next = [...prev];
+                    next[pageIdx] = null;
+                    return next;
+                  });
+                  setSearchedImages(prev => {
+                    const next = [...prev];
+                    next[pageIdx] = imageUrl;
+                    return next;
+                  });
+                  // Re-render pages with new image
+                  if (template) {
+                    const newImages = [...searchedImages];
+                    newImages[pageIdx] = imageUrl;
+                    generateAllVideoPages(template, pageTexts, brandKit, newImages, adjustments, pageTextAdjustments, pageImageAdjustments)
                       .then(pages => setVideoPages(pages));
                   }
                 }}

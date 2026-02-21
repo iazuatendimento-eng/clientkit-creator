@@ -23,9 +23,12 @@ export interface PreloadedVideoData {
   pageTextAdjustments: PageTextAdjustment[];
   pageImageAdjustments: PageImageAdjustment[];
   adjustments: ElementAdjustments;
+  searchedImages: string[];
+  materialImages: string[];
 }
 
 export function useVideoPregenerate(
+  cardId: string,
   cardText: string,
   cardTitle: string,
   brandKit: any,
@@ -77,29 +80,46 @@ export function useVideoPregenerate(
         const initPi = texts.map(() => ({ ...defaultPageImageAdjustment }));
         const adj = { ...defaultAdjustments };
 
-        // Search for background videos
-        let bgVideoUrls: (string | null)[] = texts.map(() => null);
+        // Fetch material uploads
+        let matImages: string[] = [];
         try {
-          const searchTerms = fullText.split(" ").slice(0, 6).join(" ");
-          let translatedTerms = searchTerms;
-          try {
-            const { data: transData } = await Promise.race([
-              supabase.functions.invoke("translate-text", { body: { text: searchTerms } }),
-              new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000)),
-            ]);
-            if (transData?.translatedText) translatedTerms = transData.translatedText;
-          } catch { /* use original */ }
-
-          let results = await searchVideos(translatedTerms, Math.max(texts.length, 3));
-          if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
-          if (results.length === 0) results = await searchVideos("business technology", 3);
-
-          if (results.length > 0) {
-            bgVideoUrls = texts.map((_, idx) => results[idx % results.length]?.videoUrl || null);
-          }
+          const { data: uploads } = await supabase
+            .from("card_uploads")
+            .select("file_url, file_type")
+            .eq("card_id", cardId)
+            .eq("upload_type", "material");
+          matImages = (uploads || [])
+            .filter(u => u.file_type.startsWith("image"))
+            .map(u => u.file_url);
         } catch { /* ignore */ }
 
-        const pages = await generateAllVideoPages(tmpl, texts, brandKit, [], adj, initPt, initPi);
+        const bgImages: string[] = texts.map((_, idx) => matImages[idx % Math.max(matImages.length, 1)] || "");
+
+        // Search for background videos only if no material images
+        let bgVideoUrls: (string | null)[] = texts.map(() => null);
+        if (matImages.length === 0) {
+          try {
+            const searchTerms = fullText.split(" ").slice(0, 6).join(" ");
+            let translatedTerms = searchTerms;
+            try {
+              const { data: transData } = await Promise.race([
+                supabase.functions.invoke("translate-text", { body: { text: searchTerms } }),
+                new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000)),
+              ]);
+              if (transData?.translatedText) translatedTerms = transData.translatedText;
+            } catch { /* use original */ }
+
+            let results = await searchVideos(translatedTerms, Math.max(texts.length, 3));
+            if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
+            if (results.length === 0) results = await searchVideos("business technology", 3);
+
+            if (results.length > 0) {
+              bgVideoUrls = texts.map((_, idx) => results[idx % results.length]?.videoUrl || null);
+            }
+          } catch { /* ignore */ }
+        }
+
+        const pages = await generateAllVideoPages(tmpl, texts, brandKit, matImages.length > 0 ? bgImages : [], adj, initPt, initPi);
 
         setPreloadedData({
           template: tmpl,
@@ -109,6 +129,8 @@ export function useVideoPregenerate(
           pageTextAdjustments: initPt,
           pageImageAdjustments: initPi,
           adjustments: adj,
+          searchedImages: matImages.length > 0 ? bgImages : [],
+          materialImages: matImages,
         });
       } catch (err) {
         console.error("Video pregeneration error:", err);

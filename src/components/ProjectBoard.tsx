@@ -140,6 +140,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   // Pre-generate video in background so modal opens instantly
   const { preloadedData, isPreloading } = useVideoPregenerate(
+    brief.id,
     brief.description || brief.title,
     brief.title,
     brandKit,
