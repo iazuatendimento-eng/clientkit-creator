@@ -623,10 +623,10 @@ export async function encodeVideoSimple(
   extra?: { mimeType?: string; outputType?: string }
 ): Promise<Blob> {
   const { 
-    width, 
-    height, 
+    width: rawWidth, 
+    height: rawHeight, 
     pageDuration, 
-    fps = 30, 
+    fps: rawFps = 30, 
     motionEffect = "ken-burns",
     transitionEffect = "fade",
     textAnimation = "none",
@@ -641,6 +641,18 @@ export async function encodeVideoSimple(
     imageClipShape,
     onProgress 
   } = options;
+
+  // Mobile optimization: reduce resolution, FPS and bitrate so the encoder doesn't stall
+  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const mobileScale = isMobileDevice ? 0.5 : 1;
+  const width = Math.round(rawWidth * mobileScale);
+  const height = Math.round(rawHeight * mobileScale);
+  const fps = isMobileDevice ? Math.min(rawFps, 20) : rawFps;
+  const bitrate = isMobileDevice ? 4_000_000 : 12_000_000;
+
+  if (isMobileDevice) {
+    console.log(`[VideoEncoder] Mobile optimized: ${width}x${height} @${fps}fps ${bitrate/1e6}Mbps (was ${rawWidth}x${rawHeight})`);
+  }
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -764,7 +776,7 @@ export async function encodeVideoSimple(
   const stream = canvas.captureStream(fps);
   const mediaRecorder = new MediaRecorder(stream, {
     mimeType: chosenMime,
-    videoBitsPerSecond: 12_000_000,
+    videoBitsPerSecond: bitrate,
   });
 
   const chunks: Blob[] = [];
@@ -912,7 +924,7 @@ export async function encodeVideoSimple(
         // Always use setTimeout for encoding — requestAnimationFrame pauses when
         // the tab/screen is inactive (common on mobile), causing the export to stall.
         // A small delay (16ms on mobile) prevents CPU overload on weaker devices.
-        setTimeout(tick, isMobile ? 16 : 0);
+        setTimeout(tick, isMobile ? 50 : 0);
       } else {
         bgVideos.forEach(v => { if (v) v.pause(); });
         setTimeout(() => mediaRecorder.stop(), 300);
