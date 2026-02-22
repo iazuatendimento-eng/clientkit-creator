@@ -123,7 +123,55 @@ async function patchMP4Brand(blob: Blob): Promise<Blob> {
 
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress, audioUrl } = options;
+  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+  // ====== MOBILE PATH ======
+  // MediaRecorder + canvas.captureStream() is broken/unreliable on iOS Safari.
+  // Instead, encodeVideoSimple renders frames as JPEGs and encodes via FFmpeg directly.
+  if (isMobileDevice) {
+    console.log("[VideoEncoder] Mobile: frame-by-frame path");
+    onProgress?.(0.02);
+    const rawMp4 = await withTimeout(
+      encodeVideoSimple(pages, options),
+      600_000,
+      "gerar vídeo mobile"
+    );
+
+    // Add audio via FFmpeg if needed
+    if (audioUrl) {
+      try {
+        onProgress?.(0.88);
+        const ff = await loadFFmpeg();
+        await ff.writeFile("input.mp4", await fetchFile(rawMp4));
+        const audioResponse = await fetch(audioUrl);
+        if (audioResponse.ok) {
+          const audioBlob = await audioResponse.blob();
+          const ext = audioUrl.includes(".wav") ? "wav" : audioUrl.includes(".ogg") ? "ogg" : audioUrl.includes(".m4a") ? "m4a" : "mp3";
+          await ff.writeFile(`audio.${ext}`, await fetchFile(audioBlob));
+          await withTimeout(
+            ff.exec(["-i", "input.mp4", "-i", `audio.${ext}`, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]),
+            180_000,
+            "muxar áudio mobile"
+          );
+          const data = await ff.readFile("output.mp4");
+          let result = new Blob([new Uint8Array(data as unknown as ArrayBuffer)], { type: "video/mp4" });
+          result = await patchMP4Brand(result);
+          await ff.deleteFile("input.mp4").catch(() => {});
+          await ff.deleteFile("output.mp4").catch(() => {});
+          await ff.deleteFile(`audio.${ext}`).catch(() => {});
+          if (await isValidMP4(result)) { onProgress?.(1); return result; }
+        }
+      } catch (err) {
+        console.warn("[VideoEncoder] Mobile audio mux failed:", err);
+      }
+    }
+
+    const patched = await patchMP4Brand(rawMp4);
+    onProgress?.(1);
+    return patched;
+  }
+
+  // ====== DESKTOP PATH ======
   // Strategy: Record native MP4 (H.264 via Chrome's MediaRecorder), then REMUX
   // through FFmpeg to add faststart (moov atom at beginning) for WhatsApp compatibility.
   // We use -c:v copy (no re-encoding) so we don't need libx264 in the WASM build.
@@ -764,17 +812,226 @@ export async function encodeVideoSimple(
     })
   );
 
-  // Pick mime
-  // Prioritize MP4/H.264 on mobile (Safari/iOS only supports MP4 with MediaRecorder)
-  // then fall back to WebM codecs for desktop browsers
+  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
+  const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
+  const totalFrames = framesPerPage * images.length;
+
+  // --- Drawing helpers (shared by mobile & desktop paths) ---
+  const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
+    if (applyMotion && motionEffect !== "none") {
+      const motion = getMotionTransform(motionEffect, progress);
+      ctx.save();
+      ctx.translate(width / 2, height / 2);
+      ctx.rotate((motion.rotate * Math.PI) / 180);
+      ctx.scale(motion.scale, motion.scale);
+      ctx.translate(-width / 2 + (motion.translateX * width) / 100, -height / 2 + (motion.translateY * height) / 100);
+      ctx.drawImage(source, 0, 0, width, height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(source, 0, 0, width, height);
+    }
+  };
+
+  const drawOverlay = (overlay: HTMLImageElement, progress: number) => {
+    if (textAnimation === "none") {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(overlay, 0, 0, width, height);
+      return;
+    }
+    const anim = getTextAnimationTransform(textAnimation, progress, textAnimDuration);
+    ctx.save();
+    ctx.globalAlpha = anim.opacity;
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate((anim.rotate * Math.PI) / 180);
+    ctx.scale(anim.scale, anim.scale);
+    ctx.translate(-width / 2 + (anim.translateX * width) / 100, -height / 2 + (anim.translateY * height) / 100);
+    ctx.drawImage(overlay, 0, 0, width, height);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  };
+
+  const drawLogoOverlay = (logoImg: HTMLImageElement, progress: number) => {
+    if (logoAnimation === "none") {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(logoImg, 0, 0, width, height);
+      return;
+    }
+    const anim = getLogoAnimationTransform(logoAnimation, progress);
+    ctx.save();
+    ctx.globalAlpha = anim.opacity;
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate((anim.rotate * Math.PI) / 180);
+    ctx.scale(anim.scale, anim.scale);
+    ctx.translate(-width / 2 + (anim.translateX * width) / 100, -height / 2 + (anim.translateY * height) / 100);
+    ctx.drawImage(logoImg, 0, 0, width, height);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  };
+
+  // Pure rendering function for a single frame (no side effects)
+  const renderFrameToCanvas = (frameNum: number) => {
+    const pageIdx = Math.floor(frameNum / framesPerPage);
+    const frameInPage = frameNum - (pageIdx * framesPerPage);
+    if (pageIdx >= images.length) return;
+
+    const img = images[pageIdx];
+    const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
+    const bgVideo = bgVideos[pageIdx] || null;
+    const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
+    const pageProgress = frameInPage / framesPerPage;
+
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, width, height);
+
+    if (isTransitionPhase && nextImg) {
+      const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
+      applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
+    } else if (bgVideo && bgVideo.readyState >= 2) {
+      try {
+        const vw = bgVideo.videoWidth;
+        const vh = bgVideo.videoHeight;
+        let dx = 0, dy = 0, dw = width, dh = height;
+        if (imageRect) {
+          dx = (imageRect.left / 100) * width;
+          dy = (imageRect.top / 100) * height;
+          dw = (imageRect.width / 100) * width;
+          dh = (imageRect.height / 100) * height;
+        }
+        const destRatio = dw / dh;
+        const videoRatio = vw / vh;
+        let sx = 0, sy = 0, sw = vw, sh = vh;
+        if (videoRatio > destRatio) { sw = vh * destRatio; sx = (vw - sw) / 2; }
+        else { sh = vw / destRatio; sy = (vh - sh) / 2; }
+
+        const applyMotionToCanvas = motionEffect !== "none";
+        if (applyMotionToCanvas) {
+          const motion = getMotionTransform(motionEffect, pageProgress);
+          ctx.save();
+          ctx.translate(width / 2, height / 2);
+          ctx.rotate((motion.rotate * Math.PI) / 180);
+          ctx.scale(motion.scale, motion.scale);
+          ctx.translate(-width / 2 + (motion.translateX * width) / 100, -height / 2 + (motion.translateY * height) / 100);
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const adj = pageImageAdjustments?.[pageIdx];
+        const clipShape = imageClipShape || "rect";
+
+        if (adj && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
+          const scale = adj.imageScale / 100;
+          const scaledW = dw * scale;
+          const scaledH = dh * scale;
+          const offsetX = (adj.imageX / dw) * scaledW;
+          const offsetY = (adj.imageY / dh) * scaledH;
+          const adjDx = dx + (dw - scaledW) / 2 + offsetX;
+          const adjDy = dy + (dh - scaledH) / 2 + offsetY;
+          ctx.save();
+          applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
+          ctx.drawImage(bgVideo, sx, sy, sw, sh, adjDx, adjDy, scaledW, scaledH);
+          ctx.restore();
+        } else {
+          ctx.save();
+          applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
+          ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh);
+          ctx.restore();
+        }
+
+        const frameOverlay = frameOverlayImages[pageIdx];
+        if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
+        if (applyMotionToCanvas) ctx.restore();
+
+        const overlay = overlayImages[pageIdx];
+        if (overlay) drawOverlay(overlay, pageProgress);
+        const logoOverlay = logoOverlayImages[pageIdx];
+        if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+      } catch (e) {
+        console.warn("[VideoEncoder] Video frame draw failed, using static:", e);
+        drawSource(img, true, pageProgress);
+      }
+    } else {
+      drawSource(img, true, pageProgress);
+      const frameOverlay = frameOverlayImages[pageIdx];
+      if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
+      const overlay = overlayImages[pageIdx];
+      if (overlay) drawOverlay(overlay, pageProgress);
+      const logoOverlay = logoOverlayImages[pageIdx];
+      if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+    }
+  };
+
+  console.log("[VideoEncoder] Config:", {
+    pages: images.length, width, height, pageDuration, fps,
+    framesPerPage, transitionFrames, totalFrames,
+    motionEffect, transitionEffect, textAnimation, logoAnimation,
+    bgVideoCount: bgVideos.filter(Boolean).length,
+    isMobileDevice,
+  });
+
+  // ====== MOBILE PATH: frame-by-frame JPEG capture + FFmpeg encoding ======
+  // MediaRecorder + canvas.captureStream() is broken on iOS Safari, causing
+  // the export to stall at 10%. Instead we capture each rendered frame as JPEG
+  // and assemble into MP4 using FFmpeg WASM.
+  if (isMobileDevice) {
+    console.log("[VideoEncoder] Mobile: frame-by-frame FFmpeg encoding (bypassing MediaRecorder)");
+
+    const ff = await loadFFmpeg();
+
+    for (let gf = 0; gf < totalFrames; gf++) {
+      renderFrameToCanvas(gf);
+
+      const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.90)
+      );
+      const fName = `f${String(gf).padStart(6, "0")}.jpg`;
+      await ff.writeFile(fName, new Uint8Array(await blob.arrayBuffer()));
+
+      if (gf % 5 === 0) {
+        onProgress?.(Math.min(0.75, (gf / totalFrames) * 0.75));
+        // Yield to UI thread so progress updates
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+
+    bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
+    onProgress?.(0.80);
+
+    try {
+      await ff.exec([
+        "-framerate", String(fps),
+        "-i", "f%06d.jpg",
+        "-c:v", "mpeg4", "-q:v", "3",
+        "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart",
+        "-f", "mp4", "output.mp4",
+      ]);
+
+      onProgress?.(0.92);
+      const data = await ff.readFile("output.mp4");
+
+      // Cleanup
+      for (let i = 0; i < totalFrames; i++) {
+        await ff.deleteFile(`f${String(i).padStart(6, "0")}.jpg`).catch(() => {});
+      }
+      await ff.deleteFile("output.mp4").catch(() => {});
+
+      onProgress?.(1);
+      return new Blob([new Uint8Array(data as unknown as ArrayBuffer)], { type: "video/mp4" });
+    } catch (ffErr) {
+      console.error("[VideoEncoder] Mobile FFmpeg encode failed:", ffErr);
+      for (let i = 0; i < totalFrames; i++) {
+        await ff.deleteFile(`f${String(i).padStart(6, "0")}.jpg`).catch(() => {});
+      }
+      throw ffErr;
+    }
+  }
+
+  // ====== DESKTOP PATH: MediaRecorder approach ======
   const chosenMime =
     (extra?.mimeType && MediaRecorder.isTypeSupported(extra.mimeType) ? extra.mimeType : null) ||
-    (isMobileDevice
-      ? pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"])
-      : pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"])) ||
+    pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"]) ||
     "video/webm";
 
-  console.log(`[VideoEncoder] Chosen MIME: ${chosenMime} (mobile: ${isMobileDevice})`);
+  console.log(`[VideoEncoder] Desktop MIME: ${chosenMime}`);
 
   const outType = extra?.outputType || (chosenMime.startsWith("video/mp4") ? "video/mp4" : "video/webm");
 
@@ -789,134 +1046,47 @@ export async function encodeVideoSimple(
     if (e.data.size > 0) chunks.push(e.data);
   };
 
-  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
-  const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
-  const totalFrames = framesPerPage * images.length;
-
-  console.log("[VideoEncoder] Config:", { 
-    pages: images.length, width, height, pageDuration, fps, 
-    framesPerPage, transitionFrames, totalFrames,
-    motionEffect, transitionEffect, textAnimation, logoAnimation, chosenMime,
-    bgVideoCount: bgVideos.filter(Boolean).length,
-    frameOverlayCount: frameOverlayImages.filter(Boolean).length,
-    overlayCount: overlayImages.filter(Boolean).length,
-    logoOverlayCount: logoOverlayImages.filter(Boolean).length,
-  });
-
   return new Promise((resolve, reject) => {
     mediaRecorder.onstop = () => {
-      // Cleanup: pause all background videos
-      bgVideos.forEach(v => { if (v) { v.pause(); v.src = ""; } });
+      bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
       resolve(new Blob(chunks, { type: outType }));
     };
     mediaRecorder.onerror = reject;
     mediaRecorder.start(250);
 
     let globalFrame = 0;
-
-    const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
-      if (applyMotion && motionEffect !== "none") {
-        const motion = getMotionTransform(motionEffect, progress);
-        ctx.save();
-        ctx.translate(width / 2, height / 2);
-        ctx.rotate((motion.rotate * Math.PI) / 180);
-        ctx.scale(motion.scale, motion.scale);
-        ctx.translate(
-          -width / 2 + (motion.translateX * width) / 100,
-          -height / 2 + (motion.translateY * height) / 100
-        );
-        ctx.drawImage(source, 0, 0, width, height);
-        ctx.restore();
-      } else {
-        ctx.drawImage(source, 0, 0, width, height);
-      }
-    };
-
-    // Draw overlay with text animation
-    const drawOverlay = (overlay: HTMLImageElement, progress: number) => {
-      if (textAnimation === "none") {
-        ctx.globalAlpha = 1;
-        ctx.drawImage(overlay, 0, 0, width, height);
-        return;
-      }
-
-      const anim = getTextAnimationTransform(textAnimation, progress, textAnimDuration);
-      ctx.save();
-      ctx.globalAlpha = anim.opacity;
-      ctx.translate(width / 2, height / 2);
-      ctx.rotate((anim.rotate * Math.PI) / 180);
-      ctx.scale(anim.scale, anim.scale);
-      ctx.translate(
-        -width / 2 + (anim.translateX * width) / 100,
-        -height / 2 + (anim.translateY * height) / 100
-      );
-      ctx.drawImage(overlay, 0, 0, width, height);
-      ctx.restore();
-      ctx.globalAlpha = 1;
-    };
-
-    // Draw logo overlay with logo animation
-    const drawLogoOverlay = (logoImg: HTMLImageElement, progress: number) => {
-      if (logoAnimation === "none") {
-        ctx.globalAlpha = 1;
-        ctx.drawImage(logoImg, 0, 0, width, height);
-        return;
-      }
-
-      const anim = getLogoAnimationTransform(logoAnimation, progress);
-      ctx.save();
-      ctx.globalAlpha = anim.opacity;
-      ctx.translate(width / 2, height / 2);
-      ctx.rotate((anim.rotate * Math.PI) / 180);
-      ctx.scale(anim.scale, anim.scale);
-      ctx.translate(
-        -width / 2 + (anim.translateX * width) / 100,
-        -height / 2 + (anim.translateY * height) / 100
-      );
-      ctx.drawImage(logoImg, 0, 0, width, height);
-      ctx.restore();
-      ctx.globalAlpha = 1;
-    };
-
-    // Track which video is currently playing
     let activeVideoIdx = -1;
+    let lastPageIdx = 0;
 
     const startVideoForPage = (pageIdx: number) => {
-      // Stop previous video
-      if (activeVideoIdx >= 0 && bgVideos[activeVideoIdx]) {
-        bgVideos[activeVideoIdx]!.pause();
-      }
+      if (activeVideoIdx >= 0 && bgVideos[activeVideoIdx]) bgVideos[activeVideoIdx]!.pause();
       activeVideoIdx = pageIdx;
       const v = bgVideos[pageIdx];
-      if (v) {
-        v.currentTime = 0;
-        v.play().catch(() => {});
-      }
+      if (v) { v.currentTime = 0; v.play().catch(() => {}); }
     };
 
-    // Start the first page's video immediately
-    if (bgVideos[0]) {
-      startVideoForPage(0);
-    }
+    if (bgVideos[0]) startVideoForPage(0);
 
-    let lastPageIdx = 0;
-    // Mobile devices need smaller batches to avoid choking the encoder
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const FRAMES_PER_BATCH = isMobile ? 1 : 4;
-
+    const FRAMES_PER_BATCH = 4;
     let progressCounter = 0;
-    const PROGRESS_INTERVAL = isMobile ? 3 : 10; // Report progress less often on mobile
+    const PROGRESS_INTERVAL = 10;
 
     const tick = () => {
       if (globalFrame >= totalFrames) {
-        bgVideos.forEach(v => { if (v) v.pause(); });
+        bgVideos.forEach((v) => { if (v) v.pause(); });
         setTimeout(() => mediaRecorder.stop(), 300);
         return;
       }
 
       let framesThisBatch = 0;
       while (framesThisBatch < FRAMES_PER_BATCH && globalFrame < totalFrames) {
-        renderOneFrame();
+        const pageIdx = Math.floor(globalFrame / framesPerPage);
+        if (pageIdx !== lastPageIdx) {
+          startVideoForPage(pageIdx);
+          lastPageIdx = pageIdx;
+        }
+        renderFrameToCanvas(globalFrame);
+        globalFrame++;
         framesThisBatch++;
       }
 
@@ -926,163 +1096,11 @@ export async function encodeVideoSimple(
       }
 
       if (globalFrame < totalFrames) {
-        // Always use setTimeout for encoding — requestAnimationFrame pauses when
-        // the tab/screen is inactive (common on mobile), causing the export to stall.
-        // A small delay (16ms on mobile) prevents CPU overload on weaker devices.
-        setTimeout(tick, isMobile ? 8 : 0);
+        setTimeout(tick, 0);
       } else {
-        bgVideos.forEach(v => { if (v) v.pause(); });
+        bgVideos.forEach((v) => { if (v) v.pause(); });
         setTimeout(() => mediaRecorder.stop(), 300);
       }
-    };
-
-    const renderOneFrame = () => {
-
-      const pageIdx = Math.floor(globalFrame / framesPerPage);
-      const frameInPage = globalFrame - (pageIdx * framesPerPage);
-
-      if (pageIdx >= images.length) {
-        bgVideos.forEach(v => { if (v) v.pause(); });
-        setTimeout(() => mediaRecorder.stop(), 200);
-        return;
-      }
-
-      // Start video for new page
-      if (pageIdx !== lastPageIdx) {
-        startVideoForPage(pageIdx);
-        lastPageIdx = pageIdx;
-      }
-
-      const img = images[pageIdx];
-      const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
-      const bgVideo = bgVideos[pageIdx] || null;
-
-      const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
-      const pageProgress = frameInPage / framesPerPage;
-
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, width, height);
-
-      if (isTransitionPhase && nextImg) {
-        const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
-        applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
-      } else if (bgVideo && bgVideo.readyState >= 2) {
-        // Draw the current playing video frame with motion effect applied to the whole composition
-        try {
-          const vw = bgVideo.videoWidth;
-          const vh = bgVideo.videoHeight;
-
-          // Calculate destination rect based on imageRect or fullscreen
-          let dx = 0, dy = 0, dw = width, dh = height;
-          if (imageRect) {
-            dx = (imageRect.left / 100) * width;
-            dy = (imageRect.top / 100) * height;
-            dw = (imageRect.width / 100) * width;
-            dh = (imageRect.height / 100) * height;
-          }
-
-          const destRatio = dw / dh;
-          const videoRatio = vw / vh;
-          let sx = 0, sy = 0, sw = vw, sh = vh;
-          if (videoRatio > destRatio) {
-            sw = vh * destRatio;
-            sx = (vw - sw) / 2;
-          } else {
-            sh = vw / destRatio;
-            sy = (vh - sh) / 2;
-          }
-
-          // Apply motion effect to the entire canvas
-          const applyMotionToCanvas = motionEffect !== "none";
-          if (applyMotionToCanvas) {
-            const motion = getMotionTransform(motionEffect, pageProgress);
-            ctx.save();
-            ctx.translate(width / 2, height / 2);
-            ctx.rotate((motion.rotate * Math.PI) / 180);
-            ctx.scale(motion.scale, motion.scale);
-            ctx.translate(
-              -width / 2 + (motion.translateX * width) / 100,
-              -height / 2 + (motion.translateY * height) / 100
-            );
-          }
-
-          // Draw static page image first as background (has bg color, shapes without video area)
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // Apply per-page image adjustments (position/scale) and clip shape to the video
-          const adj = pageImageAdjustments?.[pageIdx];
-          const clipShape = imageClipShape || "rect";
-
-          if (adj && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
-            const scale = adj.imageScale / 100;
-            const scaledW = dw * scale;
-            const scaledH = dh * scale;
-            const offsetX = (adj.imageX / dw) * scaledW;
-            const offsetY = (adj.imageY / dh) * scaledH;
-            const adjDx = dx + (dw - scaledW) / 2 + offsetX;
-            const adjDy = dy + (dh - scaledH) / 2 + offsetY;
-
-            ctx.save();
-            applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
-            ctx.drawImage(bgVideo, sx, sy, sw, sh, adjDx, adjDy, scaledW, scaledH);
-            ctx.restore();
-          } else {
-            // Draw video in the image placeholder area with clip shape
-            ctx.save();
-            applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
-            ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh);
-            ctx.restore();
-          }
-
-          // Draw frame overlay (decorative shapes - static, no animation)
-          const frameOverlay = frameOverlayImages[pageIdx];
-          if (frameOverlay) {
-            ctx.drawImage(frameOverlay, 0, 0, width, height);
-          }
-
-          // Restore motion transform before drawing animated overlays
-          if (applyMotionToCanvas) {
-            ctx.restore();
-          }
-
-          // Draw overlay (transparent PNG with text/elements) on top with animation
-          const overlay = overlayImages[pageIdx];
-          if (overlay) {
-            drawOverlay(overlay, pageProgress);
-          }
-          // Draw logo overlay on top with its own animation
-          const logoOverlay = logoOverlayImages[pageIdx];
-          if (logoOverlay) {
-            drawLogoOverlay(logoOverlay, pageProgress);
-          }
-        } catch (e) {
-          console.warn("[VideoEncoder] Video frame draw failed, using static:", e);
-          drawSource(img, true, pageProgress);
-        }
-      } else {
-        // No background video — use static image with motion effects
-        drawSource(img, true, pageProgress);
-
-        // Draw frame overlay (decorative shapes)
-        const frameOverlay = frameOverlayImages[pageIdx];
-        if (frameOverlay) {
-          ctx.drawImage(frameOverlay, 0, 0, width, height);
-        }
-
-        // Draw text overlay on top with animation
-        const overlay = overlayImages[pageIdx];
-        if (overlay) {
-          drawOverlay(overlay, pageProgress);
-        }
-
-        // Draw logo overlay on top with its own animation
-        const logoOverlay = logoOverlayImages[pageIdx];
-        if (logoOverlay) {
-          drawLogoOverlay(logoOverlay, pageProgress);
-        }
-      }
-
-      globalFrame++;
     };
 
     setTimeout(tick, 0);
