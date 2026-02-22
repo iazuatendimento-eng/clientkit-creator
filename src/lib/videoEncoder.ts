@@ -642,16 +642,15 @@ export async function encodeVideoSimple(
     onProgress 
   } = options;
 
-  // Mobile optimization: reduce resolution, FPS and bitrate so the encoder doesn't stall
+  // Keep full resolution on all devices — quality matters for social media
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const mobileScale = isMobileDevice ? 0.5 : 1;
-  const width = Math.round(rawWidth * mobileScale);
-  const height = Math.round(rawHeight * mobileScale);
-  const fps = isMobileDevice ? Math.min(rawFps, 20) : rawFps;
-  const bitrate = isMobileDevice ? 4_000_000 : 12_000_000;
+  const width = rawWidth;
+  const height = rawHeight;
+  const fps = rawFps;
+  const bitrate = 12_000_000;
 
   if (isMobileDevice) {
-    console.log(`[VideoEncoder] Mobile optimized: ${width}x${height} @${fps}fps ${bitrate/1e6}Mbps (was ${rawWidth}x${rawHeight})`);
+    console.log(`[VideoEncoder] Mobile device detected: ${width}x${height} @${fps}fps`);
   }
 
   const canvas = document.createElement("canvas");
@@ -766,10 +765,16 @@ export async function encodeVideoSimple(
   );
 
   // Pick mime
+  // Prioritize MP4/H.264 on mobile (Safari/iOS only supports MP4 with MediaRecorder)
+  // then fall back to WebM codecs for desktop browsers
   const chosenMime =
     (extra?.mimeType && MediaRecorder.isTypeSupported(extra.mimeType) ? extra.mimeType : null) ||
-    pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) ||
+    (isMobileDevice
+      ? pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"])
+      : pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"])) ||
     "video/webm";
+
+  console.log(`[VideoEncoder] Chosen MIME: ${chosenMime} (mobile: ${isMobileDevice})`);
 
   const outType = extra?.outputType || (chosenMime.startsWith("video/mp4") ? "video/mp4" : "video/webm");
 
@@ -924,7 +929,7 @@ export async function encodeVideoSimple(
         // Always use setTimeout for encoding — requestAnimationFrame pauses when
         // the tab/screen is inactive (common on mobile), causing the export to stall.
         // A small delay (16ms on mobile) prevents CPU overload on weaker devices.
-        setTimeout(tick, isMobile ? 50 : 0);
+        setTimeout(tick, isMobile ? 8 : 0);
       } else {
         bgVideos.forEach(v => { if (v) v.pause(); });
         setTimeout(() => mediaRecorder.stop(), 300);
