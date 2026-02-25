@@ -1442,7 +1442,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       clearTimeout(debounceTimerRef.current);
     }
     
-    // Set new debounced timer (400ms for smoother experience)
+    // Set new debounced timer (100ms for near-instant feedback)
     debounceTimerRef.current = setTimeout(() => {
       regenerateLivePreview(selectedArt, {
         photoOffsetX,
@@ -1464,7 +1464,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         contactScaleY,
         shapeOverrides,
       });
-    }, 400);
+    }, 100);
     
     return () => {
       if (debounceTimerRef.current) {
