@@ -1433,8 +1433,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   }, [template]);
 
-  // Auto-trigger live preview when any adjustment value changes while dialog is open
-  useEffect(() => {
+  // Trigger live preview regeneration (called on drag end or slider change)
+  const triggerLivePreview = useCallback(() => {
     if (!isAdjustDialogOpen || !selectedArt) return;
     
     // Clear existing timer
@@ -1442,7 +1442,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       clearTimeout(debounceTimerRef.current);
     }
     
-    // Set new debounced timer (100ms for near-instant feedback)
     debounceTimerRef.current = setTimeout(() => {
       regenerateLivePreview(selectedArt, {
         photoOffsetX,
@@ -1464,15 +1463,23 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         contactScaleY,
         shapeOverrides,
       });
-    }, 100);
-    
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
+    }, 50);
   }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, photoScale, photoFrame, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, shapeOverrides, regenerateLivePreview]);
 
+  // Only auto-trigger on initial open (not during drag)
+  const adjustDialogJustOpened = useRef(false);
+  useEffect(() => {
+    if (isAdjustDialogOpen && selectedArt) {
+      adjustDialogJustOpened.current = true;
+    }
+  }, [isAdjustDialogOpen, selectedArt]);
+
+  useEffect(() => {
+    if (adjustDialogJustOpened.current) {
+      adjustDialogJustOpened.current = false;
+      triggerLivePreview();
+    }
+  }, [triggerLivePreview]);
   const handleApplyElementOverrides = async () => {
     if (!selectedArt) return;
     const index = clientArts.findIndex((a) => 
@@ -2279,6 +2286,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               setContactScaleY={setContactScaleY}
               shapeOverrides={shapeOverrides}
               setShapeOverrides={setShapeOverrides}
+              onDragEnd={triggerLivePreview}
             />
 
             <p className="text-xs text-muted-foreground text-center pt-2">
