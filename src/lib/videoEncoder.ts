@@ -269,19 +269,40 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     onProgress?.(0.06);
     console.log("[VideoEncoder] WebCodecs API exists, starting encode...");
     
-    try {
-      onProgress?.(0.07);
-      const rawBlob = await withTimeout(
-        encodeVideoWithWebCodecs(pages, options),
-        600_000,
-        "gerar vídeo mobile (WebCodecs)"
-      );
-      console.log("[VideoEncoder] WebCodecs SUCCESS! blob size:", rawBlob.size);
-      onProgress?.(1);
-      return rawBlob;
-    } catch (wcErr) {
-      console.error("[VideoEncoder] WebCodecs encode FAILED:", wcErr);
-      throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
+    // Try full resolution first, then retry at lower resolution if it fails
+    const attempts: { label: string; opts: VideoEncoderOptions }[] = [
+      { label: "full-res", opts: options },
+    ];
+    
+    // Only add reduced attempt if resolution is large
+    if (options.width > 720 || options.height > 1280) {
+      const scale = Math.min(720 / options.width, 1280 / options.height, 1);
+      const rw = Math.round(options.width * scale / 2) * 2; // ensure even
+      const rh = Math.round(options.height * scale / 2) * 2;
+      attempts.push({ label: `reduced-${rw}x${rh}`, opts: { ...options, width: rw, height: rh } });
+    }
+    
+    for (const attempt of attempts) {
+      try {
+        onProgress?.(0.07);
+        console.log("[VideoEncoder] Mobile attempt:", attempt.label, attempt.opts.width, "x", attempt.opts.height);
+        const rawBlob = await withTimeout(
+          encodeVideoWithWebCodecs(pages, attempt.opts),
+          600_000,
+          "gerar vídeo mobile (WebCodecs)"
+        );
+        console.log("[VideoEncoder] WebCodecs SUCCESS!", attempt.label, "blob size:", rawBlob.size);
+        onProgress?.(1);
+        return rawBlob;
+      } catch (wcErr) {
+        console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
+        if (attempt === attempts[attempts.length - 1]) {
+          // Last attempt failed
+          throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
+        }
+        console.log("[VideoEncoder] Retrying with lower resolution...");
+        onProgress?.(0.05);
+      }
     }
   }
 
