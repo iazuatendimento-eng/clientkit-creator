@@ -617,23 +617,19 @@ export function ArtAdjustOverlay({
     const isActive = active === part;
 
     const HandleDot = ({ h }: { h: Handle }) => {
-      // Keep handles INSIDE the box so they never get clipped by the container.
-      const pos =
-        h === "nw"
-          ? "left-0 top-0"
-          : h === "ne"
-            ? "right-0 top-0 -translate-x-full"
-            : h === "sw"
-              ? "left-0 bottom-0 -translate-y-full"
-              : h === "se"
-                ? "right-0 bottom-0 -translate-x-full -translate-y-full"
-                : h === "n"
-                  ? "left-1/2 top-0 -translate-x-1/2"
-                  : h === "s"
-                    ? "left-1/2 bottom-0 -translate-x-1/2 -translate-y-full"
-                    : h === "w"
-                      ? "left-0 top-1/2 -translate-y-1/2"
-                      : "right-0 top-1/2 -translate-x-full -translate-y-1/2";
+      // Position handles centered on the border edges/corners
+      const style: React.CSSProperties = {};
+      const size = 10;
+      const half = -size / 2;
+
+      if (h === "nw") { style.left = half; style.top = half; }
+      else if (h === "ne") { style.right = half; style.top = half; }
+      else if (h === "sw") { style.left = half; style.bottom = half; }
+      else if (h === "se") { style.right = half; style.bottom = half; }
+      else if (h === "n") { style.left = "50%"; style.top = half; style.transform = "translateX(-50%)"; }
+      else if (h === "s") { style.left = "50%"; style.bottom = half; style.transform = "translateX(-50%)"; }
+      else if (h === "w") { style.left = half; style.top = "50%"; style.transform = "translateY(-50%)"; }
+      else if (h === "e") { style.right = half; style.top = "50%"; style.transform = "translateY(-50%)"; }
 
       const cursor =
         h === "n" || h === "s"
@@ -646,19 +642,15 @@ export function ArtAdjustOverlay({
 
       return (
         <div
-          className={cn(
-            "absolute z-30 touch-none",
-            pos,
-            cursor,
-            "h-6 w-6 flex items-center justify-center"
-          )}
+          className={cn("absolute z-30 touch-none", cursor)}
+          style={{ ...style, width: size, height: size }}
           onPointerDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
             begin(e, part, "resize", h);
           }}
         >
-          <div className="h-4 w-4 rounded-sm border-2 border-background bg-primary shadow-md" />
+          <div className="w-full h-full rounded-[2px] bg-white border border-primary shadow-sm" />
         </div>
       );
     };
@@ -666,13 +658,23 @@ export function ArtAdjustOverlay({
     return (
       <div
         className={cn(
-          "absolute rounded-md border-2 border-dashed bg-background/0 touch-none",
-          isActive ? "border-primary bg-primary/5 z-30" : "border-border/70 hover:border-primary/70 z-10"
+          "absolute touch-none cursor-move",
+          isActive ? "z-30" : "z-10"
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
         onPointerDown={(e) => begin(e, part, "move")}
       >
-        <div className="absolute -top-6 left-0 rounded border bg-background/80 px-1.5 py-0.5 text-[10px] text-foreground shadow-sm z-30">
+        {/* Border lines - Canva style solid */}
+        <div className={cn(
+          "absolute inset-0 border-[1.5px]",
+          isActive ? "border-primary" : "border-primary/40 hover:border-primary/70"
+        )} />
+
+        {/* Label badge */}
+        <div className={cn(
+          "absolute -top-5 left-1/2 -translate-x-1/2 rounded-sm px-1.5 py-0.5 text-[9px] font-medium shadow-sm whitespace-nowrap",
+          isActive ? "bg-primary text-primary-foreground" : "bg-background/90 text-muted-foreground border border-border/50"
+        )}>
           {label}
         </div>
 
