@@ -610,10 +610,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       </span>
                     </div>
                     <div className="flex flex-col gap-2 min-w-0">
-                      <Button onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
+                      <Button onClick={async (e) => { e.stopPropagation(); await handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); onStatusChange(brief.id, "completed"); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
                         <span>Baixar Com Áudio</span>
                       </Button>
-                      <Button variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
+                      <Button variant="outline" onClick={async (e) => { e.stopPropagation(); await handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); onStatusChange(brief.id, "completed"); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
                         <span>Baixar Sem Áudio</span>
                       </Button>
                     </div>
@@ -635,6 +635,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                             .update({ generated_video_url: null, generated_video_expires_at: null })
                             .eq("id", brief.id);
                           setDismissed(true);
+                          onStatusChange(brief.id, "completed");
                           toast.success("Vídeo removido!");
                         } catch {
                           toast.error("Erro ao remover");
@@ -1028,7 +1029,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         client_id: clientId,
         title: text,
         description: text,
-        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        deadline: new Date().toISOString().split('T')[0],
         status: "todo" as const,
         brand_kit_id: newBrief.brandKitId || null,
         generated_caption: generatedCaption,
@@ -1101,7 +1102,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         newBrief.brandKitId = brandKits[0].id;
       }
 
-      const createPromises = paragraphs.map(async (text) => {
+      const createPromises = paragraphs.map(async (text, index) => {
         // Gerar legenda para cada card
         let generatedCaption = "";
         try {
@@ -1125,11 +1126,15 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           console.error("Erro ao gerar legenda:", captionError);
         }
 
+        // Sequential dates: today + index days
+        const deadlineDate = new Date();
+        deadlineDate.setDate(deadlineDate.getDate() + index);
+
         const briefData = {
           client_id: clientId,
           title: text,
           description: text,
-          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          deadline: deadlineDate.toISOString().split('T')[0],
           status: "todo" as const,
           brand_kit_id: newBrief.brandKitId || null,
           generated_caption: generatedCaption,
