@@ -207,12 +207,14 @@ export function ArtAdjustOverlay({
       if (!els.textEl) return null;
       const scaledW = els.textEl.width * (textFontSize / 100);
       const scaledH = els.textEl.height * (textFontSize / 100);
-      return {
-        x: els.textEl.x + textX,
-        y: els.textEl.y + textY,
-        w: scaledW,
-        h: Math.max(scaledH, els.textEl.height),
-      };
+      // Clamp text box to stay within template bounds
+      const rawX = els.textEl.x + textX;
+      const rawY = els.textEl.y + textY;
+      const x = clamp(rawX, 0, template.width - 10);
+      const y = clamp(rawY, 0, template.height - 10);
+      const w = Math.min(scaledW, template.width - x);
+      const h = Math.min(Math.max(scaledH, els.textEl.height), template.height - y);
+      return { x, y, w, h };
     }
 
     if (isShapePart(part)) {
