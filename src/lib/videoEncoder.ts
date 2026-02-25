@@ -1,6 +1,6 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-
+import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
 export type TransitionEffect = "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "zoom-out";
@@ -121,6 +121,107 @@ async function patchMP4Brand(blob: Blob): Promise<Blob> {
   }
 }
 
+// Check if WebCodecs VideoEncoder is available (iOS 16.4+, Chrome 94+)
+function hasWebCodecs(): boolean {
+  return typeof VideoEncoder !== "undefined" && typeof VideoFrame !== "undefined";
+}
+
+// WebCodecs-based encoder using mp4-muxer — bypasses broken MediaRecorder entirely
+export async function encodeWithWebCodecs(
+  pages: string[],
+  options: VideoEncoderOptions,
+  renderFrame: (canvas: HTMLCanvasElement | OffscreenCanvas, ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, frameNum: number) => void,
+  totalFrames: number,
+): Promise<Blob> {
+  const { width, height, fps = 24, onProgress } = options;
+
+  console.log("[WebCodecs] Starting encode:", { width, height, fps, totalFrames });
+
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: {
+      codec: "avc",
+      width,
+      height,
+    },
+    fastStart: "in-memory",
+  });
+
+  let framesEncoded = 0;
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => {
+      muxer.addVideoChunk(chunk, meta ?? undefined);
+      framesEncoded++;
+    },
+    error: (e) => console.error("[WebCodecs] Encoder error:", e),
+  });
+
+  // Use Baseline profile for maximum compatibility (WhatsApp, iOS, etc.)
+  encoder.configure({
+    codec: "avc1.42001f", // H.264 Baseline Level 3.1
+    width,
+    height,
+    bitrate: 4_000_000,
+    framerate: fps,
+    hardwareAcceleration: "prefer-hardware",
+  });
+
+  // Use OffscreenCanvas if available, else regular canvas
+  let canvas: HTMLCanvasElement | OffscreenCanvas;
+  let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+  
+  if (typeof OffscreenCanvas !== "undefined") {
+    canvas = new OffscreenCanvas(width, height);
+    ctx = canvas.getContext("2d")!;
+  } else {
+    const c = document.createElement("canvas");
+    c.width = width;
+    c.height = height;
+    canvas = c;
+    ctx = c.getContext("2d")!;
+  }
+
+  const frameDurationMicros = Math.round(1_000_000 / fps);
+
+  for (let i = 0; i < totalFrames; i++) {
+    // Render the frame onto the canvas
+    renderFrame(canvas, ctx, i);
+
+    // Create VideoFrame from canvas
+    const frame = new VideoFrame(canvas as any, {
+      timestamp: i * frameDurationMicros,
+      duration: frameDurationMicros,
+    });
+
+    // Encode — keyFrame every 2 seconds
+    const keyFrame = i % (fps * 2) === 0;
+    encoder.encode(frame, { keyFrame });
+    frame.close();
+
+    // Yield to UI periodically to avoid blocking
+    if (i % 5 === 0) {
+      onProgress?.(Math.min(0.95, 0.05 + 0.9 * (i / totalFrames)));
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    // Back-pressure: if encoder queue gets too large, wait
+    if (encoder.encodeQueueSize > 10) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+  }
+
+  // Flush remaining frames
+  await encoder.flush();
+  encoder.close();
+  muxer.finalize();
+
+  const buffer = (muxer.target as ArrayBufferTarget).buffer!;
+  const blob = new Blob([buffer], { type: "video/mp4" });
+  console.log("[WebCodecs] Done! Encoded", framesEncoded, "frames, size:", blob.size);
+  onProgress?.(1);
+  return blob;
+}
+
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress, audioUrl } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -131,28 +232,43 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   const recordMime = mp4Mime || webmMime || "video/webm";
   const outputType = recordMime.startsWith("video/mp4") ? "video/mp4" : "video/webm";
 
-  console.log("[VideoEncoder] Recording MIME:", recordMime, "mobile:", isMobileDevice);
+  console.log("[VideoEncoder] Recording MIME:", recordMime, "mobile:", isMobileDevice, "webcodecs:", hasWebCodecs());
   onProgress?.(0.05);
 
-  // ====== MOBILE PATH: MediaRecorder only, NO FFmpeg ======
+  // ====== MOBILE PATH: WebCodecs (reliable) or fallback ======
   if (isMobileDevice) {
-    console.log("[VideoEncoder] Mobile: using MediaRecorder directly (no FFmpeg)");
-    const rawBlob = await withTimeout(
-      encodeVideoSimple(pages, options, { mimeType: recordMime, outputType }),
-      600_000,
-      "gerar vídeo mobile"
-    );
-    console.log("[VideoEncoder] Mobile raw blob size:", rawBlob.size, "type:", rawBlob.type);
-
-    let result = rawBlob;
-    if (await isValidMP4(result)) {
-      result = await patchMP4Brand(result);
+    if (hasWebCodecs()) {
+      console.log("[VideoEncoder] Mobile: using WebCodecs + mp4-muxer (reliable path)");
+      
+      // We need to set up the rendering context first, then use WebCodecs
+      // The encodeVideoSimple sets up all the rendering logic, so we'll create
+      // a version that uses WebCodecs instead of MediaRecorder
+      const rawBlob = await withTimeout(
+        encodeVideoWithWebCodecs(pages, options),
+        600_000,
+        "gerar vídeo mobile (WebCodecs)"
+      );
+      console.log("[VideoEncoder] WebCodecs blob size:", rawBlob.size, "type:", rawBlob.type);
+      
+      if (audioUrl) {
+        console.warn("[VideoEncoder] Mobile: skipping audio mux (FFmpeg too heavy for mobile)");
+      }
+      onProgress?.(1);
+      return rawBlob;
+    } else {
+      console.warn("[VideoEncoder] Mobile: WebCodecs not available, falling back to MediaRecorder");
+      const rawBlob = await withTimeout(
+        encodeVideoSimple(pages, options, { mimeType: recordMime, outputType }),
+        600_000,
+        "gerar vídeo mobile"
+      );
+      let result = rawBlob;
+      if (await isValidMP4(result)) {
+        result = await patchMP4Brand(result);
+      }
+      onProgress?.(1);
+      return new Blob([result], { type: "video/mp4" });
     }
-    if (audioUrl) {
-      console.warn("[VideoEncoder] Mobile: skipping audio mux (FFmpeg too heavy for mobile)");
-    }
-    onProgress?.(1);
-    return new Blob([result], { type: "video/mp4" });
   }
 
   // ====== DESKTOP PATH ======
@@ -599,6 +715,261 @@ function applyCanvasClipShape(ctx: CanvasRenderingContext2D, shape: string, x: n
   }
   ctx.closePath();
   ctx.clip();
+}
+
+// WebCodecs-based full video encoder (replaces MediaRecorder on mobile)
+// Replicates the same rendering pipeline as encodeVideoSimple but uses VideoEncoder + mp4-muxer
+async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
+  const {
+    width, height, pageDuration, fps: rawFps = 24,
+    motionEffect = "ken-burns", transitionEffect = "fade",
+    textAnimation = "none", logoAnimation = "none", textAnimDuration,
+    backgroundVideoUrls, frameOverlayPages, overlayPages, logoOverlayPages,
+    imageRect, pageImageAdjustments, imageClipShape, onProgress,
+  } = options;
+
+  const fps = Math.min(rawFps, 20); // Cap mobile fps for performance
+  console.log("[WebCodecs] Full encode start:", { width, height, fps, pages: pages.length });
+
+  // Load all images
+  const images: HTMLImageElement[] = await Promise.all(
+    pages.map((pageUrl) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = pageUrl;
+      })
+    )
+  );
+
+  // Load background videos
+  const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
+    (backgroundVideoUrls || []).map(async (videoUrl) => {
+      if (!videoUrl) return null;
+      try {
+        const video = document.createElement("video");
+        video.crossOrigin = "anonymous";
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.loop = true;
+        video.src = videoUrl;
+        await new Promise<void>((resolve, reject) => {
+          video.onloadeddata = () => resolve();
+          video.onerror = () => reject(new Error("Video load failed"));
+        });
+        return video;
+      } catch { return null; }
+    })
+  );
+
+  // Load overlay images
+  const loadOverlayList = async (list: string[] | undefined) =>
+    Promise.all((list || []).map(async (url) => {
+      if (!url) return null;
+      try {
+        return await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = url;
+        });
+      } catch { return null; }
+    }));
+
+  const overlayImages = await loadOverlayList(overlayPages);
+  const frameOverlayImages = await loadOverlayList(frameOverlayPages);
+  const logoOverlayImages = await loadOverlayList(logoOverlayPages);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+
+  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
+  const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
+  const totalFrames = framesPerPage * images.length;
+
+  // Drawing helpers (same as encodeVideoSimple)
+  const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
+    if (applyMotion && motionEffect !== "none") {
+      const motion = getMotionTransform(motionEffect, progress);
+      ctx.save();
+      ctx.translate(width / 2, height / 2);
+      ctx.rotate((motion.rotate * Math.PI) / 180);
+      ctx.scale(motion.scale, motion.scale);
+      ctx.translate(-width / 2 + (motion.translateX * width) / 100, -height / 2 + (motion.translateY * height) / 100);
+      ctx.drawImage(source, 0, 0, width, height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(source, 0, 0, width, height);
+    }
+  };
+
+  const drawOverlay = (overlay: HTMLImageElement, progress: number) => {
+    if (textAnimation === "none") { ctx.drawImage(overlay, 0, 0, width, height); return; }
+    const anim = getTextAnimationTransform(textAnimation, progress, textAnimDuration);
+    ctx.save();
+    ctx.globalAlpha = anim.opacity;
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate((anim.rotate * Math.PI) / 180);
+    ctx.scale(anim.scale, anim.scale);
+    ctx.translate(-width / 2 + (anim.translateX * width) / 100, -height / 2 + (anim.translateY * height) / 100);
+    ctx.drawImage(overlay, 0, 0, width, height);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  };
+
+  const drawLogoOverlay = (logoImg: HTMLImageElement, progress: number) => {
+    if (logoAnimation === "none") { ctx.drawImage(logoImg, 0, 0, width, height); return; }
+    const anim = getLogoAnimationTransform(logoAnimation, progress);
+    ctx.save();
+    ctx.globalAlpha = anim.opacity;
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate((anim.rotate * Math.PI) / 180);
+    ctx.scale(anim.scale, anim.scale);
+    ctx.translate(-width / 2 + (anim.translateX * width) / 100, -height / 2 + (anim.translateY * height) / 100);
+    ctx.drawImage(logoImg, 0, 0, width, height);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  };
+
+  const renderFrame = (frameNum: number) => {
+    const pageIdx = Math.floor(frameNum / framesPerPage);
+    const frameInPage = frameNum - (pageIdx * framesPerPage);
+    if (pageIdx >= images.length) return;
+
+    const img = images[pageIdx];
+    const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
+    const bgVideo = bgVideos[pageIdx] || null;
+    const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
+    const pageProgress = frameInPage / framesPerPage;
+
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, width, height);
+
+    if (isTransitionPhase && nextImg) {
+      const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
+      applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
+    } else if (bgVideo && bgVideo.readyState >= 2) {
+      try {
+        const vw = bgVideo.videoWidth;
+        const vh = bgVideo.videoHeight;
+        let dx = 0, dy = 0, dw = width, dh = height;
+        if (imageRect) { dx = (imageRect.left / 100) * width; dy = (imageRect.top / 100) * height; dw = (imageRect.width / 100) * width; dh = (imageRect.height / 100) * height; }
+        const destRatio = dw / dh;
+        const videoRatio = vw / vh;
+        let sx = 0, sy = 0, sw = vw, sh = vh;
+        if (videoRatio > destRatio) { sw = vh * destRatio; sx = (vw - sw) / 2; }
+        else { sh = vw / destRatio; sy = (vh - sh) / 2; }
+
+        if (motionEffect !== "none") {
+          const motion = getMotionTransform(motionEffect, pageProgress);
+          ctx.save();
+          ctx.translate(width / 2, height / 2);
+          ctx.rotate((motion.rotate * Math.PI) / 180);
+          ctx.scale(motion.scale, motion.scale);
+          ctx.translate(-width / 2 + (motion.translateX * width) / 100, -height / 2 + (motion.translateY * height) / 100);
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const adj = pageImageAdjustments?.[pageIdx];
+        const clipShape = imageClipShape || "rect";
+        if (adj && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
+          const scale = adj.imageScale / 100;
+          const scaledW = dw * scale; const scaledH = dh * scale;
+          const offsetX = (adj.imageX / dw) * scaledW; const offsetY = (adj.imageY / dh) * scaledH;
+          ctx.save(); applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
+          ctx.drawImage(bgVideo, sx, sy, sw, sh, dx + (dw - scaledW) / 2 + offsetX, dy + (dh - scaledH) / 2 + offsetY, scaledW, scaledH);
+          ctx.restore();
+        } else {
+          ctx.save(); applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
+          ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh); ctx.restore();
+        }
+        const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
+        if (motionEffect !== "none") ctx.restore();
+        const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
+        const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
+      } catch {
+        drawSource(img, true, pageProgress);
+      }
+    } else {
+      drawSource(img, true, pageProgress);
+      const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
+      const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
+      const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
+    }
+  };
+
+  // Set up mp4-muxer + VideoEncoder
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: { codec: "avc", width, height },
+    fastStart: "in-memory",
+  });
+
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta ?? undefined),
+    error: (e) => console.error("[WebCodecs] Encoder error:", e),
+  });
+
+  encoder.configure({
+    codec: "avc1.42001f",
+    width, height,
+    bitrate: 4_000_000,
+    framerate: fps,
+    hardwareAcceleration: "prefer-hardware",
+  });
+
+  const frameDurationMicros = Math.round(1_000_000 / fps);
+
+  // Start background videos
+  let activeVideoIdx = -1;
+  const startVideoForPage = (pageIdx: number) => {
+    if (activeVideoIdx >= 0 && bgVideos[activeVideoIdx]) bgVideos[activeVideoIdx]!.pause();
+    activeVideoIdx = pageIdx;
+    const v = bgVideos[pageIdx];
+    if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+  };
+  if (bgVideos[0]) startVideoForPage(0);
+
+  let lastPageIdx = 0;
+  for (let i = 0; i < totalFrames; i++) {
+    const pageIdx = Math.floor(i / framesPerPage);
+    if (pageIdx !== lastPageIdx) { startVideoForPage(pageIdx); lastPageIdx = pageIdx; }
+
+    renderFrame(i);
+
+    const frame = new VideoFrame(canvas, {
+      timestamp: i * frameDurationMicros,
+      duration: frameDurationMicros,
+    });
+    encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+    frame.close();
+
+    // Yield to UI every few frames
+    if (i % 3 === 0) {
+      onProgress?.(Math.min(0.95, 0.05 + 0.9 * (i / totalFrames)));
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    if (encoder.encodeQueueSize > 8) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+  }
+
+  // Cleanup videos
+  bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
+
+  await encoder.flush();
+  encoder.close();
+  muxer.finalize();
+
+  const buffer = (muxer.target as ArrayBufferTarget).buffer!;
+  const blob = new Blob([buffer], { type: "video/mp4" });
+  console.log("[WebCodecs] Done! size:", blob.size);
+  return blob;
 }
 
 export async function encodeVideoSimple(pages: string[], options: VideoEncoderOptions): Promise<Blob>;
