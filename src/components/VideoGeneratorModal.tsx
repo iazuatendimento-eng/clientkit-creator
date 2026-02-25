@@ -420,11 +420,12 @@ export function VideoGeneratorModal({
       const imageElSz = getImageElSize(template.contentElements);
       const imageClipShape = getImageClipShape(template.contentElements);
 
+      const mobileFps = isMobileDevice ? 15 : 24;
       const blob = await encodeVideoToMP4(videoPages.pages, {
-        width: template.width,
-        height: template.height,
+        width: isMobileDevice ? Math.min(template.width, 720) : template.width,
+        height: isMobileDevice ? Math.min(template.height, 1280) : template.height,
         pageDuration: template.pageDuration,
-        fps: 24,
+        fps: mobileFps,
         motionEffect: "ken-burns" as MotionEffect,
         transitionEffect: "fade" as TransitionEffect,
         textAnimation: textAnim,
@@ -500,9 +501,10 @@ export function VideoGeneratorModal({
 
       toast.success("Vídeo exportado! ✓");
       onExported?.();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Export error:", err);
-      toast.error("Erro ao exportar vídeo");
+      const msg = err?.message || String(err);
+      toast.error("Erro ao exportar vídeo: " + msg.slice(0, 120));
       setStatus("ready");
     }
   };
