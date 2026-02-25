@@ -27,11 +27,14 @@ const isVideoFile = (name: string): boolean => {
 };
 
 const downloadFile = async (url: string, fileName: string, stripAudio?: boolean) => {
+  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   try {
-    // For videos, re-encode through FFmpeg for WhatsApp compatibility
+    // For videos
     if (isVideoFile(fileName)) {
       toast.loading("Preparando vídeo...", { id: "download-prep" });
-      console.log("[Download] Starting WhatsApp-compatible video download for:", fileName, url);
+      console.log("[Download] Video download for:", fileName, url, "mobile:", isMobileDevice);
 
       // Fetch the original file as blob
       const res = await fetch(url, { mode: 'cors' });
@@ -40,27 +43,50 @@ const downloadFile = async (url: string, fileName: string, stripAudio?: boolean)
       console.log("[Download] Original blob size:", originalBlob.size, "type:", originalBlob.type);
 
       let finalBlob: Blob;
-      try {
-        // Re-encode with H.264 baseline + faststart
-        finalBlob = await reencodeForWhatsApp(originalBlob, (p) => {
-          if (p < 0.3) {
-            toast.loading("Carregando conversor...", { id: "download-prep" });
-          } else if (p < 0.85) {
-            toast.loading("Convertendo vídeo...", { id: "download-prep" });
-          } else {
-            toast.loading("Finalizando...", { id: "download-prep" });
-          }
-        }, { stripAudio: !!stripAudio });
-        console.log("[Download] Re-encoded blob size:", finalBlob.size, "type:", finalBlob.type);
-      } catch (encodeErr) {
-        console.error("[Download] FFmpeg re-encode failed, downloading original:", encodeErr);
-        toast.loading("Conversor indisponível, baixando original...", { id: "download-prep" });
+
+      if (isMobileDevice) {
+        // On mobile, skip FFmpeg entirely — it stalls. Download original directly.
+        console.log("[Download] Mobile: skipping FFmpeg, using original blob");
         finalBlob = new Blob([originalBlob], { type: "video/mp4" });
+      } else {
+        try {
+          // Desktop: Re-encode with H.264 baseline + faststart
+          finalBlob = await reencodeForWhatsApp(originalBlob, (p) => {
+            if (p < 0.3) {
+              toast.loading("Carregando conversor...", { id: "download-prep" });
+            } else if (p < 0.85) {
+              toast.loading("Convertendo vídeo...", { id: "download-prep" });
+            } else {
+              toast.loading("Finalizando...", { id: "download-prep" });
+            }
+          }, { stripAudio: !!stripAudio });
+          console.log("[Download] Re-encoded blob size:", finalBlob.size, "type:", finalBlob.type);
+        } catch (encodeErr) {
+          console.error("[Download] FFmpeg re-encode failed, downloading original:", encodeErr);
+          finalBlob = new Blob([originalBlob], { type: "video/mp4" });
+        }
       }
 
-      // Ensure .mp4 extension
       const safeName = fileName.replace(/\.[^.]+$/, '') + '.mp4';
 
+      toast.dismiss("download-prep");
+
+      // iOS: use Web Share API for native "Save Video"
+      if (isIOS && navigator.share && navigator.canShare) {
+        const file = new File([finalBlob], safeName, { type: "video/mp4" });
+        const shareData = { files: [file] };
+        if (navigator.canShare(shareData)) {
+          try {
+            await navigator.share(shareData);
+            toast.success("Salvo!");
+            return;
+          } catch (shareErr: any) {
+            if (shareErr?.name === 'AbortError') return;
+          }
+        }
+      }
+
+      // Android & Desktop: direct blob download
       const blobUrl = URL.createObjectURL(finalBlob);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -71,7 +97,6 @@ const downloadFile = async (url: string, fileName: string, stripAudio?: boolean)
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
 
-      toast.dismiss("download-prep");
       toast.success("Vídeo baixado! ✓");
       return;
     }
