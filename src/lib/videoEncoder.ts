@@ -1016,13 +1016,44 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // Cleanup videos
   bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
 
-  await encoder.flush();
-  encoder.close();
-  muxer.finalize();
+  console.log("[WebCodecs] Frame loop done. Chunks so far:", chunksReceived, "encoder state:", encoder.state);
+
+  if (encoderError) {
+    console.error("[WebCodecs] Encoder had error during loop:", encoderError);
+    try { encoder.close(); } catch {}
+    throw encoderError;
+  }
+
+  try {
+    console.log("[WebCodecs] Flushing encoder...");
+    await encoder.flush();
+    console.log("[WebCodecs] Flush done. Total chunks:", chunksReceived);
+  } catch (flushErr) {
+    console.error("[WebCodecs] Flush FAILED:", flushErr);
+    // Still try to finalize with what we have
+  }
+
+  try { encoder.close(); } catch {}
+
+  if (chunksReceived === 0) {
+    throw new Error("Nenhum frame foi codificado. O encoder não produziu dados.");
+  }
+
+  try {
+    muxer.finalize();
+  } catch (muxErr) {
+    console.error("[WebCodecs] Muxer finalize FAILED:", muxErr);
+    throw new Error("Falha ao finalizar vídeo: " + (muxErr instanceof Error ? muxErr.message : String(muxErr)));
+  }
 
   const buffer = (muxer.target as ArrayBufferTarget).buffer!;
   const blob = new Blob([buffer], { type: "video/mp4" });
-  console.log("[WebCodecs] Done! size:", blob.size);
+  console.log("[WebCodecs] Done! size:", blob.size, "chunks:", chunksReceived);
+  
+  if (blob.size < 1000) {
+    throw new Error("Vídeo gerado muito pequeno (" + blob.size + " bytes). Possível falha de encoding.");
+  }
+  
   return blob;
 }
 
