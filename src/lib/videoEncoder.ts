@@ -728,61 +728,70 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     imageRect, pageImageAdjustments, imageClipShape, onProgress,
   } = options;
 
-  const fps = Math.min(rawFps, 20); // Cap mobile fps for performance
+  const fps = Math.min(rawFps, 20);
   console.log("[WebCodecs] Full encode start:", { width, height, fps, pages: pages.length });
+  onProgress?.(0.06);
 
-  // Load all images
-  const images: HTMLImageElement[] = await Promise.all(
-    pages.map((pageUrl) =>
-      new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = pageUrl;
-      })
-    )
-  );
+  // Helper: load image with 10s timeout
+  const loadImg = (url: string): Promise<HTMLImageElement | null> => {
+    if (!url) return Promise.resolve(null);
+    return new Promise<HTMLImageElement | null>((resolve) => {
+      const timer = setTimeout(() => { console.warn("[WebCodecs] Img timeout:", url.slice(0, 60)); resolve(null); }, 10_000);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => { clearTimeout(timer); resolve(img); };
+      img.onerror = () => { clearTimeout(timer); console.warn("[WebCodecs] Img error:", url.slice(0, 60)); resolve(null); };
+      img.src = url;
+    });
+  };
 
-  // Load background videos
+  // Helper: load video with 8s timeout
+  const loadVid = (url: string): Promise<HTMLVideoElement | null> => {
+    if (!url) return Promise.resolve(null);
+    return new Promise<HTMLVideoElement | null>((resolve) => {
+      const timer = setTimeout(() => { console.warn("[WebCodecs] Vid timeout:", url.slice(0, 60)); resolve(null); }, 8_000);
+      const video = document.createElement("video");
+      video.crossOrigin = "anonymous";
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = "auto";
+      video.loop = true;
+      video.src = url;
+      video.onloadeddata = () => { clearTimeout(timer); resolve(video); };
+      video.onerror = () => { clearTimeout(timer); resolve(null); };
+    });
+  };
+
+  // Load page images (data URLs = instant)
+  console.log("[WebCodecs] Loading page images...");
+  const rawImages = await Promise.all(pages.map(p => loadImg(p)));
+  const images: HTMLImageElement[] = rawImages.map((img, i) => {
+    if (img) return img;
+    console.warn("[WebCodecs] Page", i, "failed, blank fallback");
+    const c = document.createElement("canvas"); c.width = width; c.height = height;
+    const ctx2 = c.getContext("2d")!; ctx2.fillStyle = "#000"; ctx2.fillRect(0, 0, width, height);
+    const fb = new Image(); fb.src = c.toDataURL(); return fb;
+  });
+  console.log("[WebCodecs] Pages loaded:", images.length);
+  onProgress?.(0.10);
+
+  // Load background videos (timeout = skip)
+  console.log("[WebCodecs] Loading bg videos...");
   const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
-    (backgroundVideoUrls || []).map(async (videoUrl) => {
-      if (!videoUrl) return null;
-      try {
-        const video = document.createElement("video");
-        video.crossOrigin = "anonymous";
-        video.muted = true;
-        video.playsInline = true;
-        video.preload = "auto";
-        video.loop = true;
-        video.src = videoUrl;
-        await new Promise<void>((resolve, reject) => {
-          video.onloadeddata = () => resolve();
-          video.onerror = () => reject(new Error("Video load failed"));
-        });
-        return video;
-      } catch { return null; }
-    })
+    (backgroundVideoUrls || []).map(url => url ? loadVid(url) : Promise.resolve(null))
   );
+  console.log("[WebCodecs] Bg videos:", bgVideos.filter(Boolean).length);
+  onProgress?.(0.15);
 
-  // Load overlay images
-  const loadOverlayList = async (list: string[] | undefined) =>
-    Promise.all((list || []).map(async (url) => {
-      if (!url) return null;
-      try {
-        return await new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = url;
-        });
-      } catch { return null; }
-    }));
-
-  const overlayImages = await loadOverlayList(overlayPages);
-  const frameOverlayImages = await loadOverlayList(frameOverlayPages);
-  const logoOverlayImages = await loadOverlayList(logoOverlayPages);
+  // Load overlays (parallel, with timeout)
+  console.log("[WebCodecs] Loading overlays...");
+  const loadList = (list: string[] | undefined) =>
+    Promise.all((list || []).map(url => url ? loadImg(url) : Promise.resolve(null)));
+  const [overlayImages, frameOverlayImages, logoOverlayImages] = await Promise.all([
+    loadList(overlayPages), loadList(frameOverlayPages), loadList(logoOverlayPages),
+  ]);
+  console.log("[WebCodecs] Overlays loaded, starting encode...");
+  onProgress?.(0.20);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -951,7 +960,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
     // Yield to UI every few frames
     if (i % 3 === 0) {
-      onProgress?.(Math.min(0.95, 0.05 + 0.9 * (i / totalFrames)));
+      onProgress?.(Math.min(0.95, 0.20 + 0.75 * (i / totalFrames)));
       await new Promise((r) => setTimeout(r, 0));
     }
     if (encoder.encodeQueueSize > 8) {
