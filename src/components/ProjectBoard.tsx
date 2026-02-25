@@ -587,8 +587,31 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             </div>
           )}
           
-          {isPublicView && (
+          {isPublicView && (() => {
+            const today = new Date().toISOString().split('T')[0];
+            const isDeadlineToday = brief.deadline === today;
+            return (
             <div className="flex flex-col gap-3 mt-3 min-w-0 overflow-hidden">
+              {/* Show art download only on the card's deadline day */}
+              {isDeadlineToday && (brief.coverImage || brief.coverVideo) && (
+                brief.coverVideo ? (
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); onStatusChange(brief.id, "completed"); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
+                      <Volume2 className="h-3 w-3 shrink-0 mr-0.5" />
+                      <span>Baixar Com Áudio</span>
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, true); onStatusChange(brief.id, "completed"); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
+                      <VolumeX className="h-3 w-3 shrink-0 mr-0.5" />
+                      <span>Baixar Sem Áudio</span>
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await handleDownload(brief.coverImage!, `${brief.clientName}-${brief.id}.png`); onStatusChange(brief.id, "completed"); }} className="text-xs px-2 py-1 h-auto w-full">
+                    <Download className="h-3 w-3 mr-1" />
+                    Baixar Arte
+                  </Button>
+                )
+              )}
               {/* Show saved video download with countdown if available */}
               {!dismissed && brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
                 <div className="border border-primary/20 rounded-xl overflow-hidden bg-primary/5">
@@ -674,7 +697,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 );
               })()}
             </div>
-          )}
+            );
+          })()}
           
         </div>
       </CardContent>
