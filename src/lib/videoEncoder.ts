@@ -923,24 +923,54 @@ export async function encodeVideoSimple(
 
   const outType = extra?.outputType || (chosenMime.startsWith("video/mp4") ? "video/mp4" : "video/webm");
 
-  const stream = canvas.captureStream(fps);
+  // On mobile, use a lower FPS to reduce load
+  const effectiveFps = isMobileDevice ? Math.min(fps, 15) : fps;
+  const effectiveFramesPerPage = Math.max(1, Math.floor(pageDuration * effectiveFps));
+  const effectiveTotalFrames = effectiveFramesPerPage * images.length;
+  // Frame interval in ms — on mobile we MUST render at real-time pace for MediaRecorder
+  const frameIntervalMs = isMobileDevice ? Math.floor(1000 / effectiveFps) : 0;
+
+  const stream = canvas.captureStream(isMobileDevice ? effectiveFps : fps);
   const mediaRecorder = new MediaRecorder(stream, {
     mimeType: chosenMime,
-    videoBitsPerSecond: bitrate,
+    videoBitsPerSecond: isMobileDevice ? 4_000_000 : bitrate,
   });
 
   const chunks: Blob[] = [];
+  let dataReceived = false;
   mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) chunks.push(e.data);
+    if (e.data.size > 0) {
+      chunks.push(e.data);
+      dataReceived = true;
+    }
   };
 
   return new Promise((resolve, reject) => {
+    // Stall detector: if no data after 15 seconds, abort
+    let stallTimer: number | undefined;
+    if (isMobileDevice) {
+      stallTimer = window.setTimeout(() => {
+        if (!dataReceived && mediaRecorder.state === "recording") {
+          console.error("[VideoEncoder] Mobile stall detected — no data received in 15s");
+          try { mediaRecorder.stop(); } catch {}
+          // Resolve with whatever we have (even empty) rather than hang forever
+        }
+      }, 15_000);
+    }
+
     mediaRecorder.onstop = () => {
+      if (stallTimer) window.clearTimeout(stallTimer);
       bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
-      resolve(new Blob(chunks, { type: outType }));
+      const result = new Blob(chunks, { type: outType });
+      console.log("[VideoEncoder] MediaRecorder stopped, chunks:", chunks.length, "size:", result.size);
+      resolve(result);
     };
-    mediaRecorder.onerror = reject;
-    mediaRecorder.start(250);
+    mediaRecorder.onerror = (e) => {
+      if (stallTimer) window.clearTimeout(stallTimer);
+      reject(e);
+    };
+    // On mobile use larger timeslice to collect bigger chunks
+    mediaRecorder.start(isMobileDevice ? 1000 : 250);
 
     let globalFrame = 0;
     let activeVideoIdx = -1;
@@ -957,18 +987,23 @@ export async function encodeVideoSimple(
 
     const FRAMES_PER_BATCH = isMobileDevice ? 1 : 4;
     let progressCounter = 0;
-    const PROGRESS_INTERVAL = 10;
+    const PROGRESS_INTERVAL = isMobileDevice ? 5 : 10;
+    // Use effective values for mobile
+    const useFramesPerPage = isMobileDevice ? effectiveFramesPerPage : framesPerPage;
+    const useTotalFrames = isMobileDevice ? effectiveTotalFrames : totalFrames;
 
     const tick = () => {
-      if (globalFrame >= totalFrames) {
+      if (globalFrame >= useTotalFrames) {
         bgVideos.forEach((v) => { if (v) v.pause(); });
-        setTimeout(() => mediaRecorder.stop(), 300);
+        setTimeout(() => {
+          try { mediaRecorder.stop(); } catch {}
+        }, 500);
         return;
       }
 
       let framesThisBatch = 0;
-      while (framesThisBatch < FRAMES_PER_BATCH && globalFrame < totalFrames) {
-        const pageIdx = Math.floor(globalFrame / framesPerPage);
+      while (framesThisBatch < FRAMES_PER_BATCH && globalFrame < useTotalFrames) {
+        const pageIdx = Math.floor(globalFrame / useFramesPerPage);
         if (pageIdx !== lastPageIdx) {
           startVideoForPage(pageIdx);
           lastPageIdx = pageIdx;
@@ -980,18 +1015,21 @@ export async function encodeVideoSimple(
 
       progressCounter++;
       if (progressCounter % PROGRESS_INTERVAL === 0) {
-        onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / totalFrames)));
+        onProgress?.(Math.min(0.95, Math.max(0.05, globalFrame / useTotalFrames)));
       }
 
-      if (globalFrame < totalFrames) {
-        setTimeout(tick, 0);
+      if (globalFrame < useTotalFrames) {
+        setTimeout(tick, frameIntervalMs);
       } else {
         bgVideos.forEach((v) => { if (v) v.pause(); });
-        setTimeout(() => mediaRecorder.stop(), 300);
+        setTimeout(() => {
+          try { mediaRecorder.stop(); } catch {}
+        }, 500);
       }
     };
 
-    setTimeout(tick, 0);
+    // On mobile, give MediaRecorder time to initialize before starting frame rendering
+    setTimeout(tick, isMobileDevice ? 500 : 0);
   });
 }
 

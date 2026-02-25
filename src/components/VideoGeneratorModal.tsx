@@ -434,22 +434,52 @@ export function VideoGeneratorModal({
       });
 
       let finalBlob = blob;
-      const numPages = videoPages.pages.length;
-      const expectedDuration = numPages * template.pageDuration;
-      try {
-        finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio, expectedDuration });
-      } catch { /* use original */ }
+      const isMobileExport = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      // On mobile, skip reencodeForWhatsApp (FFmpeg too heavy)
+      if (!isMobileExport) {
+        const numPages = videoPages.pages.length;
+        const expectedDuration = numPages * template.pageDuration;
+        try {
+          finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio, expectedDuration });
+        } catch { /* use original */ }
+      }
 
       setExportedBlob(finalBlob);
       setStatus("ready");
 
-      // Download locally
-      const url = URL.createObjectURL(finalBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${clientName}-${cardTitle.slice(0, 20)}.mp4`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      const safeName = `${clientName}-${cardTitle.slice(0, 20)}.mp4`;
+
+      // iOS: use Web Share API for native "Save Video"
+      if (isIOS && navigator.share && navigator.canShare) {
+        const file = new File([finalBlob], safeName, { type: "video/mp4" });
+        const shareData = { files: [file] };
+        if (navigator.canShare(shareData)) {
+          try {
+            await navigator.share(shareData);
+            // Continue to upload to storage below
+          } catch (shareErr: any) {
+            if (shareErr?.name !== 'AbortError') {
+              // Fallback to blob download
+              const url = URL.createObjectURL(finalBlob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = safeName;
+              link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 30000);
+            }
+          }
+        }
+      } else {
+        // Android & Desktop: direct blob download
+        const url = URL.createObjectURL(finalBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = safeName;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      }
 
       // Upload to storage for 24h availability
       try {
