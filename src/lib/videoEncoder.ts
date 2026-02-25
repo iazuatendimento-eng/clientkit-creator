@@ -891,7 +891,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     ctx.globalAlpha = 1;
   };
 
-  const renderFrame = (frameNum: number) => {
+  const renderFrame = async (frameNum: number) => {
     const pageIdx = Math.floor(frameNum / framesPerPage);
     const frameInPage = frameNum - (pageIdx * framesPerPage);
     if (pageIdx >= images.length) return;
@@ -990,25 +990,31 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
   const frameDurationMicros = Math.round(1_000_000 / fps);
 
-  // Start background videos
-  let activeVideoIdx = -1;
-  const startVideoForPage = (pageIdx: number) => {
-    if (activeVideoIdx >= 0 && bgVideos[activeVideoIdx]) bgVideos[activeVideoIdx]!.pause();
-    activeVideoIdx = pageIdx;
+  // Seek-based video sync: instead of play() (real-time), seek to exact frame time
+  // This ensures background videos advance correctly in the faster-than-realtime encoding loop
+  const seekVideoForFrame = async (pageIdx: number, frameInPage: number) => {
     const v = bgVideos[pageIdx];
-    if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+    if (!v || v.readyState < 2) return;
+    const targetTime = (frameInPage / fps) % (v.duration || 999);
+    // Only seek if difference is significant (avoid redundant seeks)
+    if (Math.abs(v.currentTime - targetTime) > 0.04) {
+      await seekVideoToTime(v, targetTime);
+    }
   };
-  if (bgVideos[0]) startVideoForPage(0);
 
-  let lastPageIdx = 0;
   console.log("[WebCodecs] Starting frame loop, total:", totalFrames);
   for (let i = 0; i < totalFrames; i++) {
     if (encoderError) throw encoderError;
 
     const pageIdx = Math.floor(i / framesPerPage);
-    if (pageIdx !== lastPageIdx) { startVideoForPage(pageIdx); lastPageIdx = pageIdx; }
+    const frameInPage = i - (pageIdx * framesPerPage);
 
-    renderFrame(i);
+    // Seek background video to correct time for this frame
+    if (bgVideos[pageIdx]) {
+      await seekVideoForFrame(pageIdx, frameInPage);
+    }
+
+    await renderFrame(i);
 
     try {
       const frame = new VideoFrame(canvas, {
