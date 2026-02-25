@@ -3347,10 +3347,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     Arraste os elementos para mover. Arraste as alças dos cantos para redimensionar.
                   </p>
 
-                  {/* Apply adjustments button - drag handles on the overlay replace the old sliders */}
-                  <Button size="sm" variant="outline" className="w-full" onClick={() => applyAdjustments()}>
-                    Aplicar Ajustes
-                  </Button>
 
                   {/* Page navigation */}
                   <div className="flex gap-2 overflow-x-auto pb-1 justify-center">

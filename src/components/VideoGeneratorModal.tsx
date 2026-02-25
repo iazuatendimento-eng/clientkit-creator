@@ -660,18 +660,6 @@ export function VideoGeneratorModal({
                 <p className="text-xs text-muted-foreground">
                   Template: {template.name}
                 </p>
-                {isEditing && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={applyAdjustments}
-                    disabled={isApplyingAdjustments}
-                    className="gap-1.5"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    Aplicar Ajustes
-                  </Button>
-                )}
               </div>
 
               {/* Download buttons - always visible */}
