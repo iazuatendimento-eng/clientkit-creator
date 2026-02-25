@@ -674,9 +674,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </div>
                 </div>
               )}
-              {brief.status !== "completed" && isDeadlineReached && (() => {
-                const alreadyUsed = clientId ? (hasUsedDailyVideo(clientId) || usedDailyVideo) : false;
-                return (
+              {brief.status !== "completed" && isDeadlineReached && (
                   <Button
                     variant="outline"
                     onClick={(e) => {
@@ -684,17 +682,16 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       setIsVideoGenOpen(true);
                     }}
                     className="h-auto py-3 text-xs font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
-                    disabled={isPreloading || alreadyUsed}
+                    disabled={isPreloading}
                   >
                     {isPreloading ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <Film className="h-4 w-4 mr-2" />
                     )}
-                    <span>{isPreloading ? "Preparando..." : alreadyUsed ? "Limite diário atingido" : "Baixar Vídeo Feito"}</span>
+                    <span>{isPreloading ? "Preparando..." : "Baixar Vídeo Feito"}</span>
                   </Button>
-                );
-              })()}
+              )}
             </div>
             );
           })()}
