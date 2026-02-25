@@ -1126,7 +1126,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         newBrief.brandKitId = brandKits[0].id;
       }
 
-      const createPromises = paragraphs.map(async (text, index) => {
+      // Create cards sequentially to preserve order
+      for (let index = 0; index < paragraphs.length; index++) {
+        const text = paragraphs[index];
+        
         // Gerar legenda para cada card
         let generatedCaption = "";
         try {
@@ -1162,11 +1165,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           status: "todo" as const,
           brand_kit_id: newBrief.brandKitId || null,
           generated_caption: generatedCaption,
+          sort_order: index + 1,
         };
-        return await createProjectBrief(briefData);
-      });
-
-      await Promise.all(createPromises);
+        await createProjectBrief(briefData);
+      }
       
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
