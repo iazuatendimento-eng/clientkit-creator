@@ -205,11 +205,13 @@ export function ArtAdjustOverlay({
 
     if (part === "text") {
       if (!els.textEl) return null;
+      const scaledW = els.textEl.width * (textFontSize / 100);
+      const scaledH = els.textEl.height * (textFontSize / 100);
       return {
         x: els.textEl.x + textX,
         y: els.textEl.y + textY,
-        w: els.textEl.width,
-        h: Math.max(140, els.textEl.height * 3),
+        w: scaledW,
+        h: Math.max(scaledH, els.textEl.height),
       };
     }
 
@@ -612,10 +614,16 @@ export function ArtAdjustOverlay({
     const rect = getRect(part);
     if (!rect) return null;
 
-    const left = (rect.x / template.width) * 100;
-    const top = (rect.y / template.height) * 100;
-    const width = (rect.w / template.width) * 100;
-    const height = (rect.h / template.height) * 100;
+    // Clamp box to stay within the grid boundaries
+    const clampedX = clamp(rect.x, 0, template.width);
+    const clampedY = clamp(rect.y, 0, template.height);
+    const clampedW = Math.min(rect.w, template.width - clampedX);
+    const clampedH = Math.min(rect.h, template.height - clampedY);
+
+    const left = (clampedX / template.width) * 100;
+    const top = (clampedY / template.height) * 100;
+    const width = Math.max(0, (clampedW / template.width) * 100);
+    const height = Math.max(0, (clampedH / template.height) * 100);
 
     const isActive = active === part;
 
