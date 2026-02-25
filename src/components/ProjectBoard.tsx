@@ -997,10 +997,16 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   };
 
   const handleBulkAdd = () => {
+    // Debug: log raw input to understand what's being pasted
+    console.log("[handleBulkAdd] Raw input length:", multiTextInput.length);
+    console.log("[handleBulkAdd] Raw input charCodes:", Array.from(multiTextInput.slice(0, 200)).map(c => c.charCodeAt(0)));
+    
     const paragraphs = multiTextInput
-      .split(/\r?\n/)
+      .split(/\r\n|\r|\n|\u2028|\u2029/)
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
+
+    console.log("[handleBulkAdd] Paragraphs detected:", paragraphs.length);
 
     if (paragraphs.length === 0) {
       toast.error("Por favor, insira algum texto");
@@ -1116,7 +1122,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
     try {
       const paragraphs = multiTextInput
-        .split(/\r?\n/)
+        .split(/\r\n|\r|\n|\u2028|\u2029/)
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
 
