@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check, ImageIcon } from "lucide-react";
+import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -25,7 +25,7 @@ import { VideoAdjustOverlay } from "@/components/VideoAdjustOverlay";
 import { searchVideos, type SearchVideo } from "@/lib/imageSearch";
 import { encodeVideoToMP4, reencodeForWhatsApp, type MotionEffect, type TransitionEffect, type TextAnimation, type LogoAnimation } from "@/lib/videoEncoder";
 import { Input } from "@/components/ui/input";
-import JSZip from "jszip";
+
 
 import type { PreloadedVideoData } from "@/hooks/useVideoPregenerate";
 
@@ -401,61 +401,6 @@ export function VideoGeneratorModal({
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  const handleExportImages = async () => {
-    if (!videoPages) return;
-    setStatus("exporting");
-    setExportProgress(0);
-
-    try {
-      const zip = new JSZip();
-      const pages = videoPages.pages;
-
-      for (let i = 0; i < pages.length; i++) {
-        setExportProgress((i + 1) / (pages.length + 1));
-        const dataUrl = pages[i];
-        // Convert data URL to blob
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        zip.file(`pagina-${i + 1}.png`, blob);
-      }
-
-      setExportProgress(0.9);
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      const safeName = `${clientName}-${cardTitle.slice(0, 20)}-imagens.zip`;
-
-      if (isIOS && navigator.share && navigator.canShare) {
-        const file = new File([zipBlob], safeName, { type: "application/zip" });
-        const shareData = { files: [file] };
-        if (navigator.canShare(shareData)) {
-          try {
-            await navigator.share(shareData);
-            setExportProgress(1);
-            setStatus("ready");
-            toast.success("Imagens exportadas! ✓");
-            return;
-          } catch (e: any) {
-            if (e?.name === "AbortError") { setStatus("ready"); return; }
-          }
-        }
-      }
-
-      // Fallback: blob download
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = safeName;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-
-      setExportProgress(1);
-      setStatus("ready");
-      toast.success("Imagens baixadas! ✓");
-    } catch (err) {
-      console.error("Export images error:", err);
-      toast.error("Erro ao exportar imagens");
-      setStatus("ready");
-    }
-  };
 
   const handleExport = async (stripAudio: boolean) => {
     if (!template || !videoPages) return;
@@ -739,12 +684,6 @@ export function VideoGeneratorModal({
                   Baixar Sem Áudio
                 </Button>
               </div>
-              {isMobileDevice && (
-                <Button variant="ghost" size="sm" onClick={handleExportImages} className="w-full gap-2 text-xs text-muted-foreground">
-                  <ImageIcon className="h-3 w-3" />
-                  Baixar como imagens (ZIP)
-                </Button>
-              )}
 
               {/* Video swap section */}
               <VideoSwapSection
