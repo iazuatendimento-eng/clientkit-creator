@@ -460,10 +460,8 @@ export function VideoGeneratorModal({
   const handleExport = async (stripAudio: boolean) => {
     if (!template || !videoPages) return;
 
-    // Mobile: export as image ZIP (MediaRecorder is broken on iOS/mobile)
-    if (isMobileDevice) {
-      return handleExportImages();
-    }
+    // Mobile: WebCodecs handles video encoding now (no MediaRecorder)
+    // encodeVideoToMP4 already routes to WebCodecs on mobile
 
     setStatus("exporting");
     setExportProgress(0);
@@ -500,24 +498,42 @@ export function VideoGeneratorModal({
 
       let finalBlob = blob;
 
-      const numPages = videoPages.pages.length;
-      const expectedDuration = numPages * template.pageDuration;
-      try {
-        finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio, expectedDuration });
-      } catch { /* use original */ }
+      // On mobile, skip reencodeForWhatsApp (FFmpeg WASM too heavy), WebCodecs already produces good MP4
+      if (!isMobileDevice) {
+        const numPages = videoPages.pages.length;
+        const expectedDuration = numPages * template.pageDuration;
+        try {
+          finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio, expectedDuration });
+        } catch { /* use original */ }
+      }
 
       setExportedBlob(finalBlob);
       setStatus("ready");
 
       const safeName = `${clientName}-${cardTitle.slice(0, 20)}.mp4`;
 
-      // Desktop: direct blob download
-      const url = URL.createObjectURL(finalBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = safeName;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      // iOS: use Web Share API for native "Save Video"
+      if (isIOS && navigator.share && navigator.canShare) {
+        const file = new File([finalBlob], safeName, { type: "video/mp4" });
+        const shareData = { files: [file] };
+        if (navigator.canShare(shareData)) {
+          try {
+            await navigator.share(shareData);
+          } catch (shareErr: any) {
+            if (shareErr?.name !== 'AbortError') {
+              const url = URL.createObjectURL(finalBlob);
+              const link = document.createElement("a");
+              link.href = url; link.download = safeName; link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 30000);
+            }
+          }
+        }
+      } else {
+        const url = URL.createObjectURL(finalBlob);
+        const link = document.createElement("a");
+        link.href = url; link.download = safeName; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      }
 
       // Upload to storage for 24h availability
       try {
@@ -713,27 +729,21 @@ export function VideoGeneratorModal({
               </div>
 
               {/* Download buttons - always visible */}
-              {isMobileDevice ? (
-                <div className="grid grid-cols-1 gap-2">
-                  <Button onClick={handleExportImages} className="gap-2">
-                    <ImageIcon className="h-4 w-4" />
-                    Baixar Imagens (ZIP)
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    No celular, o vídeo é exportado como imagens. Para vídeo MP4, use o computador.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={() => handleExport(false)} className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Baixar Com Áudio
-                  </Button>
-                  <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Baixar Sem Áudio
-                  </Button>
-                </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button onClick={() => handleExport(false)} className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Baixar Com Áudio
+                </Button>
+                <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Baixar Sem Áudio
+                </Button>
+              </div>
+              {isMobileDevice && (
+                <Button variant="ghost" size="sm" onClick={handleExportImages} className="w-full gap-2 text-xs text-muted-foreground">
+                  <ImageIcon className="h-3 w-3" />
+                  Baixar como imagens (ZIP)
+                </Button>
               )}
 
               {/* Video swap section */}
