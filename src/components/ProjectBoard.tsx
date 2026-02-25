@@ -998,7 +998,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
   const handleBulkAdd = () => {
     const paragraphs = multiTextInput
-      .split("\n")
+      .split(/\r?\n/)
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
 
@@ -1116,58 +1116,67 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
 
     try {
       const paragraphs = multiTextInput
-        .split("\n")
+        .split(/\r?\n/)
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
 
-      toast.info("Criando cards e gerando legendas...");
+      toast.info(`Criando ${paragraphs.length} cards e gerando legendas...`);
 
       if (!newBrief.brandKitId && brandKits.length > 0) {
         newBrief.brandKitId = brandKits[0].id;
       }
 
+      let createdCount = 0;
+      let failedCount = 0;
+
       // Create cards sequentially to preserve order
       for (let index = 0; index < paragraphs.length; index++) {
         const text = paragraphs[index];
         
-        // Gerar legenda para cada card
-        let generatedCaption = "";
         try {
-          const captionResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-              body: JSON.stringify({ text }),
+          // Gerar legenda para cada card
+          let generatedCaption = "";
+          try {
+            const captionResponse = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                },
+                body: JSON.stringify({ text }),
+              }
+            );
+
+            if (captionResponse.ok) {
+              const captionData = await captionResponse.json();
+              generatedCaption = captionData.caption;
             }
-          );
-
-          if (captionResponse.ok) {
-            const captionData = await captionResponse.json();
-            generatedCaption = captionData.caption;
+          } catch (captionError) {
+            console.error(`Erro ao gerar legenda do card ${index + 1}:`, captionError);
           }
-        } catch (captionError) {
-          console.error("Erro ao gerar legenda:", captionError);
+
+          // Sequential dates: today + index days
+          const deadlineDate = new Date();
+          deadlineDate.setDate(deadlineDate.getDate() + index);
+
+          const briefData = {
+            client_id: clientId,
+            title: text,
+            description: text,
+            deadline: deadlineDate.toISOString().split('T')[0],
+            status: "todo" as const,
+            brand_kit_id: newBrief.brandKitId || null,
+            generated_caption: generatedCaption,
+            sort_order: index + 1,
+          };
+          await createProjectBrief(briefData);
+          createdCount++;
+        } catch (cardError) {
+          console.error(`Erro ao criar card ${index + 1}:`, cardError);
+          failedCount++;
         }
-
-        // Sequential dates: today + index days
-        const deadlineDate = new Date();
-        deadlineDate.setDate(deadlineDate.getDate() + index);
-
-        const briefData = {
-          client_id: clientId,
-          title: text,
-          description: text,
-          deadline: deadlineDate.toISOString().split('T')[0],
-          status: "todo" as const,
-          brand_kit_id: newBrief.brandKitId || null,
-          generated_caption: generatedCaption,
-          sort_order: index + 1,
-        };
-        await createProjectBrief(briefData);
       }
       
       // Reload briefs from Supabase to ensure sync
@@ -1197,7 +1206,12 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       setNewBrief({});
       setShowSplitDialog(false);
       setIsDialogOpen(false);
-      toast.success(`${paragraphs.length} cards criados com legendas!`);
+      
+      if (failedCount > 0) {
+        toast.warning(`${createdCount} cards criados, ${failedCount} falharam.`);
+      } else {
+        toast.success(`${createdCount} cards criados com legendas!`);
+      }
     } catch (error: any) {
       console.error("Erro detalhado ao criar cards múltiplos:", error);
       
@@ -1498,8 +1512,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             <AlertDialogHeader>
               <AlertDialogTitle>Múltiplos textos detectados</AlertDialogTitle>
               <AlertDialogDescription>
-                Foram detectados {multiTextInput.split("\n").filter(p => p.trim().length > 0).length} textos separados. 
-                Deseja criar um card único com todo o texto ou dividir em {multiTextInput.split("\n").filter(p => p.trim().length > 0).length} cards separados?
+                Foram detectados {multiTextInput.split(/\r?\n/).filter(p => p.trim().length > 0).length} textos separados. 
+                Deseja criar um card único com todo o texto ou dividir em {multiTextInput.split(/\r?\n/).filter(p => p.trim().length > 0).length} cards separados?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1507,7 +1521,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                 Card Único
               </AlertDialogCancel>
               <AlertDialogAction onClick={createMultipleBriefs}>
-                Dividir em {multiTextInput.split("\n").filter(p => p.trim().length > 0).length} Cards
+                Dividir em {multiTextInput.split(/\r?\n/).filter(p => p.trim().length > 0).length} Cards
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
