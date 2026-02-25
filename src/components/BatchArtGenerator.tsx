@@ -1480,7 +1480,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       triggerLivePreview();
     }
   }, [triggerLivePreview]);
-  const handleApplyElementOverrides = async () => {
+  // Save current overrides back to clientArts (called on every drag end for real-time persistence)
+  const commitOverridesToArt = useCallback(() => {
     if (!selectedArt) return;
     const index = clientArts.findIndex((a) => 
       a.clientId === selectedArt.clientId && 
@@ -1513,18 +1514,43 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       }
     };
     setClientArts(updatedArts);
+  }, [selectedArt, clientArts, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, photoScale, photoFrame, shapeOverrides]);
+
+  // On drag end: regenerate preview + persist overrides in real-time
+  const handleDragEnd = useCallback(() => {
+    triggerLivePreview();
+    commitOverridesToArt();
+  }, [triggerLivePreview, commitOverridesToArt]);
+
+  // When closing the adjust dialog, do a final full regeneration
+  const handleCloseAdjustDialog = useCallback(async () => {
+    commitOverridesToArt();
     setIsAdjustDialogOpen(false);
 
-    // Regenerate the art with new overrides
+    if (!selectedArt) return;
+    const index = clientArts.findIndex((a) => 
+      a.clientId === selectedArt.clientId && 
+      a.cardId === selectedArt.cardId &&
+      a.pageIndex === selectedArt.pageIndex
+    );
+    if (index === -1) return;
+
+    // Regenerate the final art with overrides
+    const updatedArts = [...clientArts];
+    updatedArts[index] = { 
+      ...updatedArts[index], 
+      photoOffset: { x: photoOffsetX, y: photoOffsetY },
+      elementOverrides: {
+        logoX, logoY, logoScale, logoScaleX, logoScaleY,
+        textX, textY, textFontSize,
+        contactX, contactY, contactScale, contactScaleX, contactScaleY,
+        photoScale, photoFrame: photoFrame || undefined, shapes: shapeOverrides,
+      }
+    };
     const imageUrl = await generateArtForClient(updatedArts[index]);
     updatedArts[index] = { ...updatedArts[index], imageUrl };
     setClientArts([...updatedArts]);
-    
-    toast({
-      title: "Ajustes aplicados!",
-      description: "A arte foi regenerada com as novas configurações.",
-    });
-  };
+  }, [commitOverridesToArt, selectedArt, clientArts, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, photoScale, photoFrame, shapeOverrides, generateArtForClient]);
 
   // Refresh brand kit from database and regenerate art
   const refreshBrandKitAndRegenerate = async (index: number) => {
@@ -2286,7 +2312,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               setContactScaleY={setContactScaleY}
               shapeOverrides={shapeOverrides}
               setShapeOverrides={setShapeOverrides}
-              onDragEnd={triggerLivePreview}
+              onDragEnd={handleDragEnd}
             />
 
             <p className="text-xs text-muted-foreground text-center pt-2">
@@ -2339,16 +2365,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           </div>
 
           <div className="flex gap-2 justify-end pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleApplyElementOverrides} 
-              className="bg-gradient-primary"
-              disabled={isRegenerating}
-            >
-              {isRegenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Aplicar Ajustes
+            <Button variant="outline" onClick={handleCloseAdjustDialog}>
+              Fechar
             </Button>
           </div>
         </DialogContent>
