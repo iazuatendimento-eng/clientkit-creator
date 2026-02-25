@@ -742,8 +742,8 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     imageRect, pageImageAdjustments, imageClipShape, onProgress,
   } = options;
 
-  const fps = Math.min(rawFps, 20);
-  console.log("[WebCodecs] Full encode start:", { width, height, fps, pages: pages.length });
+  const fps = Math.min(rawFps, 15);
+  console.log("[WebCodecs] Full encode start:", { width, height, fps, pages: pages.length, bgVideoUrls: (backgroundVideoUrls || []).filter(Boolean).length });
   onProgress?.(0.06);
 
   // Helper: load image with 10s timeout
