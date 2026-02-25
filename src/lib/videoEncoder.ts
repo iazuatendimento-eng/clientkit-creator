@@ -256,54 +256,32 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   console.log("[VideoEncoder] Recording MIME:", recordMime, "mobile:", isMobileDevice, "webcodecs:", hasWebCodecs());
   onProgress?.(0.05);
 
-  // ====== MOBILE PATH: WebCodecs (reliable) or fallback ======
+  // ====== MOBILE PATH: WebCodecs ONLY (MediaRecorder is broken on iOS) ======
   if (isMobileDevice) {
-    const webCodecsOk = await checkWebCodecsSupport();
-    console.log("[VideoEncoder] Mobile path. WebCodecs available:", webCodecsOk);
-    onProgress?.(0.06);
-
-    if (webCodecsOk) {
-      try {
-        console.log("[VideoEncoder] Mobile: trying WebCodecs + mp4-muxer...");
-        onProgress?.(0.07);
-        const rawBlob = await withTimeout(
-          encodeVideoWithWebCodecs(pages, options),
-          600_000,
-          "gerar vídeo mobile (WebCodecs)"
-        );
-        console.log("[VideoEncoder] WebCodecs SUCCESS! blob size:", rawBlob.size);
-        if (audioUrl) {
-          console.warn("[VideoEncoder] Mobile: skipping audio mux");
-        }
-        onProgress?.(1);
-        return rawBlob;
-      } catch (wcErr) {
-        console.error("[VideoEncoder] WebCodecs FAILED, falling back to MediaRecorder:", wcErr);
-        // Fall through to MediaRecorder
-      }
+    console.log("[VideoEncoder] Mobile path — WebCodecs only (no MediaRecorder fallback)");
+    
+    // Check if WebCodecs API exists at all
+    if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") {
+      console.error("[VideoEncoder] WebCodecs API not available on this device");
+      throw new Error("Este dispositivo não suporta exportação de vídeo. Atualize o iOS/navegador para a versão mais recente.");
     }
-
-    // Fallback: MediaRecorder (may not work on iOS but try anyway)
-    console.log("[VideoEncoder] Mobile fallback: MediaRecorder with", recordMime);
-    onProgress?.(0.08);
+    
+    onProgress?.(0.06);
+    console.log("[VideoEncoder] WebCodecs API exists, starting encode...");
+    
     try {
+      onProgress?.(0.07);
       const rawBlob = await withTimeout(
-        encodeVideoSimple(pages, options, { mimeType: recordMime, outputType }),
+        encodeVideoWithWebCodecs(pages, options),
         600_000,
-        "gerar vídeo mobile"
+        "gerar vídeo mobile (WebCodecs)"
       );
-      console.log("[VideoEncoder] MediaRecorder blob size:", rawBlob.size);
-      let result = rawBlob;
-      if (await isValidMP4(result)) {
-        result = await patchMP4Brand(result);
-      }
+      console.log("[VideoEncoder] WebCodecs SUCCESS! blob size:", rawBlob.size);
       onProgress?.(1);
-      return new Blob([result], { type: "video/mp4" });
-    } catch (mrErr) {
-      console.error("[VideoEncoder] MediaRecorder also FAILED:", mrErr);
-      // Last resort: create a "video" from just the first page image
-      console.error("Não foi possível gerar vídeo neste dispositivo.");
-      throw mrErr;
+      return rawBlob;
+    } catch (wcErr) {
+      console.error("[VideoEncoder] WebCodecs encode FAILED:", wcErr);
+      throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
     }
   }
 
@@ -957,19 +935,26 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   });
 
   let encoderError: Error | null = null;
+  let chunksReceived = 0;
   const encoder = new VideoEncoder({
-    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta ?? undefined),
+    output: (chunk, meta) => { muxer.addVideoChunk(chunk, meta ?? undefined); chunksReceived++; if (chunksReceived <= 3) console.log("[WebCodecs] Chunk received #" + chunksReceived, "size:", chunk.byteLength); },
     error: (e) => { console.error("[WebCodecs] Encoder error:", e); encoderError = e instanceof Error ? e : new Error(String(e)); },
   });
 
   const config: VideoEncoderConfig = {
     codec: "avc1.42001f",
     width, height,
-    bitrate: 4_000_000,
+    bitrate: 2_000_000,
     framerate: fps,
   };
-  console.log("[WebCodecs] Configuring encoder:", config);
-  encoder.configure(config);
+  console.log("[WebCodecs] Configuring encoder:", JSON.stringify(config));
+  
+  try {
+    encoder.configure(config);
+  } catch (configErr) {
+    console.error("[WebCodecs] Configure FAILED:", configErr);
+    throw configErr;
+  }
   console.log("[WebCodecs] Encoder configured, state:", encoder.state);
 
   const frameDurationMicros = Math.round(1_000_000 / fps);
