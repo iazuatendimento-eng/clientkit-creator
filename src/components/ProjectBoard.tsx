@@ -1498,8 +1498,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             <AlertDialogHeader>
               <AlertDialogTitle>Múltiplos textos detectados</AlertDialogTitle>
               <AlertDialogDescription>
-                Foram detectados {multiTextInput.split("\n\n").filter(p => p.trim().length > 0).length} textos separados. 
-                Deseja criar um card único com todo o texto ou dividir em {multiTextInput.split("\n\n").filter(p => p.trim().length > 0).length} cards separados?
+                Foram detectados {multiTextInput.split("\n").filter(p => p.trim().length > 0).length} textos separados. 
+                Deseja criar um card único com todo o texto ou dividir em {multiTextInput.split("\n").filter(p => p.trim().length > 0).length} cards separados?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1507,7 +1507,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                 Card Único
               </AlertDialogCancel>
               <AlertDialogAction onClick={createMultipleBriefs}>
-                Dividir em {multiTextInput.split("\n\n").filter(p => p.trim().length > 0).length} Cards
+                Dividir em {multiTextInput.split("\n").filter(p => p.trim().length > 0).length} Cards
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
