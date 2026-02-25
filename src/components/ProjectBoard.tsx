@@ -1021,64 +1021,42 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     if (paragraphs.length === 1) {
       createSingleBrief(paragraphs[0]);
     } else {
-      // Multiple paragraphs - create all cards directly
-      toast.info(`Criando ${paragraphs.length} cards e gerando legendas...`);
+      // Multiple paragraphs - create all cards FIRST (fast), then generate captions in background
+      toast.info(`Criando ${paragraphs.length} cards...`);
 
       if (!newBrief.brandKitId && brandKits.length > 0) {
         newBrief.brandKitId = brandKits[0].id;
       }
 
-      let createdCount = 0;
+      // STEP 1: Create all cards immediately without captions
+      const createdIds: string[] = [];
       let failedCount = 0;
 
       for (let index = 0; index < paragraphs.length; index++) {
         const text = paragraphs[index];
         
         try {
-          let generatedCaption = "";
-          try {
-            const captionResponse = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-                },
-                body: JSON.stringify({ text }),
-              }
-            );
-
-            if (captionResponse.ok) {
-              const captionData = await captionResponse.json();
-              generatedCaption = captionData.caption;
-            }
-          } catch (captionError) {
-            console.error(`Erro ao gerar legenda do card ${index + 1}:`, captionError);
-          }
-
           const deadlineDate = new Date();
           deadlineDate.setDate(deadlineDate.getDate() + index);
 
-          await createProjectBrief({
+          const result = await createProjectBrief({
             client_id: clientId,
             title: text,
             description: text,
             deadline: deadlineDate.toISOString().split('T')[0],
             status: "todo" as const,
             brand_kit_id: newBrief.brandKitId || null,
-            generated_caption: generatedCaption,
+            generated_caption: "",
             sort_order: index + 1,
           });
-          createdCount++;
-          console.log(`[handleBulkAdd] Card ${index + 1}/${paragraphs.length} criado`);
+          createdIds.push(result.id);
         } catch (cardError) {
           console.error(`Erro ao criar card ${index + 1}:`, cardError);
           failedCount++;
         }
       }
 
-      // Reload briefs
+      // Reload briefs immediately to show all cards
       const data = await getProjectBriefsByClient(clientId);
       const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
         id: brief.id,
@@ -1105,10 +1083,58 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       setIsDialogOpen(false);
       
       if (failedCount > 0) {
-        toast.warning(`${createdCount} cards criados, ${failedCount} falharam.`);
+        toast.warning(`${createdIds.length} cards criados, ${failedCount} falharam.`);
       } else {
-        toast.success(`${createdCount} cards criados com legendas!`);
+        toast.success(`${createdIds.length} cards criados! Gerando legendas em background...`);
       }
+
+      // STEP 2: Generate captions in background (non-blocking)
+      for (const brief of data) {
+        if (brief.generated_caption) continue; // Skip if already has caption
+        try {
+          const captionResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({ text: brief.title }),
+            }
+          );
+
+          if (captionResponse.ok) {
+            const captionData = await captionResponse.json();
+            await updateProjectBrief(brief.id, { generated_caption: captionData.caption });
+          }
+        } catch (err) {
+          console.error(`Erro ao gerar legenda para ${brief.id}:`, err);
+        }
+      }
+      
+      // Reload one more time to get captions
+      const updatedData = await getProjectBriefsByClient(clientId);
+      const updatedBriefs: ProjectBrief[] = updatedData.map((brief: any) => ({
+        id: brief.id,
+        clientName: clientName || "",
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
+        generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
+        artGenerationSelected: brief.art_generation_selected || false,
+        generatedVideoUrl: (brief as any).generated_video_url || undefined,
+        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+      }));
+      setBriefs(updatedBriefs);
+      toast.success("Legendas geradas com sucesso!");
     }
   };
 
