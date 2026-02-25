@@ -25,6 +25,7 @@ import { VideoAdjustOverlay } from "@/components/VideoAdjustOverlay";
 import { searchVideos, type SearchVideo } from "@/lib/imageSearch";
 import { encodeVideoToMP4, reencodeForWhatsApp, type MotionEffect, type TransitionEffect, type TextAnimation, type LogoAnimation } from "@/lib/videoEncoder";
 import { Input } from "@/components/ui/input";
+import JSZip from "jszip";
 
 import type { PreloadedVideoData } from "@/hooks/useVideoPregenerate";
 
@@ -397,8 +398,72 @@ export function VideoGeneratorModal({
     setIsApplyingAdjustments(false);
   };
 
+  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const handleExportImages = async () => {
+    if (!videoPages) return;
+    setStatus("exporting");
+    setExportProgress(0);
+
+    try {
+      const zip = new JSZip();
+      const pages = videoPages.pages;
+
+      for (let i = 0; i < pages.length; i++) {
+        setExportProgress((i + 1) / (pages.length + 1));
+        const dataUrl = pages[i];
+        // Convert data URL to blob
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        zip.file(`pagina-${i + 1}.png`, blob);
+      }
+
+      setExportProgress(0.9);
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const safeName = `${clientName}-${cardTitle.slice(0, 20)}-imagens.zip`;
+
+      if (isIOS && navigator.share && navigator.canShare) {
+        const file = new File([zipBlob], safeName, { type: "application/zip" });
+        const shareData = { files: [file] };
+        if (navigator.canShare(shareData)) {
+          try {
+            await navigator.share(shareData);
+            setExportProgress(1);
+            setStatus("ready");
+            toast.success("Imagens exportadas! ✓");
+            return;
+          } catch (e: any) {
+            if (e?.name === "AbortError") { setStatus("ready"); return; }
+          }
+        }
+      }
+
+      // Fallback: blob download
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = safeName;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+      setExportProgress(1);
+      setStatus("ready");
+      toast.success("Imagens baixadas! ✓");
+    } catch (err) {
+      console.error("Export images error:", err);
+      toast.error("Erro ao exportar imagens");
+      setStatus("ready");
+    }
+  };
+
   const handleExport = async (stripAudio: boolean) => {
     if (!template || !videoPages) return;
+
+    // Mobile: export as image ZIP (MediaRecorder is broken on iOS/mobile)
+    if (isMobileDevice) {
+      return handleExportImages();
+    }
 
     setStatus("exporting");
     setExportProgress(0);
@@ -434,52 +499,25 @@ export function VideoGeneratorModal({
       });
 
       let finalBlob = blob;
-      const isMobileExport = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      // On mobile, skip reencodeForWhatsApp (FFmpeg too heavy)
-      if (!isMobileExport) {
-        const numPages = videoPages.pages.length;
-        const expectedDuration = numPages * template.pageDuration;
-        try {
-          finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio, expectedDuration });
-        } catch { /* use original */ }
-      }
+      const numPages = videoPages.pages.length;
+      const expectedDuration = numPages * template.pageDuration;
+      try {
+        finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio, expectedDuration });
+      } catch { /* use original */ }
 
       setExportedBlob(finalBlob);
       setStatus("ready");
 
       const safeName = `${clientName}-${cardTitle.slice(0, 20)}.mp4`;
 
-      // iOS: use Web Share API for native "Save Video"
-      if (isIOS && navigator.share && navigator.canShare) {
-        const file = new File([finalBlob], safeName, { type: "video/mp4" });
-        const shareData = { files: [file] };
-        if (navigator.canShare(shareData)) {
-          try {
-            await navigator.share(shareData);
-            // Continue to upload to storage below
-          } catch (shareErr: any) {
-            if (shareErr?.name !== 'AbortError') {
-              // Fallback to blob download
-              const url = URL.createObjectURL(finalBlob);
-              const link = document.createElement("a");
-              link.href = url;
-              link.download = safeName;
-              link.click();
-              setTimeout(() => URL.revokeObjectURL(url), 30000);
-            }
-          }
-        }
-      } else {
-        // Android & Desktop: direct blob download
-        const url = URL.createObjectURL(finalBlob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = safeName;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 30000);
-      }
+      // Desktop: direct blob download
+      const url = URL.createObjectURL(finalBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = safeName;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
 
       // Upload to storage for 24h availability
       try {
@@ -675,16 +713,28 @@ export function VideoGeneratorModal({
               </div>
 
               {/* Download buttons - always visible */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button onClick={() => handleExport(false)} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Baixar Com Áudio
-                </Button>
-                <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Baixar Sem Áudio
-                </Button>
-              </div>
+              {isMobileDevice ? (
+                <div className="grid grid-cols-1 gap-2">
+                  <Button onClick={handleExportImages} className="gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Baixar Imagens (ZIP)
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    No celular, o vídeo é exportado como imagens. Para vídeo MP4, use o computador.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={() => handleExport(false)} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Baixar Com Áudio
+                  </Button>
+                  <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Baixar Sem Áudio
+                  </Button>
+                </div>
+              )}
 
               {/* Video swap section */}
               <VideoSwapSection
