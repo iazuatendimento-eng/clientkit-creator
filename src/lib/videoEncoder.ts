@@ -912,6 +912,10 @@ export async function encodeVideoSimple(
   });
 
   // ====== ALL DEVICES: MediaRecorder approach ======
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // iOS Safari only supports video/mp4 for MediaRecorder
+  // On iOS, captureStream(0) works better — captures a frame on each canvas change
   const chosenMime =
     (extra?.mimeType && MediaRecorder.isTypeSupported(extra.mimeType) ? extra.mimeType : null) ||
     (isMobileDevice
@@ -919,58 +923,87 @@ export async function encodeVideoSimple(
       : pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"])) ||
     "video/webm";
 
-  console.log(`[VideoEncoder] MediaRecorder MIME: ${chosenMime}, mobile: ${isMobileDevice}`);
+  console.log(`[VideoEncoder] MIME: ${chosenMime}, mobile: ${isMobileDevice}, iOS: ${isIOS}`);
 
   const outType = extra?.outputType || (chosenMime.startsWith("video/mp4") ? "video/mp4" : "video/webm");
 
-  // On mobile, use a lower FPS to reduce load
-  const effectiveFps = isMobileDevice ? Math.min(fps, 15) : fps;
+  // On mobile, reduce FPS for performance
+  const effectiveFps = isMobileDevice ? Math.min(fps, 12) : fps;
   const effectiveFramesPerPage = Math.max(1, Math.floor(pageDuration * effectiveFps));
   const effectiveTotalFrames = effectiveFramesPerPage * images.length;
-  // Frame interval in ms — on mobile we MUST render at real-time pace for MediaRecorder
-  const frameIntervalMs = isMobileDevice ? Math.floor(1000 / effectiveFps) : 0;
+  const frameIntervalMs = Math.floor(1000 / effectiveFps);
 
-  const stream = canvas.captureStream(isMobileDevice ? effectiveFps : fps);
-  const mediaRecorder = new MediaRecorder(stream, {
-    mimeType: chosenMime,
-    videoBitsPerSecond: isMobileDevice ? 4_000_000 : bitrate,
-  });
+  // iOS: captureStream(0) — frame captured on each canvas draw
+  // Desktop: captureStream(fps) — automatic frame rate
+  const stream = canvas.captureStream(isIOS ? 0 : fps);
+  console.log("[VideoEncoder] Stream tracks:", stream.getTracks().length, "active:", stream.active);
+
+  let mediaRecorder: MediaRecorder;
+  try {
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: chosenMime,
+      videoBitsPerSecond: isMobileDevice ? 2_500_000 : bitrate,
+    });
+  } catch (mrErr) {
+    console.error("[VideoEncoder] MediaRecorder creation failed:", mrErr);
+    // Try without options
+    mediaRecorder = new MediaRecorder(stream);
+    console.log("[VideoEncoder] Fallback MediaRecorder created, mimeType:", mediaRecorder.mimeType);
+  }
 
   const chunks: Blob[] = [];
   let dataReceived = false;
+  let dataEventCount = 0;
   mediaRecorder.ondataavailable = (e) => {
+    dataEventCount++;
     if (e.data.size > 0) {
       chunks.push(e.data);
       dataReceived = true;
     }
+    if (dataEventCount <= 3) {
+      console.log(`[VideoEncoder] ondataavailable #${dataEventCount}: size=${e.data.size}`);
+    }
   };
 
+  const useFramesPerPage = isMobileDevice ? effectiveFramesPerPage : framesPerPage;
+  const useTotalFrames = isMobileDevice ? effectiveTotalFrames : totalFrames;
+
   return new Promise((resolve, reject) => {
-    // Stall detector: if no data after 15 seconds, abort
+    // Stall detector for mobile
     let stallTimer: number | undefined;
     if (isMobileDevice) {
       stallTimer = window.setTimeout(() => {
-        if (!dataReceived && mediaRecorder.state === "recording") {
-          console.error("[VideoEncoder] Mobile stall detected — no data received in 15s");
-          try { mediaRecorder.stop(); } catch {}
-          // Resolve with whatever we have (even empty) rather than hang forever
+        console.error("[VideoEncoder] STALL: no data after 20s. state:", mediaRecorder.state, "chunks:", chunks.length, "dataEvents:", dataEventCount);
+        if (mediaRecorder.state === "recording") {
+          try { mediaRecorder.requestData(); } catch {}
+          // Give it 2 more seconds after requesting data
+          window.setTimeout(() => {
+            if (!dataReceived) {
+              console.error("[VideoEncoder] Still no data after requestData. Aborting.");
+              try { mediaRecorder.stop(); } catch {}
+            }
+          }, 2000);
         }
-      }, 15_000);
+      }, 20_000);
     }
 
     mediaRecorder.onstop = () => {
       if (stallTimer) window.clearTimeout(stallTimer);
       bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
       const result = new Blob(chunks, { type: outType });
-      console.log("[VideoEncoder] MediaRecorder stopped, chunks:", chunks.length, "size:", result.size);
+      console.log("[VideoEncoder] Stopped. chunks:", chunks.length, "size:", result.size, "dataEvents:", dataEventCount);
       resolve(result);
     };
     mediaRecorder.onerror = (e) => {
+      console.error("[VideoEncoder] MediaRecorder error:", e);
       if (stallTimer) window.clearTimeout(stallTimer);
       reject(e);
     };
-    // On mobile use larger timeslice to collect bigger chunks
-    mediaRecorder.start(isMobileDevice ? 1000 : 250);
+
+    // Start with timeslice — forces periodic ondataavailable events
+    const timeslice = isMobileDevice ? 500 : 250;
+    mediaRecorder.start(timeslice);
+    console.log("[VideoEncoder] MediaRecorder started, state:", mediaRecorder.state, "timeslice:", timeslice);
 
     let globalFrame = 0;
     let activeVideoIdx = -1;
@@ -986,17 +1019,22 @@ export async function encodeVideoSimple(
     if (bgVideos[0]) startVideoForPage(0);
 
     const FRAMES_PER_BATCH = isMobileDevice ? 1 : 4;
+    const PROGRESS_INTERVAL = isMobileDevice ? 3 : 10;
     let progressCounter = 0;
-    const PROGRESS_INTERVAL = isMobileDevice ? 5 : 10;
-    // Use effective values for mobile
-    const useFramesPerPage = isMobileDevice ? effectiveFramesPerPage : framesPerPage;
-    const useTotalFrames = isMobileDevice ? effectiveTotalFrames : totalFrames;
 
     const tick = () => {
       if (globalFrame >= useTotalFrames) {
         bgVideos.forEach((v) => { if (v) v.pause(); });
+        // Wait a bit for last data events before stopping
         setTimeout(() => {
-          try { mediaRecorder.stop(); } catch {}
+          try {
+            mediaRecorder.requestData();
+            setTimeout(() => {
+              try { mediaRecorder.stop(); } catch {}
+            }, 300);
+          } catch {
+            try { mediaRecorder.stop(); } catch {}
+          }
         }, 500);
         return;
       }
@@ -1019,17 +1057,27 @@ export async function encodeVideoSimple(
       }
 
       if (globalFrame < useTotalFrames) {
-        setTimeout(tick, frameIntervalMs);
+        // On mobile, render at real-time pace so MediaRecorder can keep up
+        if (isMobileDevice) {
+          setTimeout(tick, frameIntervalMs);
+        } else {
+          setTimeout(tick, 0);
+        }
       } else {
         bgVideos.forEach((v) => { if (v) v.pause(); });
         setTimeout(() => {
-          try { mediaRecorder.stop(); } catch {}
+          try {
+            mediaRecorder.requestData();
+            setTimeout(() => { try { mediaRecorder.stop(); } catch {} }, 300);
+          } catch {
+            try { mediaRecorder.stop(); } catch {}
+          }
         }, 500);
       }
     };
 
-    // On mobile, give MediaRecorder time to initialize before starting frame rendering
-    setTimeout(tick, isMobileDevice ? 500 : 0);
+    // Give MediaRecorder time to fully initialize before rendering
+    setTimeout(tick, isMobileDevice ? 1000 : 0);
   });
 }
 
