@@ -420,12 +420,11 @@ export function VideoGeneratorModal({
       const imageElSz = getImageElSize(template.contentElements);
       const imageClipShape = getImageClipShape(template.contentElements);
 
-      const mobileFps = isMobileDevice ? 15 : 24;
       const blob = await encodeVideoToMP4(videoPages.pages, {
-        width: isMobileDevice ? Math.min(template.width, 720) : template.width,
-        height: isMobileDevice ? Math.min(template.height, 1280) : template.height,
+        width: template.width,
+        height: template.height,
         pageDuration: template.pageDuration,
-        fps: mobileFps,
+        fps: 24,
         motionEffect: "ken-burns" as MotionEffect,
         transitionEffect: "fade" as TransitionEffect,
         textAnimation: textAnim,
