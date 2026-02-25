@@ -269,21 +269,27 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       console.log("[Download]", filename, "MIME:", mimeType, "Size:", arrayBuffer.byteLength);
       let blob = new Blob([arrayBuffer], { type: mimeType });
 
-      // For videos: re-encode through FFmpeg for WhatsApp compatibility
+      // For videos: re-encode through FFmpeg for WhatsApp compatibility (desktop only)
+      const isMobileDownload = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       if (isVideo) {
-        try {
-          toast.loading("Processando vídeo...", { id: "download-loading" });
-          blob = await reencodeForWhatsApp(blob, (p) => {
-            if (p < 0.3) toast.loading("Carregando conversor...", { id: "download-loading" });
-            else if (p < 0.85) toast.loading("Convertendo vídeo...", { id: "download-loading" });
-            else toast.loading("Finalizando...", { id: "download-loading" });
-          }, { stripAudio: !!stripAudio });
-          // Ensure .mp4 extension
+        if (isMobileDownload) {
+          // On mobile, skip FFmpeg — it stalls. Use original blob directly.
+          console.log("[Download] Mobile: skipping FFmpeg re-encode");
+          blob = new Blob([blob], { type: "video/mp4" });
           filename = filename.replace(/\.[^.]+$/, '') + '.mp4';
-          console.log("[Download] Re-encoded for WhatsApp, size:", blob.size);
-        } catch (encErr) {
-          console.error("[Download] FFmpeg re-encode failed:", encErr);
-          // Continue with original blob
+        } else {
+          try {
+            toast.loading("Processando vídeo...", { id: "download-loading" });
+            blob = await reencodeForWhatsApp(blob, (p) => {
+              if (p < 0.3) toast.loading("Carregando conversor...", { id: "download-loading" });
+              else if (p < 0.85) toast.loading("Convertendo vídeo...", { id: "download-loading" });
+              else toast.loading("Finalizando...", { id: "download-loading" });
+            }, { stripAudio: !!stripAudio });
+            filename = filename.replace(/\.[^.]+$/, '') + '.mp4';
+            console.log("[Download] Re-encoded for WhatsApp, size:", blob.size);
+          } catch (encErr) {
+            console.error("[Download] FFmpeg re-encode failed:", encErr);
+          }
         }
       }
 
