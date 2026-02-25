@@ -759,20 +759,30 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     });
   };
 
-  // Helper: load video with 8s timeout
+  // Helper: load video with short timeout (mobile often blocks video preload)
+  const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const vidTimeout = isMob ? 3_000 : 8_000;
   const loadVid = (url: string): Promise<HTMLVideoElement | null> => {
     if (!url) return Promise.resolve(null);
     return new Promise<HTMLVideoElement | null>((resolve) => {
-      const timer = setTimeout(() => { console.warn("[WebCodecs] Vid timeout:", url.slice(0, 60)); resolve(null); }, 8_000);
+      const timer = setTimeout(() => { console.warn("[WebCodecs] Vid timeout (" + vidTimeout + "ms):", url.slice(0, 60)); resolve(null); }, vidTimeout);
       const video = document.createElement("video");
       video.crossOrigin = "anonymous";
       video.muted = true;
       video.playsInline = true;
       video.preload = "auto";
       video.loop = true;
+      // Listen to multiple events — mobile may only fire canplay, not loadeddata
+      let resolved = false;
+      const done = () => { if (resolved) return; resolved = true; clearTimeout(timer); resolve(video); };
+      const fail = () => { if (resolved) return; resolved = true; clearTimeout(timer); resolve(null); };
+      video.onloadeddata = done;
+      video.oncanplay = done;
+      video.onerror = fail;
+      video.onstalled = () => console.warn("[WebCodecs] Vid stalled:", url.slice(0, 40));
       video.src = url;
-      video.onloadeddata = () => { clearTimeout(timer); resolve(video); };
-      video.onerror = () => { clearTimeout(timer); resolve(null); };
+      // On mobile, try to trigger load explicitly
+      try { video.load(); } catch {}
     });
   };
 
