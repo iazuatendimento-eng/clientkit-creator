@@ -589,11 +589,11 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && (() => {
             const today = new Date().toISOString().split('T')[0];
-            const isDeadlineToday = brief.deadline === today;
+            const isDeadlineReached = brief.deadline ? brief.deadline <= today : false;
             return (
             <div className="flex flex-col gap-3 mt-3 min-w-0 overflow-hidden">
               {/* Show art download only on the card's deadline day */}
-              {isDeadlineToday && (brief.coverImage || brief.coverVideo) && (
+              {isDeadlineReached && (brief.coverImage || brief.coverVideo) && (
                 brief.coverVideo ? (
                   <div className="grid grid-cols-2 gap-1">
                     <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); onStatusChange(brief.id, "completed"); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
