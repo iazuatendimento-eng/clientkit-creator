@@ -1383,16 +1383,29 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     contactX, contactY, contactScale, contactScaleX, contactScaleY,
     shapeOverrides,
   });
-  // Keep ref in sync with state
-  useEffect(() => {
-    overridesRef.current = {
-      photoOffsetX, photoOffsetY, photoScale, photoFrame,
-      logoX, logoY, logoScale, logoScaleX, logoScaleY,
-      textX, textY, textFontSize,
-      contactX, contactY, contactScale, contactScaleX, contactScaleY,
-      shapeOverrides,
-    };
-  });
+  // Synchronous ref updater — called by wrapper setters so the ref is always
+  // up-to-date even before React re-renders.
+  const syncRef = useCallback((patch: Partial<typeof overridesRef.current>) => {
+    overridesRef.current = { ...overridesRef.current, ...patch };
+  }, []);
+
+  // Wrapper setters that update state + ref synchronously
+  const syncSetPhotoOffsetX = useCallback((v: number) => { setPhotoOffsetX(v); syncRef({ photoOffsetX: v }); }, [syncRef]);
+  const syncSetPhotoOffsetY = useCallback((v: number) => { setPhotoOffsetY(v); syncRef({ photoOffsetY: v }); }, [syncRef]);
+  const syncSetPhotoScale = useCallback((v: number) => { setPhotoScale(v); syncRef({ photoScale: v }); }, [syncRef]);
+  const syncSetPhotoFrame = useCallback((v: ShapeOverride | null) => { setPhotoFrame(v); syncRef({ photoFrame: v }); }, [syncRef]);
+  const syncSetLogoX = useCallback((v: number) => { setLogoX(v); syncRef({ logoX: v }); }, [syncRef]);
+  const syncSetLogoY = useCallback((v: number) => { setLogoY(v); syncRef({ logoY: v }); }, [syncRef]);
+  const syncSetLogoScaleX = useCallback((v: number) => { setLogoScaleX(v); syncRef({ logoScaleX: v }); }, [syncRef]);
+  const syncSetLogoScaleY = useCallback((v: number) => { setLogoScaleY(v); syncRef({ logoScaleY: v }); }, [syncRef]);
+  const syncSetTextX = useCallback((v: number) => { setTextX(v); syncRef({ textX: v }); }, [syncRef]);
+  const syncSetTextY = useCallback((v: number) => { setTextY(v); syncRef({ textY: v }); }, [syncRef]);
+  const syncSetTextFontSize = useCallback((v: number) => { setTextFontSize(v); syncRef({ textFontSize: v }); }, [syncRef]);
+  const syncSetContactX = useCallback((v: number) => { setContactX(v); syncRef({ contactX: v }); }, [syncRef]);
+  const syncSetContactY = useCallback((v: number) => { setContactY(v); syncRef({ contactY: v }); }, [syncRef]);
+  const syncSetContactScaleX = useCallback((v: number) => { setContactScaleX(v); syncRef({ contactScaleX: v }); }, [syncRef]);
+  const syncSetContactScaleY = useCallback((v: number) => { setContactScaleY(v); syncRef({ contactScaleY: v }); }, [syncRef]);
+  const syncSetShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => { setShapeOverrides(v); syncRef({ shapeOverrides: v }); }, [syncRef]);
 
   const selectedArtRef = useRef(selectedArt);
   useEffect(() => { selectedArtRef.current = selectedArt; });
@@ -2249,34 +2262,34 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               photoOffsetY={photoOffsetY}
               photoScale={photoScale}
               photoFrame={photoFrame}
-              setPhotoOffsetX={setPhotoOffsetX}
-              setPhotoOffsetY={setPhotoOffsetY}
-              setPhotoScale={setPhotoScale}
-              setPhotoFrame={setPhotoFrame}
+              setPhotoOffsetX={syncSetPhotoOffsetX}
+              setPhotoOffsetY={syncSetPhotoOffsetY}
+              setPhotoScale={syncSetPhotoScale}
+              setPhotoFrame={syncSetPhotoFrame}
               logoX={logoX}
               logoY={logoY}
               logoScaleX={logoScaleX}
               logoScaleY={logoScaleY}
-              setLogoX={setLogoX}
-              setLogoY={setLogoY}
-              setLogoScaleX={setLogoScaleX}
-              setLogoScaleY={setLogoScaleY}
+              setLogoX={syncSetLogoX}
+              setLogoY={syncSetLogoY}
+              setLogoScaleX={syncSetLogoScaleX}
+              setLogoScaleY={syncSetLogoScaleY}
               textX={textX}
               textY={textY}
               textFontSize={textFontSize}
-              setTextX={setTextX}
-              setTextY={setTextY}
-              setTextFontSize={setTextFontSize}
+              setTextX={syncSetTextX}
+              setTextY={syncSetTextY}
+              setTextFontSize={syncSetTextFontSize}
               contactX={contactX}
               contactY={contactY}
               contactScaleX={contactScaleX}
               contactScaleY={contactScaleY}
-              setContactX={setContactX}
-              setContactY={setContactY}
-              setContactScaleX={setContactScaleX}
-              setContactScaleY={setContactScaleY}
+              setContactX={syncSetContactX}
+              setContactY={syncSetContactY}
+              setContactScaleX={syncSetContactScaleX}
+              setContactScaleY={syncSetContactScaleY}
               shapeOverrides={shapeOverrides}
-              setShapeOverrides={setShapeOverrides}
+              setShapeOverrides={syncSetShapeOverrides}
               onDragEnd={handleDragEnd}
             />
 
