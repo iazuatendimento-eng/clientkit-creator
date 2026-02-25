@@ -596,17 +596,17 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               {isDeadlineReached && (brief.coverImage || brief.coverVideo) && (
                 brief.coverVideo ? (
                   <div className="grid grid-cols-2 gap-1">
-                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); onStatusChange(brief.id, "completed"); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
+                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
                       <Volume2 className="h-3 w-3 shrink-0 mr-0.5" />
                       <span>Baixar Com Áudio</span>
                     </Button>
-                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); onStatusChange(brief.id, "completed"); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, true); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
+                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, true); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
                       <VolumeX className="h-3 w-3 shrink-0 mr-0.5" />
                       <span>Baixar Sem Áudio</span>
                     </Button>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); onStatusChange(brief.id, "completed"); handleDownload(brief.coverImage!, `${brief.clientName}-${brief.id}.png`); }} className="text-xs px-2 py-1 h-auto w-full">
+                  <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.coverImage!, `${brief.clientName}-${brief.id}.png`); }} className="text-xs px-2 py-1 h-auto w-full">
                     <Download className="h-3 w-3 mr-1" />
                     Baixar Arte
                   </Button>
@@ -633,10 +633,10 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       </span>
                     </div>
                     <div className="flex flex-col gap-2 min-w-0">
-                      <Button onClick={async (e) => { e.stopPropagation(); onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
+                      <Button onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
                         <span>Baixar Com Áudio</span>
                       </Button>
-                      <Button variant="outline" onClick={async (e) => { e.stopPropagation(); onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
+                      <Button variant="outline" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
                         <span>Baixar Sem Áudio</span>
                       </Button>
                     </div>
