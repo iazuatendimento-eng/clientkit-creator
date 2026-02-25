@@ -747,7 +747,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [multiTextInput, setMultiTextInput] = useState("");
-  const [showSplitDialog, setShowSplitDialog] = useState(false);
+  const [showSplitDialog, setShowSplitDialog] = useState(false); // kept for compatibility
   const [captionCopied, setCaptionCopied] = useState(false);
 
   // Load briefs from Supabase
@@ -996,12 +996,16 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     }
   };
 
-  const handleBulkAdd = () => {
-    // Debug: log raw input to understand what's being pasted
-    console.log("[handleBulkAdd] Raw input length:", multiTextInput.length);
-    console.log("[handleBulkAdd] Raw input charCodes:", Array.from(multiTextInput.slice(0, 200)).map(c => c.charCodeAt(0)));
+  const handleBulkAdd = async () => {
+    if (!clientId) {
+      toast.error("Cliente não identificado");
+      return;
+    }
+
+    const rawInput = multiTextInput;
+    console.log("[handleBulkAdd] Raw input length:", rawInput.length);
     
-    const paragraphs = multiTextInput
+    const paragraphs = rawInput
       .split(/\r\n|\r|\n|\u2028|\u2029/)
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
@@ -1013,10 +1017,98 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       return;
     }
 
-    if (paragraphs.length > 1) {
-      setShowSplitDialog(true);
-    } else {
+    // Create cards directly - no confirmation dialog
+    if (paragraphs.length === 1) {
       createSingleBrief(paragraphs[0]);
+    } else {
+      // Multiple paragraphs - create all cards directly
+      toast.info(`Criando ${paragraphs.length} cards e gerando legendas...`);
+
+      if (!newBrief.brandKitId && brandKits.length > 0) {
+        newBrief.brandKitId = brandKits[0].id;
+      }
+
+      let createdCount = 0;
+      let failedCount = 0;
+
+      for (let index = 0; index < paragraphs.length; index++) {
+        const text = paragraphs[index];
+        
+        try {
+          let generatedCaption = "";
+          try {
+            const captionResponse = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                },
+                body: JSON.stringify({ text }),
+              }
+            );
+
+            if (captionResponse.ok) {
+              const captionData = await captionResponse.json();
+              generatedCaption = captionData.caption;
+            }
+          } catch (captionError) {
+            console.error(`Erro ao gerar legenda do card ${index + 1}:`, captionError);
+          }
+
+          const deadlineDate = new Date();
+          deadlineDate.setDate(deadlineDate.getDate() + index);
+
+          await createProjectBrief({
+            client_id: clientId,
+            title: text,
+            description: text,
+            deadline: deadlineDate.toISOString().split('T')[0],
+            status: "todo" as const,
+            brand_kit_id: newBrief.brandKitId || null,
+            generated_caption: generatedCaption,
+            sort_order: index + 1,
+          });
+          createdCount++;
+          console.log(`[handleBulkAdd] Card ${index + 1}/${paragraphs.length} criado`);
+        } catch (cardError) {
+          console.error(`Erro ao criar card ${index + 1}:`, cardError);
+          failedCount++;
+        }
+      }
+
+      // Reload briefs
+      const data = await getProjectBriefsByClient(clientId);
+      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
+        id: brief.id,
+        clientName: clientName || "",
+        title: brief.title,
+        description: brief.description || "",
+        deadline: brief.deadline || "",
+        status: brief.status || "todo",
+        brandKitId: brief.brand_kit_id,
+        createdAt: brief.created_at || new Date().toISOString(),
+        type: brief.brief_type as "art" | "video",
+        coverImage: brief.cover_image,
+        coverVideo: brief.cover_video,
+        generatedCaption: brief.generated_caption || "",
+        published: brief.published || false,
+        artGenerationSelected: brief.art_generation_selected || false,
+        generatedVideoUrl: (brief as any).generated_video_url || undefined,
+        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+      }));
+      setBriefs(mappedBriefs);
+      
+      setMultiTextInput("");
+      setNewBrief({});
+      setIsDialogOpen(false);
+      
+      if (failedCount > 0) {
+        toast.warning(`${createdCount} cards criados, ${failedCount} falharam.`);
+      } else {
+        toast.success(`${createdCount} cards criados com legendas!`);
+      }
     }
   };
 
@@ -1114,124 +1206,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     }
   };
 
-  const createMultipleBriefs = async () => {
-    if (!clientId) {
-      toast.error("Cliente não identificado");
-      return;
-    }
-
-    try {
-      const paragraphs = multiTextInput
-        .split(/\r\n|\r|\n|\u2028|\u2029/)
-        .map((p) => p.trim())
-        .filter((p) => p.length > 0);
-
-      toast.info(`Criando ${paragraphs.length} cards e gerando legendas...`);
-
-      if (!newBrief.brandKitId && brandKits.length > 0) {
-        newBrief.brandKitId = brandKits[0].id;
-      }
-
-      let createdCount = 0;
-      let failedCount = 0;
-
-      // Create cards sequentially to preserve order
-      for (let index = 0; index < paragraphs.length; index++) {
-        const text = paragraphs[index];
-        
-        try {
-          // Gerar legenda para cada card
-          let generatedCaption = "";
-          try {
-            const captionResponse = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-                },
-                body: JSON.stringify({ text }),
-              }
-            );
-
-            if (captionResponse.ok) {
-              const captionData = await captionResponse.json();
-              generatedCaption = captionData.caption;
-            }
-          } catch (captionError) {
-            console.error(`Erro ao gerar legenda do card ${index + 1}:`, captionError);
-          }
-
-          // Sequential dates: today + index days
-          const deadlineDate = new Date();
-          deadlineDate.setDate(deadlineDate.getDate() + index);
-
-          const briefData = {
-            client_id: clientId,
-            title: text,
-            description: text,
-            deadline: deadlineDate.toISOString().split('T')[0],
-            status: "todo" as const,
-            brand_kit_id: newBrief.brandKitId || null,
-            generated_caption: generatedCaption,
-            sort_order: index + 1,
-          };
-          await createProjectBrief(briefData);
-          createdCount++;
-        } catch (cardError) {
-          console.error(`Erro ao criar card ${index + 1}:`, cardError);
-          failedCount++;
-        }
-      }
-      
-      // Reload briefs from Supabase to ensure sync
-      const data = await getProjectBriefsByClient(clientId);
-      
-      const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
-        id: brief.id,
-        clientName: clientName || "",
-        title: brief.title,
-        description: brief.description || "",
-        deadline: brief.deadline || "",
-        status: brief.status || "todo",
-        brandKitId: brief.brand_kit_id,
-        createdAt: brief.created_at || new Date().toISOString(),
-        type: brief.brief_type as "art" | "video",
-        coverImage: brief.cover_image,
-        coverVideo: brief.cover_video,
-        generatedCaption: brief.generated_caption || "",
-        published: brief.published || false,
-        artGenerationSelected: brief.art_generation_selected || false,
-        generatedVideoUrl: (brief as any).generated_video_url || undefined,
-        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
-      }));
-      setBriefs(mappedBriefs);
-      
-      setMultiTextInput("");
-      setNewBrief({});
-      setShowSplitDialog(false);
-      setIsDialogOpen(false);
-      
-      if (failedCount > 0) {
-        toast.warning(`${createdCount} cards criados, ${failedCount} falharam.`);
-      } else {
-        toast.success(`${createdCount} cards criados com legendas!`);
-      }
-    } catch (error: any) {
-      console.error("Erro detalhado ao criar cards múltiplos:", error);
-      
-      let errorMessage = "Erro ao criar cards";
-      if (error?.message) {
-        errorMessage += `: ${error.message}`;
-      }
-      if (error?.code === "PGRST301") {
-        errorMessage = "Erro de autenticação. Por favor, faça login novamente.";
-      }
-      
-      toast.error(errorMessage);
-    }
-  };
+  // createMultipleBriefs removed - logic moved into handleBulkAdd
 
   const handleDeleteBrief = async (id: string) => {
     if (!clientId) return;
@@ -1513,25 +1488,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           </div>
         )}
 
-        <AlertDialog open={showSplitDialog} onOpenChange={setShowSplitDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Múltiplos textos detectados</AlertDialogTitle>
-              <AlertDialogDescription>
-                Foram detectados {multiTextInput.split(/\r?\n/).filter(p => p.trim().length > 0).length} textos separados. 
-                Deseja criar um card único com todo o texto ou dividir em {multiTextInput.split(/\r?\n/).filter(p => p.trim().length > 0).length} cards separados?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => createSingleBrief(multiTextInput)}>
-                Card Único
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={createMultipleBriefs}>
-                Dividir em {multiTextInput.split(/\r?\n/).filter(p => p.trim().length > 0).length} Cards
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Split dialog removed - cards are created directly */}
 
           <DndContext
             sensors={sensors}
