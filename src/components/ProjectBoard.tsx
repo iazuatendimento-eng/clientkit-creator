@@ -1521,13 +1521,12 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
-              // Sort completed column by deadline descending (most recent deadline first)
+              // Sort completed column: most recently created first
               if (column.id === "completed") {
                 columnBriefs = [...columnBriefs].sort((a, b) => {
-                  if (!a.deadline && !b.deadline) return 0;
-                  if (!a.deadline) return 1;
-                  if (!b.deadline) return -1;
-                  return new Date(b.deadline).getTime() - new Date(a.deadline).getTime();
+                  const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  return dateB - dateA;
                 });
               }
               
