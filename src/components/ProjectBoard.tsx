@@ -674,7 +674,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </div>
                 </div>
               )}
-              {brief.status !== "completed" && isFirstInQueue && (() => {
+              {brief.status !== "completed" && isDeadlineReached && (() => {
                 const alreadyUsed = clientId ? (hasUsedDailyVideo(clientId) || usedDailyVideo) : false;
                 if (alreadyUsed) return null;
                 return (
