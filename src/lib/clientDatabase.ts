@@ -44,6 +44,7 @@ export interface ProjectBrief {
   created_at?: string;
   generated_caption?: string;
   published?: boolean;
+  sort_order?: number;
 }
 
 // Client functions
