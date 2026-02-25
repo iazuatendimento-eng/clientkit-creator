@@ -589,7 +589,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           
           {isPublicView && (() => {
             const today = new Date().toISOString().split('T')[0];
-            const isDeadlineReached = brief.deadline === today;
+            const isDeadlineReached = brief.deadline ? brief.deadline <= today : false;
             return (
             <div className="flex flex-col gap-3 mt-3 min-w-0 overflow-hidden">
               {/* Show art download only on the card's deadline day */}
