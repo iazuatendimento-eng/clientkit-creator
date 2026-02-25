@@ -619,17 +619,19 @@ export function ArtAdjustOverlay({
     const HandleDot = ({ h }: { h: Handle }) => {
       // Position handles centered on the border edges/corners
       const style: React.CSSProperties = {};
-      const size = 10;
+      const size = 12;
       const half = -size / 2;
+      const hitSize = 24; // larger hit area for easier grabbing
+      const hitHalf = -hitSize / 2;
 
-      if (h === "nw") { style.left = half; style.top = half; }
-      else if (h === "ne") { style.right = half; style.top = half; }
-      else if (h === "sw") { style.left = half; style.bottom = half; }
-      else if (h === "se") { style.right = half; style.bottom = half; }
-      else if (h === "n") { style.left = "50%"; style.top = half; style.transform = "translateX(-50%)"; }
-      else if (h === "s") { style.left = "50%"; style.bottom = half; style.transform = "translateX(-50%)"; }
-      else if (h === "w") { style.left = half; style.top = "50%"; style.transform = "translateY(-50%)"; }
-      else if (h === "e") { style.right = half; style.top = "50%"; style.transform = "translateY(-50%)"; }
+      if (h === "nw") { style.left = hitHalf; style.top = hitHalf; }
+      else if (h === "ne") { style.right = hitHalf; style.top = hitHalf; }
+      else if (h === "sw") { style.left = hitHalf; style.bottom = hitHalf; }
+      else if (h === "se") { style.right = hitHalf; style.bottom = hitHalf; }
+      else if (h === "n") { style.left = "50%"; style.top = hitHalf; style.transform = "translateX(-50%)"; }
+      else if (h === "s") { style.left = "50%"; style.bottom = hitHalf; style.transform = "translateX(-50%)"; }
+      else if (h === "w") { style.left = hitHalf; style.top = "50%"; style.transform = "translateY(-50%)"; }
+      else if (h === "e") { style.right = hitHalf; style.top = "50%"; style.transform = "translateY(-50%)"; }
 
       const cursor =
         h === "n" || h === "s"
@@ -642,15 +644,15 @@ export function ArtAdjustOverlay({
 
       return (
         <div
-          className={cn("absolute z-30 touch-none", cursor)}
-          style={{ ...style, width: size, height: size }}
+          className={cn("absolute z-30 touch-none flex items-center justify-center", cursor)}
+          style={{ ...style, width: hitSize, height: hitSize }}
           onPointerDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
             begin(e, part, "resize", h);
           }}
         >
-          <div className="w-full h-full rounded-[2px] bg-white border border-primary shadow-sm" />
+          <div style={{ width: size, height: size }} className="rounded-[2px] bg-white border border-primary shadow-sm" />
         </div>
       );
     };
@@ -697,7 +699,8 @@ export function ArtAdjustOverlay({
   return (
     <div
       ref={containerRef}
-      className="relative mx-auto w-full max-w-md aspect-[4/5] overflow-hidden rounded-lg border bg-muted"
+      className="relative mx-auto w-full max-w-md overflow-hidden rounded-lg border bg-muted"
+      style={{ aspectRatio: `${template.width} / ${template.height}` }}
     >
       {previewUrl ? (
         <img
