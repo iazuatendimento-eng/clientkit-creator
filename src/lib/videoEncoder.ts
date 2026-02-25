@@ -121,7 +121,28 @@ async function patchMP4Brand(blob: Blob): Promise<Blob> {
   }
 }
 
-// Check if WebCodecs VideoEncoder is available (iOS 16.4+, Chrome 94+)
+// Check if WebCodecs VideoEncoder is available AND supports H.264
+async function checkWebCodecsSupport(): Promise<boolean> {
+  try {
+    if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") {
+      console.log("[WebCodecs] Not available in this browser");
+      return false;
+    }
+    const support = await VideoEncoder.isConfigSupported({
+      codec: "avc1.42001f",
+      width: 640,
+      height: 480,
+      bitrate: 1_000_000,
+      framerate: 15,
+    });
+    console.log("[WebCodecs] H.264 support:", support.supported);
+    return !!support.supported;
+  } catch (e) {
+    console.warn("[WebCodecs] Support check failed:", e);
+    return false;
+  }
+}
+
 function hasWebCodecs(): boolean {
   return typeof VideoEncoder !== "undefined" && typeof VideoFrame !== "undefined";
 }
@@ -237,37 +258,52 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
 
   // ====== MOBILE PATH: WebCodecs (reliable) or fallback ======
   if (isMobileDevice) {
-    if (hasWebCodecs()) {
-      console.log("[VideoEncoder] Mobile: using WebCodecs + mp4-muxer (reliable path)");
-      
-      // We need to set up the rendering context first, then use WebCodecs
-      // The encodeVideoSimple sets up all the rendering logic, so we'll create
-      // a version that uses WebCodecs instead of MediaRecorder
-      const rawBlob = await withTimeout(
-        encodeVideoWithWebCodecs(pages, options),
-        600_000,
-        "gerar vídeo mobile (WebCodecs)"
-      );
-      console.log("[VideoEncoder] WebCodecs blob size:", rawBlob.size, "type:", rawBlob.type);
-      
-      if (audioUrl) {
-        console.warn("[VideoEncoder] Mobile: skipping audio mux (FFmpeg too heavy for mobile)");
+    const webCodecsOk = await checkWebCodecsSupport();
+    console.log("[VideoEncoder] Mobile path. WebCodecs available:", webCodecsOk);
+    onProgress?.(0.06);
+
+    if (webCodecsOk) {
+      try {
+        console.log("[VideoEncoder] Mobile: trying WebCodecs + mp4-muxer...");
+        onProgress?.(0.07);
+        const rawBlob = await withTimeout(
+          encodeVideoWithWebCodecs(pages, options),
+          600_000,
+          "gerar vídeo mobile (WebCodecs)"
+        );
+        console.log("[VideoEncoder] WebCodecs SUCCESS! blob size:", rawBlob.size);
+        if (audioUrl) {
+          console.warn("[VideoEncoder] Mobile: skipping audio mux");
+        }
+        onProgress?.(1);
+        return rawBlob;
+      } catch (wcErr) {
+        console.error("[VideoEncoder] WebCodecs FAILED, falling back to MediaRecorder:", wcErr);
+        // Fall through to MediaRecorder
       }
-      onProgress?.(1);
-      return rawBlob;
-    } else {
-      console.warn("[VideoEncoder] Mobile: WebCodecs not available, falling back to MediaRecorder");
+    }
+
+    // Fallback: MediaRecorder (may not work on iOS but try anyway)
+    console.log("[VideoEncoder] Mobile fallback: MediaRecorder with", recordMime);
+    onProgress?.(0.08);
+    try {
       const rawBlob = await withTimeout(
         encodeVideoSimple(pages, options, { mimeType: recordMime, outputType }),
         600_000,
         "gerar vídeo mobile"
       );
+      console.log("[VideoEncoder] MediaRecorder blob size:", rawBlob.size);
       let result = rawBlob;
       if (await isValidMP4(result)) {
         result = await patchMP4Brand(result);
       }
       onProgress?.(1);
       return new Blob([result], { type: "video/mp4" });
+    } catch (mrErr) {
+      console.error("[VideoEncoder] MediaRecorder also FAILED:", mrErr);
+      // Last resort: create a "video" from just the first page image
+      console.error("Não foi possível gerar vídeo neste dispositivo.");
+      throw mrErr;
     }
   }
 
@@ -913,24 +949,28 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   };
 
   // Set up mp4-muxer + VideoEncoder
+  console.log("[WebCodecs] Setting up muxer + encoder...");
   const muxer = new Muxer({
     target: new ArrayBufferTarget(),
     video: { codec: "avc", width, height },
     fastStart: "in-memory",
   });
 
+  let encoderError: Error | null = null;
   const encoder = new VideoEncoder({
     output: (chunk, meta) => muxer.addVideoChunk(chunk, meta ?? undefined),
-    error: (e) => console.error("[WebCodecs] Encoder error:", e),
+    error: (e) => { console.error("[WebCodecs] Encoder error:", e); encoderError = e instanceof Error ? e : new Error(String(e)); },
   });
 
-  encoder.configure({
+  const config: VideoEncoderConfig = {
     codec: "avc1.42001f",
     width, height,
     bitrate: 4_000_000,
     framerate: fps,
-    hardwareAcceleration: "prefer-hardware",
-  });
+  };
+  console.log("[WebCodecs] Configuring encoder:", config);
+  encoder.configure(config);
+  console.log("[WebCodecs] Encoder configured, state:", encoder.state);
 
   const frameDurationMicros = Math.round(1_000_000 / fps);
 
@@ -945,18 +985,28 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   if (bgVideos[0]) startVideoForPage(0);
 
   let lastPageIdx = 0;
+  console.log("[WebCodecs] Starting frame loop, total:", totalFrames);
   for (let i = 0; i < totalFrames; i++) {
+    if (encoderError) throw encoderError;
+
     const pageIdx = Math.floor(i / framesPerPage);
     if (pageIdx !== lastPageIdx) { startVideoForPage(pageIdx); lastPageIdx = pageIdx; }
 
     renderFrame(i);
 
-    const frame = new VideoFrame(canvas, {
-      timestamp: i * frameDurationMicros,
-      duration: frameDurationMicros,
-    });
-    encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
-    frame.close();
+    try {
+      const frame = new VideoFrame(canvas, {
+        timestamp: i * frameDurationMicros,
+        duration: frameDurationMicros,
+      });
+      encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+      frame.close();
+
+      if (i === 0) console.log("[WebCodecs] First frame encoded OK, queue:", encoder.encodeQueueSize);
+    } catch (frameErr) {
+      console.error("[WebCodecs] Frame", i, "failed:", frameErr);
+      throw frameErr;
+    }
 
     // Yield to UI every few frames
     if (i % 3 === 0) {
