@@ -1375,50 +1375,47 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setIsAdjustDialogOpen(true);
   };
 
-  // Debounced live preview regeneration
-  const regenerateLivePreview = useCallback(async (
-    art: ClientArt,
-    overrides: {
-      photoOffsetX: number;
-      photoOffsetY: number;
-      photoScale: number;
-      photoFrame: ShapeOverride | null;
-      logoX: number;
-      logoY: number;
-      logoScale: number;
-      logoScaleX: number;
-      logoScaleY: number;
-      textX: number;
-      textY: number;
-      textFontSize: number;
-      contactX: number;
-      contactY: number;
-      contactScale: number;
-      contactScaleX: number;
-      contactScaleY: number;
-      shapeOverrides: Record<string, ShapeOverride>;
-    }
-  ) => {
+  // Refs that always hold current override values (no stale closures)
+  const overridesRef = useRef({
+    photoOffsetX, photoOffsetY, photoScale, photoFrame,
+    logoX, logoY, logoScale, logoScaleX, logoScaleY,
+    textX, textY, textFontSize,
+    contactX, contactY, contactScale, contactScaleX, contactScaleY,
+    shapeOverrides,
+  });
+  // Keep ref in sync with state
+  useEffect(() => {
+    overridesRef.current = {
+      photoOffsetX, photoOffsetY, photoScale, photoFrame,
+      logoX, logoY, logoScale, logoScaleX, logoScaleY,
+      textX, textY, textFontSize,
+      contactX, contactY, contactScale, contactScaleX, contactScaleY,
+      shapeOverrides,
+    };
+  });
+
+  const selectedArtRef = useRef(selectedArt);
+  useEffect(() => { selectedArtRef.current = selectedArt; });
+  const clientArtsRef = useRef(clientArts);
+  useEffect(() => { clientArtsRef.current = clientArts; });
+
+  // Live preview regeneration using refs (always current values)
+  const regenerateFromRefs = useCallback(async () => {
+    const art = selectedArtRef.current;
+    if (!art) return;
+    const ov = overridesRef.current;
+    
     const tempArt: ClientArt = {
       ...art,
-      photoOffset: { x: overrides.photoOffsetX, y: overrides.photoOffsetY },
+      photoOffset: { x: ov.photoOffsetX, y: ov.photoOffsetY },
       elementOverrides: {
-        logoX: overrides.logoX,
-        logoY: overrides.logoY,
-        logoScale: overrides.logoScale,
-        logoScaleX: overrides.logoScaleX,
-        logoScaleY: overrides.logoScaleY,
-        textX: overrides.textX,
-        textY: overrides.textY,
-        textFontSize: overrides.textFontSize,
-        contactX: overrides.contactX,
-        contactY: overrides.contactY,
-        contactScale: overrides.contactScale,
-        contactScaleX: overrides.contactScaleX,
-        contactScaleY: overrides.contactScaleY,
-        photoScale: overrides.photoScale,
-        photoFrame: overrides.photoFrame || undefined,
-        shapes: overrides.shapeOverrides,
+        logoX: ov.logoX, logoY: ov.logoY, logoScale: ov.logoScale,
+        logoScaleX: ov.logoScaleX, logoScaleY: ov.logoScaleY,
+        textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
+        contactX: ov.contactX, contactY: ov.contactY,
+        contactScale: ov.contactScale, contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
+        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
+        shapes: ov.shapeOverrides,
       }
     };
     
@@ -1431,89 +1428,94 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     } finally {
       setIsRegenerating(false);
     }
-  }, [template]);
+  }, [generateArtForClient]);
 
-
-
-
-  // Auto-trigger live preview whenever any override state changes (true real-time)
-  const overrideVersion = useRef(0);
-  useEffect(() => {
-    if (!isAdjustDialogOpen || !selectedArt) return;
-    overrideVersion.current += 1;
-    const currentVersion = overrideVersion.current;
-
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      if (currentVersion !== overrideVersion.current) return;
-      regenerateLivePreview(selectedArt, {
-        photoOffsetX, photoOffsetY, photoScale, photoFrame,
-        logoX, logoY, logoScale, logoScaleX, logoScaleY,
-        textX, textY, textFontSize,
-        contactX, contactY, contactScale, contactScaleX, contactScaleY,
-        shapeOverrides,
-      });
-    }, 150);
-  }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, photoScale, photoFrame, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, shapeOverrides, regenerateLivePreview]);
-
-  // Save current overrides back to clientArts (called on every drag end for persistence)
+  // Save current overrides back to clientArts
   const commitOverridesToArt = useCallback(() => {
-    if (!selectedArt) return;
-    const index = clientArts.findIndex((a) => 
-      a.clientId === selectedArt.clientId && 
-      a.cardId === selectedArt.cardId &&
-      a.pageIndex === selectedArt.pageIndex
+    const art = selectedArtRef.current;
+    if (!art) return;
+    const arts = clientArtsRef.current;
+    const index = arts.findIndex((a) => 
+      a.clientId === art.clientId && 
+      a.cardId === art.cardId &&
+      a.pageIndex === art.pageIndex
     );
     if (index === -1) return;
 
-    const updatedArts = [...clientArts];
+    const ov = overridesRef.current;
+    const updatedArts = [...arts];
     updatedArts[index] = { 
       ...updatedArts[index], 
-      photoOffset: { x: photoOffsetX, y: photoOffsetY },
+      photoOffset: { x: ov.photoOffsetX, y: ov.photoOffsetY },
       elementOverrides: {
-        logoX, logoY, logoScale, logoScaleX, logoScaleY,
-        textX, textY, textFontSize,
-        contactX, contactY, contactScale, contactScaleX, contactScaleY,
-        photoScale, photoFrame: photoFrame || undefined, shapes: shapeOverrides,
+        logoX: ov.logoX, logoY: ov.logoY, logoScale: ov.logoScale,
+        logoScaleX: ov.logoScaleX, logoScaleY: ov.logoScaleY,
+        textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
+        contactX: ov.contactX, contactY: ov.contactY,
+        contactScale: ov.contactScale, contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
+        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
+        shapes: ov.shapeOverrides,
       }
     };
     setClientArts(updatedArts);
-  }, [selectedArt, clientArts, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, photoScale, photoFrame, shapeOverrides]);
+  }, []);
 
-  // On drag end: persist overrides (preview auto-updates via useEffect above)
+  // On drag end: regenerate preview + persist (reads from refs = always current)
   const handleDragEnd = useCallback(() => {
     commitOverridesToArt();
-  }, [commitOverridesToArt]);
+    // Debounce regeneration
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      regenerateFromRefs();
+    }, 80);
+  }, [commitOverridesToArt, regenerateFromRefs]);
+
+  // Auto-trigger preview when dialog opens
+  useEffect(() => {
+    if (isAdjustDialogOpen && selectedArt) {
+      regenerateFromRefs();
+    }
+  }, [isAdjustDialogOpen, selectedArt]);
 
   // When closing the adjust dialog, do a final full regeneration
   const handleCloseAdjustDialog = useCallback(async () => {
     commitOverridesToArt();
     setIsAdjustDialogOpen(false);
 
-    if (!selectedArt) return;
-    const index = clientArts.findIndex((a) => 
-      a.clientId === selectedArt.clientId && 
-      a.cardId === selectedArt.cardId &&
-      a.pageIndex === selectedArt.pageIndex
+    // Final regeneration using refs
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    await regenerateFromRefs();
+    
+    // Update the main art list with the final image
+    const art = selectedArtRef.current;
+    if (!art) return;
+    const arts = clientArtsRef.current;
+    const index = arts.findIndex((a) => 
+      a.clientId === art.clientId && 
+      a.cardId === art.cardId &&
+      a.pageIndex === art.pageIndex
     );
     if (index === -1) return;
 
-    // Regenerate the final art with overrides
-    const updatedArts = [...clientArts];
+    const ov = overridesRef.current;
+    const updatedArts = [...arts];
     updatedArts[index] = { 
       ...updatedArts[index], 
-      photoOffset: { x: photoOffsetX, y: photoOffsetY },
+      photoOffset: { x: ov.photoOffsetX, y: ov.photoOffsetY },
       elementOverrides: {
-        logoX, logoY, logoScale, logoScaleX, logoScaleY,
-        textX, textY, textFontSize,
-        contactX, contactY, contactScale, contactScaleX, contactScaleY,
-        photoScale, photoFrame: photoFrame || undefined, shapes: shapeOverrides,
+        logoX: ov.logoX, logoY: ov.logoY, logoScale: ov.logoScale,
+        logoScaleX: ov.logoScaleX, logoScaleY: ov.logoScaleY,
+        textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
+        contactX: ov.contactX, contactY: ov.contactY,
+        contactScale: ov.contactScale, contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
+        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
+        shapes: ov.shapeOverrides,
       }
     };
     const imageUrl = await generateArtForClient(updatedArts[index]);
     updatedArts[index] = { ...updatedArts[index], imageUrl };
     setClientArts([...updatedArts]);
-  }, [commitOverridesToArt, selectedArt, clientArts, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, photoScale, photoFrame, shapeOverrides, generateArtForClient]);
+  }, [commitOverridesToArt, regenerateFromRefs, generateArtForClient]);
 
   // Refresh brand kit from database and regenerate art
   const refreshBrandKitAndRegenerate = async (index: number) => {
