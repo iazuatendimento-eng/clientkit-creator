@@ -125,61 +125,37 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   const { onProgress, audioUrl } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // ====== MOBILE PATH ======
-  // MediaRecorder + canvas.captureStream() is broken/unreliable on iOS Safari.
-  // Instead, encodeVideoSimple renders frames as JPEGs and encodes via FFmpeg directly.
+  // Pick best MIME type for MediaRecorder
+  const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
+  const webmMime = pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
+  const recordMime = mp4Mime || webmMime || "video/webm";
+  const outputType = recordMime.startsWith("video/mp4") ? "video/mp4" : "video/webm";
+
+  console.log("[VideoEncoder] Recording MIME:", recordMime, "mobile:", isMobileDevice);
+  onProgress?.(0.05);
+
+  // ====== MOBILE PATH: MediaRecorder only, NO FFmpeg ======
   if (isMobileDevice) {
-    console.log("[VideoEncoder] Mobile: frame-by-frame path");
-    onProgress?.(0.02);
-    const rawMp4 = await withTimeout(
-      encodeVideoSimple(pages, options),
+    console.log("[VideoEncoder] Mobile: using MediaRecorder directly (no FFmpeg)");
+    const rawBlob = await withTimeout(
+      encodeVideoSimple(pages, options, { mimeType: recordMime, outputType }),
       600_000,
       "gerar vídeo mobile"
     );
+    console.log("[VideoEncoder] Mobile raw blob size:", rawBlob.size, "type:", rawBlob.type);
 
-    // Add audio via FFmpeg if needed
-    if (audioUrl) {
-      try {
-        onProgress?.(0.88);
-        const ff = await loadFFmpeg();
-        await ff.writeFile("input.mp4", await fetchFile(rawMp4));
-        const audioResponse = await fetch(audioUrl);
-        if (audioResponse.ok) {
-          const audioBlob = await audioResponse.blob();
-          const ext = audioUrl.includes(".wav") ? "wav" : audioUrl.includes(".ogg") ? "ogg" : audioUrl.includes(".m4a") ? "m4a" : "mp3";
-          await ff.writeFile(`audio.${ext}`, await fetchFile(audioBlob));
-          await withTimeout(
-            ff.exec(["-i", "input.mp4", "-i", `audio.${ext}`, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]),
-            180_000,
-            "muxar áudio mobile"
-          );
-          const data = await ff.readFile("output.mp4");
-          let result = new Blob([new Uint8Array(data as unknown as ArrayBuffer)], { type: "video/mp4" });
-          result = await patchMP4Brand(result);
-          await ff.deleteFile("input.mp4").catch(() => {});
-          await ff.deleteFile("output.mp4").catch(() => {});
-          await ff.deleteFile(`audio.${ext}`).catch(() => {});
-          if (await isValidMP4(result)) { onProgress?.(1); return result; }
-        }
-      } catch (err) {
-        console.warn("[VideoEncoder] Mobile audio mux failed:", err);
-      }
+    let result = rawBlob;
+    if (await isValidMP4(result)) {
+      result = await patchMP4Brand(result);
     }
-
-    const patched = await patchMP4Brand(rawMp4);
+    if (audioUrl) {
+      console.warn("[VideoEncoder] Mobile: skipping audio mux (FFmpeg too heavy for mobile)");
+    }
     onProgress?.(1);
-    return patched;
+    return new Blob([result], { type: "video/mp4" });
   }
 
   // ====== DESKTOP PATH ======
-  // Strategy: Record native MP4 (H.264 via Chrome's MediaRecorder), then REMUX
-  // through FFmpeg to add faststart (moov atom at beginning) for WhatsApp compatibility.
-  // We use -c:v copy (no re-encoding) so we don't need libx264 in the WASM build.
-  const mp4Mime = pickSupportedMimeType([
-    "video/mp4;codecs=avc1",
-    "video/mp4",
-  ]);
-
   if (mp4Mime) {
     console.log("[VideoEncoder] Recording native MP4:", mp4Mime);
     onProgress?.(0.1);
@@ -190,13 +166,12 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     );
     onProgress?.(0.6);
 
-    // Remux through FFmpeg to add faststart (moov atom at beginning) + audio if provided
+    // Remux through FFmpeg to add faststart + audio if provided
     try {
       const ff = await loadFFmpeg();
       onProgress?.(0.7);
       await ff.writeFile("input.mp4", await fetchFile(nativeMp4));
 
-      // Prepare audio file if provided
       let hasAudio = false;
       if (audioUrl) {
         try {
@@ -207,49 +182,29 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             const audioExt = audioUrl.includes(".wav") ? "wav" : audioUrl.includes(".ogg") ? "ogg" : audioUrl.includes(".m4a") ? "m4a" : "mp3";
             await ff.writeFile(`audio.${audioExt}`, await fetchFile(audioBlob));
             hasAudio = true;
-            console.log("[VideoEncoder] Audio file loaded, size:", audioBlob.size);
           }
         } catch (audioErr) {
-          console.warn("[VideoEncoder] Failed to fetch audio, proceeding without:", audioErr);
+          console.warn("[VideoEncoder] Failed to fetch audio:", audioErr);
         }
       }
 
+      const audioExt = audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : audioUrl?.includes(".m4a") ? "m4a" : "mp3";
       const ffmpegArgs = hasAudio
-        ? [
-            "-i", "input.mp4",
-            "-i", `audio.${audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : audioUrl?.includes(".m4a") ? "m4a" : "mp3"}`,
-            "-c:v", "copy",
-            "-c:a", "aac", "-b:a", "128k",
-            "-shortest",
-            "-movflags", "+faststart",
-            "-f", "mp4", "output.mp4",
-          ]
-        : [
-            "-i", "input.mp4",
-            "-c:v", "copy", "-c:a", "copy",
-            "-movflags", "+faststart",
-            "-f", "mp4", "output.mp4",
-          ];
+        ? ["-i", "input.mp4", "-i", `audio.${audioExt}`, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]
+        : ["-i", "input.mp4", "-c:v", "copy", "-c:a", "copy", "-movflags", "+faststart", "-f", "mp4", "output.mp4"];
 
-      await withTimeout(
-        ff.exec(ffmpegArgs),
-        180_000,
-        hasAudio ? "muxar vídeo + áudio" : "remux faststart"
-      );
-
+      await withTimeout(ff.exec(ffmpegArgs), 180_000, hasAudio ? "muxar vídeo + áudio" : "remux faststart");
       onProgress?.(0.9);
+
       const mp4Data = await ff.readFile("output.mp4");
       let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
-      await ff.deleteFile("input.mp4");
-      await ff.deleteFile("output.mp4");
-      if (hasAudio) {
-        const audioExt = audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : audioUrl?.includes(".m4a") ? "m4a" : "mp3";
-        await ff.deleteFile(`audio.${audioExt}`).catch(() => {});
-      }
+      await ff.deleteFile("input.mp4").catch(() => {});
+      await ff.deleteFile("output.mp4").catch(() => {});
+      if (hasAudio) await ff.deleteFile(`audio.${audioExt}`).catch(() => {});
       mp4Blob = await patchMP4Brand(mp4Blob);
 
       if (await isValidMP4(mp4Blob)) {
-        console.log("[VideoEncoder] Remuxed MP4 with faststart" + (hasAudio ? " + audio" : "") + ", size:", mp4Blob.size);
+        console.log("[VideoEncoder] Remuxed MP4 size:", mp4Blob.size);
         onProgress?.(1);
         return mp4Blob;
       }
@@ -257,13 +212,12 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       console.error("[VideoEncoder] FFmpeg remux failed, using native MP4:", err);
     }
 
-    // Fallback: return native MP4 with brand patch (no audio in this case)
     const patched = await patchMP4Brand(nativeMp4);
     onProgress?.(1);
     return patched;
   }
 
-  // No native MP4 support - try WebM → FFmpeg full encode
+  // No native MP4 - WebM → FFmpeg
   console.log("[VideoEncoder] No native MP4, recording WebM for FFmpeg conversion");
   onProgress?.(0.1);
   const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
@@ -274,7 +228,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     onProgress?.(0.55);
     await ff.writeFile("input.webm", await fetchFile(webmBlob));
 
-    // Try libx264 first, fallback to mpeg4 if not available
     const encoders = [
       ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p"],
       ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p"],
@@ -283,23 +236,15 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     for (const encoderArgs of encoders) {
       try {
         await withTimeout(
-          ff.exec([
-            "-i", "input.webm",
-            ...encoderArgs,
-            "-movflags", "+faststart", "-an", "-y", "output.mp4",
-          ]),
-          360_000,
-          "converter para MP4"
+          ff.exec(["-i", "input.webm", ...encoderArgs, "-movflags", "+faststart", "-an", "-y", "output.mp4"]),
+          360_000, "converter para MP4"
         );
-
         const mp4Data = await ff.readFile("output.mp4");
         let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
         mp4Blob = await patchMP4Brand(mp4Blob);
-
         if (await isValidMP4(mp4Blob)) {
-          console.log("[VideoEncoder] Converted WebM→MP4 with encoder:", encoderArgs[1], "size:", mp4Blob.size);
-          await ff.deleteFile("input.webm");
-          await ff.deleteFile("output.mp4");
+          await ff.deleteFile("input.webm").catch(() => {});
+          await ff.deleteFile("output.mp4").catch(() => {});
           onProgress?.(1);
           return mp4Blob;
         }
@@ -307,7 +252,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         console.warn("[VideoEncoder] Encoder", encoderArgs[1], "failed:", encErr);
       }
     }
-
     await ff.deleteFile("input.webm").catch(() => {});
   } catch (err) {
     console.error("[VideoEncoder] FFmpeg failed:", err);
@@ -967,71 +911,15 @@ export async function encodeVideoSimple(
     isMobileDevice,
   });
 
-  // ====== MOBILE PATH: frame-by-frame JPEG capture + FFmpeg encoding ======
-  // MediaRecorder + canvas.captureStream() is broken on iOS Safari, causing
-  // the export to stall at 10%. Instead we capture each rendered frame as JPEG
-  // and assemble into MP4 using FFmpeg WASM.
-  if (isMobileDevice) {
-    console.log("[VideoEncoder] Mobile: frame-by-frame FFmpeg encoding (bypassing MediaRecorder)");
-
-    const ff = await loadFFmpeg();
-
-    for (let gf = 0; gf < totalFrames; gf++) {
-      renderFrameToCanvas(gf);
-
-      const blob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.90)
-      );
-      const fName = `f${String(gf).padStart(6, "0")}.jpg`;
-      await ff.writeFile(fName, new Uint8Array(await blob.arrayBuffer()));
-
-      if (gf % 5 === 0) {
-        onProgress?.(Math.min(0.75, (gf / totalFrames) * 0.75));
-        // Yield to UI thread so progress updates
-        await new Promise((r) => setTimeout(r, 0));
-      }
-    }
-
-    bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
-    onProgress?.(0.80);
-
-    try {
-      await ff.exec([
-        "-framerate", String(fps),
-        "-i", "f%06d.jpg",
-        "-c:v", "mpeg4", "-q:v", "3",
-        "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-        "-f", "mp4", "output.mp4",
-      ]);
-
-      onProgress?.(0.92);
-      const data = await ff.readFile("output.mp4");
-
-      // Cleanup
-      for (let i = 0; i < totalFrames; i++) {
-        await ff.deleteFile(`f${String(i).padStart(6, "0")}.jpg`).catch(() => {});
-      }
-      await ff.deleteFile("output.mp4").catch(() => {});
-
-      onProgress?.(1);
-      return new Blob([new Uint8Array(data as unknown as ArrayBuffer)], { type: "video/mp4" });
-    } catch (ffErr) {
-      console.error("[VideoEncoder] Mobile FFmpeg encode failed:", ffErr);
-      for (let i = 0; i < totalFrames; i++) {
-        await ff.deleteFile(`f${String(i).padStart(6, "0")}.jpg`).catch(() => {});
-      }
-      throw ffErr;
-    }
-  }
-
-  // ====== DESKTOP PATH: MediaRecorder approach ======
+  // ====== ALL DEVICES: MediaRecorder approach ======
   const chosenMime =
     (extra?.mimeType && MediaRecorder.isTypeSupported(extra.mimeType) ? extra.mimeType : null) ||
-    pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"]) ||
+    (isMobileDevice
+      ? pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"])
+      : pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"])) ||
     "video/webm";
 
-  console.log(`[VideoEncoder] Desktop MIME: ${chosenMime}`);
+  console.log(`[VideoEncoder] MediaRecorder MIME: ${chosenMime}, mobile: ${isMobileDevice}`);
 
   const outType = extra?.outputType || (chosenMime.startsWith("video/mp4") ? "video/mp4" : "video/webm");
 
@@ -1067,7 +955,7 @@ export async function encodeVideoSimple(
 
     if (bgVideos[0]) startVideoForPage(0);
 
-    const FRAMES_PER_BATCH = 4;
+    const FRAMES_PER_BATCH = isMobileDevice ? 1 : 4;
     let progressCounter = 0;
     const PROGRESS_INTERVAL = 10;
 
