@@ -80,24 +80,45 @@ export function useVideoPregenerate(
         const initPi = texts.map(() => ({ ...defaultPageImageAdjustment }));
         const adj = { ...defaultAdjustments };
 
-        // Fetch material uploads
-        let matImages: string[] = [];
+        // Fetch ALL material uploads (images + videos) in order
+        let matFiles: { url: string; isVideo: boolean }[] = [];
         try {
           const { data: uploads } = await supabase
             .from("card_uploads")
             .select("file_url, file_type")
             .eq("card_id", cardId)
             .eq("upload_type", "material");
-          matImages = (uploads || [])
-            .filter(u => u.file_type.startsWith("image"))
-            .map(u => u.file_url);
+          matFiles = (uploads || []).map(u => ({
+            url: u.file_url,
+            isVideo: u.file_type.startsWith("video"),
+          }));
         } catch { /* ignore */ }
 
-        const bgImages: string[] = texts.map((_, idx) => matImages[idx % Math.max(matImages.length, 1)] || "");
+        // Trim materials to page count (discard extras)
+        const usableMats = matFiles.slice(0, texts.length);
 
-        // Search for background videos only if no material images
+        // Assign materials per page in order; remaining pages need bank videos
+        const bgImages: string[] = texts.map(() => "");
         let bgVideoUrls: (string | null)[] = texts.map(() => null);
-        if (matImages.length === 0) {
+        const pagesNeedingBankVideo: number[] = [];
+
+        usableMats.forEach((mat, idx) => {
+          if (mat.isVideo) {
+            bgVideoUrls[idx] = mat.url;
+          } else {
+            bgImages[idx] = mat.url;
+          }
+        });
+
+        // Pages without any material need a video from the bank
+        texts.forEach((_, idx) => {
+          if (idx >= usableMats.length) {
+            pagesNeedingBankVideo.push(idx);
+          }
+        });
+
+        // Search bank videos only for uncovered pages
+        if (pagesNeedingBankVideo.length > 0) {
           try {
             const searchTerms = fullText.split(" ").slice(0, 6).join(" ");
             let translatedTerms = searchTerms;
@@ -109,17 +130,22 @@ export function useVideoPregenerate(
               if (transData?.translatedText) translatedTerms = transData.translatedText;
             } catch { /* use original */ }
 
-            let results = await searchVideos(translatedTerms, Math.max(texts.length, 3));
+            let results = await searchVideos(translatedTerms, Math.max(pagesNeedingBankVideo.length, 3));
             if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
             if (results.length === 0) results = await searchVideos("business technology", 3);
 
             if (results.length > 0) {
-              bgVideoUrls = texts.map((_, idx) => results[idx % results.length]?.videoUrl || null);
+              pagesNeedingBankVideo.forEach((pageIdx, i) => {
+                bgVideoUrls[pageIdx] = results[i % results.length]?.videoUrl || null;
+              });
             }
           } catch { /* ignore */ }
         }
 
-        const pages = await generateAllVideoPages(tmpl, texts, brandKit, matImages.length > 0 ? bgImages : [], adj, initPt, initPi);
+        // Collect material image URLs for the renderer
+        const matImageUrls = bgImages.filter(u => u.length > 0);
+
+        const pages = await generateAllVideoPages(tmpl, texts, brandKit, bgImages, adj, initPt, initPi);
 
         setPreloadedData({
           template: tmpl,
@@ -129,8 +155,8 @@ export function useVideoPregenerate(
           pageTextAdjustments: initPt,
           pageImageAdjustments: initPi,
           adjustments: adj,
-          searchedImages: matImages.length > 0 ? bgImages : [],
-          materialImages: matImages,
+          searchedImages: bgImages,
+          materialImages: matImageUrls,
         });
       } catch (err) {
         console.error("Video pregeneration error:", err);
