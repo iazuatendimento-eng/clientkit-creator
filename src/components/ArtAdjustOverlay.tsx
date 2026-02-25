@@ -46,6 +46,7 @@ const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
 
 export function ArtAdjustOverlay({
   template,
+  onDragEnd,
   previewUrl,
   isBusy,
   photoOffsetX,
@@ -84,6 +85,7 @@ export function ArtAdjustOverlay({
   template: MasterTemplateLike;
   previewUrl: string | null;
   isBusy?: boolean;
+  onDragEnd?: () => void;
 
   photoOffsetX: number;
   photoOffsetY: number;
@@ -591,6 +593,7 @@ export function ArtAdjustOverlay({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       startRef.current = null;
+      onDragEnd?.();
     };
 
     window.addEventListener("pointermove", onMove);
@@ -742,7 +745,8 @@ export function ArtAdjustOverlay({
               max={300}
               step={5}
               value={[photoScale]}
-              onValueChange={([v]) => setPhotoScale(v)}
+              onValueChange={([v]) => { setPhotoScale(v); }}
+              onValueCommit={() => onDragEnd?.()}
               className="flex-1"
             />
             <ZoomIn className="h-3 w-3 text-muted-foreground flex-shrink-0" />
@@ -760,6 +764,8 @@ export function ArtAdjustOverlay({
               max={200}
               value={photoOffsetX}
               onChange={(e) => setPhotoOffsetX(Number(e.target.value))}
+              onMouseUp={() => onDragEnd?.()}
+              onTouchEnd={() => onDragEnd?.()}
               className="flex-1 h-1 accent-primary"
             />
             <span>Y</span>
@@ -769,6 +775,8 @@ export function ArtAdjustOverlay({
               max={200}
               value={photoOffsetY}
               onChange={(e) => setPhotoOffsetY(Number(e.target.value))}
+              onMouseUp={() => onDragEnd?.()}
+              onTouchEnd={() => onDragEnd?.()}
               className="flex-1 h-1 accent-primary"
             />
           </div>
