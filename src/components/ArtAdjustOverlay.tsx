@@ -205,15 +205,13 @@ export function ArtAdjustOverlay({
 
     if (part === "text") {
       if (!els.textEl) return null;
-      const scaledW = els.textEl.width * (textFontSize / 100);
-      const scaledH = els.textEl.height * (textFontSize / 100);
-      // Clamp text box to stay within template bounds
+      // Text box keeps original width (text wraps inside it), height stays original
+      const w = els.textEl.width;
+      const h = els.textEl.height;
       const rawX = els.textEl.x + textX;
       const rawY = els.textEl.y + textY;
-      const x = clamp(rawX, 0, template.width - 10);
-      const y = clamp(rawY, 0, template.height - 10);
-      const w = Math.min(scaledW, template.width - x);
-      const h = Math.min(Math.max(scaledH, els.textEl.height), template.height - y);
+      const x = clamp(rawX, 0, template.width - w);
+      const y = clamp(rawY, 0, template.height - h);
       return { x, y, w, h };
     }
 

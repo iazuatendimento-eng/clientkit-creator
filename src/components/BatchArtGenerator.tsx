@@ -1433,54 +1433,30 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   }, [template]);
 
-  // Trigger live preview regeneration (called on drag end or slider change)
-  const triggerLivePreview = useCallback(() => {
+
+
+
+  // Auto-trigger live preview whenever any override state changes (true real-time)
+  const overrideVersion = useRef(0);
+  useEffect(() => {
     if (!isAdjustDialogOpen || !selectedArt) return;
-    
-    // Clear existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
+    overrideVersion.current += 1;
+    const currentVersion = overrideVersion.current;
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
+      if (currentVersion !== overrideVersion.current) return;
       regenerateLivePreview(selectedArt, {
-        photoOffsetX,
-        photoOffsetY,
-        photoScale,
-        photoFrame,
-        logoX,
-        logoY,
-        logoScale,
-        logoScaleX,
-        logoScaleY,
-        textX,
-        textY,
-        textFontSize,
-        contactX,
-        contactY,
-        contactScale,
-        contactScaleX,
-        contactScaleY,
+        photoOffsetX, photoOffsetY, photoScale, photoFrame,
+        logoX, logoY, logoScale, logoScaleX, logoScaleY,
+        textX, textY, textFontSize,
+        contactX, contactY, contactScale, contactScaleX, contactScaleY,
         shapeOverrides,
       });
-    }, 50);
+    }, 150);
   }, [isAdjustDialogOpen, selectedArt, photoOffsetX, photoOffsetY, photoScale, photoFrame, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, shapeOverrides, regenerateLivePreview]);
 
-  // Only auto-trigger on initial open (not during drag)
-  const adjustDialogJustOpened = useRef(false);
-  useEffect(() => {
-    if (isAdjustDialogOpen && selectedArt) {
-      adjustDialogJustOpened.current = true;
-    }
-  }, [isAdjustDialogOpen, selectedArt]);
-
-  useEffect(() => {
-    if (adjustDialogJustOpened.current) {
-      adjustDialogJustOpened.current = false;
-      triggerLivePreview();
-    }
-  }, [triggerLivePreview]);
-  // Save current overrides back to clientArts (called on every drag end for real-time persistence)
+  // Save current overrides back to clientArts (called on every drag end for persistence)
   const commitOverridesToArt = useCallback(() => {
     if (!selectedArt) return;
     const index = clientArts.findIndex((a) => 
@@ -1495,32 +1471,19 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       ...updatedArts[index], 
       photoOffset: { x: photoOffsetX, y: photoOffsetY },
       elementOverrides: {
-        logoX,
-        logoY,
-        logoScale,
-        logoScaleX,
-        logoScaleY,
-        textX,
-        textY,
-        textFontSize,
-        contactX,
-        contactY,
-        contactScale,
-        contactScaleX,
-        contactScaleY,
-        photoScale,
-        photoFrame: photoFrame || undefined,
-        shapes: shapeOverrides,
+        logoX, logoY, logoScale, logoScaleX, logoScaleY,
+        textX, textY, textFontSize,
+        contactX, contactY, contactScale, contactScaleX, contactScaleY,
+        photoScale, photoFrame: photoFrame || undefined, shapes: shapeOverrides,
       }
     };
     setClientArts(updatedArts);
   }, [selectedArt, clientArts, photoOffsetX, photoOffsetY, logoX, logoY, logoScale, logoScaleX, logoScaleY, textX, textY, textFontSize, contactX, contactY, contactScale, contactScaleX, contactScaleY, photoScale, photoFrame, shapeOverrides]);
 
-  // On drag end: regenerate preview + persist overrides in real-time
+  // On drag end: persist overrides (preview auto-updates via useEffect above)
   const handleDragEnd = useCallback(() => {
-    triggerLivePreview();
     commitOverridesToArt();
-  }, [triggerLivePreview, commitOverridesToArt]);
+  }, [commitOverridesToArt]);
 
   // When closing the adjust dialog, do a final full regeneration
   const handleCloseAdjustDialog = useCallback(async () => {
