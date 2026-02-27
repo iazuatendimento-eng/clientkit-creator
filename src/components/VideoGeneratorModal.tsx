@@ -668,39 +668,46 @@ export function VideoGeneratorModal({
                 </p>
               </div>
 
-              {/* Audio track selector */}
+              {/* Audio track selector + download buttons */}
               {template.audioUrl1 || template.audioUrl2 ? (
-                <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                  <p className="text-xs font-medium flex items-center gap-1.5">
-                    <Volume2 className="h-3.5 w-3.5" />
-                    Música de fundo
-                  </p>
-                  <RadioGroup value={selectedAudioTrack} onValueChange={(v) => setSelectedAudioTrack(v as "1" | "2" | "none")} className="flex flex-col gap-1.5">
-                    {template.audioUrl1 && (
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem value="1" id="audio-1" />
-                        <Label htmlFor="audio-1" className="text-xs cursor-pointer">Música 1</Label>
-                      </div>
-                    )}
-                    {template.audioUrl2 && (
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem value="2" id="audio-2" />
-                        <Label htmlFor="audio-2" className="text-xs cursor-pointer">Música 2</Label>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="none" id="audio-none" />
-                      <Label htmlFor="audio-none" className="text-xs cursor-pointer">Sem música</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              ) : null}
-
-              {/* Download button */}
-              <Button onClick={() => handleExport(selectedAudioTrack === "none")} className="gap-2 w-full">
-                <Download className="h-4 w-4" />
-                {selectedAudioTrack === "none" ? "Baixar Sem Áudio" : "Baixar Com Áudio"}
-              </Button>
+                <>
+                  <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                    <p className="text-xs font-medium flex items-center gap-1.5">
+                      <Volume2 className="h-3.5 w-3.5" />
+                      Música de fundo
+                    </p>
+                    <RadioGroup value={selectedAudioTrack} onValueChange={(v) => setSelectedAudioTrack(v as "1" | "2" | "none")} className="flex flex-col gap-1.5">
+                      {template.audioUrl1 && (
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="1" id="audio-1" />
+                          <Label htmlFor="audio-1" className="text-xs cursor-pointer">Música 1</Label>
+                        </div>
+                      )}
+                      {template.audioUrl2 && (
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="2" id="audio-2" />
+                          <Label htmlFor="audio-2" className="text-xs cursor-pointer">Música 2</Label>
+                        </div>
+                      )}
+                    </RadioGroup>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => handleExport(false)} className="gap-2 flex-1">
+                      <Download className="h-4 w-4" />
+                      Baixar Com Áudio
+                    </Button>
+                    <Button variant="outline" onClick={() => handleExport(true)} className="gap-2 flex-1">
+                      <VolumeX className="h-4 w-4" />
+                      Baixar Sem Áudio
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <Button onClick={() => handleExport(true)} className="gap-2 w-full">
+                  <Download className="h-4 w-4" />
+                  Baixar Vídeo
+                </Button>
+              )}
 
               {/* Video swap section */}
               <VideoSwapSection
