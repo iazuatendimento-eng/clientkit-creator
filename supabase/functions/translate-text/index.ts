@@ -62,7 +62,18 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const translatedText = data.choices?.[0]?.message?.content?.trim() || text;
+    let translatedText = data.choices?.[0]?.message?.content?.trim() || text;
+    // Clean up: remove markdown formatting, extra lines, and keep only the first meaningful line
+    translatedText = translatedText
+      .replace(/\*\*/g, "")
+      .replace(/^(Keywords|Image Search Term|Search Term|Term)[:\s]*/i, "")
+      .split("\n")
+      .map((l: string) => l.trim())
+      .filter((l: string) => l.length > 0 && !l.startsWith("Keywords") && !l.startsWith("Image Search") && !l.startsWith("Search Term"))
+      .slice(0, 1)
+      .join(" ")
+      .trim();
+    if (!translatedText) translatedText = text;
 
     console.log("Translated to:", translatedText);
 
