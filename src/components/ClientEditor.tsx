@@ -54,22 +54,33 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
   const [teams, setTeams] = useState<Team[]>([]);
   const [newTeamName, setNewTeamName] = useState("");
   const [showNewTeam, setShowNewTeam] = useState(false);
-  const [formData, setFormData] = useState<Partial<Client>>({
-    name: "",
-    email: "",
-    company: "",
-    phone: "",
-    notes: "",
-    team: "",
-    projectCount: 0,
-    created_at: new Date().toISOString().split('T')[0],
-    payment_method: undefined,
-    payment_due_day: undefined,
-    monthly_amount: undefined,
-    narration_type: "",
-    image_type: "",
-    particularity_type: "",
-    briefing: "",
+  const [formData, setFormData] = useState<Partial<Client>>(() => {
+    if (client) {
+      return {
+        ...client,
+        email: (client.email || "").trim(),
+        email_2: (client.email_2 || "").trim(),
+        email_3: (client.email_3 || "").trim(),
+        team: (client.team || "").trim(),
+      };
+    }
+    return {
+      name: "",
+      email: "",
+      company: "",
+      phone: "",
+      notes: "",
+      team: "",
+      projectCount: 0,
+      created_at: new Date().toISOString().split('T')[0],
+      payment_method: undefined,
+      payment_due_day: undefined,
+      monthly_amount: undefined,
+      narration_type: "",
+      image_type: "",
+      particularity_type: "",
+      briefing: "",
+    };
   });
   const [clientUploads, setClientUploads] = useState<ClientUpload[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -103,6 +114,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
 
   useEffect(() => {
     if (client) {
+      console.log("[ClientEditor] Loading client data - team:", JSON.stringify(client.team), "email_2:", JSON.stringify(client.email_2), "email_3:", JSON.stringify(client.email_3));
       setFormData({
         ...client,
         email: (client.email || "").trim(),
