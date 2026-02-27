@@ -1,0 +1,2 @@
+ALTER TABLE public.client_data ADD COLUMN IF NOT EXISTS email_2 text DEFAULT NULL;
+ALTER TABLE public.client_data ADD COLUMN IF NOT EXISTS email_3 text DEFAULT NULL;

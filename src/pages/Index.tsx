@@ -243,6 +243,8 @@ const Index = () => {
         await updateClient(clientData.id, {
           name: clientData.name,
           email: clientData.email,
+          email_2: clientData.email_2 || null,
+          email_3: clientData.email_3 || null,
           company: clientData.company,
           phone: clientData.phone,
           notes: clientData.notes,
@@ -265,6 +267,8 @@ const Index = () => {
         await createClient({
           name: clientData.name,
           email: clientData.email,
+          email_2: clientData.email_2 || null,
+          email_3: clientData.email_3 || null,
           company: clientData.company,
           phone: clientData.phone,
           notes: clientData.notes,

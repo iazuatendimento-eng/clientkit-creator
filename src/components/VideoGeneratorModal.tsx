@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check } from "lucide-react";
+import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -201,6 +201,7 @@ interface VideoGeneratorModalProps {
   clientName: string;
   cardIndex: number;
   preloadedData?: PreloadedVideoData | null;
+  clientId?: string;
   onExported?: () => void;
 }
 
@@ -214,6 +215,7 @@ export function VideoGeneratorModal({
   clientName,
   cardIndex,
   preloadedData,
+  clientId,
   onExported,
 }: VideoGeneratorModalProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "exporting" | "error">("loading");
@@ -233,6 +235,29 @@ export function VideoGeneratorModal({
   const [pageImageAdjustments, setPageImageAdjustments] = useState<PageImageAdjustment[]>([]);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<"1" | "2" | "none">("1");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const handleSendEmail = async (videoUrl: string) => {
+    if (!clientId) return;
+    setIsSendingEmail(true);
+    try {
+      const { data: clientData } = await supabase.from("client_data").select("email, email_2, email_3").eq("id", clientId).single();
+      if (!clientData) throw new Error("Cliente não encontrado");
+      const emails = [clientData.email, (clientData as any).email_2, (clientData as any).email_3].filter(Boolean);
+      if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); return; }
+
+      const { data, error } = await supabase.functions.invoke("send-media-email", {
+        body: { emails, subject: `Vídeo - ${clientName}`, mediaUrl: videoUrl, mediaType: "video", clientName },
+      });
+      if (error) throw error;
+      toast.success(data?.message || "E-mail(s) enviado(s)!");
+    } catch (err: any) {
+      console.error("Email error:", err);
+      toast.error("Erro ao enviar e-mail: " + (err.message || ""));
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   // Adjustment helpers
   const updateAdj = (key: keyof ElementAdjustments, value: number) => {
@@ -740,6 +765,31 @@ export function VideoGeneratorModal({
                 <Button onClick={() => handleExport(true)} className="gap-2 w-full">
                   <Download className="h-4 w-4" />
                   Baixar Vídeo
+                </Button>
+              )}
+
+              {/* Email button - shown after export */}
+              {clientId && exportedBlob && (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    // Get the stored video URL from project_briefs
+                    const { data: brief } = await supabase
+                      .from("project_briefs")
+                      .select("generated_video_url")
+                      .eq("id", cardId)
+                      .single();
+                    if (brief?.generated_video_url) {
+                      handleSendEmail(brief.generated_video_url);
+                    } else {
+                      toast.error("Exporte o vídeo primeiro");
+                    }
+                  }}
+                  disabled={isSendingEmail}
+                  className="w-full gap-2"
+                >
+                  {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  Enviar por E-mail
                 </Button>
               )}
 

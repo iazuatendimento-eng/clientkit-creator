@@ -4,6 +4,8 @@ export interface ClientData {
   id: string;
   name: string;
   email: string;
+  email_2?: string | null;
+  email_3?: string | null;
   company?: string;
   phone?: string;
   notes?: string;

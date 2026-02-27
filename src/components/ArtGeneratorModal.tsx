@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Download, Palette, ImageIcon, Search, Upload, Link } from "lucide-react";
+import { Loader2, Download, Palette, ImageIcon, Search, Upload, Link, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,6 +90,7 @@ interface ArtGeneratorModalProps {
   brandKit: any;
   clientName: string;
   cardIndex: number;
+  clientId?: string;
   onExported?: () => void;
 }
 
@@ -480,6 +481,7 @@ export function ArtGeneratorModal({
   brandKit,
   clientName,
   cardIndex,
+  clientId,
   onExported,
 }: ArtGeneratorModalProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -516,7 +518,37 @@ export function ArtGeneratorModal({
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [searchPage, setSearchPage] = useState(1);
   const [hasMoreResults, setHasMoreResults] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
+  const handleSendEmail = async () => {
+    if (!clientId || !artDataUrl) return;
+    setIsSendingEmail(true);
+    try {
+      // First upload the art to storage to get a public URL
+      const blob = await (await fetch(artDataUrl)).blob();
+      const path = `email-arts/${clientId}/${Date.now()}.png`;
+      const { error: uploadErr } = await supabase.storage.from("card-uploads").upload(path, blob, { contentType: "image/png" });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+
+      // Fetch client emails
+      const { data: clientData } = await supabase.from("client_data").select("email, email_2, email_3").eq("id", clientId).single();
+      if (!clientData) throw new Error("Cliente não encontrado");
+      const emails = [clientData.email, (clientData as any).email_2, (clientData as any).email_3].filter(Boolean);
+      if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); return; }
+
+      const { data, error } = await supabase.functions.invoke("send-media-email", {
+        body: { emails, subject: `Arte - ${clientName}`, mediaUrl: urlData.publicUrl, mediaType: "art", clientName },
+      });
+      if (error) throw error;
+      toast.success(data?.message || "E-mail(s) enviado(s)!");
+    } catch (err: any) {
+      console.error("Email error:", err);
+      toast.error("Erro ao enviar e-mail: " + (err.message || ""));
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
   // Refs for sync
   const overridesRef = useRef({
     photoOffsetX, photoOffsetY, photoScale, photoFrame,
@@ -863,6 +895,17 @@ export function ArtGeneratorModal({
                   Baixar Arte
                 </Button>
               </div>
+              {clientId && (
+                <Button
+                  variant="outline"
+                  onClick={handleSendEmail}
+                  disabled={isSendingEmail}
+                  className="w-full gap-2"
+                >
+                  {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  Enviar por E-mail
+                </Button>
+              )}
             </div>
           )}
         </DialogContent>
