@@ -5,6 +5,7 @@ import { Loader2, Download, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { drawNewShape } from "@/lib/canvasShapes";
+import { searchPexelsImages } from "@/lib/imageSearch";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -422,6 +423,21 @@ export function ArtGeneratorModal({
           .filter(u => u.file_type.startsWith("image"))
           .map(u => u.file_url);
       } catch { /* ignore */ }
+
+      // If no material images, search Pexels using card text as query
+      if (matImages.length === 0) {
+        try {
+          const searchQuery = (cardTitle || cardText || clientName).substring(0, 80);
+          console.log("[ArtGen] No material images, searching Pexels for:", searchQuery);
+          const pexelsResults = await searchPexelsImages(searchQuery, 1);
+          if (pexelsResults.length > 0) {
+            matImages = [pexelsResults[0].urls.regular];
+            console.log("[ArtGen] Found Pexels image:", matImages[0].substring(0, 60));
+          }
+        } catch (e) {
+          console.warn("[ArtGen] Pexels search failed:", e);
+        }
+      }
 
       const text = cardText || cardTitle || clientName;
       console.log("[ArtGen] Rendering art with template:", tmpl.name, "elements:", tmpl.elements.length, "text:", text.substring(0, 50));
