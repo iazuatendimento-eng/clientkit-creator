@@ -39,6 +39,8 @@ interface Client {
   id: string;
   name: string;
   email: string;
+  email_2?: string;
+  email_3?: string;
   company?: string;
   phone?: string;
   notes?: string;
@@ -188,10 +190,12 @@ const Index = () => {
         id: c.id,
         name: c.name,
         email: c.email,
+        email_2: c.email_2 || "",
+        email_3: c.email_3 || "",
         company: c.company,
         phone: c.phone,
         notes: c.notes,
-        team: c.team,
+        team: (c.team || "").trim(),
         slug: c.slug,
         brand_kit: c.brand_kit,
         projectCount: 0,
@@ -238,17 +242,23 @@ const Index = () => {
   const handleSaveClient = async (clientData: any) => {
     try {
       const slug = generateSlug(clientData.company || clientData.name);
+      const normalizedEmail = (clientData.email || "").trim();
+      const normalizedEmail2 = (clientData.email_2 || "").trim();
+      const normalizedEmail3 = (clientData.email_3 || "").trim();
+      const rawTeam = (clientData.team || "").trim();
+      const matchedTeam = availableTeams.find((t) => t.name.toLowerCase() === rawTeam.toLowerCase())?.name;
+      const normalizedTeam = matchedTeam || rawTeam;
       
       if (clientData.id && clients.find(c => c.id === clientData.id)) {
         await updateClient(clientData.id, {
           name: clientData.name,
-          email: clientData.email,
-          email_2: clientData.email_2 || null,
-          email_3: clientData.email_3 || null,
+          email: normalizedEmail,
+          email_2: normalizedEmail2 || null,
+          email_3: normalizedEmail3 || null,
           company: clientData.company,
           phone: clientData.phone,
           notes: clientData.notes,
-          team: clientData.team,
+          team: normalizedTeam,
           slug,
           brand_kit: clientData.brandKit || clientData.brand_kit,
           payment_method: clientData.payment_method,
@@ -266,13 +276,13 @@ const Index = () => {
       } else {
         await createClient({
           name: clientData.name,
-          email: clientData.email,
-          email_2: clientData.email_2 || null,
-          email_3: clientData.email_3 || null,
+          email: normalizedEmail,
+          email_2: normalizedEmail2 || null,
+          email_3: normalizedEmail3 || null,
           company: clientData.company,
           phone: clientData.phone,
           notes: clientData.notes,
-          team: clientData.team,
+          team: normalizedTeam,
           slug,
           brand_kit: clientData.brandKit || clientData.brand_kit,
           payment_method: clientData.payment_method,
