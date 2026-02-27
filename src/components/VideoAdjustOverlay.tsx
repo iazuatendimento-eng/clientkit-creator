@@ -753,14 +753,7 @@ export function VideoAdjustOverlay({
           {frameOverlayUrl && (
             <img src={frameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
           )}
-          {/* Text overlay layer - render as visual reference so text looks identical to preview */}
-          {textOverlayUrl && (
-            <img src={textOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[2]" draggable={false} />
-          )}
-          {/* Logo overlay layer - render as visual reference */}
-          {logoOverlayUrl && (
-            <img src={logoOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[3]" draggable={false} />
-          )}
+          {/* Static text/logo overlays hidden — content rendered inside interactive boxes instead */}
         </>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
@@ -810,12 +803,38 @@ export function VideoAdjustOverlay({
         )}
         {/* Text - only on content pages */}
         {isContentPage && els.textEl && (
-          <Box part="text" label="Texto" tone="muted" />
+          <Box part="text" label="Texto" tone="muted">
+            {pageText && (
+              <p
+                className="text-left w-full leading-tight break-words"
+                style={{
+                  fontFamily: fontFamily || "sans-serif",
+                  color: textColor || "#ffffff",
+                  fontSize: `${((els.textEl.fontSize || 48) * (textScale / 100)) / (template.height / 100)}cqh`,
+                  fontWeight: (els.textEl as any).fontWeight || "bold",
+                }}
+              >
+                {pageText}
+              </p>
+            )}
+          </Box>
         )}
         {/* Logo, Contato, Mascote */}
-        {els.logoEl && <Box part="logo" label="Logo" tone="primary" />}
-        {els.contactEl && <Box part="contact" label="Contato" tone="accent" />}
-        {els.mascotEl && <Box part="mascot" label="Mascote" tone="secondary" />}
+        {els.logoEl && (
+          <Box part="logo" label="Logo" tone="primary">
+            {logoUrl && <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" draggable={false} />}
+          </Box>
+        )}
+        {els.contactEl && (
+          <Box part="contact" label="Contato" tone="accent">
+            {contactUrl && <img src={contactUrl} alt="Contato" className="w-full h-full object-contain" draggable={false} />}
+          </Box>
+        )}
+        {els.mascotEl && (
+          <Box part="mascot" label="Mascote" tone="secondary">
+            {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-contain" draggable={false} />}
+          </Box>
+        )}
       </div>
 
       {isBusy && (
