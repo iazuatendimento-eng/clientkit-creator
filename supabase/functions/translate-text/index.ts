@@ -39,7 +39,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are a translator. Translate the given Portuguese text to English. Return ONLY the translated text, nothing else. Keep it concise - extract the main subject/topic (2-4 words max) that would be good for an image search."
+            content: "You are a keyword extractor for stock video/image search. Given text in any language, extract 2-5 English keywords that best describe the visual theme or subject. Return ONLY the keywords separated by spaces, nothing else. Examples: 'digital marketing social media' or 'luxury real estate modern'. Focus on visual, concrete nouns and adjectives. Never return sentences, only keywords."
           },
           {
             role: "user",

@@ -121,7 +121,7 @@ export function useVideoPregenerate(
         // Search bank videos only for uncovered pages
         if (pagesNeedingBankVideo.length > 0) {
           try {
-            const searchTerms = fullText.split(" ").slice(0, 6).join(" ");
+            const searchTerms = fullText.split(" ").slice(0, 10).join(" ");
             let translatedTerms = searchTerms;
             try {
               const { data: transData } = await Promise.race([

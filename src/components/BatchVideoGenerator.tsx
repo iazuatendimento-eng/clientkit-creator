@@ -1062,13 +1062,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const video = updatedVideos[i];
       // Skip videos that already have valid previewVideoUrls (user-chosen videos)
       if (video.previewVideoUrls && video.previewVideoUrls.some(u => u && u !== "")) continue;
-      // Combine ALL page texts, card title, imageType, briefing and company for a complete search query
-      const allTexts = [...video.pageTexts, video.cardTitle, video.imageType, video.briefing, video.company].filter(Boolean).join(" ");
-      const firstText = allTexts || "";
+      // Prioritize imageType and briefing for search (most relevant for visual content)
+      const searchContext = [video.imageType, video.briefing, video.cardTitle].filter(Boolean).join(" ");
+      const firstText = searchContext || video.pageTexts[0] || "";
       if (!firstText) continue;
       try {
-        const combinedText = firstText;
-        let searchTerms = combinedText.split(" ").slice(0, 8).join(" ");
+        const combinedText = firstText.split(" ").slice(0, 15).join(" ");
+        let searchTerms = combinedText;
         try {
           const { data, error } = await Promise.race([
             supabase.functions.invoke("translate-text", { body: { text: combinedText } }),
@@ -2157,8 +2157,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           }
 
           try {
-            // Combine page text + card title + imageType + briefing + company for complete search context
-            const fullContext = [text, video.cardTitle, video.imageType, video.briefing, video.company].filter(Boolean).join(" ");
+            // Prioritize imageType and briefing for search context (most relevant for visual content)
+            const fullContext = [video.imageType, video.briefing, video.cardTitle, text].filter(Boolean).join(" ").split(" ").slice(0, 15).join(" ");
             let searchTerms = fullContext;
 
             // Translate to English for better search results (with timeout)
