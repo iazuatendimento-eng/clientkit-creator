@@ -782,6 +782,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         clientName={brief.clientName}
         cardIndex={cardIndex}
         preloadedData={preloadedData}
+        clientId={clientId}
         onExported={() => {
           onStatusChange(brief.id, "completed");
           if (clientId) { markDailyVideoUsed(clientId); setUsedDailyVideo(true); }
@@ -796,6 +797,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         brandKit={brandKit}
         clientName={brief.clientName}
         cardIndex={cardIndex}
+        clientId={clientId}
         onExported={() => {
           onStatusChange(brief.id, "completed");
         }}

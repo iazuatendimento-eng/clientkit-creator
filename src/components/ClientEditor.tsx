@@ -25,6 +25,8 @@ interface Client {
   id?: string;
   name: string;
   email: string;
+  email_2?: string;
+  email_3?: string;
   company?: string;
   phone?: string;
   notes?: string;
@@ -254,6 +256,8 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       id: client?.id,
       name: formData.name || "",
       email: formData.email || "",
+      email_2: (formData as any).email_2 || undefined,
+      email_3: (formData as any).email_3 || undefined,
       company: formData.company,
       phone: formData.phone,
       notes: formData.notes,
@@ -337,14 +341,37 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Email 1 *</Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email || ""}
                     onChange={(e) => handleChange("email", e.target.value)}
-                    placeholder="Digite o email do cliente"
+                    placeholder="Email principal do cliente"
                     required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email_2">Email 2</Label>
+                  <Input
+                    id="email_2"
+                    type="email"
+                    value={(formData as any).email_2 || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email_2: e.target.value }))}
+                    placeholder="Segundo email (opcional)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email_3">Email 3</Label>
+                  <Input
+                    id="email_3"
+                    type="email"
+                    value={(formData as any).email_3 || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email_3: e.target.value }))}
+                    placeholder="Terceiro email (opcional)"
                   />
                 </div>
               </div>
