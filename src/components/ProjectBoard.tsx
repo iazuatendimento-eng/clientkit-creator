@@ -391,7 +391,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         return null;
       })()}
 
-      <CardHeader className={`${isPublicView ? 'p-1.5 pb-1' : 'pb-2'} overflow-hidden`}>
+      <CardHeader className={`${isPublicView ? 'p-3 pb-2' : 'pb-2'} overflow-hidden`}>
         <div className="flex justify-between items-start">
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -418,7 +418,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               null
             ) : (
               <div className="flex items-start gap-1.5">
-                <h4 className="font-semibold text-sm text-left break-words whitespace-pre-wrap leading-relaxed flex-1">
+                <h4 className={`font-semibold ${isPublicView ? 'text-base' : 'text-sm'} text-left break-words whitespace-pre-wrap leading-relaxed flex-1`}>
                   {(brief.title?.trim() ? brief.title : brief.description)}
                 </h4>
                 {!isPublicView && brief.status !== "completed" && !isFirstInQueue && (
@@ -457,9 +457,9 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           )}
         </div>
       </CardHeader>
-      <CardContent className={`pt-0 ${isPublicView ? 'p-1.5 pt-0' : ''} overflow-hidden`}>
+      <CardContent className={`pt-0 ${isPublicView ? 'p-3 pt-0' : ''} overflow-hidden`}>
         <div className="space-y-2 min-w-0">
-          <div className="flex items-center gap-2 text-xs">
+          <div className={`flex items-center gap-2 ${isPublicView ? 'text-sm' : 'text-xs'}`}>
             <Calendar className="h-3 w-3" />
             <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
           </div>
@@ -595,13 +595,13 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               {/* Show art download only on the card's deadline day */}
               {isDeadlineReached && (brief.coverImage || brief.coverVideo) && (
                 brief.coverVideo ? (
-                  <div className="grid grid-cols-2 gap-1">
-                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
-                      <Volume2 className="h-3 w-3 shrink-0 mr-0.5" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, false); }} className="text-xs px-2 py-2 h-auto min-w-0">
+                      <Volume2 className="h-3.5 w-3.5 shrink-0 mr-1" />
                       <span>Baixar Com Áudio</span>
                     </Button>
-                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, true); }} className="text-[11px] px-1.5 py-1 h-auto min-w-0">
-                      <VolumeX className="h-3 w-3 shrink-0 mr-0.5" />
+                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.coverVideo!, `${brief.clientName}-${brief.id}.mp4`, true); }} className="text-xs px-2 py-2 h-auto min-w-0">
+                      <VolumeX className="h-3.5 w-3.5 shrink-0 mr-1" />
                       <span>Baixar Sem Áudio</span>
                     </Button>
                   </div>
@@ -627,16 +627,16 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     />
                   </div>
                   <div className="p-3 space-y-2.5 min-w-0 overflow-hidden">
-                    <div className="flex items-center justify-center gap-1 py-1 px-1.5 bg-destructive/15 border border-destructive/30 rounded-lg overflow-hidden">
-                      <span className="text-[10px] font-semibold text-destructive">
+                    <div className="flex items-center justify-center gap-1 py-1.5 px-2 bg-destructive/15 border border-destructive/30 rounded-lg overflow-hidden">
+                      <span className="text-xs font-semibold text-destructive">
                         <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} />
                       </span>
                     </div>
-                    <div className="flex flex-col gap-2 min-w-0">
-                      <Button onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
+                    <div className="flex flex-col gap-2.5 min-w-0">
+                      <Button onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-2.5 text-sm font-medium rounded-lg w-full overflow-hidden">
                         <span>Baixar Com Áudio</span>
                       </Button>
-                      <Button variant="outline" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-2 text-xs font-medium rounded-lg w-full overflow-hidden">
+                      <Button variant="outline" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-2.5 text-sm font-medium rounded-lg w-full overflow-hidden">
                         <span>Baixar Sem Áudio</span>
                       </Button>
                     </div>
@@ -681,7 +681,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                       e.stopPropagation();
                       setIsVideoGenOpen(true);
                     }}
-                    className="h-auto py-3 text-xs font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
+                    className="h-auto py-3.5 text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
                     disabled={isPreloading}
                   >
                     {isPreloading ? (
@@ -1517,7 +1517,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className={`grid ${isPublicView ? 'grid-cols-2 gap-3' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid ${isPublicView ? 'grid-cols-1 sm:grid-cols-2 gap-4' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
@@ -1534,9 +1534,9 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                 <ColumnDroppable key={column.id} id={column.id}>
                   <div className={`${isPublicView ? 'space-y-2' : 'space-y-4'} min-w-0`}>
                     {isPublicView ? (
-                      <div className={`py-2 px-3 rounded-lg border ${column.color}`}>
-                        <h3 className="font-semibold text-center text-xs">{column.title}</h3>
-                        <div className="text-center text-[10px] text-muted-foreground">
+                      <div className={`py-3 px-4 rounded-lg border ${column.color}`}>
+                        <h3 className="font-semibold text-center text-sm">{column.title}</h3>
+                        <div className="text-center text-xs text-muted-foreground mt-0.5">
                           {columnBriefs.length} itens
                         </div>
                       </div>
@@ -1550,7 +1550,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                     )}
                     
                     <SortableContext items={columnBriefs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                      <div className={isPublicView ? 'space-y-2' : 'space-y-3'}>
+                      <div className={isPublicView ? 'space-y-3' : 'space-y-3'}>
                         {columnBriefs.map((brief, index) => (
                           <SortableCard
                             key={brief.id}

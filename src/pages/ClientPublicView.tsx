@@ -96,22 +96,22 @@ const ClientPublicView = () => {
     <div className="min-h-screen bg-background">
       {/* Header - Modern & Clean */}
       <div className="sticky top-0 z-10 border-b border-border/50 bg-background/90 backdrop-blur-xl">
-        <div className="px-2 sm:px-6 py-4 sm:py-5">
+        <div className="px-3 sm:px-6 py-5 sm:py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-center sm:text-left">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 {client.name}
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{client.email}</p>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1">{client.email}</p>
             </div>
             <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
               {client.company && (
-                <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium border border-primary/20">
+                <span className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium border border-primary/20">
                   {client.company}
                 </span>
               )}
               {client.team && (
-                <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full text-xs font-medium border border-border/50">
+                <span className="px-4 py-2 bg-muted text-muted-foreground rounded-full text-sm font-medium border border-border/50">
                   {client.team}
                 </span>
               )}
@@ -119,7 +119,7 @@ const ClientPublicView = () => {
           </div>
           {client.notes && (
             <div className="mt-3">
-              <div className="px-3 py-2 bg-muted/50 rounded-lg text-muted-foreground text-xs leading-relaxed border border-border/30">
+              <div className="px-4 py-3 bg-muted/50 rounded-lg text-muted-foreground text-sm leading-relaxed border border-border/30">
                 📝 <LinkableText text={client.notes} />
               </div>
             </div>
@@ -128,7 +128,7 @@ const ClientPublicView = () => {
       </div>
 
       {/* Content */}
-      <div className="py-2 sm:px-4 sm:py-8 w-full">
+      <div className="py-3 px-3 sm:px-6 sm:py-8 w-full">
         <ProjectBoard 
           brandKits={client.brand_kit ? [client.brand_kit as any] : []}
           onCreateProject={handleCreateProject}
