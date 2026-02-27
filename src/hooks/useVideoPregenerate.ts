@@ -48,9 +48,10 @@ export function useVideoPregenerate(
       setIsPreloading(true);
       try {
         const { data: templates, error } = await supabase
-          .from("master_video_templates")
-          .select("*")
-          .order("created_at", { ascending: true });
+        .from("master_video_templates")
+        .select("*")
+        .eq("deleted", false)
+        .order("created_at", { ascending: true });
 
         if (error || !templates || templates.length === 0) return;
 

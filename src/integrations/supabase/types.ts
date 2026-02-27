@@ -309,6 +309,7 @@ export type Database = {
           background_color: string
           created_at: string
           created_by: string | null
+          deleted: boolean
           elements: Json
           height: number
           id: string
@@ -320,6 +321,7 @@ export type Database = {
           background_color?: string
           created_at?: string
           created_by?: string | null
+          deleted?: boolean
           elements?: Json
           height?: number
           id?: string
@@ -331,6 +333,7 @@ export type Database = {
           background_color?: string
           created_at?: string
           created_by?: string | null
+          deleted?: boolean
           elements?: Json
           height?: number
           id?: string
@@ -348,6 +351,7 @@ export type Database = {
           content_elements: Json
           created_at: string
           created_by: string | null
+          deleted: boolean
           height: number
           id: string
           name: string
@@ -363,6 +367,7 @@ export type Database = {
           content_elements?: Json
           created_at?: string
           created_by?: string | null
+          deleted?: boolean
           height?: number
           id?: string
           name: string
@@ -378,6 +383,7 @@ export type Database = {
           content_elements?: Json
           created_at?: string
           created_by?: string | null
+          deleted?: boolean
           height?: number
           id?: string
           name?: string

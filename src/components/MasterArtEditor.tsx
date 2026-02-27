@@ -276,6 +276,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
       const { data, error } = await supabase
         .from('master_templates')
         .select('*')
+        .eq('deleted', false)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -399,7 +400,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     try {
       const { error } = await supabase
         .from('master_templates')
-        .delete()
+        .update({ deleted: true })
         .eq('id', templateId);
       if (error) throw error;
       if (currentTemplateId === templateId) {
