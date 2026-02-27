@@ -3539,21 +3539,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     </div>
                   ))}
                 </div>
-                {searchResults.length > 0 && (
-                  <div className="flex justify-center pt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleLoadMoreVideos}
-                      disabled={isLoadingMore}
-                    >
-                      {isLoadingMore ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Carregar Mais
-                    </Button>
-                  </div>
-                )}
                 {searchResults.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Busque por vídeos acima</p>
@@ -3561,6 +3546,21 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   </div>
                 )}
               </ScrollArea>
+              {searchResults.length > 0 && (
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadMoreVideos}
+                    disabled={isLoadingMore}
+                  >
+                    {isLoadingMore ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    Carregar Mais
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="custom" className="space-y-6" onPaste={(e) => {
