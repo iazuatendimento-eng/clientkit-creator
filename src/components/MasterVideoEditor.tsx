@@ -2717,10 +2717,6 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
               <Play className="mr-1 h-4 w-4" />
               Play Geral
             </Button>
-            <Button className="flex-1 bg-gradient-primary" onClick={handleGenerateBatch}>
-              <Play className="mr-1 h-4 w-4" />
-              Gerar Lote
-            </Button>
           </div>
         </div>
       </div>

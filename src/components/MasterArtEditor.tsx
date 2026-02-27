@@ -1733,10 +1733,6 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
             </SelectContent>
           </Select>
           
-          <Button onClick={handleGenerateBatch} className="bg-gradient-primary">
-            <Play className="mr-2 h-4 w-4" />
-            Gerar Artes em Lote
-          </Button>
         </div>
       </div>
 
