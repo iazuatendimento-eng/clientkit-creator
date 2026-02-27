@@ -394,6 +394,25 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     });
   };
 
+  const deleteTemplate = async (templateId: string, templateName: string) => {
+    if (!window.confirm(`Excluir o template "${templateName}" permanentemente?`)) return;
+    try {
+      const { error } = await supabase
+        .from('master_templates')
+        .delete()
+        .eq('id', templateId);
+      if (error) throw error;
+      if (currentTemplateId === templateId) {
+        createNewTemplate();
+      }
+      loadTemplates();
+      toast({ title: "Template excluído", description: `"${templateName}" foi removido.` });
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      toast({ title: "Erro ao excluir", variant: "destructive" });
+    }
+  };
+
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
     if (toolId === "image") {
@@ -1661,9 +1680,20 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
               </SelectItem>
               {savedTemplates.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
-                  <div className="flex items-center gap-2">
-                    <FolderOpen className="h-4 w-4" />
-                    {t.name}
+                  <div className="flex items-center gap-2 w-full">
+                    <FolderOpen className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 truncate">{t.name}</span>
+                    <button
+                      type="button"
+                      className="ml-auto p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deleteTemplate(t.id, t.name);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </SelectItem>
               ))}
