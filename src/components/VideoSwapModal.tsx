@@ -175,7 +175,7 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
           {/* Results grid */}
           {searchResults.length > 0 && (
             <div className="space-y-2">
-              <ScrollArea className="h-[280px]">
+              <ScrollArea className="h-[220px]">
                 <div className="grid grid-cols-2 gap-2 pr-2">
                   {searchResults.map((video) => (
                     <div

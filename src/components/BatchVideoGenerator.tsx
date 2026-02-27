@@ -3517,7 +3517,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                 </Button>
               </div>
 
-              <ScrollArea className="h-[280px]">
+              <ScrollArea className="h-[220px]">
                 <div className="grid grid-cols-3 gap-2 pr-2">
                   {searchResults.map((image) => (
                     <div
