@@ -895,17 +895,6 @@ export function ArtGeneratorModal({
                   Baixar Arte
                 </Button>
               </div>
-              {clientId && (
-                <Button
-                  variant="outline"
-                  onClick={handleSendEmail}
-                  disabled={isSendingEmail}
-                  className="w-full gap-2"
-                >
-                  {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                  Enviar por E-mail
-                </Button>
-              )}
             </div>
           )}
         </DialogContent>
