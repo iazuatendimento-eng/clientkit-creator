@@ -103,7 +103,13 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
 
   useEffect(() => {
     if (client) {
-      setFormData({ ...client });
+      setFormData({
+        ...client,
+        email: (client.email || "").trim(),
+        email_2: (client.email_2 || "").trim(),
+        email_3: (client.email_3 || "").trim(),
+        team: (client.team || "").trim(),
+      });
       if (client.id) {
         loadClientUploads(client.id);
       }
@@ -261,7 +267,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       company: formData.company,
       phone: formData.phone,
       notes: formData.notes,
-      team: formData.team || "",
+      team: (formData.team || "").trim(),
       brand_kit: brandKit,
       projectCount: client?.projectCount || 0,
       created_at: client?.created_at || new Date().toISOString().split('T')[0],
