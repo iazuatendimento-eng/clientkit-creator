@@ -2440,7 +2440,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         </div>
 
         {/* Canvas Area */}
-        <div className="flex-1 bg-muted/30 flex items-center justify-center p-8 overflow-auto">
+        <div className="flex-1 bg-muted/30 flex items-center justify-center p-2 overflow-auto">
           <div className="shadow-2xl">
             <canvas
               ref={canvasRef}
