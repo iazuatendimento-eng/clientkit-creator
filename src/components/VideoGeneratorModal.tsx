@@ -43,16 +43,35 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
   const [searchResults, setSearchResults] = useState<SearchVideo[]>([]);
   const [searching, setSearching] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setSearching(true);
+    setSearchPage(1);
     try {
-      const results = await searchVideos(searchQuery, 6);
+      const results = await searchVideos(searchQuery, 12, 1);
       setSearchResults(results);
       if (results.length === 0) toast.info("Nenhum vídeo encontrado.");
     } catch { toast.error("Erro ao buscar vídeos"); }
     finally { setSearching(false); }
+  };
+
+  const handleLoadMore = async () => {
+    if (!searchQuery.trim()) return;
+    const nextPage = searchPage + 1;
+    setIsLoadingMore(true);
+    try {
+      const results = await searchVideos(searchQuery, 12, nextPage);
+      if (results.length > 0) {
+        setSearchResults(prev => [...prev, ...results]);
+        setSearchPage(nextPage);
+      } else {
+        toast.info("Sem mais resultados");
+      }
+    } catch { toast.error("Erro ao carregar mais"); }
+    finally { setIsLoadingMore(false); }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,16 +162,30 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
         </Button>
       </div>
       {searchResults.length > 0 && (
-        <div className="grid grid-cols-3 gap-1.5">
-          {searchResults.map((video) => (
-            <div key={video.id} onClick={() => { onVideoSwapped(currentEditPage, video.videoUrl); toast.success("Vídeo trocado!"); setIsOpen(false); }} className="relative cursor-pointer rounded overflow-hidden border hover:border-primary transition-all">
-              <video src={video.videoUrl} poster={video.image} className="w-full h-16 object-cover" muted playsInline onMouseEnter={(e) => e.currentTarget.play()} onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }} />
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
-                <span className="text-[8px] text-white">{video.source}</span>
+        <>
+          <div className="grid grid-cols-3 gap-1.5">
+            {searchResults.map((video) => (
+              <div key={video.id} onClick={() => { onVideoSwapped(currentEditPage, video.videoUrl); toast.success("Vídeo trocado!"); setIsOpen(false); }} className="relative cursor-pointer rounded overflow-hidden border hover:border-primary transition-all">
+                <video src={video.videoUrl} poster={video.image} className="w-full h-16 object-cover" muted playsInline onMouseEnter={(e) => e.currentTarget.play()} onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }} />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
+                  <span className="text-[8px] text-white">{video.source}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="h-7 text-xs"
+            >
+              {isLoadingMore ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Carregar Mais
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );
