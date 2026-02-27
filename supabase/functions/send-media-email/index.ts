@@ -79,7 +79,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'ClientKit <onboarding@resend.dev>',
+          from: 'ClientKit <noreply@contato.iazu.com.br>',
           to: [email],
           subject: subject || `${mediaLabel} - ${clientName}`,
           html: htmlBody,
