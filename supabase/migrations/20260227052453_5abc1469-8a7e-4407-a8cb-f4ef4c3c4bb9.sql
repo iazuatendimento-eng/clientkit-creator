@@ -1,0 +1,1 @@
+CREATE POLICY "Public read access to master_templates" ON public.master_templates FOR SELECT USING (true);

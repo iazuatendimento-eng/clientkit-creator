@@ -222,6 +222,7 @@ async function renderArt(
   ctx.fillRect(0, 0, template.width, template.height);
 
   for (const el of template.elements) {
+    try {
     ctx.save();
     applyStyles(el);
 
@@ -339,6 +340,10 @@ async function renderArt(
     }
 
     ctx.restore();
+    } catch (elErr) {
+      console.warn("[ArtGen] Error rendering element:", el.type, elErr);
+      ctx.restore();
+    }
   }
 
   return canvas.toDataURL("image/png");
@@ -404,7 +409,9 @@ export function ArtGeneratorModal({
       } catch { /* ignore */ }
 
       const text = cardText || cardTitle || clientName;
+      console.log("[ArtGen] Rendering art with template:", tmpl.name, "elements:", tmpl.elements.length, "text:", text.substring(0, 50));
       const dataUrl = await renderArt(tmpl, brandKit, text, matImages);
+      console.log("[ArtGen] Art rendered successfully, dataUrl length:", dataUrl.length);
       setArtDataUrl(dataUrl);
       setStatus("ready");
     } catch (err) {
