@@ -15,7 +15,7 @@ export interface SearchImage {
 }
 
 // Pexels API search (free, excellent quality)
-export const searchPexelsImages = async (query: string, perPage: number = 15): Promise<SearchImage[]> => {
+export const searchPexelsImages = async (query: string, perPage: number = 15, page: number = 1): Promise<SearchImage[]> => {
   // Pexels API key (publishable, client-side)
   const apiKey = import.meta.env.VITE_PEXELS_API_KEY || 'Ogmbd5yQ7EvLxAyzUKA7o9JqFsQj28loZrZKNoPzzQflzmBjCl28EUuk';
   
@@ -26,7 +26,7 @@ export const searchPexelsImages = async (query: string, perPage: number = 15): P
 
   try {
     const response = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=portrait`,
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${perPage}&page=${page}&orientation=portrait`,
       {
         headers: {
           'Authorization': apiKey
@@ -115,9 +115,9 @@ export const getPicsumFallback = (query: string, count: number = 12): SearchImag
 };
 
 // Main search function - tries Pexels first, then Unsplash, then fallback
-export const searchImages = async (query: string, perPage: number = 15): Promise<SearchImage[]> => {
+export const searchImages = async (query: string, perPage: number = 15, page: number = 1): Promise<SearchImage[]> => {
   // Try Pexels first (generally better results)
-  let results = await searchPexelsImages(query, perPage);
+  let results = await searchPexelsImages(query, perPage, page);
   
   if (results.length > 0) {
     console.log(`Found ${results.length} images from Pexels`);
