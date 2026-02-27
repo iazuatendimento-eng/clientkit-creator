@@ -18,9 +18,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
+import { ArtGeneratorModal } from "@/components/ArtGeneratorModal";
 import { VideoSwapModal } from "@/components/VideoSwapModal";
 import { toast } from "sonner";
 import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder } from "@/lib/clientDatabase";
@@ -152,6 +153,7 @@ interface SortableCardProps {
 const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue, cardIndex = 0, clientId }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isVideoGenOpen, setIsVideoGenOpen] = useState(false);
+  const [isArtGenOpen, setIsArtGenOpen] = useState(false);
   const [isVideoSwapOpen, setIsVideoSwapOpen] = useState(false);
   const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -668,6 +670,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 </div>
               )}
               {brief.status !== "completed" && isDeadlineReached && (
+                cardIndex % 2 === 0 ? (
                   <Button
                     variant="outline"
                     onClick={(e) => {
@@ -684,6 +687,19 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     )}
                     <span>{isPreloading ? "Preparando..." : "Baixar Vídeo Feito"}</span>
                   </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsArtGenOpen(true);
+                    }}
+                    className="h-auto py-3.5 text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
+                  >
+                    <Palette className="h-4 w-4 mr-2" />
+                    <span>Baixar Arte Feita</span>
+                  </Button>
+                )
               )}
             </div>
             );
@@ -712,6 +728,19 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         onExported={() => {
           onStatusChange(brief.id, "completed");
           if (clientId) { markDailyVideoUsed(clientId); setUsedDailyVideo(true); }
+        }}
+      />
+      <ArtGeneratorModal
+        isOpen={isArtGenOpen}
+        onClose={() => setIsArtGenOpen(false)}
+        cardId={brief.id}
+        cardTitle={brief.title}
+        cardText={brief.description || brief.title}
+        brandKit={brandKit}
+        clientName={brief.clientName}
+        cardIndex={cardIndex}
+        onExported={() => {
+          onStatusChange(brief.id, "completed");
         }}
       />
       <VideoSwapModal
