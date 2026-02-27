@@ -804,12 +804,16 @@ const Index = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={async (e) => {
+                      onClick={async (e) => {
                           e.stopPropagation();
-                          // Load brand_kit for editing
+                          // Load full client data for editing (including brand_kit, email_2, email_3)
                           try {
                             const fullClient = await getClientWithBrandKit(client.id);
-                            setEditingClient({ ...client, brand_kit: fullClient?.brand_kit || null });
+                            if (fullClient) {
+                              setEditingClient({ ...client, ...fullClient, projectCount: client.projectCount || 0, payment_method: fullClient.payment_method as "pix" | "credit_card" | undefined });
+                            } else {
+                              setEditingClient(client);
+                            }
                           } catch {
                             setEditingClient(client);
                           }

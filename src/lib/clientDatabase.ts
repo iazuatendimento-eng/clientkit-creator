@@ -86,7 +86,7 @@ export async function deleteClient(id: string) {
 export async function getAllClients() {
   const { data, error } = await supabase
     .from("client_data")
-    .select("id, name, email, company, phone, notes, team, slug, created_at, active, payment_method, payment_due_day, monthly_amount, narration_type, image_type, particularity_type, briefing")
+    .select("id, name, email, email_2, email_3, company, phone, notes, team, slug, created_at, active, payment_method, payment_due_day, monthly_amount, narration_type, image_type, particularity_type, briefing")
     .order("created_at", { ascending: false });
   
   if (error) throw error;
