@@ -247,7 +247,7 @@ export function VideoGeneratorModal({
       if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); return; }
 
       const { data, error } = await supabase.functions.invoke("send-media-email", {
-        body: { emails, subject: `Vídeo - ${clientName}`, mediaUrl: videoUrl, mediaType: "video", clientName },
+        body: { emails, subject: `Vídeo - ${clientName}`, mediaUrl: videoUrl, mediaType: "video", clientName, cardText: cardText || cardTitle, caption: undefined },
       });
       if (error) throw error;
       toast.success(data?.message || "E-mail(s) enviado(s)!");

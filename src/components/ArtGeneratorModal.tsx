@@ -538,7 +538,7 @@ export function ArtGeneratorModal({
       if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); return; }
 
       const { data, error } = await supabase.functions.invoke("send-media-email", {
-        body: { emails, subject: `Arte - ${clientName}`, mediaUrl: urlData.publicUrl, mediaType: "art", clientName },
+        body: { emails, subject: `Arte - ${clientName}`, mediaUrl: urlData.publicUrl, mediaType: "art", clientName, cardText: cardText || cardTitle, caption: undefined },
       });
       if (error) throw error;
       toast.success(data?.message || "E-mail(s) enviado(s)!");
