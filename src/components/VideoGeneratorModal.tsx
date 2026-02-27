@@ -25,7 +25,8 @@ import { VideoAdjustOverlay } from "@/components/VideoAdjustOverlay";
 import { searchVideos, type SearchVideo } from "@/lib/imageSearch";
 import { encodeVideoToMP4, reencodeForWhatsApp, type MotionEffect, type TransitionEffect, type TextAnimation, type LogoAnimation } from "@/lib/videoEncoder";
 import { Input } from "@/components/ui/input";
-
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 import type { PreloadedVideoData } from "@/hooks/useVideoPregenerate";
 
@@ -198,6 +199,7 @@ export function VideoGeneratorModal({
   const [pageTextAdjustments, setPageTextAdjustments] = useState<PageTextAdjustment[]>([]);
   const [pageImageAdjustments, setPageImageAdjustments] = useState<PageImageAdjustment[]>([]);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
+  const [selectedAudioTrack, setSelectedAudioTrack] = useState<"1" | "2" | "none">("1");
 
   // Adjustment helpers
   const updateAdj = (key: keyof ElementAdjustments, value: number) => {
@@ -437,7 +439,11 @@ export function VideoGeneratorModal({
         imageRect,
         imageClipShape,
         pageImageAdjustments,
-        audioUrl: stripAudio ? undefined : (template.audioUrl1 || template.audioUrl2 || undefined),
+        audioUrl: stripAudio ? undefined : (
+          selectedAudioTrack === "1" ? (template.audioUrl1 || template.audioUrl2 || undefined) :
+          selectedAudioTrack === "2" ? (template.audioUrl2 || template.audioUrl1 || undefined) :
+          undefined
+        ),
         onProgress: setExportProgress,
       });
 
@@ -662,17 +668,39 @@ export function VideoGeneratorModal({
                 </p>
               </div>
 
-              {/* Download buttons - always visible */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button onClick={() => handleExport(false)} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Baixar Com Áudio
-                </Button>
-                <Button variant="outline" onClick={() => handleExport(true)} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Baixar Sem Áudio
-                </Button>
-              </div>
+              {/* Audio track selector */}
+              {template.audioUrl1 || template.audioUrl2 ? (
+                <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                  <p className="text-xs font-medium flex items-center gap-1.5">
+                    <Volume2 className="h-3.5 w-3.5" />
+                    Música de fundo
+                  </p>
+                  <RadioGroup value={selectedAudioTrack} onValueChange={(v) => setSelectedAudioTrack(v as "1" | "2" | "none")} className="flex flex-col gap-1.5">
+                    {template.audioUrl1 && (
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="1" id="audio-1" />
+                        <Label htmlFor="audio-1" className="text-xs cursor-pointer">Música 1</Label>
+                      </div>
+                    )}
+                    {template.audioUrl2 && (
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="2" id="audio-2" />
+                        <Label htmlFor="audio-2" className="text-xs cursor-pointer">Música 2</Label>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="none" id="audio-none" />
+                      <Label htmlFor="audio-none" className="text-xs cursor-pointer">Sem música</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              ) : null}
+
+              {/* Download button */}
+              <Button onClick={() => handleExport(selectedAudioTrack === "none")} className="gap-2 w-full">
+                <Download className="h-4 w-4" />
+                {selectedAudioTrack === "none" ? "Baixar Sem Áudio" : "Baixar Com Áudio"}
+              </Button>
 
               {/* Video swap section */}
               <VideoSwapSection
