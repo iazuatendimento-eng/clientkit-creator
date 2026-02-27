@@ -206,6 +206,19 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
                 ))}
               </div>
 
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Carregar Mais
+                </Button>
+              </div>
+
               {selectedVideo && (
                 <Button
                   onClick={handleConfirmSelection}
@@ -216,18 +229,6 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
                   Usar este vídeo
                 </Button>
               )}
-
-              <div className="flex justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLoadMore}
-                  disabled={isLoadingMore}
-                >
-                  {isLoadingMore && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Carregar Mais
-                </Button>
-              </div>
             </div>
           )}
         </div>
