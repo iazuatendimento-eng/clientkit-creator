@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { createCardUpload, getCardUploads, deleteCardUpload } from "@/lib/clientDatabase";
 import { supabase } from "@/integrations/supabase/client";
-import { reencodeForWhatsApp } from "@/lib/videoEncoder";
+
 
 const getMimeFromName = (name: string): string => {
   const ext = name.split('.').pop()?.toLowerCase();
@@ -34,38 +34,12 @@ const downloadFile = async (url: string, fileName: string, stripAudio?: boolean)
     // For videos
     if (isVideoFile(fileName)) {
       toast.loading("Preparando vídeo...", { id: "download-prep" });
-      console.log("[Download] Video download for:", fileName, url, "mobile:", isMobileDevice);
 
-      // Fetch the original file as blob
+      // Fetch the original file as blob — no re-encoding for fast download
       const res = await fetch(url, { mode: 'cors' });
       if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
       const originalBlob = await res.blob();
-      console.log("[Download] Original blob size:", originalBlob.size, "type:", originalBlob.type);
-
-      let finalBlob: Blob;
-
-      if (isMobileDevice) {
-        // On mobile, skip FFmpeg entirely — it stalls. Download original directly.
-        console.log("[Download] Mobile: skipping FFmpeg, using original blob");
-        finalBlob = new Blob([originalBlob], { type: "video/mp4" });
-      } else {
-        try {
-          // Desktop: Re-encode with H.264 baseline + faststart
-          finalBlob = await reencodeForWhatsApp(originalBlob, (p) => {
-            if (p < 0.3) {
-              toast.loading("Carregando conversor...", { id: "download-prep" });
-            } else if (p < 0.85) {
-              toast.loading("Convertendo vídeo...", { id: "download-prep" });
-            } else {
-              toast.loading("Finalizando...", { id: "download-prep" });
-            }
-          }, { stripAudio: !!stripAudio });
-          console.log("[Download] Re-encoded blob size:", finalBlob.size, "type:", finalBlob.type);
-        } catch (encodeErr) {
-          console.error("[Download] FFmpeg re-encode failed, downloading original:", encodeErr);
-          finalBlob = new Blob([originalBlob], { type: "video/mp4" });
-        }
-      }
+      const finalBlob = new Blob([originalBlob], { type: "video/mp4" });
 
       const safeName = fileName.replace(/\.[^.]+$/, '') + '.mp4';
 
