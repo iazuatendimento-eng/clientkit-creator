@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Upload, Search, Film, Check } from "lucide-react";
@@ -174,50 +175,50 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
           {/* Results grid */}
           {searchResults.length > 0 && (
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                {searchResults.map((video) => (
-                  <div
-                    key={video.id}
-                    onClick={() => handleSelectFromBank(video)}
-                    className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
-                      selectedVideo === video.videoUrl
-                        ? "border-primary ring-2 ring-primary/30"
-                        : "border-transparent hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <video
-                      src={video.videoUrl}
-                      poster={video.image}
-                      className="w-full h-28 object-cover"
-                      muted
-                      playsInline
-                      onMouseEnter={(e) => e.currentTarget.play()}
-                      onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
-                    />
-                    {selectedVideo === video.videoUrl && (
-                      <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-1">
-                        <Check className="h-3 w-3" />
+              <ScrollArea className="h-[280px]">
+                <div className="grid grid-cols-2 gap-2 pr-2">
+                  {searchResults.map((video) => (
+                    <div
+                      key={video.id}
+                      onClick={() => handleSelectFromBank(video)}
+                      className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                        selectedVideo === video.videoUrl
+                          ? "border-primary ring-2 ring-primary/30"
+                          : "border-transparent hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <video
+                        src={video.videoUrl}
+                        poster={video.image}
+                        className="w-full h-28 object-cover"
+                        muted
+                        playsInline
+                        onMouseEnter={(e) => e.currentTarget.play()}
+                        onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+                      />
+                      {selectedVideo === video.videoUrl && (
+                        <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-1">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
+                        <span className="text-[10px] text-white">{video.source}</span>
                       </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
-                      <span className="text-[10px] text-white">{video.source}</span>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
 
-              <div className="flex justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={handleLoadMore}
-                  disabled={isLoadingMore}
-                >
-                  {isLoadingMore && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Carregar Mais
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+              >
+                {isLoadingMore && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Carregar Mais
+              </Button>
 
               {selectedVideo && (
                 <Button
