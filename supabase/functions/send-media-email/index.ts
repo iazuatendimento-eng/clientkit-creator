@@ -52,19 +52,47 @@ serve(async (req) => {
       `;
     }
 
+    // Fetch the media file and convert to base64 for attachment
+    let attachments: any[] = [];
+    try {
+      const mediaResponse = await fetch(mediaUrl);
+      if (mediaResponse.ok) {
+        const arrayBuffer = await mediaResponse.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const chunkSize = 8192;
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+          for (let j = 0; j < chunk.length; j++) {
+            binary += String.fromCharCode(chunk[j]);
+          }
+        }
+        const base64Content = btoa(binary);
+        const contentType = mediaResponse.headers.get("content-type") || (isVideo ? "video/mp4" : "image/png");
+        const extension = isVideo ? "mp4" : "png";
+        const fileName = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}.${extension}`;
+        attachments = [{
+          filename: fileName,
+          content: base64Content,
+          type: contentType,
+        }];
+      } else {
+        console.error("Failed to fetch media for attachment:", mediaResponse.status);
+      }
+    } catch (fetchErr) {
+      console.error("Error fetching media for attachment:", fetchErr);
+    }
+
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #333;">📬 ${mediaLabel} - ${clientName}</h2>
         <p style="color: #555;">Olá! Segue ${isVideo ? 'o vídeo' : 'a arte'} gerada para <strong>${clientName}</strong>.</p>
         ${textSection}
         <div style="text-align: center; margin: 30px 0;">
-          ${isVideo 
-            ? `<p style="color: #555;">Clique no botão abaixo para baixar o vídeo:</p>`
-            : `<img src="${mediaUrl}" alt="Arte" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />`
+          ${!isVideo
+            ? `<img src="${mediaUrl}" alt="Arte" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />`
+            : `<p style="color: #555;">O vídeo foi enviado em anexo neste e-mail.</p>`
           }
-          <a href="${mediaUrl}" download style="display: inline-block; margin-top: 20px; padding: 12px 24px; background-color: #6366f1; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
-            ⬇ Baixar ${mediaLabel}
-          </a>
         </div>
         <p style="color: #999; font-size: 12px; margin-top: 30px;">Enviado via ClientKit Creator</p>
       </div>
@@ -83,6 +111,7 @@ serve(async (req) => {
           to: [email],
           subject: subject || `${mediaLabel} - ${clientName}`,
           html: htmlBody,
+          attachments: attachments.length > 0 ? attachments : undefined,
         }),
       });
 
