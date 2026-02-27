@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette, Mail } from "lucide-react";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { ArtGeneratorModal } from "@/components/ArtGeneratorModal";
@@ -167,6 +167,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   const [editText, setEditText] = useState(brief.title || "");
   const [savingText, setSavingText] = useState(false);
   const [usedDailyVideo, setUsedDailyVideo] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Pre-generate video in background so modal opens instantly
   const { preloadedData, isPreloading } = useVideoPregenerate(
@@ -344,6 +345,40 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   const handleView = (url: string) => {
     window.open(url, '_blank');
+  };
+
+  const handleSendEmail = async (mediaUrl: string, mediaType: "art" | "video") => {
+    if (!clientId) return;
+    setIsSendingEmail(true);
+    try {
+      const { data: clientData } = await supabase
+        .from("client_data")
+        .select("email, email_2, email_3")
+        .eq("id", clientId)
+        .single();
+      if (!clientData) throw new Error("Cliente não encontrado");
+      const emails = [clientData.email, clientData.email_2, clientData.email_3].filter(Boolean);
+      if (emails.length === 0) throw new Error("Nenhum e-mail cadastrado");
+
+      const { data, error } = await supabase.functions.invoke("send-media-email", {
+        body: {
+          emails,
+          subject: `${mediaType === "video" ? "Vídeo" : "Arte"} - ${brief.clientName}`,
+          mediaUrl,
+          mediaType,
+          clientName: brief.clientName,
+          cardText: brief.description || brief.title,
+          caption: brief.generatedCaption || undefined,
+        },
+      });
+      if (error) throw error;
+      toast.success(data?.message || "E-mail enviado!");
+    } catch (err: any) {
+      console.error("Erro ao enviar e-mail:", err);
+      toast.error(err?.message || "Erro ao enviar e-mail");
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   const handleCopyCardLink = () => {
@@ -669,7 +704,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     >
                        {isDismissing ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 shrink-0" />}
                        <span>Já Baixei</span>
-                    </Button>
+                     </Button>
+                    {clientId && (
+                      <Button
+                        variant="outline"
+                        onClick={(e) => { e.stopPropagation(); handleSendEmail(brief.generatedVideoUrl!, "video"); }}
+                        disabled={isSendingEmail}
+                        className="w-full h-9 text-xs overflow-hidden"
+                      >
+                        {isSendingEmail ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Mail className="h-3.5 w-3.5 shrink-0" />}
+                        <span className="ml-1">Enviar por E-mail</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -722,7 +768,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                     >
                        {isArtDismissing ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 shrink-0" />}
                        <span>Já Baixei</span>
-                    </Button>
+                     </Button>
+                    {clientId && (
+                      <Button
+                        variant="outline"
+                        onClick={(e) => { e.stopPropagation(); handleSendEmail(brief.generatedArtUrl!, "art"); }}
+                        disabled={isSendingEmail}
+                        className="w-full h-9 text-xs overflow-hidden"
+                      >
+                        {isSendingEmail ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Mail className="h-3.5 w-3.5 shrink-0" />}
+                        <span className="ml-1">Enviar por E-mail</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}

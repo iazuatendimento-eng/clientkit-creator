@@ -16,7 +16,7 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY não configurada');
     }
 
-    const { emails, subject, mediaUrl, mediaType, clientName } = await req.json();
+    const { emails, subject, mediaUrl, mediaType, clientName, cardText, caption } = await req.json();
 
     if (!emails || emails.length === 0) {
       throw new Error('Nenhum e-mail fornecido');
@@ -33,10 +33,30 @@ serve(async (req) => {
     const isVideo = mediaType === 'video';
     const mediaLabel = isVideo ? 'Vídeo' : 'Arte';
 
+    // Build text/caption section if provided
+    let textSection = '';
+    if (cardText) {
+      textSection += `
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+          <p style="color: #333; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">📝 Texto:</p>
+          <p style="color: #555; margin: 0; white-space: pre-wrap; font-size: 14px;">${cardText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+        </div>
+      `;
+    }
+    if (caption) {
+      textSection += `
+        <div style="background-color: #f0f4ff; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+          <p style="color: #333; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">💬 Legenda:</p>
+          <p style="color: #555; margin: 0; white-space: pre-wrap; font-size: 14px;">${caption.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+        </div>
+      `;
+    }
+
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #333;">📬 ${mediaLabel} - ${clientName}</h2>
         <p style="color: #555;">Olá! Segue ${isVideo ? 'o vídeo' : 'a arte'} gerada para <strong>${clientName}</strong>.</p>
+        ${textSection}
         <div style="text-align: center; margin: 30px 0;">
           ${isVideo 
             ? `<p style="color: #555;">Clique no botão abaixo para baixar o vídeo:</p>`
