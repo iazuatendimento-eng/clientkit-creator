@@ -514,6 +514,8 @@ export function ArtGeneratorModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [searchPage, setSearchPage] = useState(1);
+  const [hasMoreResults, setHasMoreResults] = useState(false);
 
   // Refs for sync
   const overridesRef = useRef({
@@ -692,12 +694,18 @@ export function ArtGeneratorModal({
   };
 
   // Photo search
-  const handleSearchImages = async () => {
+  const handleSearchImages = async (page: number = 1) => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
-      const images = await searchImages(searchQuery, 15);
-      setSearchResults(images);
+      const images = await searchImages(searchQuery, 15, page);
+      if (page === 1) {
+        setSearchResults(images);
+      } else {
+        setSearchResults(prev => [...prev, ...images]);
+      }
+      setSearchPage(page);
+      setHasMoreResults(images.length >= 15);
     } catch {
       toast.error("Erro ao buscar imagens");
     } finally {
@@ -861,23 +869,34 @@ export function ArtGeneratorModal({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar imagens..."
-                  onKeyDown={(e) => e.key === "Enter" && handleSearchImages()}
+                  onKeyDown={(e) => { if (e.key === "Enter") { setSearchPage(1); handleSearchImages(1); } }}
                 />
-                <Button onClick={handleSearchImages} disabled={isSearching} size="sm">
+                <Button onClick={() => handleSearchImages(1)} disabled={isSearching} size="sm">
                   {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 </Button>
               </div>
-              <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-auto">
-                {searchResults.map((img, i) => (
-                  <img
-                    key={i}
-                    src={img.urls.small}
-                    alt=""
-                    className="w-full aspect-square object-cover rounded cursor-pointer hover:ring-2 ring-primary transition-all"
-                    onClick={() => handleSelectPhoto(img.urls.regular)}
-                  />
-                ))}
-              </div>
+               <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-auto">
+                 {searchResults.map((img, i) => (
+                   <img
+                     key={i}
+                     src={img.urls.small}
+                     alt=""
+                     className="w-full aspect-square object-cover rounded cursor-pointer hover:ring-2 ring-primary transition-all"
+                     onClick={() => handleSelectPhoto(img.urls.regular)}
+                   />
+                 ))}
+               </div>
+               {hasMoreResults && searchResults.length > 0 && (
+                 <Button
+                   variant="outline"
+                   className="w-full"
+                   onClick={() => handleSearchImages(searchPage + 1)}
+                   disabled={isSearching}
+                 >
+                   {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                   Carregar Mais
+                 </Button>
+               )}
             </TabsContent>
 
             <TabsContent value="upload" className="space-y-3">

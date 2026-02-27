@@ -727,7 +727,7 @@ export function ArtAdjustOverlay({
           style={{
             left: `${pct}%`,
             width: 1,
-            background: isMajor ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)",
+            background: isMajor ? "rgba(128,128,128,0.35)" : "rgba(128,128,128,0.15)",
           }}
         />
       );
@@ -743,15 +743,15 @@ export function ArtAdjustOverlay({
           style={{
             top: `${pct}%`,
             height: 1,
-            background: isMajor ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)",
+            background: isMajor ? "rgba(128,128,128,0.35)" : "rgba(128,128,128,0.15)",
           }}
         />
       );
     }
     // Center cross (stronger)
     lines.push(
-      <div key="cx" className="absolute top-0 bottom-0 pointer-events-none" style={{ left: "50%", width: 1, background: "rgba(255,255,255,0.3)" }} />,
-      <div key="cy" className="absolute left-0 right-0 pointer-events-none" style={{ top: "50%", height: 1, background: "rgba(255,255,255,0.3)" }} />
+      <div key="cx" className="absolute top-0 bottom-0 pointer-events-none" style={{ left: "50%", width: 1, background: "rgba(128,128,128,0.5)" }} />,
+      <div key="cy" className="absolute left-0 right-0 pointer-events-none" style={{ top: "50%", height: 1, background: "rgba(128,128,128,0.5)" }} />
     );
     return lines;
   }, []);
