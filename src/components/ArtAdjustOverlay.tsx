@@ -209,9 +209,9 @@ export function ArtAdjustOverlay({
 
     if (part === "text") {
       if (!els.textEl) return null;
-      // Text box keeps original width (text wraps inside it), height stays original
-      const w = els.textEl.width;
-      const h = els.textEl.height;
+      const scale = textFontSize / 100;
+      const w = els.textEl.width * scale;
+      const h = els.textEl.height * scale;
       const rawX = els.textEl.x + textX;
       const rawY = els.textEl.y + textY;
       const x = clamp(rawX, 0, template.width - w);
@@ -530,18 +530,34 @@ export function ArtAdjustOverlay({
         }
 
         const baseW = els.textEl?.width || 1;
+        const baseH = els.textEl?.height || 1;
         const h = s.handle as Handle;
+        const isVerticalHandle = h === "n" || h === "s";
+        const isHorizontalHandle = h === "e" || h === "w";
 
-        const signedDx = handleHasW(h) || handleHasE(h) ? handleSignX(h) * dx : 0;
-        const signedDy = handleHasN(h) || handleHasS(h) ? handleSignY(h) * dy : 0;
-        const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
-
-        const newW = clamp(s.start.textW + signedDelta, baseW * 0.5, baseW * 2);
-        const newScale = clamp((newW / baseW) * 100, 50, 200);
-        setTextFontSize(newScale);
-
-        if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
-        if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
+        if (isHorizontalHandle) {
+          const signedDx = handleSignX(h) * dx;
+          const newW = clamp(s.start.textW + signedDx, baseW * 0.5, baseW * 2);
+          const newScale = clamp((newW / baseW) * 100, 50, 200);
+          setTextFontSize(newScale);
+          if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
+        } else if (isVerticalHandle) {
+          const signedDy = handleSignY(h) * dy;
+          const newH = clamp(s.start.textW + signedDy, baseH * 0.5, baseH * 2);
+          const newScale = clamp((newH / baseH) * 100, 50, 200);
+          setTextFontSize(newScale);
+          if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
+        } else {
+          // Corner handles - use dominant axis
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+          const newW = clamp(s.start.textW + signedDelta, baseW * 0.5, baseW * 2);
+          const newScale = clamp((newW / baseW) * 100, 50, 200);
+          setTextFontSize(newScale);
+          if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
+          if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
+        }
         return;
       }
 
