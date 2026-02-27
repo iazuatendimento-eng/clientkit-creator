@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, ZoomIn, ZoomOut, Move } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
@@ -126,6 +126,10 @@ export function ArtAdjustOverlay({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part>("photo");
+
+  // Use a ref for onDragEnd to avoid stale closures in pointer event listeners
+  const onDragEndRef = useRef(onDragEnd);
+  useEffect(() => { onDragEndRef.current = onDragEnd; });
 
   const els = useMemo(() => {
     const photoFrame = template.elements.find((e) => e.type === "image" && e.placeholder);
@@ -595,7 +599,7 @@ export function ArtAdjustOverlay({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       startRef.current = null;
-      onDragEnd?.();
+      onDragEndRef.current?.();
     };
 
     window.addEventListener("pointermove", onMove);
@@ -754,7 +758,7 @@ export function ArtAdjustOverlay({
               step={5}
               value={[photoScale]}
               onValueChange={([v]) => { setPhotoScale(v); }}
-              onValueCommit={() => onDragEnd?.()}
+              onValueCommit={() => onDragEndRef.current?.()}
               className="flex-1"
             />
             <ZoomIn className="h-3 w-3 text-muted-foreground flex-shrink-0" />
@@ -772,8 +776,8 @@ export function ArtAdjustOverlay({
               max={200}
               value={photoOffsetX}
               onChange={(e) => setPhotoOffsetX(Number(e.target.value))}
-              onMouseUp={() => onDragEnd?.()}
-              onTouchEnd={() => onDragEnd?.()}
+              onMouseUp={() => onDragEndRef.current?.()}
+              onTouchEnd={() => onDragEndRef.current?.()}
               className="flex-1 h-1 accent-primary"
             />
             <span>Y</span>
@@ -783,8 +787,8 @@ export function ArtAdjustOverlay({
               max={200}
               value={photoOffsetY}
               onChange={(e) => setPhotoOffsetY(Number(e.target.value))}
-              onMouseUp={() => onDragEnd?.()}
-              onTouchEnd={() => onDragEnd?.()}
+              onMouseUp={() => onDragEndRef.current?.()}
+              onTouchEnd={() => onDragEndRef.current?.()}
               className="flex-1 h-1 accent-primary"
             />
           </div>
