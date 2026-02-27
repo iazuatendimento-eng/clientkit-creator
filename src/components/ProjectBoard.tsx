@@ -738,6 +738,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false); // kept for compatibility
   const [captionCopied, setCaptionCopied] = useState(false);
+  const [visibleCount, setVisibleCount] = useState<Record<string, number>>({});
 
   // Load briefs from Supabase
   useEffect(() => {
@@ -1522,6 +1523,11 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                   return dateB - dateA;
                 });
               }
+
+              const PUBLIC_PAGE_SIZE = 6;
+              const currentVisible = visibleCount[column.id] || PUBLIC_PAGE_SIZE;
+              const visibleBriefs = isPublicView ? columnBriefs.slice(0, currentVisible) : columnBriefs;
+              const hasMore = isPublicView && columnBriefs.length > currentVisible;
               
               return (
                 <ColumnDroppable key={column.id} id={column.id}>
@@ -1542,9 +1548,9 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                       </div>
                     )}
                     
-                    <SortableContext items={columnBriefs.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext items={visibleBriefs.map(b => b.id)} strategy={verticalListSortingStrategy}>
                       <div className={isPublicView ? 'space-y-3' : 'space-y-3'}>
-                        {columnBriefs.map((brief, index) => (
+                        {visibleBriefs.map((brief, index) => (
                           <SortableCard
                             key={brief.id}
                             brief={brief}
@@ -1564,6 +1570,21 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                         ))}
                       </div>
                     </SortableContext>
+                    {hasMore && (
+                      <div className="flex justify-center pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full py-2.5 text-sm"
+                          onClick={() => setVisibleCount(prev => ({
+                            ...prev,
+                            [column.id]: (prev[column.id] || PUBLIC_PAGE_SIZE) + PUBLIC_PAGE_SIZE
+                          }))}
+                        >
+                          Carregar Mais ({columnBriefs.length - currentVisible} restantes)
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </ColumnDroppable>
               );
