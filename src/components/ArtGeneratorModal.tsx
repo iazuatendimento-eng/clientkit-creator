@@ -288,30 +288,44 @@ async function renderArt(
       }
       ctx.fillText(line.trim(), drawX, ly);
       ctx.textAlign = "left";
-    } else if (el.type === "image" && el.placeholder && materialImages.length > 0) {
-      const img = await loadImage(materialImages[0]);
-      if (img) {
-        const clipShape = (el as any).clipShape || "rect";
-        const radius = el.borderRadius || 0;
-        if (clipShape === "circle") {
-          ctx.beginPath();
-          ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-          ctx.clip();
-        } else if (radius > 0) {
-          ctx.beginPath();
-          ctx.roundRect(x, y, w, h, radius);
-          ctx.clip();
+    } else if (el.type === "image") {
+      // Determine image source: material uploads for placeholders, or element's own imageUrl
+      let imgSrc: string | null = null;
+      if (el.placeholder && materialImages.length > 0) {
+        imgSrc = materialImages[0];
+      } else if (el.imageUrl) {
+        imgSrc = el.imageUrl;
+      }
+
+      if (imgSrc) {
+        const img = await loadImage(imgSrc);
+        if (img) {
+          const clipShape = el.clipShape || "rect";
+          const radius = el.borderRadius || 0;
+          if (clipShape === "circle") {
+            ctx.beginPath();
+            ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+            ctx.clip();
+          } else if (radius > 0) {
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, radius);
+            ctx.clip();
+          }
+          // Cover crop
+          const imgA = img.width / img.height;
+          const frameA = w / h;
+          let sw = img.width, sh = img.height;
+          if (imgA > frameA) { sh = img.height; sw = sh * frameA; }
+          else { sw = img.width; sh = sw / frameA; }
+          const sx = (img.width - sw) / 2;
+          const sy = (img.height - sh) / 2;
+          ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+        } else {
+          ctx.fillStyle = "#e5e7eb";
+          ctx.fillRect(x, y, w, h);
         }
-        // Cover crop
-        const imgA = img.width / img.height;
-        const frameA = w / h;
-        let sw = img.width, sh = img.height;
-        if (imgA > frameA) { sh = img.height; sw = sh * frameA; }
-        else { sw = img.width; sh = sw / frameA; }
-        const sx = (img.width - sw) / 2;
-        const sy = (img.height - sh) / 2;
-        ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-      } else {
+      } else if (el.placeholder) {
+        // Placeholder with no image available - draw subtle placeholder
         ctx.fillStyle = "#e5e7eb";
         ctx.fillRect(x, y, w, h);
       }
