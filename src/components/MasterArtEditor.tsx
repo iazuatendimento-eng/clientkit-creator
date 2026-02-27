@@ -1678,12 +1678,6 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
           />
         </div>
         <div className="flex gap-2 items-center">
-          {onOpenHistory && (
-            <Button variant="outline" onClick={onOpenHistory}>
-              <History className="mr-2 h-4 w-4" />
-              Histórico
-            </Button>
-          )}
           <Button variant="outline" onClick={saveTemplate} disabled={isSaving}>
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
