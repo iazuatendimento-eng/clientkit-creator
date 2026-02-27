@@ -3483,7 +3483,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         setIsImageDialogOpen(open);
         if (!open) setCustomImageUrl("");
       }}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Trocar Vídeo da Página {currentPreviewPage + 1}</DialogTitle>
           </DialogHeader>
