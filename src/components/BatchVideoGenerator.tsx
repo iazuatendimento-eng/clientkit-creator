@@ -3517,37 +3517,35 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                 </Button>
               </div>
 
-              <ScrollArea className="h-[400px]">
-                <div className="grid grid-cols-3 gap-2 pr-2">
-                  {searchResults.map((image) => (
-                    <div
-                      key={image.id}
-                      className="aspect-[9/16] rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all relative"
-                      onClick={() => handleSelectImage(image)}
-                    >
-                      <img
-                        src={image.urls.small}
-                        alt={image.description || "Video"}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Play className="h-8 w-8 text-white/80 drop-shadow-lg" />
-                      </div>
-                      <div className="absolute bottom-1 right-1 bg-background/80 text-[10px] px-1 rounded capitalize">
-                        {image.source === 'pixabay' ? 'Pixabay' : 'Pexels'}
-                      </div>
+              <div className="grid grid-cols-3 gap-2">
+                {searchResults.map((image) => (
+                  <div
+                    key={image.id}
+                    className="aspect-[9/16] rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all relative"
+                    onClick={() => handleSelectImage(image)}
+                  >
+                    <img
+                      src={image.urls.small}
+                      alt={image.description || "Video"}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Play className="h-8 w-8 text-white/80 drop-shadow-lg" />
                     </div>
-                  ))}
-                </div>
-                {searchResults.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Busque por vídeos acima</p>
-                    <p className="text-xs mt-2">Digite um termo e clique em buscar</p>
+                    <div className="absolute bottom-1 right-1 bg-background/80 text-[10px] px-1 rounded capitalize">
+                      {image.source === 'pixabay' ? 'Pixabay' : 'Pexels'}
+                    </div>
                   </div>
-                )}
-              </ScrollArea>
+                ))}
+              </div>
+              {searchResults.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Busque por vídeos acima</p>
+                  <p className="text-xs mt-2">Digite um termo e clique em buscar</p>
+                </div>
+              )}
               {searchResults.length > 0 && (
-                <div className="flex justify-center pt-2">
+                <div className="flex justify-center pt-3 pb-2">
                   <Button
                     variant="outline"
                     size="sm"
