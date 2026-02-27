@@ -684,12 +684,39 @@ export function ArtGeneratorModal({
     }
   }, [isOpen]);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!artDataUrl) return;
+    
+    // Download locally
     const link = document.createElement("a");
     link.download = `${clientName}-${cardTitle.slice(0, 20)}.png`;
     link.href = artDataUrl;
     link.click();
+
+    // Upload to storage with 24h expiry (same as video flow)
+    try {
+      const response = await fetch(artDataUrl);
+      const blob = await response.blob();
+      const fileName = `generated-arts/${cardId}-${Date.now()}.png`;
+      
+      await supabase.storage.from("card-uploads").upload(fileName, blob, {
+        contentType: "image/png",
+        upsert: true,
+      });
+      
+      const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
+      
+      if (urlData?.publicUrl) {
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        await supabase
+          .from("project_briefs")
+          .update({ generated_art_url: urlData.publicUrl, generated_art_expires_at: expiresAt })
+          .eq("id", cardId);
+      }
+    } catch (err) {
+      console.error("Error saving generated art:", err);
+    }
+
     onExported?.();
     onClose();
   };

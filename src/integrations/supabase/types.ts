@@ -435,6 +435,8 @@ export type Database = {
           created_at: string | null
           deadline: string | null
           description: string | null
+          generated_art_expires_at: string | null
+          generated_art_url: string | null
           generated_caption: string | null
           generated_video_expires_at: string | null
           generated_video_url: string | null
@@ -454,6 +456,8 @@ export type Database = {
           created_at?: string | null
           deadline?: string | null
           description?: string | null
+          generated_art_expires_at?: string | null
+          generated_art_url?: string | null
           generated_caption?: string | null
           generated_video_expires_at?: string | null
           generated_video_url?: string | null
@@ -473,6 +477,8 @@ export type Database = {
           created_at?: string | null
           deadline?: string | null
           description?: string | null
+          generated_art_expires_at?: string | null
+          generated_art_url?: string | null
           generated_caption?: string | null
           generated_video_expires_at?: string | null
           generated_video_url?: string | null

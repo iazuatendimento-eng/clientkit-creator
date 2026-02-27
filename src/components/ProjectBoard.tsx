@@ -123,6 +123,8 @@ interface ProjectBrief {
   artGenerationSelected?: boolean;
   generatedVideoUrl?: string;
   generatedVideoExpiresAt?: string;
+  generatedArtUrl?: string;
+  generatedArtExpiresAt?: string;
 }
 
 interface ProjectBoardProps {
@@ -159,6 +161,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   const [copiedLink, setCopiedLink] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [isArtDismissing, setIsArtDismissing] = useState(false);
+  const [artDismissed, setArtDismissed] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
   const [editText, setEditText] = useState(brief.title || "");
   const [savingText, setSavingText] = useState(false);
@@ -669,6 +673,59 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </div>
                 </div>
               )}
+              {/* Show saved art download with countdown if available */}
+              {!artDismissed && brief.generatedArtUrl && brief.generatedArtExpiresAt && new Date(brief.generatedArtExpiresAt) > new Date() && (
+                <div className="border border-primary/20 rounded-xl overflow-hidden bg-primary/5">
+                  {/* Art preview */}
+                  <div className="w-full bg-black flex justify-center">
+                    <img
+                      src={brief.generatedArtUrl}
+                      className="w-full max-h-64 object-contain"
+                      alt="Arte gerada"
+                    />
+                  </div>
+                  <div className="p-3 space-y-2.5 min-w-0 overflow-hidden">
+                    <div className="flex items-center justify-center gap-1 py-1.5 px-2 bg-destructive/15 border border-destructive/30 rounded-lg overflow-hidden">
+                      <span className="text-xs font-semibold text-destructive">
+                        <VideoCountdown expiresAt={brief.generatedArtExpiresAt} />
+                      </span>
+                    </div>
+                    <Button onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedArtUrl!, `${brief.clientName}-arte.png`); }} className="h-auto py-2.5 text-sm font-medium rounded-lg w-full overflow-hidden">
+                      <Download className="h-4 w-4 mr-2" />
+                      <span>Baixar Arte</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setIsArtDismissing(true);
+                        try {
+                          const url = brief.generatedArtUrl!;
+                          const pathMatch = url.match(/card-uploads\/(.+)$/);
+                          if (pathMatch) {
+                            await supabase.storage.from("card-uploads").remove([pathMatch[1]]);
+                          }
+                          await supabase
+                            .from("project_briefs")
+                            .update({ generated_art_url: null, generated_art_expires_at: null })
+                            .eq("id", brief.id);
+                          setArtDismissed(true);
+                          onStatusChange(brief.id, "completed");
+                          toast.success("Arte removida!");
+                        } catch {
+                          toast.error("Erro ao remover");
+                        }
+                        setIsArtDismissing(false);
+                      }}
+                      disabled={isArtDismissing}
+                      className="w-full h-9 text-xs text-muted-foreground hover:text-foreground overflow-hidden"
+                    >
+                       {isArtDismissing ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 shrink-0" />}
+                       <span>Já Baixei</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
               {brief.status !== "completed" && isDeadlineReached && (
                 cardIndex % 2 === 0 ? (
                   <Button
@@ -794,6 +851,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           artGenerationSelected: brief.art_generation_selected || false,
           generatedVideoUrl: (brief as any).generated_video_url || undefined,
           generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+          generatedArtUrl: (brief as any).generated_art_url || undefined,
+          generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         }));
         setBriefs(mappedBriefs);
       } catch (error) {
@@ -993,6 +1052,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         artGenerationSelected: brief.art_generation_selected || false,
         generatedVideoUrl: (brief as any).generated_video_url || undefined,
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+        generatedArtUrl: (brief as any).generated_art_url || undefined,
+        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1094,9 +1155,11 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         artGenerationSelected: brief.art_generation_selected || false,
         generatedVideoUrl: (brief as any).generated_video_url || undefined,
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+        generatedArtUrl: (brief as any).generated_art_url || undefined,
+        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
-      
+
       setMultiTextInput("");
       setNewBrief({});
       setIsDialogOpen(false);
@@ -1151,6 +1214,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         artGenerationSelected: brief.art_generation_selected || false,
         generatedVideoUrl: (brief as any).generated_video_url || undefined,
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+        generatedArtUrl: (brief as any).generated_art_url || undefined,
+        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
       }));
       setBriefs(updatedBriefs);
       toast.success("Legendas geradas com sucesso!");
@@ -1224,9 +1289,11 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         artGenerationSelected: brief.art_generation_selected || false,
         generatedVideoUrl: (brief as any).generated_video_url || undefined,
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+        generatedArtUrl: (brief as any).generated_art_url || undefined,
+        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
-      
+
       setMultiTextInput("");
       setNewBrief({});
       setShowSplitDialog(false);
@@ -1277,6 +1344,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         published: brief.published || false,
         generatedVideoUrl: (brief as any).generated_video_url || undefined,
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+        generatedArtUrl: (brief as any).generated_art_url || undefined,
+        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
       
@@ -1311,9 +1380,11 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         published: brief.published || false,
         generatedVideoUrl: (brief as any).generated_video_url || undefined,
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+        generatedArtUrl: (brief as any).generated_art_url || undefined,
+        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
-      
+
       toast.success("Status atualizado!");
     } catch (error) {
       console.error("Error updating status:", error);
@@ -1377,9 +1448,11 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         published: brief.published || false,
         generatedVideoUrl: (brief as any).generated_video_url || undefined,
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
+        generatedArtUrl: (brief as any).generated_art_url || undefined,
+        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
       }));
       setBriefs(mappedBriefs);
-      
+
       toast.success("Capa atualizada!");
     } catch (error) {
       console.error("Error updating cover:", error);
