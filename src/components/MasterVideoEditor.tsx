@@ -2688,12 +2688,6 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
         {/* Generate Button */}
         <div className="p-4 border-t space-y-2">
-          {onOpenHistory && (
-            <Button variant="outline" className="w-full" onClick={onOpenHistory}>
-              <History className="mr-2 h-4 w-4" />
-              Histórico de Vídeos
-            </Button>
-          )}
           
           {/* Team Filter Selector */}
           <Select 
