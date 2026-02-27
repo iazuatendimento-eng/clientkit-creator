@@ -1,17 +1,22 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Palette } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Download, Palette, ImageIcon, Search, Upload, Link } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { drawNewShape } from "@/lib/canvasShapes";
-import { searchPexelsImages } from "@/lib/imageSearch";
+import { searchPexelsImages, searchImages, SearchImage } from "@/lib/imageSearch";
+import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent";
+
 interface CanvasElement {
   id: string;
-  type: string;
+  type: ElementType;
   x: number;
   y: number;
   width: number;
@@ -57,6 +62,25 @@ interface ArtTemplate {
   backgroundColor: string;
 }
 
+type ShapeOverride = { x: number; y: number; width: number; height: number };
+
+interface ElementOverrides {
+  logoX?: number;
+  logoY?: number;
+  logoScaleX?: number;
+  logoScaleY?: number;
+  textX?: number;
+  textY?: number;
+  textFontSize?: number;
+  contactX?: number;
+  contactY?: number;
+  contactScaleX?: number;
+  contactScaleY?: number;
+  photoScale?: number;
+  photoFrame?: ShapeOverride;
+  shapes?: Record<string, ShapeOverride>;
+}
+
 interface ArtGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -88,7 +112,6 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
     });
   }
 
-  // Fetch as blob
   try {
     const resp = await fetch(url);
     if (resp.ok) {
@@ -103,7 +126,6 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
     }
   } catch { /* fallback */ }
 
-  // CORS fallback
   return new Promise((resolve) => {
     const el = new Image();
     el.crossOrigin = "anonymous";
@@ -131,13 +153,15 @@ const loadGoogleFont = async (fontFamily: string): Promise<void> => {
   try { await document.fonts.load(`16px "${fontFamily}"`); } catch { /* ok */ }
 };
 
-// ── Render art ─────────────────────────────────────────────────────────────────
+// ── Render art with overrides ─────────────────────────────────────────────────
 
 async function renderArt(
   template: ArtTemplate,
   brandKit: any,
   cardText: string,
-  materialImages: string[],
+  photoImage: string | null,
+  photoOffset: { x: number; y: number },
+  overrides: ElementOverrides,
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.width;
@@ -224,137 +248,218 @@ async function renderArt(
 
   for (const el of template.elements) {
     try {
-    ctx.save();
-    applyStyles(el);
+      ctx.save();
+      applyStyles(el);
 
-    if (el.rotation) {
-      const cx2 = el.x + el.width / 2;
-      const cy2 = el.y + el.height / 2;
-      ctx.translate(cx2, cy2);
-      ctx.rotate((el.rotation * Math.PI) / 180);
-      ctx.translate(-cx2, -cy2);
-    }
+      if (el.rotation) {
+        const cx2 = el.x + el.width / 2;
+        const cy2 = el.y + el.height / 2;
+        ctx.translate(cx2, cy2);
+        ctx.rotate((el.rotation * Math.PI) / 180);
+        ctx.translate(-cx2, -cy2);
+      }
 
-    const { x, y, width: w, height: h } = el;
+      // Use shape overrides if available
+      let { x, y, width: w, height: h } = el;
+      if (el.id && overrides.shapes?.[el.id]) {
+        const ov = overrides.shapes[el.id];
+        x = ov.x; y = ov.y; w = ov.width; h = ov.height;
+      }
 
-    if (el.type === "rect") {
-      ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
-      if (el.borderRadius && el.borderRadius > 0) {
+      if (el.type === "rect") {
+        ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
+        if (el.borderRadius && el.borderRadius > 0) {
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, el.borderRadius);
+          ctx.fill();
+          drawBorder(el);
+        } else {
+          ctx.fillRect(x, y, w, h);
+          if (el.borderWidth) { ctx.beginPath(); ctx.rect(x, y, w, h); drawBorder(el); }
+        }
+      } else if (el.type === "circle") {
+        ctx.fillStyle = getFill(el, x, y, w, h, acc2) as string;
         ctx.beginPath();
-        ctx.roundRect(x, y, w, h, el.borderRadius);
+        ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
         ctx.fill();
         drawBorder(el);
-      } else {
-        ctx.fillRect(x, y, w, h);
-        if (el.borderWidth) { ctx.beginPath(); ctx.rect(x, y, w, h); drawBorder(el); }
-      }
-    } else if (el.type === "circle") {
-      ctx.fillStyle = getFill(el, x, y, w, h, acc2) as string;
-      ctx.beginPath();
-      ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      drawBorder(el);
-    } else if (el.type === "triangle") {
-      ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
-      ctx.beginPath();
-      ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h);
-      ctx.closePath(); ctx.fill(); drawBorder(el);
-    } else if (el.type === "line") {
-      ctx.strokeStyle = getColor(el, acc1);
-      ctx.lineWidth = h || 4;
-      ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke();
-    } else if (el.type === "text") {
-      ctx.fillStyle = textColor;
-      const fontSize = el.fontSize || 32;
-      const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
-      ctx.font = `${fontSize}px ${fontFamily}`;
-      const text = cardText || el.text || "";
-      const align = el.textAlign || "left";
-      ctx.textAlign = align;
-      const drawX = align === "center" ? x + w / 2 : align === "right" ? x + w : x;
-      const words = text.split(" ");
-      let line = "";
-      let ly = y + fontSize;
-      const lineH = (el.lineHeight || 1.2) * fontSize;
-      for (let i = 0; i < words.length; i++) {
-        const testLine = line + words[i] + " ";
-        if (ctx.measureText(testLine).width > w && i > 0) {
-          ctx.fillText(line.trim(), drawX, ly);
-          line = words[i] + " ";
-          ly += lineH;
-        } else {
-          line = testLine;
-        }
-      }
-      ctx.fillText(line.trim(), drawX, ly);
-      ctx.textAlign = "left";
-    } else if (el.type === "image") {
-      // Determine image source: material uploads for placeholders, or element's own imageUrl
-      let imgSrc: string | null = null;
-      if (el.placeholder && materialImages.length > 0) {
-        imgSrc = materialImages[0];
-      } else if (el.imageUrl) {
-        imgSrc = el.imageUrl;
-      }
-
-      if (imgSrc) {
-        const img = await loadImage(imgSrc);
-        if (img) {
-          const clipShape = el.clipShape || "rect";
-          const radius = el.borderRadius || 0;
-          if (clipShape === "circle") {
-            ctx.beginPath();
-            ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-            ctx.clip();
-          } else if (radius > 0) {
-            ctx.beginPath();
-            ctx.roundRect(x, y, w, h, radius);
-            ctx.clip();
+      } else if (el.type === "triangle") {
+        ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
+        ctx.beginPath();
+        ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h);
+        ctx.closePath(); ctx.fill(); drawBorder(el);
+      } else if (el.type === "line") {
+        ctx.strokeStyle = getColor(el, acc1);
+        ctx.lineWidth = h || 4;
+        ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke();
+      } else if (el.type === "text") {
+        ctx.fillStyle = textColor;
+        const baseFontSize = el.fontSize || 32;
+        const fontSizeMultiplier = (overrides.textFontSize || 100) / 100;
+        const fontSize = Math.round(baseFontSize * fontSizeMultiplier);
+        const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        const text = cardText || el.text || "";
+        const textOffsetX = overrides.textX || 0;
+        const textOffsetY = overrides.textY || 0;
+        const baseX = el.x + textOffsetX;
+        const baseY = el.y + textOffsetY;
+        const align = el.textAlign || "left";
+        ctx.textAlign = align;
+        const drawX = align === "center" ? baseX + el.width / 2 : align === "right" ? baseX + el.width : baseX;
+        const words = text.split(" ");
+        let line = "";
+        let ly = baseY + fontSize;
+        const lineH = (el.lineHeight || 1.2) * fontSize;
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + " ";
+          if (ctx.measureText(testLine).width > el.width && i > 0) {
+            ctx.fillText(line.trim(), drawX, ly);
+            line = words[i] + " ";
+            ly += lineH;
+          } else {
+            line = testLine;
           }
-          // Cover crop
-          const imgA = img.width / img.height;
-          const frameA = w / h;
-          let sw = img.width, sh = img.height;
-          if (imgA > frameA) { sh = img.height; sw = sh * frameA; }
-          else { sw = img.width; sh = sw / frameA; }
-          const sx = (img.width - sw) / 2;
-          const sy = (img.height - sh) / 2;
-          ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+        }
+        ctx.fillText(line.trim(), drawX, ly);
+        ctx.textAlign = "left";
+      } else if (el.type === "image" && el.placeholder) {
+        // Photo with pan + zoom via overrides
+        const frameOv = overrides.photoFrame;
+        const frameW = frameOv?.width ?? el.width;
+        const frameH = frameOv?.height ?? el.height;
+        const frameX = frameOv?.x ?? el.x;
+        const frameY = frameOv?.y ?? el.y;
+
+        if (photoImage) {
+          const img = await loadImage(photoImage);
+          if (img) {
+            const zoom = (overrides.photoScale || 100) / 100;
+            const imgAspect = img.width / img.height;
+            const frameAspect = frameW / frameH;
+            let sw = img.width, sh = img.height;
+            if (imgAspect > frameAspect) { sh = img.height; sw = sh * frameAspect; }
+            else { sw = img.width; sh = sw / frameAspect; }
+            sw = sw / zoom; sh = sh / zoom;
+            if (sw > img.width) { sw = img.width; sh = sw / frameAspect; }
+            if (sh > img.height) { sh = img.height; sw = sh * frameAspect; }
+            let sx = (img.width - sw) / 2;
+            let sy = (img.height - sh) / 2;
+            const maxPanX = (img.width - sw) / 2;
+            const maxPanY = (img.height - sh) / 2;
+            sx += (photoOffset.x / 100) * maxPanX;
+            sy += (photoOffset.y / 100) * maxPanY;
+            sx = Math.max(0, Math.min(sx, img.width - sw));
+            sy = Math.max(0, Math.min(sy, img.height - sh));
+
+            const clipShape = el.clipShape || "rect";
+            const radius = el.borderRadius || 0;
+            if (clipShape === "circle") {
+              ctx.beginPath();
+              ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
+              ctx.clip();
+            } else if (radius > 0) {
+              ctx.beginPath();
+              ctx.roundRect(frameX, frameY, frameW, frameH, radius);
+              ctx.clip();
+            }
+            ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
+          } else {
+            ctx.fillStyle = "#e5e7eb";
+            ctx.fillRect(frameX, frameY, frameW, frameH);
+          }
+        } else if (el.imageUrl) {
+          const img = await loadImage(el.imageUrl);
+          if (img) {
+            const clipShape = el.clipShape || "rect";
+            const radius = el.borderRadius || 0;
+            if (clipShape === "circle") {
+              ctx.beginPath();
+              ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+              ctx.clip();
+            } else if (radius > 0) {
+              ctx.beginPath();
+              ctx.roundRect(x, y, w, h, radius);
+              ctx.clip();
+            }
+            const imgA = img.width / img.height;
+            const frameA = w / h;
+            let sw2 = img.width, sh2 = img.height;
+            if (imgA > frameA) { sh2 = img.height; sw2 = sh2 * frameA; }
+            else { sw2 = img.width; sh2 = sw2 / frameA; }
+            const sx2 = (img.width - sw2) / 2;
+            const sy2 = (img.height - sh2) / 2;
+            ctx.drawImage(img, sx2, sy2, sw2, sh2, x, y, w, h);
+          } else {
+            ctx.fillStyle = "#e5e7eb";
+            ctx.fillRect(x, y, w, h);
+          }
         } else {
           ctx.fillStyle = "#e5e7eb";
-          ctx.fillRect(x, y, w, h);
+          ctx.fillRect(frameX, frameY, frameW, frameH);
         }
-      } else if (el.placeholder) {
-        // Placeholder with no image available - draw subtle placeholder
-        ctx.fillStyle = "#e5e7eb";
-        ctx.fillRect(x, y, w, h);
+      } else if (el.type === "image" && !el.placeholder) {
+        if (el.imageUrl) {
+          const img = await loadImage(el.imageUrl);
+          if (img) {
+            const clipShape = el.clipShape || "rect";
+            const radius = el.borderRadius || 0;
+            if (clipShape === "circle") {
+              ctx.beginPath();
+              ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+              ctx.clip();
+            } else if (radius > 0) {
+              ctx.beginPath();
+              ctx.roundRect(x, y, w, h, radius);
+              ctx.clip();
+            }
+            const imgA = img.width / img.height;
+            const frameA = w / h;
+            let sw2 = img.width, sh2 = img.height;
+            if (imgA > frameA) { sh2 = img.height; sw2 = sh2 * frameA; }
+            else { sw2 = img.width; sh2 = sw2 / frameA; }
+            const sx2 = (img.width - sw2) / 2;
+            const sy2 = (img.height - sh2) / 2;
+            ctx.drawImage(img, sx2, sy2, sw2, sh2, x, y, w, h);
+          }
+        }
+      } else if (el.type === "logo") {
+        const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
+        if (logoUrl) {
+          const img = await loadImage(logoUrl);
+          if (img) {
+            const lx = el.x + (overrides.logoX || 0);
+            const ly = el.y + (overrides.logoY || 0);
+            const lw = el.width * ((overrides.logoScaleX || 100) / 100);
+            const lh = el.height * ((overrides.logoScaleY || 100) / 100);
+            ctx.drawImage(img, lx, ly, lw, lh);
+          }
+        }
+      } else if (el.type === "contact") {
+        const contactUrl = brandKit?.pngs?.[1] || brandKit?.contactInfo;
+        if (contactUrl) {
+          const img = await loadImage(contactUrl);
+          if (img) {
+            const cx = el.x + (overrides.contactX || 0);
+            const cy = el.y + (overrides.contactY || 0);
+            const cw = el.width * ((overrides.contactScaleX || 100) / 100);
+            const ch = el.height * ((overrides.contactScaleY || 100) / 100);
+            ctx.drawImage(img, cx, cy, cw, ch);
+          }
+        }
+      } else if (el.type === "mascot") {
+        const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
+        if (mascotUrl) {
+          const img = await loadImage(mascotUrl);
+          if (img) ctx.drawImage(img, x, y, w, h);
+        }
+      } else {
+        ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
+        drawNewShape(ctx, el.type as any, x, y, w, h, ctx.fillStyle as string);
       }
-    } else if (el.type === "logo") {
-      const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
-      if (logoUrl) {
-        const img = await loadImage(logoUrl);
-        if (img) ctx.drawImage(img, x, y, w, h);
-      }
-    } else if (el.type === "contact") {
-      const contactUrl = brandKit?.pngs?.[1] || brandKit?.contactInfo;
-      if (contactUrl) {
-        const img = await loadImage(contactUrl);
-        if (img) ctx.drawImage(img, x, y, w, h);
-      }
-    } else if (el.type === "mascot") {
-      const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
-      if (mascotUrl) {
-        const img = await loadImage(mascotUrl);
-        if (img) ctx.drawImage(img, x, y, w, h);
-      }
-    } else {
-      // Try shape helpers (diamond, hexagon, pentagon, star, etc.)
-      ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
-      drawNewShape(ctx, el.type as any, x, y, w, h, ctx.fillStyle as string);
-    }
 
-    ctx.restore();
+      ctx.restore();
     } catch (elErr) {
       console.warn("[ArtGen] Error rendering element:", el.type, elErr);
       ctx.restore();
@@ -379,6 +484,106 @@ export function ArtGeneratorModal({
 }: ArtGeneratorModalProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [artDataUrl, setArtDataUrl] = useState<string | null>(null);
+  const [template, setTemplate] = useState<ArtTemplate | null>(null);
+  const [photoImage, setPhotoImage] = useState<string | null>(null);
+
+  // Override states
+  const [photoOffsetX, setPhotoOffsetX] = useState(0);
+  const [photoOffsetY, setPhotoOffsetY] = useState(0);
+  const [photoScale, setPhotoScale] = useState(100);
+  const [photoFrame, setPhotoFrame] = useState<ShapeOverride | null>(null);
+  const [logoX, setLogoX] = useState(0);
+  const [logoY, setLogoY] = useState(0);
+  const [logoScaleX, setLogoScaleX] = useState(100);
+  const [logoScaleY, setLogoScaleY] = useState(100);
+  const [textX, setTextX] = useState(0);
+  const [textY, setTextY] = useState(0);
+  const [textFontSize, setTextFontSize] = useState(100);
+  const [contactX, setContactX] = useState(0);
+  const [contactY, setContactY] = useState(0);
+  const [contactScaleX, setContactScaleX] = useState(100);
+  const [contactScaleY, setContactScaleY] = useState(100);
+  const [shapeOverrides, setShapeOverrides] = useState<Record<string, ShapeOverride>>({});
+
+  // Photo search
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [customImageUrl, setCustomImageUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Refs for sync
+  const overridesRef = useRef({
+    photoOffsetX, photoOffsetY, photoScale, photoFrame,
+    logoX, logoY, logoScaleX, logoScaleY,
+    textX, textY, textFontSize,
+    contactX, contactY, contactScaleX, contactScaleY,
+    shapeOverrides,
+  });
+
+  const syncRef = useCallback((patch: Partial<typeof overridesRef.current>) => {
+    overridesRef.current = { ...overridesRef.current, ...patch };
+  }, []);
+
+  const syncSetPhotoOffsetX = useCallback((v: number) => { setPhotoOffsetX(v); syncRef({ photoOffsetX: v }); }, [syncRef]);
+  const syncSetPhotoOffsetY = useCallback((v: number) => { setPhotoOffsetY(v); syncRef({ photoOffsetY: v }); }, [syncRef]);
+  const syncSetPhotoScale = useCallback((v: number) => { setPhotoScale(v); syncRef({ photoScale: v }); }, [syncRef]);
+  const syncSetPhotoFrame = useCallback((v: ShapeOverride | null) => { setPhotoFrame(v); syncRef({ photoFrame: v }); }, [syncRef]);
+  const syncSetLogoX = useCallback((v: number) => { setLogoX(v); syncRef({ logoX: v }); }, [syncRef]);
+  const syncSetLogoY = useCallback((v: number) => { setLogoY(v); syncRef({ logoY: v }); }, [syncRef]);
+  const syncSetLogoScaleX = useCallback((v: number) => { setLogoScaleX(v); syncRef({ logoScaleX: v }); }, [syncRef]);
+  const syncSetLogoScaleY = useCallback((v: number) => { setLogoScaleY(v); syncRef({ logoScaleY: v }); }, [syncRef]);
+  const syncSetTextX = useCallback((v: number) => { setTextX(v); syncRef({ textX: v }); }, [syncRef]);
+  const syncSetTextY = useCallback((v: number) => { setTextY(v); syncRef({ textY: v }); }, [syncRef]);
+  const syncSetTextFontSize = useCallback((v: number) => { setTextFontSize(v); syncRef({ textFontSize: v }); }, [syncRef]);
+  const syncSetContactX = useCallback((v: number) => { setContactX(v); syncRef({ contactX: v }); }, [syncRef]);
+  const syncSetContactY = useCallback((v: number) => { setContactY(v); syncRef({ contactY: v }); }, [syncRef]);
+  const syncSetContactScaleX = useCallback((v: number) => { setContactScaleX(v); syncRef({ contactScaleX: v }); }, [syncRef]);
+  const syncSetContactScaleY = useCallback((v: number) => { setContactScaleY(v); syncRef({ contactScaleY: v }); }, [syncRef]);
+  const syncSetShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => { setShapeOverrides(v); syncRef({ shapeOverrides: v }); }, [syncRef]);
+
+  const photoImageRef = useRef(photoImage);
+  useEffect(() => { photoImageRef.current = photoImage; });
+  const templateRef = useRef(template);
+  useEffect(() => { templateRef.current = template; });
+
+  const regeneratePreview = useCallback(async () => {
+    const tmpl = templateRef.current;
+    if (!tmpl) return;
+    const ov = overridesRef.current;
+    const text = cardText || cardTitle || clientName;
+
+    setIsRegenerating(true);
+    try {
+      const dataUrl = await renderArt(tmpl, brandKit, text, photoImageRef.current, {
+        x: ov.photoOffsetX,
+        y: ov.photoOffsetY,
+      }, {
+        logoX: ov.logoX, logoY: ov.logoY,
+        logoScaleX: ov.logoScaleX, logoScaleY: ov.logoScaleY,
+        textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
+        contactX: ov.contactX, contactY: ov.contactY,
+        contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
+        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
+        shapes: ov.shapeOverrides,
+      });
+      setArtDataUrl(dataUrl);
+    } catch (err) {
+      console.error("Regenerate error:", err);
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [cardText, cardTitle, clientName, brandKit]);
+
+  const handleDragEnd = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      regeneratePreview();
+    }, 80);
+  }, [regeneratePreview]);
 
   const generateArt = useCallback(async () => {
     setStatus("loading");
@@ -407,42 +612,56 @@ export function ArtGeneratorModal({
         height: raw.height,
         backgroundColor: raw.background_color,
       };
+      setTemplate(tmpl);
 
       const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
       await loadGoogleFont(fontFamily);
 
       // Load material images from card uploads
-      let matImages: string[] = [];
+      let matImage: string | null = null;
       try {
         const { data: uploads } = await supabase
           .from("card_uploads")
           .select("file_url, file_type")
           .eq("card_id", cardId)
           .eq("upload_type", "material");
-        matImages = (uploads || [])
+        const imgs = (uploads || [])
           .filter(u => u.file_type.startsWith("image"))
           .map(u => u.file_url);
+        if (imgs.length > 0) matImage = imgs[0];
       } catch { /* ignore */ }
 
-      // If no material images, search Pexels using card text as query
-      if (matImages.length === 0) {
+      // If no material images, search Pexels
+      if (!matImage) {
         try {
-          const searchQuery = (cardTitle || cardText || clientName).substring(0, 80);
-          console.log("[ArtGen] No material images, searching Pexels for:", searchQuery);
-          const pexelsResults = await searchPexelsImages(searchQuery, 1);
+          const sq = (cardTitle || cardText || clientName).substring(0, 80);
+          const pexelsResults = await searchPexelsImages(sq, 1);
           if (pexelsResults.length > 0) {
-            matImages = [pexelsResults[0].urls.regular];
-            console.log("[ArtGen] Found Pexels image:", matImages[0].substring(0, 60));
+            matImage = pexelsResults[0].urls.regular;
           }
-        } catch (e) {
-          console.warn("[ArtGen] Pexels search failed:", e);
-        }
+        } catch { /* ignore */ }
       }
 
+      setPhotoImage(matImage);
+      photoImageRef.current = matImage;
+
+      // Reset overrides
+      setPhotoOffsetX(0); setPhotoOffsetY(0); setPhotoScale(100);
+      setPhotoFrame(null);
+      setLogoX(0); setLogoY(0); setLogoScaleX(100); setLogoScaleY(100);
+      setTextX(0); setTextY(0); setTextFontSize(100);
+      setContactX(0); setContactY(0); setContactScaleX(100); setContactScaleY(100);
+      setShapeOverrides({});
+      overridesRef.current = {
+        photoOffsetX: 0, photoOffsetY: 0, photoScale: 100, photoFrame: null,
+        logoX: 0, logoY: 0, logoScaleX: 100, logoScaleY: 100,
+        textX: 0, textY: 0, textFontSize: 100,
+        contactX: 0, contactY: 0, contactScaleX: 100, contactScaleY: 100,
+        shapeOverrides: {},
+      };
+
       const text = cardText || cardTitle || clientName;
-      console.log("[ArtGen] Rendering art with template:", tmpl.name, "elements:", tmpl.elements.length, "text:", text.substring(0, 50));
-      const dataUrl = await renderArt(tmpl, brandKit, text, matImages);
-      console.log("[ArtGen] Art rendered successfully, dataUrl length:", dataUrl.length);
+      const dataUrl = await renderArt(tmpl, brandKit, text, matImage, { x: 0, y: 0 }, {});
       setArtDataUrl(dataUrl);
       setStatus("ready");
     } catch (err) {
@@ -458,6 +677,8 @@ export function ArtGeneratorModal({
     } else {
       setStatus("loading");
       setArtDataUrl(null);
+      setTemplate(null);
+      setPhotoImage(null);
     }
   }, [isOpen]);
 
@@ -470,42 +691,233 @@ export function ArtGeneratorModal({
     onExported?.();
   };
 
+  // Photo search
+  const handleSearchImages = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const images = await searchImages(searchQuery, 15);
+      setSearchResults(images);
+    } catch {
+      toast.error("Erro ao buscar imagens");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectPhoto = async (imageUrl: string) => {
+    setPhotoImage(imageUrl);
+    photoImageRef.current = imageUrl;
+    setIsImageDialogOpen(false);
+    setCustomImageUrl("");
+    // Regenerate
+    if (template) {
+      const text = cardText || cardTitle || clientName;
+      const ov = overridesRef.current;
+      const dataUrl = await renderArt(template, brandKit, text, imageUrl, {
+        x: ov.photoOffsetX, y: ov.photoOffsetY,
+      }, {
+        logoX: ov.logoX, logoY: ov.logoY,
+        logoScaleX: ov.logoScaleX, logoScaleY: ov.logoScaleY,
+        textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
+        contactX: ov.contactX, contactY: ov.contactY,
+        contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
+        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
+        shapes: ov.shapeOverrides,
+      });
+      setArtDataUrl(dataUrl);
+    }
+  };
+
+  const handleCustomImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      handleSelectPhoto(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Arte Gerada
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Arte Gerada
+            </DialogTitle>
+          </DialogHeader>
 
-        {status === "loading" && (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Gerando arte...</p>
-          </div>
-        )}
-
-        {status === "error" && (
-          <div className="text-center py-8">
-            <p className="text-destructive mb-4">Erro ao gerar arte</p>
-            <Button variant="outline" onClick={generateArt}>Tentar novamente</Button>
-          </div>
-        )}
-
-        {status === "ready" && artDataUrl && (
-          <div className="space-y-4">
-            <div className="border rounded-lg overflow-hidden bg-muted/30">
-              <img src={artDataUrl} alt="Arte gerada" className="w-full h-auto" />
+          {status === "loading" && (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Gerando arte...</p>
             </div>
-            <Button onClick={handleDownload} className="w-full">
-              <Download className="mr-2 h-4 w-4" />
-              Baixar Arte
-            </Button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+
+          {status === "error" && (
+            <div className="text-center py-8">
+              <p className="text-destructive mb-4">Erro ao gerar arte</p>
+              <Button variant="outline" onClick={generateArt}>Tentar novamente</Button>
+            </div>
+          )}
+
+          {status === "ready" && artDataUrl && template && (
+            <div className="space-y-4">
+              {/* Adjust overlay */}
+              <div className="border rounded-lg overflow-hidden bg-muted/30">
+                <ArtAdjustOverlay
+                  template={template}
+                  previewUrl={artDataUrl}
+                  isBusy={isRegenerating}
+                  onDragEnd={handleDragEnd}
+                  photoOffsetX={photoOffsetX}
+                  photoOffsetY={photoOffsetY}
+                  photoScale={photoScale}
+                  photoFrame={photoFrame}
+                  setPhotoOffsetX={syncSetPhotoOffsetX}
+                  setPhotoOffsetY={syncSetPhotoOffsetY}
+                  setPhotoScale={syncSetPhotoScale}
+                  setPhotoFrame={syncSetPhotoFrame}
+                  logoX={logoX}
+                  logoY={logoY}
+                  logoScaleX={logoScaleX}
+                  logoScaleY={logoScaleY}
+                  setLogoX={syncSetLogoX}
+                  setLogoY={syncSetLogoY}
+                  setLogoScaleX={syncSetLogoScaleX}
+                  setLogoScaleY={syncSetLogoScaleY}
+                  textX={textX}
+                  textY={textY}
+                  textFontSize={textFontSize}
+                  setTextX={syncSetTextX}
+                  setTextY={syncSetTextY}
+                  setTextFontSize={syncSetTextFontSize}
+                  contactX={contactX}
+                  contactY={contactY}
+                  contactScaleX={contactScaleX}
+                  contactScaleY={contactScaleY}
+                  setContactX={syncSetContactX}
+                  setContactY={syncSetContactY}
+                  setContactScaleX={syncSetContactScaleX}
+                  setContactScaleY={syncSetContactScaleY}
+                  shapeOverrides={shapeOverrides}
+                  setShapeOverrides={syncSetShapeOverrides}
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setSearchQuery((cardTitle || cardText).split(" ").slice(0, 3).join(" "));
+                    setIsImageDialogOpen(true);
+                  }}
+                >
+                  <ImageIcon className="mr-2 h-4 w-4" />
+                  Trocar Foto
+                </Button>
+                <Button onClick={handleDownload} className="flex-1">
+                  <Download className="mr-2 h-4 w-4" />
+                  Baixar Arte
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image search dialog */}
+      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Trocar Foto</DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="search">
+            <TabsList className="w-full">
+              <TabsTrigger value="search" className="flex-1">
+                <Search className="mr-1 h-3 w-3" />
+                Buscar
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="flex-1">
+                <Upload className="mr-1 h-3 w-3" />
+                Upload
+              </TabsTrigger>
+              <TabsTrigger value="url" className="flex-1">
+                <Link className="mr-1 h-3 w-3" />
+                URL
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="search" className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar imagens..."
+                  onKeyDown={(e) => e.key === "Enter" && handleSearchImages()}
+                />
+                <Button onClick={handleSearchImages} disabled={isSearching} size="sm">
+                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-auto">
+                {searchResults.map((img, i) => (
+                  <img
+                    key={i}
+                    src={img.urls.small}
+                    alt=""
+                    className="w-full aspect-square object-cover rounded cursor-pointer hover:ring-2 ring-primary transition-all"
+                    onClick={() => handleSelectPhoto(img.urls.regular)}
+                  />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="upload" className="space-y-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCustomImageUpload}
+              />
+              <Button
+                variant="outline"
+                className="w-full h-32 border-dashed"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-6 w-6" />
+                Selecionar imagem
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="url" className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  value={customImageUrl}
+                  onChange={(e) => setCustomImageUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+                <Button
+                  onClick={() => {
+                    if (customImageUrl.trim()) handleSelectPhoto(customImageUrl.trim());
+                  }}
+                  size="sm"
+                >
+                  Aplicar
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
