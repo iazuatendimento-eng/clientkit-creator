@@ -444,6 +444,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       const { data, error } = await supabase
         .from('master_video_templates')
         .select('*')
+        .eq('deleted', false)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -1846,7 +1847,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                       const confirmed = window.confirm(`Excluir template "${templateName}"? Esta ação não pode ser desfeita.`);
                       if (!confirmed) return;
                       try {
-                        await supabase.from("master_video_templates").delete().eq("id", currentTemplateId);
+                        await supabase.from("master_video_templates").update({ deleted: true }).eq("id", currentTemplateId);
                         toast({ title: "Template excluído!" });
                         setSavedTemplates(prev => prev.filter(t => t.id !== currentTemplateId));
                         newTemplate();

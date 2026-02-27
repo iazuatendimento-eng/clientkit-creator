@@ -373,6 +373,7 @@ export function ArtGeneratorModal({
       const { data: templates, error } = await supabase
         .from("master_templates")
         .select("*")
+        .eq("deleted", false)
         .order("created_at", { ascending: true });
 
       if (error || !templates || templates.length === 0) {
