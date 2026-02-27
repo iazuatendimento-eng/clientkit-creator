@@ -691,6 +691,7 @@ export function ArtGeneratorModal({
     link.href = artDataUrl;
     link.click();
     onExported?.();
+    onClose();
   };
 
   // Photo search
