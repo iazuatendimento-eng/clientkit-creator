@@ -247,69 +247,116 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   const { onProgress, audioUrl } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // Pick best MIME type for MediaRecorder
-  const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
-  const webmMime = pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
-  const recordMime = mp4Mime || webmMime || "video/webm";
-  const outputType = recordMime.startsWith("video/mp4") ? "video/mp4" : "video/webm";
-
-  console.log("[VideoEncoder] Recording MIME:", recordMime, "mobile:", isMobileDevice, "webcodecs:", hasWebCodecs());
+  console.log("[VideoEncoder] Starting encode. mobile:", isMobileDevice, "webcodecs:", hasWebCodecs());
   onProgress?.(0.05);
 
-  // ====== MOBILE PATH: WebCodecs ONLY (MediaRecorder is broken on iOS) ======
-  if (isMobileDevice) {
-    console.log("[VideoEncoder] Mobile path — WebCodecs only (no MediaRecorder fallback)");
-    
-    // Check if WebCodecs API exists at all
-    if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") {
-      console.error("[VideoEncoder] WebCodecs API not available on this device");
-      throw new Error("Este dispositivo não suporta exportação de vídeo. Atualize o iOS/navegador para a versão mais recente.");
-    }
-    
-    onProgress?.(0.06);
-    console.log("[VideoEncoder] WebCodecs API exists, starting encode...");
-    
-    // Try full resolution first, then retry at lower resolution if it fails
+  // ====== ALL DEVICES: Try WebCodecs first (most reliable — each frame is encoded directly) ======
+  if (hasWebCodecs()) {
+    console.log("[VideoEncoder] Using WebCodecs path (direct frame encoding)");
+
     const attempts: { label: string; opts: VideoEncoderOptions }[] = [
       { label: "full-res", opts: options },
     ];
-    
-    // Only add reduced attempt if resolution is large
+
+    // Add reduced resolution fallback for large canvases
     if (options.width > 720 || options.height > 1280) {
       const scale = Math.min(720 / options.width, 1280 / options.height, 1);
-      const rw = Math.round(options.width * scale / 2) * 2; // ensure even
+      const rw = Math.round(options.width * scale / 2) * 2;
       const rh = Math.round(options.height * scale / 2) * 2;
       attempts.push({ label: `reduced-${rw}x${rh}`, opts: { ...options, width: rw, height: rh } });
     }
-    
+
     for (const attempt of attempts) {
       try {
         onProgress?.(0.07);
-        console.log("[VideoEncoder] Mobile attempt:", attempt.label, attempt.opts.width, "x", attempt.opts.height);
+        console.log("[VideoEncoder] WebCodecs attempt:", attempt.label, attempt.opts.width, "x", attempt.opts.height);
         const rawBlob = await withTimeout(
           encodeVideoWithWebCodecs(pages, attempt.opts),
           600_000,
-          "gerar vídeo mobile (WebCodecs)"
+          "gerar vídeo (WebCodecs)"
         );
         console.log("[VideoEncoder] WebCodecs SUCCESS!", attempt.label, "blob size:", rawBlob.size);
+
+        // On desktop, remux through FFmpeg to add audio + faststart
+        if (!isMobileDevice) {
+          try {
+            const ff = await loadFFmpeg();
+            onProgress?.(0.7);
+            await ff.writeFile("input.mp4", await fetchFile(rawBlob));
+
+            let hasAudio = false;
+            if (audioUrl) {
+              try {
+                console.log("[VideoEncoder] Fetching audio:", audioUrl.substring(0, 80));
+                const audioResponse = await fetch(audioUrl);
+                if (audioResponse.ok) {
+                  const audioBlob = await audioResponse.blob();
+                  const audioExt = audioUrl.includes(".wav") ? "wav" : audioUrl.includes(".ogg") ? "ogg" : audioUrl.includes(".m4a") ? "m4a" : "mp3";
+                  await ff.writeFile(`audio.${audioExt}`, await fetchFile(audioBlob));
+                  hasAudio = true;
+                }
+              } catch (audioErr) {
+                console.warn("[VideoEncoder] Failed to fetch audio:", audioErr);
+              }
+            }
+
+            const audioExt = audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : audioUrl?.includes(".m4a") ? "m4a" : "mp3";
+            const ffmpegArgs = hasAudio
+              ? ["-i", "input.mp4", "-i", `audio.${audioExt}`, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]
+              : ["-i", "input.mp4", "-c:v", "copy", "-c:a", "copy", "-movflags", "+faststart", "-f", "mp4", "output.mp4"];
+
+            await withTimeout(ff.exec(ffmpegArgs), 180_000, hasAudio ? "muxar vídeo + áudio" : "remux faststart");
+            onProgress?.(0.9);
+
+            const mp4Data = await ff.readFile("output.mp4");
+            let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
+            await ff.deleteFile("input.mp4").catch(() => {});
+            await ff.deleteFile("output.mp4").catch(() => {});
+            if (hasAudio) await ff.deleteFile(`audio.${audioExt}`).catch(() => {});
+            mp4Blob = await patchMP4Brand(mp4Blob);
+
+            if (await isValidMP4(mp4Blob)) {
+              console.log("[VideoEncoder] Remuxed MP4 size:", mp4Blob.size);
+              onProgress?.(1);
+              return mp4Blob;
+            }
+          } catch (err) {
+            console.warn("[VideoEncoder] FFmpeg remux failed, using raw WebCodecs output:", err);
+          }
+
+          // If FFmpeg failed, return raw WebCodecs output
+          const patched = await patchMP4Brand(rawBlob);
+          onProgress?.(1);
+          return patched;
+        }
+
+        // Mobile: return directly (no FFmpeg needed)
         onProgress?.(1);
         return rawBlob;
       } catch (wcErr) {
         console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
         if (attempt === attempts[attempts.length - 1]) {
-          // Last attempt failed
-          throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
+          // On mobile, no fallback — throw error
+          if (isMobileDevice) {
+            throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
+          }
+          // On desktop, fall through to MediaRecorder fallback
+          console.log("[VideoEncoder] All WebCodecs attempts failed, trying MediaRecorder fallback...");
         }
-        console.log("[VideoEncoder] Retrying with lower resolution...");
         onProgress?.(0.05);
       }
     }
   }
 
-  // ====== DESKTOP PATH ======
+  // ====== DESKTOP FALLBACK: MediaRecorder (only if WebCodecs unavailable/failed) ======
+  const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
+  const webmMime = pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
+  const recordMime = mp4Mime || webmMime || "video/webm";
+
+  console.log("[VideoEncoder] MediaRecorder fallback, MIME:", recordMime);
+  onProgress?.(0.1);
+
   if (mp4Mime) {
-    console.log("[VideoEncoder] Recording native MP4:", mp4Mime);
-    onProgress?.(0.1);
     const nativeMp4 = await withTimeout(
       encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
       240_000,
@@ -317,7 +364,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     );
     onProgress?.(0.6);
 
-    // Remux through FFmpeg to add faststart + audio if provided
     try {
       const ff = await loadFFmpeg();
       onProgress?.(0.7);
@@ -326,7 +372,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       let hasAudio = false;
       if (audioUrl) {
         try {
-          console.log("[VideoEncoder] Fetching audio:", audioUrl.substring(0, 80));
           const audioResponse = await fetch(audioUrl);
           if (audioResponse.ok) {
             const audioBlob = await audioResponse.blob();
@@ -355,7 +400,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       mp4Blob = await patchMP4Brand(mp4Blob);
 
       if (await isValidMP4(mp4Blob)) {
-        console.log("[VideoEncoder] Remuxed MP4 size:", mp4Blob.size);
         onProgress?.(1);
         return mp4Blob;
       }
