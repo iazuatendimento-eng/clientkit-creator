@@ -784,7 +784,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 </div>
               )}
               {brief.status !== "completed" && isDeadlineReached && (
-                cardIndex % 2 === 0 ? (
+                new Date().getDate() % 2 === 0 ? (
                   <Button
                     variant="outline"
                     onClick={(e) => {
