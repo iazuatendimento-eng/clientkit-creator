@@ -618,6 +618,104 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <Film className="h-3 w-3 mr-1" />
                 Baixar Vídeo Feito
               </Button>
+              {/* Generated video with Já Baixei + Enviar por E-mail */}
+              {!dismissed && brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
+                <div className="border border-primary/20 rounded-lg overflow-hidden bg-primary/5">
+                  <div className="w-full bg-black flex justify-center">
+                    <video src={brief.generatedVideoUrl} className="w-full max-h-40 object-contain" autoPlay muted loop playsInline />
+                  </div>
+                  <div className="p-2 space-y-1.5 min-w-0 overflow-hidden">
+                    <div className="flex items-center justify-center gap-1 py-1 px-2 bg-destructive/15 border border-destructive/30 rounded-md overflow-hidden">
+                      <span className="text-[11px] font-semibold text-destructive">
+                        <VideoCountdown expiresAt={brief.generatedVideoExpiresAt} />
+                      </span>
+                    </div>
+                    <Button size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, false); }} className="h-auto py-1.5 text-xs font-medium rounded-md w-full overflow-hidden">
+                      <span>Baixar Com Áudio</span>
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedVideoUrl!, `${brief.clientName}-video.mp4`, true); }} className="h-auto py-1.5 text-xs font-medium rounded-md w-full overflow-hidden">
+                      <span>Baixar Sem Áudio</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setIsDismissing(true);
+                        try {
+                          const url = brief.generatedVideoUrl!;
+                          const pathMatch = url.match(/card-uploads\/(.+)$/);
+                          if (pathMatch) await supabase.storage.from("card-uploads").remove([pathMatch[1]]);
+                          await supabase.from("project_briefs").update({ generated_video_url: null, generated_video_expires_at: null }).eq("id", brief.id);
+                          setDismissed(true);
+                          onStatusChange(brief.id, "completed");
+                          toast.success("Vídeo removido!");
+                        } catch { toast.error("Erro ao remover"); }
+                        setIsDismissing(false);
+                      }}
+                      disabled={isDismissing}
+                      className="w-full h-7 text-[11px] text-muted-foreground hover:text-foreground overflow-hidden"
+                    >
+                      {isDismissing ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <CheckCircle className="h-3 w-3 shrink-0" />}
+                      <span className="ml-1">Já Baixei</span>
+                    </Button>
+                    {clientId && (
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleSendEmail(brief.generatedVideoUrl!, "video"); }} disabled={isSendingEmail} className="w-full h-7 text-[11px] overflow-hidden">
+                        {isSendingEmail ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <Mail className="h-3 w-3 shrink-0" />}
+                        <span className="ml-1">Enviar por E-mail</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Generated art with Já Baixei + Enviar por E-mail */}
+              {!artDismissed && brief.generatedArtUrl && brief.generatedArtExpiresAt && new Date(brief.generatedArtExpiresAt) > new Date() && (
+                <div className="border border-primary/20 rounded-lg overflow-hidden bg-primary/5">
+                  <div className="w-full bg-black flex justify-center">
+                    <img src={brief.generatedArtUrl} className="w-full max-h-40 object-contain" alt="Arte gerada" />
+                  </div>
+                  <div className="p-2 space-y-1.5 min-w-0 overflow-hidden">
+                    <div className="flex items-center justify-center gap-1 py-1 px-2 bg-destructive/15 border border-destructive/30 rounded-md overflow-hidden">
+                      <span className="text-[11px] font-semibold text-destructive">
+                        <VideoCountdown expiresAt={brief.generatedArtExpiresAt} />
+                      </span>
+                    </div>
+                    <Button size="sm" onClick={async (e) => { e.stopPropagation(); await onStatusChange(brief.id, "completed"); handleDownload(brief.generatedArtUrl!, `${brief.clientName}-arte.png`); }} className="h-auto py-1.5 text-xs font-medium rounded-md w-full overflow-hidden">
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      <span>Baixar Arte</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setIsArtDismissing(true);
+                        try {
+                          const url = brief.generatedArtUrl!;
+                          const pathMatch = url.match(/card-uploads\/(.+)$/);
+                          if (pathMatch) await supabase.storage.from("card-uploads").remove([pathMatch[1]]);
+                          await supabase.from("project_briefs").update({ generated_art_url: null, generated_art_expires_at: null }).eq("id", brief.id);
+                          setArtDismissed(true);
+                          onStatusChange(brief.id, "completed");
+                          toast.success("Arte removida!");
+                        } catch { toast.error("Erro ao remover"); }
+                        setIsArtDismissing(false);
+                      }}
+                      disabled={isArtDismissing}
+                      className="w-full h-7 text-[11px] text-muted-foreground hover:text-foreground overflow-hidden"
+                    >
+                      {isArtDismissing ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <CheckCircle className="h-3 w-3 shrink-0" />}
+                      <span className="ml-1">Já Baixei</span>
+                    </Button>
+                    {clientId && (
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleSendEmail(brief.generatedArtUrl!, "art"); }} disabled={isSendingEmail} className="w-full h-7 text-[11px] overflow-hidden">
+                        {isSendingEmail ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <Mail className="h-3 w-3 shrink-0" />}
+                        <span className="ml-1">Enviar por E-mail</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
