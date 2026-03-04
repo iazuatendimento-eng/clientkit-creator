@@ -569,14 +569,21 @@ export function ArtGeneratorModal({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const handleSendEmail = async () => {
-    if (!clientId || !artDataUrl) return;
+    if (!clientId) return;
     setIsSendingEmail(true);
     try {
-      const blob = await (await fetch(artDataUrl)).blob();
-      const path = `email-arts/${clientId}/${Date.now()}.png`;
-      const { error: uploadErr } = await supabase.storage.from("card-uploads").upload(path, blob, { contentType: "image/png" });
-      if (uploadErr) throw uploadErr;
-      const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+      // Upload all pages to storage
+      const uploadedUrls: string[] = [];
+      const artsToUpload = isCarousel ? pageArts.filter(Boolean) as string[] : [artDataUrl].filter(Boolean) as string[];
+      
+      for (let i = 0; i < artsToUpload.length; i++) {
+        const blob = await (await fetch(artsToUpload[i])).blob();
+        const path = `email-arts/${clientId}/${Date.now()}-p${i + 1}.png`;
+        const { error: uploadErr } = await supabase.storage.from("card-uploads").upload(path, blob, { contentType: "image/png" });
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+        uploadedUrls.push(urlData.publicUrl);
+      }
 
       const { data: clientData } = await supabase.from("client_data").select("email, email_2, email_3").eq("id", clientId).single();
       if (!clientData) throw new Error("Cliente não encontrado");
@@ -584,7 +591,7 @@ export function ArtGeneratorModal({
       if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); return; }
 
       const { data, error } = await supabase.functions.invoke("send-media-email", {
-        body: { emails, subject: `Arte - ${clientName}`, mediaUrl: urlData.publicUrl, mediaType: "art", clientName, cardText: cardText || cardTitle, caption: undefined },
+        body: { emails, subject: `Arte - ${clientName}`, mediaUrls: uploadedUrls, mediaUrl: uploadedUrls[0], mediaType: "art", clientName, cardText: cardText || cardTitle, caption: undefined },
       });
       if (error) throw error;
       toast.success(data?.message || "E-mail(s) enviado(s)!");

@@ -16,12 +16,12 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY não configurada');
     }
 
-    const { emails, subject, mediaUrl, mediaType, clientName, cardText, caption } = await req.json();
+    const { emails, subject, mediaUrl, mediaUrls, mediaType, clientName, cardText, caption } = await req.json();
 
     if (!emails || emails.length === 0) {
       throw new Error('Nenhum e-mail fornecido');
     }
-    if (!mediaUrl) {
+    if (!mediaUrl && (!mediaUrls || mediaUrls.length === 0)) {
       throw new Error('URL da mídia não fornecida');
     }
 
@@ -52,18 +52,19 @@ serve(async (req) => {
       `;
     }
 
-    // Build attachment using Resend's "path" field (Resend fetches the file directly from URL)
-    // This avoids downloading the file into edge function memory
+    // Build attachments - support multiple URLs for carousel
+    const allUrls: string[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
     const extension = isVideo ? "mp4" : "png";
-    const fileName = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}.${extension}`;
-    const attachments = [{
-      filename: fileName,
-      path: mediaUrl,
-    }];
+    const baseName = clientName.replace(/[^a-zA-Z0-9]/g, '_');
+    const attachments = allUrls.map((url: string, i: number) => ({
+      filename: allUrls.length > 1 ? `${baseName}_p${i + 1}.${extension}` : `${baseName}.${extension}`,
+      path: url,
+    }));
 
+    const count = allUrls.length;
     const mediaSection = `
       <div style="text-align: center; margin: 30px 0;">
-        <p style="color: #555;">${isVideo ? 'O vídeo' : 'A arte'} foi enviado(a) em anexo neste e-mail.</p>
+        <p style="color: #555;">${isVideo ? 'O vídeo' : count > 1 ? `As ${count} artes foram enviadas` : 'A arte foi enviada'} em anexo neste e-mail.</p>
       </div>
     `;
 
