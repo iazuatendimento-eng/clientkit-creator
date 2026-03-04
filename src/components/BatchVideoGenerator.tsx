@@ -839,7 +839,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [selectedVideo, isPlayingPreview, activeDialogTab]);
+  }, [selectedVideo, isPlayingPreview, activeDialogTab, isImageDialogOpen]);
 
   const loadFromExistingBatch = async (batch: import("@/lib/batchHistory").BatchGeneration) => {
     try {
