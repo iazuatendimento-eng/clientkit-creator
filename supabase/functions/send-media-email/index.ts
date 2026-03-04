@@ -61,13 +61,11 @@ serve(async (req) => {
       path: mediaUrl,
     }];
 
-    const mediaSection = isVideo
-      ? `<div style="text-align: center; margin: 30px 0;">
-           <p style="color: #555;">O vídeo foi enviado em anexo neste e-mail.</p>
-         </div>`
-      : `<div style="text-align: center; margin: 30px 0;">
-           <img src="${mediaUrl}" alt="Arte" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
-         </div>`;
+    const mediaSection = `
+      <div style="text-align: center; margin: 30px 0;">
+        <p style="color: #555;">${isVideo ? 'O vídeo' : 'A arte'} foi enviado(a) em anexo neste e-mail.</p>
+      </div>
+    `;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
