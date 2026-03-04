@@ -830,15 +830,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   useEffect(() => {
     if (!selectedVideo || !isPlayingPreview) return;
     if (selectedVideo.pages.length <= 1) return;
-    // Don't auto-cycle pages when in adjust mode
+    // Don't auto-cycle pages when in adjust mode or image dialog is open
     if (activeDialogTab === "adjust") return;
+    if (isImageDialogOpen) return;
 
     const interval = window.setInterval(() => {
       setCurrentPreviewPage((p) => (p + 1) % selectedVideo.pages.length);
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [selectedVideo, isPlayingPreview, activeDialogTab]);
+  }, [selectedVideo, isPlayingPreview, activeDialogTab, isImageDialogOpen]);
 
   const loadFromExistingBatch = async (batch: import("@/lib/batchHistory").BatchGeneration) => {
     try {
