@@ -830,7 +830,7 @@ export function VideoGeneratorModal({
                       <Download className="h-4 w-4" />
                       Baixar Com Áudio
                     </Button>
-                    <Button variant="outline" onClick={() => handleExport(true)} disabled={status === "exporting" || isSendingEmail} className="gap-2 flex-1">
+                    <Button variant="outline" onClick={() => handleExport(true)} disabled={isSendingEmail} className="gap-2 flex-1">
                       <VolumeX className="h-4 w-4" />
                       Baixar Sem Áudio
                     </Button>
