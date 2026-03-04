@@ -753,26 +753,7 @@ const Index = () => {
                   className="pl-9 h-9"
                 />
               </div>
-              <button
-                onClick={() => setShowOnlyWithoutText(!showOnlyWithoutText)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
-                  showOnlyWithoutText 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-                }`}
-              >
-                <FileX className="h-4 w-4" />
-                Sem texto para fazer
-                {clientsWithoutText.size > 0 && (
-                  <span className={`ml-auto px-2 py-0.5 rounded-full text-xs ${
-                    showOnlyWithoutText 
-                      ? 'bg-primary-foreground/20' 
-                      : 'bg-primary/20 text-primary'
-                  }`}>
-                    {clientsWithoutText.size}
-                  </span>
-                )}
-              </button>
+              {/* "Sem texto para fazer" filter hidden */}
             </div>
             <p className="text-sm text-muted-foreground px-3 mb-2">
               {filteredClients.length} de {clients.length} clientes
