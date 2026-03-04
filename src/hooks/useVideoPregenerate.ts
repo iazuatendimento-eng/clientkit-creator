@@ -70,6 +70,23 @@ export function useVideoPregenerate(
           audioUrl2: raw.audio_url_2 || undefined,
         };
 
+        // Fetch client metadata for better search context
+        let clientImageType = "";
+        let clientNarrationType = "";
+        let clientBriefing = "";
+        try {
+          const { data: clientMeta } = await supabase
+            .from("client_data")
+            .select("image_type, narration_type, briefing")
+            .eq("name", clientName)
+            .maybeSingle();
+          if (clientMeta) {
+            clientImageType = clientMeta.image_type || "";
+            clientNarrationType = clientMeta.narration_type || "";
+            clientBriefing = clientMeta.briefing || "";
+          }
+        } catch { /* ignore */ }
+
         const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
         await loadGoogleFont(fontFamily);
 
@@ -121,11 +138,13 @@ export function useVideoPregenerate(
         // Search bank videos only for uncovered pages
         if (pagesNeedingBankVideo.length > 0) {
           try {
-            const searchTerms = fullText.split(" ").slice(0, 10).join(" ");
-            let translatedTerms = searchTerms;
+            // Build rich search context from client metadata + text
+            const contextParts = [clientImageType, clientNarrationType, clientBriefing, fullText].filter(Boolean);
+            const searchContext = contextParts.join(" ").split(" ").slice(0, 15).join(" ");
+            let translatedTerms = searchContext;
             try {
               const { data: transData } = await Promise.race([
-                supabase.functions.invoke("translate-text", { body: { text: searchTerms } }),
+                supabase.functions.invoke("translate-text", { body: { text: searchContext } }),
                 new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000)),
               ]);
               if (transData?.translatedText) translatedTerms = transData.translatedText;

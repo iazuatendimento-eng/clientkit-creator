@@ -135,6 +135,8 @@ interface ClientArt {
   pageIndex?: number; // For carousel - which page this is (0-based)
   totalPages?: number; // For carousel - total pages in this card
   imageType?: string; // Tipo de imagem do cadastro do cliente
+  narrationType?: string; // Tipo de narração do cadastro do cliente
+  briefing?: string; // Briefing do cadastro do cliente
   note?: string; // Anotação do operador
   noteRead?: boolean; // Se a anotação foi marcada como lida
 }
@@ -404,14 +406,20 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   }, [clientArts, isLoading]);
 
   const loadFromExistingBatch = async (batch: import("@/lib/batchHistory").BatchGeneration) => {
-    // Collect unique client IDs to fetch image_type
+    // Collect unique client IDs to fetch image_type, narration_type, briefing
     const clientIds = [...new Set(batch.items.map(item => item.clientId))];
     const { data: clientsData } = await supabase
       .from("client_data")
-      .select("id, image_type")
+      .select("id, image_type, narration_type, briefing")
       .in("id", clientIds);
     const imageTypeMap: Record<string, string> = {};
-    clientsData?.forEach(c => { if (c.image_type) imageTypeMap[c.id] = c.image_type; });
+    const narrationTypeMap: Record<string, string> = {};
+    const briefingMap: Record<string, string> = {};
+    clientsData?.forEach(c => { 
+      if (c.image_type) imageTypeMap[c.id] = c.image_type;
+      if (c.narration_type) narrationTypeMap[c.id] = c.narration_type;
+      if (c.briefing) briefingMap[c.id] = c.briefing;
+    });
 
     const arts: ClientArt[] = batch.items.map((item, index) => ({
       clientId: item.clientId,
@@ -424,6 +432,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       imageUrl: item.files?.[0] || null,
       backgroundImage: item.backgroundImages?.[0],
       imageType: (item as any).imageType || imageTypeMap[item.clientId] || undefined,
+      narrationType: (item as any).narrationType || narrationTypeMap[item.clientId] || undefined,
+      briefing: (item as any).briefing || briefingMap[item.clientId] || undefined,
       status: "pending" as const,
       note: item.note,
       noteRead: item.noteRead,
@@ -462,6 +472,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               cardText: text,
               brandKit: card.client?.brand_kit,
               imageType: card.client?.image_type || undefined,
+              narrationType: card.client?.narration_type || undefined,
+              briefing: card.client?.briefing || undefined,
               imageUrl: null,
               status: "pending",
               pageIndex,
@@ -479,6 +491,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             cardText: fullText,
             brandKit: card.client?.brand_kit,
             imageType: card.client?.image_type || undefined,
+            narrationType: card.client?.narration_type || undefined,
+            briefing: card.client?.briefing || undefined,
             imageUrl: null,
             status: "pending",
           });
@@ -1154,8 +1168,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         // Search for relevant image if template has image placeholder
         if (hasImagePlaceholder && !art.photoImage) {
           try {
-            // Translate text to English for better image search results
-            let searchTerms = art.cardText.split(" ").slice(0, 5).join(" ");
+            // Build rich search context from client metadata + page text
+            const contextParts = [art.imageType, art.narrationType, art.briefing, art.cardText].filter(Boolean);
+            const fullContext = contextParts.join(" ").split(" ").slice(0, 15).join(" ");
+            let searchTerms = fullContext;
             
             try {
               const translateResponse = await fetch(
@@ -1166,7 +1182,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
                   },
-                  body: JSON.stringify({ text: art.cardText }),
+                  body: JSON.stringify({ text: fullContext }),
                 }
               );
               
