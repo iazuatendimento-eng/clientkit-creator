@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Download, Palette, ImageIcon, Search, Upload, Link, Mail } from "lucide-react";
+import { Loader2, Download, Palette, ImageIcon, Search, Upload, Link, Mail, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -484,28 +484,76 @@ export function ArtGeneratorModal({
   clientId,
   onExported,
 }: ArtGeneratorModalProps) {
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [artDataUrl, setArtDataUrl] = useState<string | null>(null);
-  const [template, setTemplate] = useState<ArtTemplate | null>(null);
-  const [photoImage, setPhotoImage] = useState<string | null>(null);
+  // Split text by ";" for carousel pages
+  const pages = (cardText || cardTitle || clientName).split(";").map(p => p.trim()).filter(Boolean);
+  const isCarousel = pages.length > 1;
 
-  // Override states
-  const [photoOffsetX, setPhotoOffsetX] = useState(0);
-  const [photoOffsetY, setPhotoOffsetY] = useState(0);
-  const [photoScale, setPhotoScale] = useState(100);
-  const [photoFrame, setPhotoFrame] = useState<ShapeOverride | null>(null);
-  const [logoX, setLogoX] = useState(0);
-  const [logoY, setLogoY] = useState(0);
-  const [logoScaleX, setLogoScaleX] = useState(100);
-  const [logoScaleY, setLogoScaleY] = useState(100);
-  const [textX, setTextX] = useState(0);
-  const [textY, setTextY] = useState(0);
-  const [textFontSize, setTextFontSize] = useState(100);
-  const [contactX, setContactX] = useState(0);
-  const [contactY, setContactY] = useState(0);
-  const [contactScaleX, setContactScaleX] = useState(100);
-  const [contactScaleY, setContactScaleY] = useState(100);
-  const [shapeOverrides, setShapeOverrides] = useState<Record<string, ShapeOverride>>({});
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [template, setTemplate] = useState<ArtTemplate | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+
+  // Per-page state
+  const [pageArts, setPageArts] = useState<(string | null)[]>([]);
+  const [pagePhotos, setPagePhotos] = useState<(string | null)[]>([]);
+  const [pageOverrides, setPageOverrides] = useState<ElementOverrides[]>([]);
+  const [pagePhotoOffsets, setPagePhotoOffsets] = useState<{ x: number; y: number }[]>([]);
+
+  // Current page shortcuts
+  const artDataUrl = pageArts[currentPage] || null;
+  const photoImage = pagePhotos[currentPage] || null;
+
+  const currentOv = pageOverrides[currentPage] || {};
+  const photoOffsetX = pagePhotoOffsets[currentPage]?.x || 0;
+  const photoOffsetY = pagePhotoOffsets[currentPage]?.y || 0;
+  const photoScale = currentOv.photoScale || 100;
+  const photoFrame = currentOv.photoFrame || null;
+  const logoX = currentOv.logoX || 0;
+  const logoY = currentOv.logoY || 0;
+  const logoScaleX = currentOv.logoScaleX || 100;
+  const logoScaleY = currentOv.logoScaleY || 100;
+  const textX = currentOv.textX || 0;
+  const textY = currentOv.textY || 0;
+  const textFontSize = currentOv.textFontSize || 100;
+  const contactX = currentOv.contactX || 0;
+  const contactY = currentOv.contactY || 0;
+  const contactScaleX = currentOv.contactScaleX || 100;
+  const contactScaleY = currentOv.contactScaleY || 100;
+  const shapeOverrides = currentOv.shapes || {};
+
+  // Updater helpers
+  const updateOverride = useCallback((key: keyof ElementOverrides, value: any) => {
+    setPageOverrides(prev => {
+      const copy = [...prev];
+      copy[currentPage] = { ...copy[currentPage], [key]: value };
+      return copy;
+    });
+  }, [currentPage]);
+
+  const updatePhotoOffset = useCallback((axis: "x" | "y", value: number) => {
+    setPagePhotoOffsets(prev => {
+      const copy = [...prev];
+      copy[currentPage] = { ...copy[currentPage], [axis]: value };
+      return copy;
+    });
+  }, [currentPage]);
+
+  // Sync setters for ArtAdjustOverlay compatibility
+  const syncSetPhotoOffsetX = useCallback((v: number) => updatePhotoOffset("x", v), [updatePhotoOffset]);
+  const syncSetPhotoOffsetY = useCallback((v: number) => updatePhotoOffset("y", v), [updatePhotoOffset]);
+  const syncSetPhotoScale = useCallback((v: number) => updateOverride("photoScale", v), [updateOverride]);
+  const syncSetPhotoFrame = useCallback((v: ShapeOverride | null) => updateOverride("photoFrame", v), [updateOverride]);
+  const syncSetLogoX = useCallback((v: number) => updateOverride("logoX", v), [updateOverride]);
+  const syncSetLogoY = useCallback((v: number) => updateOverride("logoY", v), [updateOverride]);
+  const syncSetLogoScaleX = useCallback((v: number) => updateOverride("logoScaleX", v), [updateOverride]);
+  const syncSetLogoScaleY = useCallback((v: number) => updateOverride("logoScaleY", v), [updateOverride]);
+  const syncSetTextX = useCallback((v: number) => updateOverride("textX", v), [updateOverride]);
+  const syncSetTextY = useCallback((v: number) => updateOverride("textY", v), [updateOverride]);
+  const syncSetTextFontSize = useCallback((v: number) => updateOverride("textFontSize", v), [updateOverride]);
+  const syncSetContactX = useCallback((v: number) => updateOverride("contactX", v), [updateOverride]);
+  const syncSetContactY = useCallback((v: number) => updateOverride("contactY", v), [updateOverride]);
+  const syncSetContactScaleX = useCallback((v: number) => updateOverride("contactScaleX", v), [updateOverride]);
+  const syncSetContactScaleY = useCallback((v: number) => updateOverride("contactScaleY", v), [updateOverride]);
+  const syncSetShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => updateOverride("shapes", v), [updateOverride]);
 
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
@@ -524,14 +572,12 @@ export function ArtGeneratorModal({
     if (!clientId || !artDataUrl) return;
     setIsSendingEmail(true);
     try {
-      // First upload the art to storage to get a public URL
       const blob = await (await fetch(artDataUrl)).blob();
       const path = `email-arts/${clientId}/${Date.now()}.png`;
       const { error: uploadErr } = await supabase.storage.from("card-uploads").upload(path, blob, { contentType: "image/png" });
       if (uploadErr) throw uploadErr;
       const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
 
-      // Fetch client emails
       const { data: clientData } = await supabase.from("client_data").select("email, email_2, email_3").eq("id", clientId).single();
       if (!clientData) throw new Error("Cliente não encontrado");
       const emails = [clientData.email, (clientData as any).email_2, (clientData as any).email_3].filter(Boolean);
@@ -549,79 +595,44 @@ export function ArtGeneratorModal({
       setIsSendingEmail(false);
     }
   };
-  // Refs for sync
-  const overridesRef = useRef({
-    photoOffsetX, photoOffsetY, photoScale, photoFrame,
-    logoX, logoY, logoScaleX, logoScaleY,
-    textX, textY, textFontSize,
-    contactX, contactY, contactScaleX, contactScaleY,
-    shapeOverrides,
-  });
 
-  const syncRef = useCallback((patch: Partial<typeof overridesRef.current>) => {
-    overridesRef.current = { ...overridesRef.current, ...patch };
-  }, []);
-
-  const syncSetPhotoOffsetX = useCallback((v: number) => { setPhotoOffsetX(v); syncRef({ photoOffsetX: v }); }, [syncRef]);
-  const syncSetPhotoOffsetY = useCallback((v: number) => { setPhotoOffsetY(v); syncRef({ photoOffsetY: v }); }, [syncRef]);
-  const syncSetPhotoScale = useCallback((v: number) => { setPhotoScale(v); syncRef({ photoScale: v }); }, [syncRef]);
-  const syncSetPhotoFrame = useCallback((v: ShapeOverride | null) => { setPhotoFrame(v); syncRef({ photoFrame: v }); }, [syncRef]);
-  const syncSetLogoX = useCallback((v: number) => { setLogoX(v); syncRef({ logoX: v }); }, [syncRef]);
-  const syncSetLogoY = useCallback((v: number) => { setLogoY(v); syncRef({ logoY: v }); }, [syncRef]);
-  const syncSetLogoScaleX = useCallback((v: number) => { setLogoScaleX(v); syncRef({ logoScaleX: v }); }, [syncRef]);
-  const syncSetLogoScaleY = useCallback((v: number) => { setLogoScaleY(v); syncRef({ logoScaleY: v }); }, [syncRef]);
-  const syncSetTextX = useCallback((v: number) => { setTextX(v); syncRef({ textX: v }); }, [syncRef]);
-  const syncSetTextY = useCallback((v: number) => { setTextY(v); syncRef({ textY: v }); }, [syncRef]);
-  const syncSetTextFontSize = useCallback((v: number) => { setTextFontSize(v); syncRef({ textFontSize: v }); }, [syncRef]);
-  const syncSetContactX = useCallback((v: number) => { setContactX(v); syncRef({ contactX: v }); }, [syncRef]);
-  const syncSetContactY = useCallback((v: number) => { setContactY(v); syncRef({ contactY: v }); }, [syncRef]);
-  const syncSetContactScaleX = useCallback((v: number) => { setContactScaleX(v); syncRef({ contactScaleX: v }); }, [syncRef]);
-  const syncSetContactScaleY = useCallback((v: number) => { setContactScaleY(v); syncRef({ contactScaleY: v }); }, [syncRef]);
-  const syncSetShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => { setShapeOverrides(v); syncRef({ shapeOverrides: v }); }, [syncRef]);
-
-  const photoImageRef = useRef(photoImage);
-  useEffect(() => { photoImageRef.current = photoImage; });
+  // Refs for current page regeneration
   const templateRef = useRef(template);
   useEffect(() => { templateRef.current = template; });
 
-  const regeneratePreview = useCallback(async () => {
+  const regenerateCurrentPage = useCallback(async () => {
     const tmpl = templateRef.current;
     if (!tmpl) return;
-    const ov = overridesRef.current;
-    const text = cardText || cardTitle || clientName;
-
     setIsRegenerating(true);
     try {
-      const dataUrl = await renderArt(tmpl, brandKit, text, photoImageRef.current, {
-        x: ov.photoOffsetX,
-        y: ov.photoOffsetY,
-      }, {
-        logoX: ov.logoX, logoY: ov.logoY,
-        logoScaleX: ov.logoScaleX, logoScaleY: ov.logoScaleY,
-        textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
-        contactX: ov.contactX, contactY: ov.contactY,
-        contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
-        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
-        shapes: ov.shapeOverrides,
+      const ov = pageOverrides[currentPage] || {};
+      const offset = pagePhotoOffsets[currentPage] || { x: 0, y: 0 };
+      const photo = pagePhotos[currentPage] || null;
+      const text = pages[currentPage] || "";
+      const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, ov);
+      setPageArts(prev => {
+        const copy = [...prev];
+        copy[currentPage] = dataUrl;
+        return copy;
       });
-      setArtDataUrl(dataUrl);
     } catch (err) {
       console.error("Regenerate error:", err);
     } finally {
       setIsRegenerating(false);
     }
-  }, [cardText, cardTitle, clientName, brandKit]);
+  }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pages, brandKit]);
 
   const handleDragEnd = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
-      regeneratePreview();
+      regenerateCurrentPage();
     }, 80);
-  }, [regeneratePreview]);
+  }, [regenerateCurrentPage]);
 
   const generateArt = useCallback(async () => {
     setStatus("loading");
-    setArtDataUrl(null);
+    setPageArts([]);
+    setCurrentPage(0);
 
     try {
       const { data: templates, error } = await supabase
@@ -652,80 +663,94 @@ export function ArtGeneratorModal({
       await loadGoogleFont(fontFamily);
 
       // Load material images from card uploads
-      let matImage: string | null = null;
+      let matImages: string[] = [];
       try {
         const { data: uploads } = await supabase
           .from("card_uploads")
           .select("file_url, file_type")
           .eq("card_id", cardId)
           .eq("upload_type", "material");
-        const imgs = (uploads || [])
+        matImages = (uploads || [])
           .filter(u => u.file_type.startsWith("image"))
           .map(u => u.file_url);
-        if (imgs.length > 0) matImage = imgs[0];
       } catch { /* ignore */ }
 
-      // If no material images, search Pexels
-      if (!matImage) {
-        try {
-          const sq = (cardTitle || cardText || clientName).substring(0, 80);
-          const pexelsResults = await searchPexelsImages(sq, 1);
-          if (pexelsResults.length > 0) {
-            matImage = pexelsResults[0].urls.regular;
-          }
-        } catch { /* ignore */ }
+      // Generate all pages
+      const arts: (string | null)[] = [];
+      const photos: (string | null)[] = [];
+      const overrides: ElementOverrides[] = [];
+      const offsets: { x: number; y: number }[] = [];
+
+      for (let i = 0; i < pages.length; i++) {
+        let photo: string | null = matImages[i] || null;
+
+        // If no material, search Pexels
+        if (!photo) {
+          try {
+            const sq = pages[i].substring(0, 80);
+            const pexelsResults = await searchPexelsImages(sq, 1);
+            if (pexelsResults.length > 0) {
+              photo = pexelsResults[0].urls.regular;
+            }
+          } catch { /* ignore */ }
+        }
+
+        photos.push(photo);
+        overrides.push({});
+        offsets.push({ x: 0, y: 0 });
+
+        const dataUrl = await renderArt(tmpl, brandKit, pages[i], photo, { x: 0, y: 0 }, {});
+        arts.push(dataUrl);
       }
 
-      setPhotoImage(matImage);
-      photoImageRef.current = matImage;
-
-      // Reset overrides
-      setPhotoOffsetX(0); setPhotoOffsetY(0); setPhotoScale(100);
-      setPhotoFrame(null);
-      setLogoX(0); setLogoY(0); setLogoScaleX(100); setLogoScaleY(100);
-      setTextX(0); setTextY(0); setTextFontSize(100);
-      setContactX(0); setContactY(0); setContactScaleX(100); setContactScaleY(100);
-      setShapeOverrides({});
-      overridesRef.current = {
-        photoOffsetX: 0, photoOffsetY: 0, photoScale: 100, photoFrame: null,
-        logoX: 0, logoY: 0, logoScaleX: 100, logoScaleY: 100,
-        textX: 0, textY: 0, textFontSize: 100,
-        contactX: 0, contactY: 0, contactScaleX: 100, contactScaleY: 100,
-        shapeOverrides: {},
-      };
-
-      const text = cardText || cardTitle || clientName;
-      const dataUrl = await renderArt(tmpl, brandKit, text, matImage, { x: 0, y: 0 }, {});
-      setArtDataUrl(dataUrl);
+      setPageArts(arts);
+      setPagePhotos(photos);
+      setPageOverrides(overrides);
+      setPagePhotoOffsets(offsets);
       setStatus("ready");
     } catch (err) {
       console.error("Art generation error:", err);
       toast.error("Erro ao gerar arte");
       setStatus("error");
     }
-  }, [cardId, cardTitle, cardText, brandKit, clientName, cardIndex]);
+  }, [cardId, cardTitle, cardText, brandKit, clientName, cardIndex, pages]);
 
   useEffect(() => {
     if (isOpen) {
       generateArt();
     } else {
       setStatus("loading");
-      setArtDataUrl(null);
+      setPageArts([]);
+      setPagePhotos([]);
+      setPageOverrides([]);
+      setPagePhotoOffsets([]);
       setTemplate(null);
-      setPhotoImage(null);
+      setCurrentPage(0);
     }
   }, [isOpen]);
 
   const handleDownload = async () => {
     if (!artDataUrl) return;
     
-    // Download locally
-    const link = document.createElement("a");
-    link.download = `${clientName}-${cardTitle.slice(0, 20)}.png`;
-    link.href = artDataUrl;
-    link.click();
+    if (isCarousel) {
+      // Download all pages
+      for (let i = 0; i < pageArts.length; i++) {
+        const art = pageArts[i];
+        if (!art) continue;
+        const link = document.createElement("a");
+        link.download = `${clientName}-${cardTitle.slice(0, 15)}-p${i + 1}.png`;
+        link.href = art;
+        link.click();
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } else {
+      const link = document.createElement("a");
+      link.download = `${clientName}-${cardTitle.slice(0, 20)}.png`;
+      link.href = artDataUrl;
+      link.click();
+    }
 
-    // Upload to storage with 24h expiry (same as video flow)
+    // Upload to storage with 24h expiry
     try {
       const response = await fetch(artDataUrl);
       const blob = await response.blob();
@@ -774,26 +799,25 @@ export function ArtGeneratorModal({
   };
 
   const handleSelectPhoto = async (imageUrl: string) => {
-    setPhotoImage(imageUrl);
-    photoImageRef.current = imageUrl;
+    // Update photo for current page
+    setPagePhotos(prev => {
+      const copy = [...prev];
+      copy[currentPage] = imageUrl;
+      return copy;
+    });
     setIsImageDialogOpen(false);
     setCustomImageUrl("");
-    // Regenerate
+    // Regenerate current page
     if (template) {
-      const text = cardText || cardTitle || clientName;
-      const ov = overridesRef.current;
-      const dataUrl = await renderArt(template, brandKit, text, imageUrl, {
-        x: ov.photoOffsetX, y: ov.photoOffsetY,
-      }, {
-        logoX: ov.logoX, logoY: ov.logoY,
-        logoScaleX: ov.logoScaleX, logoScaleY: ov.logoScaleY,
-        textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
-        contactX: ov.contactX, contactY: ov.contactY,
-        contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
-        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
-        shapes: ov.shapeOverrides,
+      const text = pages[currentPage] || "";
+      const ov = pageOverrides[currentPage] || {};
+      const offset = pagePhotoOffsets[currentPage] || { x: 0, y: 0 };
+      const dataUrl = await renderArt(template, brandKit, text, imageUrl, offset, ov);
+      setPageArts(prev => {
+        const copy = [...prev];
+        copy[currentPage] = dataUrl;
+        return copy;
       });
-      setArtDataUrl(dataUrl);
     }
   };
 
@@ -877,13 +901,38 @@ export function ArtGeneratorModal({
                 />
               </div>
 
+              {/* Page navigation for carousel */}
+              {isCarousel && (
+                <div className="flex items-center justify-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium">
+                    {currentPage + 1} / {pages.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(p => Math.min(pages.length - 1, p + 1))}
+                    disabled={currentPage === pages.length - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   className="flex-1"
                   onClick={() => {
-                    setSearchQuery((cardTitle || cardText).split(" ").slice(0, 3).join(" "));
+                    setSearchQuery(pages[currentPage]?.split(" ").slice(0, 3).join(" ") || "");
                     setIsImageDialogOpen(true);
                   }}
                 >
@@ -892,7 +941,7 @@ export function ArtGeneratorModal({
                 </Button>
                 <Button onClick={handleDownload} className="flex-1">
                   <Download className="mr-2 h-4 w-4" />
-                  Baixar Arte
+                  {isCarousel ? `Baixar Todas (${pages.length})` : "Baixar Arte"}
                 </Button>
               </div>
             </div>
