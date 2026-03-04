@@ -826,7 +826,7 @@ export function VideoGeneratorModal({
                     </RadioGroup>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => handleExport(false)} disabled={status === "exporting" || isSendingEmail} className="gap-2 flex-1">
+                    <Button onClick={() => handleExport(false)} disabled={isSendingEmail} className="gap-2 flex-1">
                       <Download className="h-4 w-4" />
                       Baixar Com Áudio
                     </Button>
