@@ -359,6 +359,19 @@ All colors MUST be HSL.
 .anim-preview-elastic-in { animation: ap-elastic 1.2s ease-out forwards; }
 .anim-preview-flip-in { animation: ap-flip 1.2s ease-out forwards; }
 .anim-preview-spin-in { animation: ap-spin 1.2s ease-out forwards; }
+.anim-preview-rise { animation: ap-rise 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.anim-preview-pop { animation: ap-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.anim-preview-flow { animation: ap-flow 1.4s ease-out forwards; }
+.anim-preview-breathe-in { animation: ap-breathe-in 1.5s ease-in-out forwards; }
+.anim-preview-tectonic { animation: ap-tectonic 0.8s ease-out forwards; }
+.anim-preview-drift-in { animation: ap-drift-in 1.6s ease-out forwards; }
+.anim-preview-wipe-left { animation: ap-wipe-left 1.0s ease-out forwards; }
+.anim-preview-wipe-right { animation: ap-wipe-right 1.0s ease-out forwards; }
+.anim-preview-stomp { animation: ap-stomp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.anim-preview-tumble { animation: ap-tumble 1.0s ease-out forwards; }
+.anim-preview-zoom-out-in { animation: ap-zoom-out-in 0.8s ease-out forwards; }
+.anim-preview-glitch { animation: ap-glitch 0.6s steps(4) forwards; }
+.anim-preview-panorama { animation: ap-panorama 1.2s ease-in-out forwards; }
 
 @keyframes ap-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes ap-slide-up { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
@@ -375,3 +388,16 @@ All colors MUST be HSL.
 @keyframes ap-elastic { 0% { opacity: 0; transform: scaleX(0.3); } 40% { transform: scaleX(1.1); } 60% { transform: scaleX(0.95); } 80% { transform: scaleX(1.02); } 100% { opacity: 1; transform: scaleX(1); } }
 @keyframes ap-flip { from { opacity: 0; transform: perspective(400px) rotateY(90deg); } to { opacity: 1; transform: perspective(400px) rotateY(0); } }
 @keyframes ap-spin { from { opacity: 0; transform: rotate(-360deg) scale(0.5); } to { opacity: 1; transform: rotate(0) scale(1); } }
+@keyframes ap-rise { 0% { opacity: 0; transform: translateY(60px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ap-pop { 0% { opacity: 0; transform: scale(0); } 60% { opacity: 1; transform: scale(1.2); } 80% { transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes ap-flow { 0% { opacity: 0; transform: translateX(-60px) skewX(10deg); } 50% { transform: translateX(10px) skewX(-3deg); } 100% { opacity: 1; transform: translateX(0) skewX(0); } }
+@keyframes ap-breathe-in { 0% { opacity: 0; transform: scale(0.85); } 50% { opacity: 0.7; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes ap-tectonic { 0% { opacity: 0; transform: translateX(-8px); } 15% { transform: translateX(8px); } 30% { transform: translateX(-6px); } 45% { transform: translateX(4px); } 60% { transform: translateX(-2px); } 75% { transform: translateX(1px); } 100% { opacity: 1; transform: translateX(0); } }
+@keyframes ap-drift-in { 0% { opacity: 0; transform: translate(-30px, 20px) rotate(-5deg); } 100% { opacity: 1; transform: translate(0, 0) rotate(0); } }
+@keyframes ap-wipe-left { from { clip-path: inset(0 100% 0 0); opacity: 1; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+@keyframes ap-wipe-right { from { clip-path: inset(0 0 0 100%); opacity: 1; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+@keyframes ap-stomp { 0% { opacity: 0; transform: scale(2.5); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes ap-tumble { 0% { opacity: 0; transform: rotate(-90deg) translateY(-50px); } 60% { transform: rotate(10deg) translateY(5px); } 100% { opacity: 1; transform: rotate(0) translateY(0); } }
+@keyframes ap-zoom-out-in { 0% { opacity: 0; transform: scale(2); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes ap-glitch { 0% { opacity: 0; transform: translate(-5px, 3px) skewX(5deg); } 25% { opacity: 0.7; transform: translate(5px, -3px) skewX(-3deg); } 50% { opacity: 0.4; transform: translate(-3px, 1px) skewX(2deg); } 75% { opacity: 0.9; transform: translate(2px, -1px) skewX(-1deg); } 100% { opacity: 1; transform: translate(0, 0) skewX(0); } }
+@keyframes ap-panorama { 0% { opacity: 0; transform: translateX(-100%); } 100% { opacity: 1; transform: translateX(0); } }
