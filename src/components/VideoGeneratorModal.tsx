@@ -236,6 +236,7 @@ export function VideoGeneratorModal({
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<"1" | "2" | "none">("1");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailProgress, setEmailProgress] = useState(0);
 
   const handleSendEmail = async (videoUrl: string) => {
     if (!clientId) return;
@@ -244,7 +245,7 @@ export function VideoGeneratorModal({
       const { data: clientData } = await supabase.from("client_data").select("email, email_2, email_3").eq("id", clientId).single();
       if (!clientData) throw new Error("Cliente não encontrado");
       const emails = [clientData.email, (clientData as any).email_2, (clientData as any).email_3].filter(Boolean);
-      if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); return; }
+      if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); setIsSendingEmail(false); return; }
 
       const { data, error } = await supabase.functions.invoke("send-media-email", {
         body: { emails, subject: `Vídeo - ${clientName}`, mediaUrl: videoUrl, mediaType: "video", clientName, cardText: cardText || cardTitle, caption: undefined },
@@ -256,6 +257,80 @@ export function VideoGeneratorModal({
       toast.error("Erro ao enviar e-mail: " + (err.message || ""));
     } finally {
       setIsSendingEmail(false);
+    }
+  };
+
+  const handleExportAndEmail = async (stripAudio: boolean) => {
+    if (!template || !videoPages || !clientId) return;
+    setIsSendingEmail(true);
+    setEmailProgress(0);
+
+    try {
+      const textAnim = getTextAnimation(template);
+      const logoAnim = getLogoAnimation(template);
+      const textAnimDuration = getTextAnimDuration(template);
+      const imageRect = getImagePlaceholderRect(template.contentElements, template.width, template.height);
+      const imageClipShape = getImageClipShape(template.contentElements);
+
+      const blob = await encodeVideoToMP4(videoPages.pages, {
+        width: template.width,
+        height: template.height,
+        pageDuration: template.pageDuration,
+        fps: 24,
+        motionEffect: "ken-burns" as MotionEffect,
+        transitionEffect: "fade" as TransitionEffect,
+        textAnimation: textAnim,
+        logoAnimation: logoAnim,
+        textAnimDuration: textAnimDuration / (template.pageDuration || 3),
+        backgroundVideoUrls: videoUrls,
+        overlayPages: videoPages.overlayPages,
+        frameOverlayPages: videoPages.frameOverlayPages,
+        logoOverlayPages: videoPages.logoOverlayPages,
+        imageRect,
+        imageClipShape,
+        pageImageAdjustments,
+        audioUrl: stripAudio ? undefined : (
+          selectedAudioTrack === "1" ? (template.audioUrl1 || template.audioUrl2 || undefined) :
+          selectedAudioTrack === "2" ? (template.audioUrl2 || template.audioUrl1 || undefined) :
+          undefined
+        ),
+        onProgress: setEmailProgress,
+      });
+
+      let finalBlob = blob;
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (!isMobile) {
+        const numPages = videoPages.pages.length;
+        const expectedDuration = numPages * template.pageDuration;
+        try {
+          finalBlob = await reencodeForWhatsApp(blob, () => {}, { stripAudio, expectedDuration });
+        } catch { /* use original */ }
+      }
+
+      // Upload to storage
+      const storagePath = `${cardId}/${Date.now()}-generated.mp4`;
+      const { error: uploadErr } = await supabase.storage
+        .from("card-uploads")
+        .upload(storagePath, finalBlob, { contentType: "video/mp4" });
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      await supabase
+        .from("project_briefs")
+        .update({ generated_video_url: urlData.publicUrl, generated_video_expires_at: expiresAt })
+        .eq("id", cardId);
+
+      // Send email
+      await handleSendEmail(urlData.publicUrl);
+      setExportedBlob(finalBlob);
+      onExported?.();
+    } catch (err: any) {
+      console.error("Export+Email error:", err);
+      toast.error("Erro ao enviar: " + (err?.message || "").slice(0, 120));
+    } finally {
+      setIsSendingEmail(false);
+      setEmailProgress(0);
     }
   };
 
