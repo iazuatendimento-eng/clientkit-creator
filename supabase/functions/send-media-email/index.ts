@@ -55,46 +55,17 @@ serve(async (req) => {
       `;
     }
 
-    // Try to fetch the media and attach if small enough, otherwise send as link
+    // For videos: always send as download link (videos are too large for edge fn memory)
+    // For images: fetch and attach as base64
     let attachments: any[] = [];
-    let useLink = false;
 
-    try {
-      // First do a HEAD request to check size without downloading
-      const headResponse = await fetch(mediaUrl, { method: 'HEAD' });
-      const contentLength = headResponse.headers.get('content-length');
-      const fileSize = contentLength ? parseInt(contentLength, 10) : 0;
-
-      if (fileSize > MAX_ATTACHMENT_BYTES) {
-        // Too large for attachment, send as download link
-        useLink = true;
-        console.log(`File too large for attachment (${(fileSize / 1024 / 1024).toFixed(1)}MB), sending as link`);
-      } else {
-        // Small enough, download and attach
+    if (!isVideo) {
+      try {
         const mediaResponse = await fetch(mediaUrl);
         if (mediaResponse.ok) {
           const arrayBuffer = await mediaResponse.arrayBuffer();
-          
-          // Double-check actual size
-          if (arrayBuffer.byteLength > MAX_ATTACHMENT_BYTES) {
-            useLink = true;
-            console.log(`Actual file too large (${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB), sending as link`);
-          } else {
+          if (arrayBuffer.byteLength < 10 * 1024 * 1024) {
             const bytes = new Uint8Array(arrayBuffer);
-            // Convert to base64 in chunks to avoid stack overflow
-            const chunkSize = 32768;
-            let base64 = '';
-            for (let i = 0; i < bytes.length; i += chunkSize) {
-              const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-              let binary = '';
-              for (let j = 0; j < chunk.length; j++) {
-                binary += String.fromCharCode(chunk[j]);
-              }
-              base64 += btoa(binary);
-            }
-            
-            // btoa on chunks doesn't work correctly for base64 - need proper encoding
-            // Re-do with proper full base64
             let fullBinary = '';
             for (let i = 0; i < bytes.length; i += 8192) {
               const chunk = bytes.subarray(i, Math.min(i + 8192, bytes.length));
@@ -103,44 +74,26 @@ serve(async (req) => {
               }
             }
             const base64Content = btoa(fullBinary);
-            
-            const contentType = mediaResponse.headers.get("content-type") || (isVideo ? "video/mp4" : "image/png");
-            const extension = isVideo ? "mp4" : "png";
-            const fileName = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}.${extension}`;
-            attachments = [{
-              filename: fileName,
-              content: base64Content,
-              type: contentType,
-            }];
+            const contentType = mediaResponse.headers.get("content-type") || "image/png";
+            const fileName = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+            attachments = [{ filename: fileName, content: base64Content, type: contentType }];
           }
-        } else {
-          console.error("Failed to fetch media:", mediaResponse.status);
-          useLink = true;
         }
+      } catch (fetchErr) {
+        console.error("Error fetching image for attachment:", fetchErr);
       }
-    } catch (fetchErr) {
-      console.error("Error fetching media for attachment:", fetchErr);
-      useLink = true;
     }
 
     // Build media section in email body
     let mediaSection = '';
     if (isVideo) {
-      if (useLink) {
-        mediaSection = `
-          <div style="text-align: center; margin: 30px 0;">
-            <p style="color: #555; margin-bottom: 16px;">O vídeo é grande demais para anexo. Clique no botão abaixo para baixar:</p>
-            <a href="${mediaUrl}" style="display: inline-block; background-color: #7c3aed; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">⬇️ Baixar Vídeo</a>
-            <p style="color: #999; font-size: 12px; margin-top: 12px;">Este link expira em alguns dias.</p>
-          </div>
-        `;
-      } else {
-        mediaSection = `
-          <div style="text-align: center; margin: 30px 0;">
-            <p style="color: #555;">O vídeo foi enviado em anexo neste e-mail.</p>
-          </div>
-        `;
-      }
+      mediaSection = `
+        <div style="text-align: center; margin: 30px 0;">
+          <p style="color: #555; margin-bottom: 16px;">Clique no botão abaixo para baixar o vídeo:</p>
+          <a href="${mediaUrl}" style="display: inline-block; background-color: #7c3aed; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">⬇️ Baixar Vídeo</a>
+          <p style="color: #999; font-size: 12px; margin-top: 12px;">Este link expira em alguns dias.</p>
+        </div>
+      `;
     } else {
       mediaSection = `
         <div style="text-align: center; margin: 30px 0;">
