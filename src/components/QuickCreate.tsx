@@ -81,6 +81,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
       const title = text.split("\n")[0].slice(0, 100) || "Criação Rápida";
       const today = new Date().toISOString().split("T")[0];
 
+      // Create a temporary card (will be deleted after modal closes)
       const brief = await createProjectBrief({
         client_id: clientId,
         title,
@@ -103,7 +104,6 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
 
       setCreatedCardId(brief.id);
 
-      // Open the appropriate modal
       if (type === "video") {
         setIsVideoGenOpen(true);
       } else {
@@ -117,11 +117,19 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
     }
   };
 
-  const handleModalClose = () => {
+  const handleModalClose = async () => {
+    // Delete the temporary card and its uploads (no record left)
+    if (createdCardId) {
+      try {
+        await supabase.from("card_uploads").delete().eq("card_id", createdCardId);
+        await supabase.from("project_briefs").delete().eq("id", createdCardId);
+      } catch (err) {
+        console.error("Cleanup error:", err);
+      }
+    }
     setIsVideoGenOpen(false);
     setIsArtGenOpen(false);
     setShowTemplateSelector(false);
-    // Reset form
     setText("");
     setUploadedFiles([]);
     setCreatedCardId(null);
