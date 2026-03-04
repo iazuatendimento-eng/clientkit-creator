@@ -141,29 +141,11 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
             </p>
           </div>
         )}
-        <Tabs defaultValue="board" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="board">Quadro de Projetos</TabsTrigger>
-            <TabsTrigger value="quick">Criar Rápido</TabsTrigger>
-          </TabsList>
-          <TabsContent value="board">
-            <ProjectBoard 
-              brandKits={client.brand_kit ? [client.brand_kit] : []}
-              onCreateProject={handleCreateProject}
-              clientName={client.name}
-              clientId={client.id}
-              isPublicView={false}
-              isInactive={!client.active}
-            />
-          </TabsContent>
-          <TabsContent value="quick">
-            <QuickCreate
-              clientId={client.id}
-              clientName={client.name}
-              brandKit={client.brand_kit}
-            />
-          </TabsContent>
-        </Tabs>
+        <QuickCreate
+          clientId={client.id}
+          clientName={client.name}
+          brandKit={client.brand_kit}
+        />
       </div>
     </div>
   );
