@@ -860,7 +860,7 @@ export function VideoGeneratorModal({
                 </>
               ) : (
                 <>
-                  <Button onClick={() => handleExport(true)} disabled={status === "exporting" || isSendingEmail} className="gap-2 w-full">
+                  <Button onClick={() => handleExport(true)} disabled={isSendingEmail} className="gap-2 w-full">
                     <Download className="h-4 w-4" />
                     Baixar Vídeo
                   </Button>
