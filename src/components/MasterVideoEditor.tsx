@@ -2881,6 +2881,15 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                         { value: "spin-in", label: "Girar" },
                         { value: "flip-in", label: "Virar" },
                         { value: "swing", label: "Balançar" },
+                        { value: "rise", label: "Elevação" },
+                        { value: "pop", label: "Surgir" },
+                        { value: "flow", label: "Correnteza" },
+                        { value: "breathe-in", label: "Sopro" },
+                        { value: "tectonic", label: "Tectônico" },
+                        { value: "stomp", label: "Impacto" },
+                        { value: "tumble", label: "Cambalhota" },
+                        { value: "zoom-out-in", label: "Zoom Out" },
+                        { value: "glitch", label: "Glitch" },
                       ];
                     }
                     if (type === "text" || type === "contact") {
@@ -2900,6 +2909,19 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                         { value: "swing-in", label: "Balançar" },
                         { value: "elastic-in", label: "Elástico" },
                         { value: "flip-in", label: "Virar" },
+                        { value: "rise", label: "Elevação" },
+                        { value: "pop", label: "Surgir" },
+                        { value: "flow", label: "Correnteza" },
+                        { value: "breathe-in", label: "Sopro" },
+                        { value: "tectonic", label: "Tectônico" },
+                        { value: "drift-in", label: "Deriva" },
+                        { value: "wipe-left", label: "Panorama →" },
+                        { value: "wipe-right", label: "← Panorama" },
+                        { value: "stomp", label: "Impacto" },
+                        { value: "tumble", label: "Cambalhota" },
+                        { value: "zoom-out-in", label: "Zoom Out" },
+                        { value: "glitch", label: "Glitch" },
+                        { value: "panorama", label: "Deslizar" },
                       ];
                     }
                     return [
@@ -2909,6 +2931,14 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                       { value: "slide-up", label: "Subir" },
                       { value: "slide-down", label: "Descer" },
                       { value: "bounce-in", label: "Quicar" },
+                      { value: "rise", label: "Elevação" },
+                      { value: "pop", label: "Surgir" },
+                      { value: "flow", label: "Correnteza" },
+                      { value: "breathe-in", label: "Sopro" },
+                      { value: "tectonic", label: "Tectônico" },
+                      { value: "stomp", label: "Impacto" },
+                      { value: "zoom-out-in", label: "Zoom Out" },
+                      { value: "glitch", label: "Glitch" },
                     ];
                   };
 

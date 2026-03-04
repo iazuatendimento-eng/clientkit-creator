@@ -4,8 +4,8 @@ import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
 export type TransitionEffect = "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "zoom-out";
-export type TextAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "typewriter" | "bounce-in" | "rotate-in" | "blur-in" | "drop-in" | "swing-in" | "elastic-in" | "flip-in";
-export type LogoAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "bounce-in" | "spin-in" | "flip-in" | "swing";
+export type TextAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "typewriter" | "bounce-in" | "rotate-in" | "blur-in" | "drop-in" | "swing-in" | "elastic-in" | "flip-in" | "rise" | "pop" | "flow" | "breathe-in" | "tectonic" | "drift-in" | "wipe-left" | "wipe-right" | "stomp" | "tumble" | "zoom-out-in" | "glitch" | "panorama";
+export type LogoAnimation = "none" | "fade-in" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale-in" | "bounce-in" | "spin-in" | "flip-in" | "swing" | "rise" | "pop" | "flow" | "breathe-in" | "tectonic" | "stomp" | "tumble" | "zoom-out-in" | "glitch";
 
 export interface VideoEncoderOptions {
   width: number;
@@ -610,6 +610,51 @@ function getTextAnimationTransform(effect: TextAnimation, progress: number, cust
       const s = eased < 0.3 ? eased / 0.3 * 0.01 : 0.01 + (eased - 0.3) / 0.7;
       return { opacity: eased, translateX: 0, translateY: (1 - eased) * 15, scale: Math.max(0.01, s), rotate: 0 };
     }
+    case "rise":
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 40, scale: 0.95 + eased * 0.05, rotate: 0 };
+    case "pop": {
+      let popScale: number;
+      if (t < 0.4) popScale = t / 0.4 * 1.2;
+      else if (t < 0.6) popScale = 1.2 - (t - 0.4) / 0.2 * 0.3;
+      else if (t < 0.8) popScale = 0.9 + (t - 0.6) / 0.2 * 0.1;
+      else popScale = 1;
+      return { opacity: Math.min(1, t * 3), translateX: 0, translateY: 0, scale: Math.max(0.01, popScale), rotate: 0 };
+    }
+    case "flow": {
+      const skewFactor = (1 - eased) * 8;
+      return { opacity: eased, translateX: (1 - eased) * -40, translateY: 0, scale: 1, rotate: skewFactor * 0.3 };
+    }
+    case "breathe-in": {
+      const breatheScale = t < 0.5 ? 0.85 + t * 0.4 : 1.05 - (t - 0.5) * 0.1;
+      return { opacity: eased, translateX: 0, translateY: 0, scale: breatheScale, rotate: 0 };
+    }
+    case "tectonic": {
+      const shakeAmp = (1 - t) * 8;
+      const shakeX = Math.sin(t * Math.PI * 8) * shakeAmp;
+      return { opacity: Math.min(1, t * 2), translateX: shakeX * 0.3, translateY: 0, scale: 1, rotate: 0 };
+    }
+    case "drift-in":
+      return { opacity: eased, translateX: (1 - eased) * -20, translateY: (1 - eased) * 15, scale: 1, rotate: (1 - eased) * -5 };
+    case "wipe-left":
+    case "wipe-right":
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1, rotate: 0 };
+    case "stomp":
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 + (1 - eased) * 1.5, rotate: 0 };
+    case "tumble": {
+      let tumbleR: number;
+      if (t < 0.6) tumbleR = -90 + (t / 0.6) * 100;
+      else tumbleR = 10 - (t - 0.6) / 0.4 * 10;
+      return { opacity: Math.min(1, t * 2), translateX: 0, translateY: (1 - eased) * -30, scale: 1, rotate: tumbleR };
+    }
+    case "zoom-out-in":
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 + (1 - eased) * 1, rotate: 0 };
+    case "glitch": {
+      const glitchX = Math.sin(t * Math.PI * 8) * (1 - t) * 5;
+      const glitchY = Math.cos(t * Math.PI * 6) * (1 - t) * 3;
+      return { opacity: Math.min(1, t * 2.5), translateX: glitchX * 0.3, translateY: glitchY * 0.3, scale: 1, rotate: 0 };
+    }
+    case "panorama":
+      return { opacity: eased, translateX: (1 - eased) * -70, translateY: 0, scale: 1, rotate: 0 };
     default:
       return { opacity: 1, translateX: 0, translateY: 0, scale: 1, rotate: 0 };
   }
@@ -656,6 +701,41 @@ function getLogoAnimationTransform(effect: LogoAnimation, progress: number): { o
     case "swing": {
       const angle = Math.sin(t * Math.PI * 3) * (1 - eased) * 25;
       return { opacity: eased, translateX: 0, translateY: 0, scale: 1, rotate: angle };
+    }
+    case "rise":
+      return { opacity: eased, translateX: 0, translateY: (1 - eased) * 30, scale: 0.95 + eased * 0.05, rotate: 0 };
+    case "pop": {
+      let popS: number;
+      if (t < 0.4) popS = t / 0.4 * 1.2;
+      else if (t < 0.7) popS = 1.2 - (t - 0.4) / 0.3 * 0.3;
+      else popS = 1;
+      return { opacity: Math.min(1, t * 3), translateX: 0, translateY: 0, scale: Math.max(0.01, popS), rotate: 0 };
+    }
+    case "flow": {
+      return { opacity: eased, translateX: (1 - eased) * -30, translateY: 0, scale: 1, rotate: (1 - eased) * 5 };
+    }
+    case "breathe-in": {
+      const bScale = t < 0.5 ? 0.85 + t * 0.4 : 1.05 - (t - 0.5) * 0.1;
+      return { opacity: eased, translateX: 0, translateY: 0, scale: bScale, rotate: 0 };
+    }
+    case "tectonic": {
+      const amp = (1 - t) * 6;
+      const shk = Math.sin(t * Math.PI * 8) * amp;
+      return { opacity: Math.min(1, t * 2), translateX: shk * 0.3, translateY: 0, scale: 1, rotate: 0 };
+    }
+    case "stomp":
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 + (1 - eased) * 1.5, rotate: 0 };
+    case "tumble": {
+      let tR: number;
+      if (t < 0.6) tR = -90 + (t / 0.6) * 100;
+      else tR = 10 - (t - 0.6) / 0.4 * 10;
+      return { opacity: Math.min(1, t * 2), translateX: 0, translateY: (1 - eased) * -20, scale: 1, rotate: tR };
+    }
+    case "zoom-out-in":
+      return { opacity: eased, translateX: 0, translateY: 0, scale: 1 + (1 - eased) * 1, rotate: 0 };
+    case "glitch": {
+      const gx = Math.sin(t * Math.PI * 8) * (1 - t) * 4;
+      return { opacity: Math.min(1, t * 2.5), translateX: gx * 0.3, translateY: 0, scale: 1, rotate: 0 };
     }
     default:
       return { opacity: 1, translateX: 0, translateY: 0, scale: 1, rotate: 0 };
