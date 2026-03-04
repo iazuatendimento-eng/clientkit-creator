@@ -10,6 +10,7 @@ import { createProjectBrief } from "@/lib/clientDatabase";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { ArtGeneratorModal } from "@/components/ArtGeneratorModal";
 import { useVideoPregenerate } from "@/hooks/useVideoPregenerate";
+import { TemplateSelector } from "@/components/TemplateSelector";
 
 interface QuickCreateProps {
   clientId: string;
@@ -26,6 +27,8 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
   const [createdCardId, setCreatedCardId] = useState<string | null>(null);
   const [isVideoGenOpen, setIsVideoGenOpen] = useState(false);
   const [isArtGenOpen, setIsArtGenOpen] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [selectedTemplateIndex, setSelectedTemplateIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pregenerate video data when a card is ready
@@ -35,7 +38,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
     text.split("\n")[0] || clientName,
     brandKit,
     clientName,
-    0,
+    selectedTemplateIndex,
     !!createdCardId && type === "video"
   );
 
@@ -62,11 +65,17 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
     }
   };
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!text.trim()) {
       toast.error("Cole o texto primeiro!");
       return;
     }
+    setShowTemplateSelector(true);
+  };
+
+  const handleTemplateSelected = async (index: number) => {
+    setSelectedTemplateIndex(index);
+    setShowTemplateSelector(false);
     setCreating(true);
     try {
       const title = text.split("\n")[0].slice(0, 100) || "Criação Rápida";
@@ -111,11 +120,34 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
   const handleModalClose = () => {
     setIsVideoGenOpen(false);
     setIsArtGenOpen(false);
+    setShowTemplateSelector(false);
     // Reset form
     setText("");
     setUploadedFiles([]);
     setCreatedCardId(null);
+    setSelectedTemplateIndex(0);
   };
+
+  if (showTemplateSelector) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            Escolher Template
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Visualize e selecione o template para {type === "video" ? "vídeo" : "arte"}.
+          </p>
+        </div>
+        <TemplateSelector
+          type={type}
+          onSelect={handleTemplateSelected}
+          onBack={() => setShowTemplateSelector(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -228,7 +260,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
             cardText={text}
             brandKit={brandKit}
             clientName={clientName}
-            cardIndex={0}
+            cardIndex={selectedTemplateIndex}
             preloadedData={preloadedData}
             clientId={clientId}
           />
@@ -240,7 +272,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps
             cardText={text}
             brandKit={brandKit}
             clientName={clientName}
-            cardIndex={0}
+            cardIndex={selectedTemplateIndex}
             clientId={clientId}
           />
         </>
