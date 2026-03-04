@@ -775,7 +775,7 @@ export function ArtGeneratorModal({
     }
 
     onExported?.();
-    onClose();
+    toast.success("Arte baixada!");
   };
 
   // Photo search
@@ -944,6 +944,18 @@ export function ArtGeneratorModal({
                   {isCarousel ? `Baixar Todas (${pages.length})` : "Baixar Arte"}
                 </Button>
               </div>
+              {/* Send email button */}
+              {clientId && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleSendEmail}
+                  disabled={isSendingEmail}
+                >
+                  {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                  {isSendingEmail ? "Enviando..." : "Enviar por E-mail"}
+                </Button>
+              )}
             </div>
           )}
         </DialogContent>
