@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrandKitEditor } from "@/components/BrandKitEditor";
 import { CanvasEditor } from "@/components/CanvasEditor";
 import { AIArtGenerator } from "@/components/AIArtGenerator";
 import ProjectBoard from "@/components/ProjectBoard";
+import { QuickCreate } from "@/components/QuickCreate";
 import { LinkableText } from "@/components/LinkableText";
 
 interface Client {
@@ -139,14 +141,29 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
             </p>
           </div>
         )}
-        <ProjectBoard 
-          brandKits={client.brand_kit ? [client.brand_kit] : []}
-          onCreateProject={handleCreateProject}
-          clientName={client.name}
-          clientId={client.id}
-          isPublicView={false}
-          isInactive={!client.active}
-        />
+        <Tabs defaultValue="board" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="board">Quadro de Projetos</TabsTrigger>
+            <TabsTrigger value="quick">Criar Rápido</TabsTrigger>
+          </TabsList>
+          <TabsContent value="board">
+            <ProjectBoard 
+              brandKits={client.brand_kit ? [client.brand_kit] : []}
+              onCreateProject={handleCreateProject}
+              clientName={client.name}
+              clientId={client.id}
+              isPublicView={false}
+              isInactive={!client.active}
+            />
+          </TabsContent>
+          <TabsContent value="quick">
+            <QuickCreate
+              clientId={client.id}
+              clientName={client.name}
+              brandKit={client.brand_kit}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
