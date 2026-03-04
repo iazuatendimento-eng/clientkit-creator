@@ -802,7 +802,7 @@ export function VideoGeneratorModal({
                 </p>
               </div>
 
-              {/* Audio track selector + download buttons */}
+              {/* Audio track selector + download/email buttons */}
               {template.audioUrl1 || template.audioUrl2 ? (
                 <>
                   <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
@@ -826,46 +826,56 @@ export function VideoGeneratorModal({
                     </RadioGroup>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => handleExport(false)} className="gap-2 flex-1">
+                    <Button onClick={() => handleExport(false)} disabled={status === "exporting" || isSendingEmail} className="gap-2 flex-1">
                       <Download className="h-4 w-4" />
                       Baixar Com Áudio
                     </Button>
-                    <Button variant="outline" onClick={() => handleExport(true)} className="gap-2 flex-1">
+                    <Button variant="outline" onClick={() => handleExport(true)} disabled={status === "exporting" || isSendingEmail} className="gap-2 flex-1">
                       <VolumeX className="h-4 w-4" />
                       Baixar Sem Áudio
                     </Button>
                   </div>
+                  {clientId && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleExportAndEmail(false)}
+                        disabled={isSendingEmail || status === "exporting"}
+                        className="gap-2 flex-1 border-primary/30 hover:border-primary/60"
+                      >
+                        {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                        {isSendingEmail && emailProgress > 0 ? `Enviando... ${Math.round(emailProgress * 100)}%` : "📧 Com Áudio"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleExportAndEmail(true)}
+                        disabled={isSendingEmail || status === "exporting"}
+                        className="gap-2 flex-1 border-primary/30 hover:border-primary/60"
+                      >
+                        {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                        📧 Sem Áudio
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
-                <Button onClick={() => handleExport(true)} className="gap-2 w-full">
-                  <Download className="h-4 w-4" />
-                  Baixar Vídeo
-                </Button>
-              )}
-
-              {/* Email button - shown after export */}
-              {clientId && exportedBlob && (
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    // Get the stored video URL from project_briefs
-                    const { data: brief } = await supabase
-                      .from("project_briefs")
-                      .select("generated_video_url")
-                      .eq("id", cardId)
-                      .single();
-                    if (brief?.generated_video_url) {
-                      handleSendEmail(brief.generated_video_url);
-                    } else {
-                      toast.error("Exporte o vídeo primeiro");
-                    }
-                  }}
-                  disabled={isSendingEmail}
-                  className="w-full gap-2"
-                >
-                  {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                  Enviar por E-mail
-                </Button>
+                <>
+                  <Button onClick={() => handleExport(true)} disabled={status === "exporting" || isSendingEmail} className="gap-2 w-full">
+                    <Download className="h-4 w-4" />
+                    Baixar Vídeo
+                  </Button>
+                  {clientId && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleExportAndEmail(true)}
+                      disabled={isSendingEmail || status === "exporting"}
+                      className="gap-2 w-full border-primary/30 hover:border-primary/60"
+                    >
+                      {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                      {isSendingEmail && emailProgress > 0 ? `Enviando... ${Math.round(emailProgress * 100)}%` : "📧 Enviar por E-mail"}
+                    </Button>
+                  )}
+                </>
               )}
 
               {/* Video swap section */}
