@@ -849,7 +849,7 @@ export function VideoGeneratorModal({
                       <Button
                         variant="outline"
                         onClick={() => handleExportAndEmail(true)}
-                        disabled={isSendingEmail || status === "exporting"}
+                        disabled={isSendingEmail}
                         className="gap-2 flex-1 border-primary/30 hover:border-primary/60"
                       >
                         {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
