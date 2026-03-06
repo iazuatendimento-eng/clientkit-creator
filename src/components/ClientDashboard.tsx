@@ -7,7 +7,7 @@ import { BrandKitEditor } from "@/components/BrandKitEditor";
 import { CanvasEditor } from "@/components/CanvasEditor";
 import { AIArtGenerator } from "@/components/AIArtGenerator";
 import ProjectBoard from "@/components/ProjectBoard";
-import { QuickCreate } from "@/components/QuickCreate";
+
 import { LinkableText } from "@/components/LinkableText";
 
 interface Client {
