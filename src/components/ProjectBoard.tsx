@@ -498,20 +498,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
           </div>
           
-          {brandKit && !isPublicView && (
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                {brandKit.colors.slice(0, 3).map((color: string, index: number) => (
-                  <div
-                    key={index}
-                    className="w-3 h-3 rounded-full border border-white/20"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-              <span className="text-xs text-muted-foreground">{brandKit.name}</span>
-            </div>
-          )}
           
           {!isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
