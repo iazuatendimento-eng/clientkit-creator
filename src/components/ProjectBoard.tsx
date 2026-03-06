@@ -1619,8 +1619,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                     </Button>
                   </div>
 
+                  {editingBrief && (
                   <div className="border-t pt-4">
-                    <label className="text-sm font-medium mb-2 block">Ou criar um único briefing</label>
                     <div className="space-y-3">
                       <div>
                         <label className="text-sm font-medium mb-1 block">Título do Projeto</label>
@@ -1641,27 +1641,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                           onChange={(e) => setNewBrief({...newBrief, deadline: e.target.value})}
                         />
                       </div>
-                      {newBrief.type === "art" && (
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">Imagem de Capa</label>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setNewBrief({...newBrief, coverImage: reader.result as string});
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
                       
-                      {editingBrief && editingBrief.generatedCaption && (
+                      {editingBrief.generatedCaption && (
                         <div className="border-t pt-4">
                           <label className="text-sm font-medium mb-2 block">Legenda para Redes Sociais</label>
                           <div className="space-y-2">
@@ -1693,10 +1674,11 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                       )}
                       
                       <Button onClick={handleSaveBrief} className="w-full">
-                        {editingBrief ? "Salvar Alterações" : "Criar Briefing"}
+                        Salvar Alterações
                       </Button>
                     </div>
                   </div>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
