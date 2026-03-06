@@ -711,8 +711,8 @@ const Index = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => handleExportToExcel()}>Todos</DropdownMenuItem>
-                {teams.map(t => (
-                  <DropdownMenuItem key={t} onClick={() => handleExportToExcel(t)}>{t}</DropdownMenuItem>
+                {availableTeams.map(t => (
+                  <DropdownMenuItem key={t.id} onClick={() => handleExportToExcel(t.name)}>{t.name}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
