@@ -144,8 +144,9 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
         <ProjectBoard
           clientId={client.id}
           clientName={client.name}
-          brandKit={client.brand_kit}
-          isClientActive={client.active !== false}
+          brandKits={client.brand_kit ? [client.brand_kit] : []}
+          onCreateProject={handleCreateProject}
+          isInactive={client.active === false}
         />
       </div>
     </div>
