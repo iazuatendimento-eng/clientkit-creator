@@ -702,6 +702,38 @@ const Index = () => {
         <div className="container mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex flex-wrap gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <FileDown className="mr-1 h-4 w-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleExportToExcel()}>Todos</DropdownMenuItem>
+                {teams.map(t => (
+                  <DropdownMenuItem key={t} onClick={() => handleExportToExcel(t)}>{t}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" variant="outline" onClick={() => setIsDeadlineDialogOpen(true)}>
+              <Calendar className="mr-1 h-4 w-4" />
+              Prazo
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <CheckCircle2 className="mr-1 h-4 w-4" />
+                  Concluir
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleBulkMoveToCompleted()}>Todos</DropdownMenuItem>
+                {teams.map(t => (
+                  <DropdownMenuItem key={t} onClick={() => handleBulkMoveToCompleted(t)}>{t}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             <Button
               size="sm"
