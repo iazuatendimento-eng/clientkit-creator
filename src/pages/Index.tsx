@@ -888,15 +888,6 @@ const Index = () => {
                   }`}>
                     {client.company}
                   </div>
-                  {client.team && (
-                    <div className={`text-xs mt-1 ${
-                      selectedClient?.id === client.id
-                        ? 'text-primary-foreground/60'
-                        : 'text-muted-foreground'
-                    }`}>
-                      {client.team || "Sem equipe"}
-                    </div>
-                  )}
                 </button>
               ))
             ) : (
