@@ -604,7 +604,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 className="text-xs px-2 py-1 h-auto w-full"
               >
                 <Upload className="h-3 w-3 mr-1" />
-                Uploads
+                Arquivos
               </Button>
               {/* Generated video with Já Baixei + Enviar por E-mail */}
               {!dismissed && brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
