@@ -936,7 +936,6 @@ const Index = () => {
           )}
         </div>
       </div>
-      </div>
 
       {/* Deadline Dialog */}
       <Dialog open={isDeadlineDialogOpen} onOpenChange={setIsDeadlineDialogOpen}>
@@ -972,6 +971,7 @@ const Index = () => {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
   );
 };
 
