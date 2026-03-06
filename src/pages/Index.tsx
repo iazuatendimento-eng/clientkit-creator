@@ -809,8 +809,8 @@ const Index = () => {
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className="font-semibold">{client.name}</div>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="font-semibold truncate">{client.name}</div>
                       {!client.active && (
                         <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-500">
                           Inativa
