@@ -436,8 +436,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         <div className="flex justify-between items-start">
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <User className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{brief.clientName}</span>
               {brief.artGenerationSelected && (
                 <Badge
                   variant="outline"
