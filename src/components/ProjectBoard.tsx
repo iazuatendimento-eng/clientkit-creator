@@ -869,38 +869,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </div>
                 </div>
               )}
-              {brief.status !== "completed" && isDeadlineReached && (
-                cardIndex % 2 === 0 ? (
-                  <Button
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsVideoGenOpen(true);
-                    }}
-                    className="h-auto py-3.5 text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
-                    disabled={isPreloading}
-                  >
-                    {isPreloading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Film className="h-4 w-4 mr-2" />
-                    )}
-                    <span>{isPreloading ? "Preparando..." : "Baixar Vídeo Feito"}</span>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsArtGenOpen(true);
-                    }}
-                    className="h-auto py-3.5 text-sm font-medium w-full rounded-xl border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all overflow-hidden"
-                  >
-                    <Palette className="h-4 w-4 mr-2" />
-                    <span>Baixar Arte Feita</span>
-                  </Button>
-                )
-              )}
             </div>
             );
           })()}
