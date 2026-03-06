@@ -141,10 +141,11 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
             </p>
           </div>
         )}
-        <QuickCreate
+        <ProjectBoard
           clientId={client.id}
           clientName={client.name}
           brandKit={client.brand_kit}
+          isClientActive={client.active !== false}
         />
       </div>
     </div>
