@@ -998,8 +998,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   );
 
   const columns = [
-    { id: "todo", title: "Vídeos e Artes para Baixar", color: "bg-yellow-500/20 border-yellow-500/30" },
-    { id: "completed", title: "Vídeos e Artes Baixados", color: "bg-green-500/20 border-green-500/30" }
+    { id: "todo", title: "A Fazer", color: "bg-yellow-500/20 border-yellow-500/30" },
+    { id: "completed", title: "Concluído", color: "bg-green-500/20 border-green-500/30" }
   ];
 
   const ColumnDroppable = ({ id, children }: { id: string; children: React.ReactNode }) => {
