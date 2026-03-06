@@ -606,33 +606,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <Upload className="h-3 w-3 mr-1" />
                 Uploads
               </Button>
-              {cardIndex % 2 === 0 ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsVideoGenOpen(true);
-                  }}
-                  className="text-xs px-2 py-1 h-auto w-full"
-                >
-                  <Film className="h-3 w-3 mr-1" />
-                  Baixar Vídeo Feito
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsArtGenOpen(true);
-                  }}
-                  className="text-xs px-2 py-1 h-auto w-full"
-                >
-                  <Palette className="h-3 w-3 mr-1" />
-                  Baixar Arte Feita
-                </Button>
-              )}
               {/* Generated video with Já Baixei + Enviar por E-mail */}
               {!dismissed && brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
                 <div className="border border-primary/20 rounded-lg overflow-hidden bg-primary/5">
