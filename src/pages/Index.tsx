@@ -729,8 +729,8 @@ const Index = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => handleBulkMoveToCompleted()}>Todos</DropdownMenuItem>
-                {teams.map(t => (
-                  <DropdownMenuItem key={t} onClick={() => handleBulkMoveToCompleted(t)}>{t}</DropdownMenuItem>
+                {availableTeams.map(t => (
+                  <DropdownMenuItem key={t.id} onClick={() => handleBulkMoveToCompleted(t.name)}>{t.name}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
