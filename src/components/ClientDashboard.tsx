@@ -7,7 +7,7 @@ import { BrandKitEditor } from "@/components/BrandKitEditor";
 import { CanvasEditor } from "@/components/CanvasEditor";
 import { AIArtGenerator } from "@/components/AIArtGenerator";
 import ProjectBoard from "@/components/ProjectBoard";
-import { QuickCreate } from "@/components/QuickCreate";
+
 import { LinkableText } from "@/components/LinkableText";
 
 interface Client {
@@ -141,10 +141,12 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
             </p>
           </div>
         )}
-        <QuickCreate
+        <ProjectBoard
           clientId={client.id}
           clientName={client.name}
-          brandKit={client.brand_kit}
+          brandKits={client.brand_kit ? [client.brand_kit] : []}
+          onCreateProject={handleCreateProject}
+          isInactive={client.active === false}
         />
       </div>
     </div>
