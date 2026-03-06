@@ -881,13 +881,6 @@ const Index = () => {
                       </button>
                     </div>
                   </div>
-                  <div className={`text-sm ${
-                    selectedClient?.id === client.id
-                      ? 'text-primary-foreground/80'
-                      : 'text-muted-foreground'
-                  }`}>
-                    {client.company}
-                  </div>
                 </button>
               ))
             ) : (
