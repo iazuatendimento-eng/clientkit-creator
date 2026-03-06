@@ -936,6 +936,41 @@ const Index = () => {
           )}
         </div>
       </div>
+
+      {/* Deadline Dialog */}
+      <Dialog open={isDeadlineDialogOpen} onOpenChange={setIsDeadlineDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Definir Prazo em Massa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data do Prazo</label>
+              <Input
+                type="date"
+                value={bulkDeadline}
+                onChange={(e) => setBulkDeadline(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Equipe (opcional)</label>
+              <select
+                value={selectedTeamForDeadline || ""}
+                onChange={(e) => setSelectedTeamForDeadline(e.target.value || undefined)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Todas as equipes</option>
+                {availableTeams.map(t => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+            <Button onClick={handleBulkUpdateDeadline} className="w-full">
+              Aplicar Prazo
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
