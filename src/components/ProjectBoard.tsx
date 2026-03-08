@@ -1706,6 +1706,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         )}
 
