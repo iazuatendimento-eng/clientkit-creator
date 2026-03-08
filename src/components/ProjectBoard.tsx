@@ -919,6 +919,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [editingBrief, setEditingBrief] = useState<ProjectBrief | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false); // kept for compatibility
   const [captionCopied, setCaptionCopied] = useState(false);
