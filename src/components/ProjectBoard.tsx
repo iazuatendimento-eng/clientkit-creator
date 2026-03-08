@@ -18,7 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette, Mail } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette, Mail, Sparkles } from "lucide-react";
+import { QuickCreate } from "@/components/QuickCreate";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { ArtGeneratorModal } from "@/components/ArtGeneratorModal";
@@ -918,6 +919,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [editingBrief, setEditingBrief] = useState<ProjectBrief | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false); // kept for compatibility
   const [captionCopied, setCaptionCopied] = useState(false);
@@ -1578,14 +1580,36 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
               </p>
             </div>
           
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="gradient" className="glow-effect">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Briefing
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center gap-2">
+              <Dialog open={isQuickCreateOpen} onOpenChange={setIsQuickCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="creative" className="gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Criar Rápido
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Criar Rápido</DialogTitle>
+                  </DialogHeader>
+                  {clientId && clientName && (
+                    <QuickCreate
+                      clientId={clientId}
+                      clientName={clientName}
+                      brandKit={brandKits.length > 0 ? brandKits[0] : undefined}
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="gradient" className="glow-effect">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Briefing
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
                 <DialogHeader className="sticky top-0 bg-background z-10 pb-4">
                   <DialogTitle>
                     {editingBrief ? "Editar Briefing" : "Novo Briefing"}
@@ -1682,6 +1706,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         )}
 
