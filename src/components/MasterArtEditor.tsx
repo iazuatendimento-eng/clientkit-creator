@@ -150,6 +150,10 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const [editingLayerName, setEditingLayerName] = useState("");
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<TeamFilter>(undefined);
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
+  const [inlineEditText, setInlineEditText] = useState<string | null>(null);
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  const directImageInputRef = useRef<HTMLInputElement>(null);
+  const [directImageTargetId, setDirectImageTargetId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
