@@ -1476,7 +1476,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     setInlineEditText(null);
   };
 
-
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (selectedTool !== "move" || !selectedElement) return;
 
     const canvas = canvasRef.current;
