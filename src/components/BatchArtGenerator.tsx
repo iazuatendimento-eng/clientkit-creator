@@ -1973,15 +1973,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   : ""
               }`}
             >
-              {/* Art Preview - Double click to adjust photo position */}
+              {/* Art Preview - Click to adjust */}
               <div 
-                className="aspect-[4/5] bg-muted relative cursor-pointer"
-                onDoubleClick={() => {
+                className={cn(
+                  "aspect-[4/5] bg-muted relative cursor-pointer",
+                  isAdjustDialogOpen && selectedArt?.clientId === art.clientId && selectedArt?.cardId === art.cardId && selectedArt?.pageIndex === art.pageIndex && "ring-2 ring-primary"
+                )}
+                onClick={() => {
                   if (art.imageUrl && art.status === "pending") {
                     openAdjustDialog(art);
                   }
                 }}
-                title={art.status === "pending" ? "Duplo clique para ajustar posição" : ""}
+                title={art.status === "pending" && art.imageUrl ? "Clique para ajustar" : ""}
               >
                 {art.imageUrl ? (
                   <img
@@ -2005,12 +2008,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 {art.totalPages && art.totalPages > 1 && (
                   <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-semibold">
                     {(art.pageIndex ?? 0) + 1}/{art.totalPages}
-                  </div>
-                )}
-                
-                {art.status === "pending" && art.imageUrl && (
-                  <div className="absolute bottom-2 left-2 bg-background/80 text-foreground text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity">
-                    Duplo clique para ajustar
                   </div>
                 )}
               </div>
