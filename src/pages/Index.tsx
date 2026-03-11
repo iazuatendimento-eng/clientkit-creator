@@ -749,10 +749,24 @@ const Index = () => {
               <Video className="mr-1 h-4 w-4" />
               Vídeo
             </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate("/batch-history")}>
-              <History className="mr-1 h-4 w-4" />
-              Histórico
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <History className="mr-1 h-4 w-4" />
+                  Histórico
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => navigate("/batch-history?type=art")}>
+                  <Palette className="mr-1 h-4 w-4" />
+                  Artes
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/batch-history?type=video")}>
+                  <Video className="mr-1 h-4 w-4" />
+                  Vídeos
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button
               size="sm"
