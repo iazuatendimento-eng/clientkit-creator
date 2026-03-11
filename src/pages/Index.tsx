@@ -699,6 +699,9 @@ const Index = () => {
             </div>
           </div>
         </div>
+        <div className="container mx-auto mt-3">
+          <DatabaseUsageBar />
+        </div>
       </div>
 
       {/* Header */}
