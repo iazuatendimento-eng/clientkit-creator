@@ -1732,9 +1732,20 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                 <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>
               ))}
             </SelectContent>
-          </Select>
-          
-        </div>
+            </Select>
+
+            <Button variant="default" onClick={handleGenerateBatch}>
+              <Play className="mr-2 h-4 w-4" />
+              Gerar em Lote
+            </Button>
+
+            {onOpenHistory && (
+              <Button variant="outline" onClick={onOpenHistory}>
+                <History className="mr-2 h-4 w-4" />
+                Histórico
+              </Button>
+            )}
+          </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
