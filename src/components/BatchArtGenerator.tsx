@@ -1860,296 +1860,76 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         </div>
       </div>
 
-      {/* Inline Adjust Panel */}
-      {isAdjustDialogOpen && selectedArt && (
-        <div className="border-b bg-card px-4 py-4">
-          <div className="max-w-2xl mx-auto space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold flex items-center gap-2">
-                  Ajustar Elementos — {selectedArt.company}
-                  {isRegenerating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Arraste para mover • Puxe nos cantos e nas laterais para redimensionar
-                </p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleCloseAdjustDialog}>
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-
-            <ArtAdjustOverlay
-              template={template}
-              previewUrl={livePreviewUrl || selectedArt?.imageUrl || null}
-              isBusy={isRegenerating}
-              photoOffsetX={photoOffsetX}
-              photoOffsetY={photoOffsetY}
-              photoScale={photoScale}
-              photoFrame={photoFrame}
-              setPhotoOffsetX={syncSetPhotoOffsetX}
-              setPhotoOffsetY={syncSetPhotoOffsetY}
-              setPhotoScale={syncSetPhotoScale}
-              setPhotoFrame={syncSetPhotoFrame}
-              logoX={logoX}
-              logoY={logoY}
-              logoScaleX={logoScaleX}
-              logoScaleY={logoScaleY}
-              setLogoX={syncSetLogoX}
-              setLogoY={syncSetLogoY}
-              setLogoScaleX={syncSetLogoScaleX}
-              setLogoScaleY={syncSetLogoScaleY}
-              textX={textX}
-              textY={textY}
-              textFontSize={textFontSize}
-              setTextX={syncSetTextX}
-              setTextY={syncSetTextY}
-              setTextFontSize={syncSetTextFontSize}
-              contactX={contactX}
-              contactY={contactY}
-              contactScaleX={contactScaleX}
-              contactScaleY={contactScaleY}
-              setContactX={syncSetContactX}
-              setContactY={syncSetContactY}
-              setContactScaleX={syncSetContactScaleX}
-              setContactScaleY={syncSetContactScaleY}
-              shapeOverrides={shapeOverrides}
-              setShapeOverrides={syncSetShapeOverrides}
-              onDragEnd={handleDragEnd}
-            />
-
-            {/* Remove Background & Eraser Buttons */}
-            {selectedArt?.photoImage && (
-              <div className="flex gap-2 items-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRemoveBackground}
-                  disabled={isRemovingBg || isRegenerating}
-                >
-                  {isRemovingBg ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {removeBgProgress || "Processando..."}
-                    </>
-                  ) : (
-                    <>
-                      <Scissors className="h-4 w-4 mr-2" />
-                      Recortar Fundo
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEraserModalOpen(true)}
-                  disabled={isRegenerating}
-                >
-                  <Eraser className="h-4 w-4 mr-2" />
-                  Borracha
-                </Button>
-                <ImageEraserModal
-                  open={eraserModalOpen}
-                  onOpenChange={setEraserModalOpen}
-                  imageUrl={selectedArt.photoImage}
-                  onSave={handleEraserSave}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Gallery */}
       <ScrollArea className="flex-1 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {clientArts.map((art, index) => (
-            <div
+            <ArtCardWithOverlay
               key={`${art.clientId}-${art.cardId}-${art.pageIndex ?? 0}`}
-              className={`border rounded-lg overflow-hidden bg-card ${
-                art.status === "approved"
-                  ? "ring-2 ring-green-500"
-                  : art.status === "rejected"
-                  ? "ring-2 ring-red-500 opacity-50"
-                  : ""
-              }`}
-            >
-              {/* Art Preview - Click to adjust */}
-              <div 
-                className={cn(
-                  "aspect-[4/5] bg-muted relative cursor-pointer",
-                  isAdjustDialogOpen && selectedArt?.clientId === art.clientId && selectedArt?.cardId === art.cardId && selectedArt?.pageIndex === art.pageIndex && "ring-2 ring-primary"
-                )}
-                onClick={() => {
-                  if (art.imageUrl && art.status === "pending") {
-                    openAdjustDialog(art);
-                  }
-                }}
-                title={art.status === "pending" && art.imageUrl ? "Clique para ajustar" : ""}
-              >
-                {art.imageUrl ? (
-                  <img
-                    src={art.imageUrl}
-                    alt={art.company}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                )}
-
-                {art.status === "approved" && (
-                  <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
-                    <Check className="h-4 w-4" />
-                  </div>
-                )}
-
-                {/* Carousel page indicator */}
-                {art.totalPages && art.totalPages > 1 && (
-                  <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-semibold">
-                    {(art.pageIndex ?? 0) + 1}/{art.totalPages}
-                  </div>
-                )}
-              </div>
-
-              {/* Info */}
-              <div className="p-3">
-                <h3 className="font-semibold truncate">{art.company}</h3>
-                <p className="text-sm text-muted-foreground truncate">{art.cardText}</p>
-                {art.imageType && (
-                  <p className="text-xs text-primary/70 truncate mt-0.5">{art.imageType}</p>
-                )}
-
-                {/* Actions */}
-                {art.imageUrl && art.status === "pending" && (
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      title="Trocar foto"
-                      onClick={() => {
-                        const idx = clientArts.indexOf(art);
-                        setSelectedArt(art);
-                        setSelectedArtIndex(idx);
-                        setSearchQuery(art.cardText.split(" ").slice(0, 3).join(" "));
-                        setIsImageDialogOpen(true);
-                      }}
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      title="Atualizar cores do cadastro e regenerar"
-                      onClick={() => refreshBrandKitAndRegenerate(index)}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleReject(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-green-500 hover:bg-green-600"
-                      onClick={() => handleApprove(index)}
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="relative px-2"
-                          title="Anotação"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (art.note && !art.noteRead) {
-                              const updated = [...clientArts];
-                              updated[index] = { ...updated[index], noteRead: true };
-                              setClientArts(updated);
-                            }
-                          }}
-                        >
-                          <MessageSquareWarning className="h-4 w-4" />
-                          {art.note && !art.noteRead && (
-                            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse" />
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-foreground">Anotação</p>
-                          <Textarea
-                            placeholder="Escreva uma observação..."
-                            className="text-xs min-h-[60px] resize-none"
-                            value={art.note || ""}
-                            onChange={(e) => {
-                              const updated = [...clientArts];
-                              updated[index] = { ...updated[index], note: e.target.value, noteRead: false };
-                              setClientArts(updated);
-                            }}
-                          />
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="w-full text-xs"
-                            onClick={async () => {
-                              if (currentBatchId) {
-                                const success = await updateBatchItem(currentBatchId, index, { note: art.note || "", noteRead: !art.note ? true : false });
-                                if (success) {
-                                  toast({ title: "Anotação salva" });
-                                } else {
-                                  toast({ title: "Erro ao salvar anotação", variant: "destructive" });
-                                }
-                              } else {
-                                toast({ title: "Salve o lote primeiro (gere ou aprove)", variant: "destructive" });
-                              }
-                            }}
-                          >
-                            <Save className="h-3 w-3 mr-1" /> Salvar
-                          </Button>
-                          {art.note && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="w-full text-xs"
-                              onClick={async () => {
-                                const updated = [...clientArts];
-                                updated[index] = { ...updated[index], note: "", noteRead: true };
-                                setClientArts(updated);
-                                if (currentBatchId) {
-                                  await updateBatchItem(currentBatchId, index, { note: "", noteRead: true });
-                                }
-                              }}
-                            >
-                              <Check className="h-3 w-3 mr-1" /> Resolvido
-                            </Button>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                   </div>
-                 )}
-
-                {art.status === "approved" && (
-                  <div className="mt-3 text-center">
-                    <Badge className="bg-green-500">Aprovada</Badge>
-                  </div>
-                )}
-
-                {art.status === "rejected" && (
-                  <div className="mt-3 text-center">
-                    <Badge variant="destructive">Rejeitada</Badge>
-                  </div>
-                )}
-              </div>
-            </div>
+              art={art}
+              index={index}
+              template={template}
+              onArtUpdate={(idx, updates) => {
+                const updated = [...clientArts];
+                updated[idx] = { ...updated[idx], ...updates };
+                setClientArts(updated);
+              }}
+              onRegenerate={generateArtForClient}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onOpenImageDialog={(a, idx) => {
+                setSelectedArt(a);
+                setSelectedArtIndex(idx);
+                setSearchQuery(a.cardText.split(" ").slice(0, 3).join(" "));
+                setIsImageDialogOpen(true);
+              }}
+              onRefreshBrandKit={refreshBrandKitAndRegenerate}
+              onRemoveBackground={async (a, idx) => {
+                if (!a.photoImage) return;
+                setIsRemovingBg(true);
+                setRemoveBgProgress("Iniciando...");
+                try {
+                  const newPhotoUrl = await removeBackground(a.photoImage, setRemoveBgProgress);
+                  const updatedArt = { ...clientArts[idx], photoImage: newPhotoUrl, photoOffset: { x: 0, y: 0 } };
+                  const updatedArts = [...clientArts];
+                  updatedArts[idx] = updatedArt;
+                  setClientArts(updatedArts);
+                  const artImageUrl = await generateArtForClient(updatedArt);
+                  updatedArts[idx] = { ...updatedArt, imageUrl: artImageUrl };
+                  setClientArts([...updatedArts]);
+                  toast({ title: "Fundo removido!" });
+                } catch (error) {
+                  console.error("Error removing background:", error);
+                  toast({ title: "Erro ao remover fundo", variant: "destructive" });
+                } finally {
+                  setIsRemovingBg(false);
+                  setRemoveBgProgress("");
+                }
+              }}
+              onOpenEraser={(a, idx) => {
+                setSelectedArt(a);
+                setSelectedArtIndex(idx);
+                setEraserModalOpen(true);
+              }}
+              onSaveNote={async (idx, note) => {
+                if (currentBatchId) {
+                  const success = await updateBatchItem(currentBatchId, idx, { note, noteRead: !note });
+                  toast({ title: success ? "Anotação salva" : "Erro ao salvar anotação", variant: success ? "default" : "destructive" });
+                } else {
+                  toast({ title: "Salve o lote primeiro", variant: "destructive" });
+                }
+              }}
+              onResolveNote={async (idx) => {
+                const updated = [...clientArts];
+                updated[idx] = { ...updated[idx], note: "", noteRead: true };
+                setClientArts(updated);
+                if (currentBatchId) {
+                  await updateBatchItem(currentBatchId, idx, { note: "", noteRead: true });
+                }
+              }}
+              isRemovingBg={isRemovingBg}
+              removeBgProgress={removeBgProgress}
+            />
           ))}
         </div>
 
