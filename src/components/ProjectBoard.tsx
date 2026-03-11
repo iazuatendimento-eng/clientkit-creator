@@ -381,6 +381,60 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     }
   };
 
+  const handleSendCardEmail = async () => {
+    if (!clientId) return;
+    setIsSendingEmail(true);
+    try {
+      const { data: clientData } = await supabase
+        .from("client_data")
+        .select("email, email_2, email_3")
+        .eq("id", clientId)
+        .single();
+      if (!clientData) throw new Error("Cliente não encontrado");
+      const emails = [clientData.email, clientData.email_2, clientData.email_3].filter(Boolean);
+      if (emails.length === 0) throw new Error("Nenhum e-mail cadastrado");
+
+      // Determine media to send: final artworks first, then cover fallback
+      let mediaUrls: string[] = [];
+      let mediaType: "art" | "video" = "art";
+      
+      if (finalArtworks.length > 0) {
+        mediaUrls = finalArtworks.map(a => a.url);
+        mediaType = finalArtworks.some(a => a.fileType.startsWith("video")) ? "video" : "art";
+      } else if (brief.coverVideo) {
+        mediaUrls = [brief.coverVideo];
+        mediaType = "video";
+      } else if (brief.coverImage) {
+        mediaUrls = [brief.coverImage];
+        mediaType = "art";
+      }
+
+      if (mediaUrls.length === 0) {
+        toast.error("Nenhum arquivo para enviar");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("send-media-email", {
+        body: {
+          emails,
+          subject: `${mediaType === "video" ? "Vídeo" : "Arte"} - ${brief.clientName}`,
+          mediaUrls,
+          mediaType,
+          clientName: brief.clientName,
+          cardText: brief.description || brief.title,
+          caption: brief.generatedCaption || undefined,
+        },
+      });
+      if (error) throw error;
+      toast.success(data?.message || "E-mail enviado!");
+    } catch (err: any) {
+      console.error("Erro ao enviar e-mail:", err);
+      toast.error(err?.message || "Erro ao enviar e-mail");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   const handleCopyCardLink = () => {
     const cardUrl = `${window.location.origin}${window.location.pathname}#card-${brief.id}`;
     navigator.clipboard.writeText(cardUrl);
