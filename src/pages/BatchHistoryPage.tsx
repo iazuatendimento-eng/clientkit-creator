@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { BatchHistory } from "@/components/BatchHistory";
 import { BatchVideoGenerator } from "@/components/BatchVideoGenerator";
 import { BatchGeneration } from "@/lib/batchHistory";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const BatchHistoryPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [view, setView] = useState<"list" | "edit">("list");
   const [selectedBatch, setSelectedBatch] = useState<BatchGeneration | null>(null);
   const [resolvedTemplate, setResolvedTemplate] = useState<any>(null);
@@ -79,7 +80,9 @@ const BatchHistoryPage = () => {
     );
   }
 
-  return <BatchHistory onBack={() => navigate("/")} onEditBatch={handleEditBatch} />;
+  const filterType = searchParams.get("type") as "art" | "video" | undefined;
+
+  return <BatchHistory onBack={() => navigate("/")} onEditBatch={handleEditBatch} filterType={filterType || undefined} />;
 };
 
 export default BatchHistoryPage;
