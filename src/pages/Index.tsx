@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import * as XLSX from 'xlsx';
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseUsageBar } from "@/components/DatabaseUsageBar";
 import {
   Dialog,
   DialogContent,
@@ -697,6 +698,9 @@ const Index = () => {
               })()}
             </div>
           </div>
+        </div>
+        <div className="container mx-auto mt-3">
+          <DatabaseUsageBar />
         </div>
       </div>
 
