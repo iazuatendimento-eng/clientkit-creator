@@ -1859,6 +1859,106 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         </div>
       </div>
 
+      {/* Inline Adjust Panel */}
+      {isAdjustDialogOpen && selectedArt && (
+        <div className="border-b bg-card px-4 py-4">
+          <div className="max-w-2xl mx-auto space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold flex items-center gap-2">
+                  Ajustar Elementos — {selectedArt.company}
+                  {isRegenerating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Arraste para mover • Puxe nos cantos e nas laterais para redimensionar
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleCloseAdjustDialog}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <ArtAdjustOverlay
+              template={template}
+              previewUrl={livePreviewUrl || selectedArt?.imageUrl || null}
+              isBusy={isRegenerating}
+              photoOffsetX={photoOffsetX}
+              photoOffsetY={photoOffsetY}
+              photoScale={photoScale}
+              photoFrame={photoFrame}
+              setPhotoOffsetX={syncSetPhotoOffsetX}
+              setPhotoOffsetY={syncSetPhotoOffsetY}
+              setPhotoScale={syncSetPhotoScale}
+              setPhotoFrame={syncSetPhotoFrame}
+              logoX={logoX}
+              logoY={logoY}
+              logoScaleX={logoScaleX}
+              logoScaleY={logoScaleY}
+              setLogoX={syncSetLogoX}
+              setLogoY={syncSetLogoY}
+              setLogoScaleX={syncSetLogoScaleX}
+              setLogoScaleY={syncSetLogoScaleY}
+              textX={textX}
+              textY={textY}
+              textFontSize={textFontSize}
+              setTextX={syncSetTextX}
+              setTextY={syncSetTextY}
+              setTextFontSize={syncSetTextFontSize}
+              contactX={contactX}
+              contactY={contactY}
+              contactScaleX={contactScaleX}
+              contactScaleY={contactScaleY}
+              setContactX={syncSetContactX}
+              setContactY={syncSetContactY}
+              setContactScaleX={syncSetContactScaleX}
+              setContactScaleY={syncSetContactScaleY}
+              shapeOverrides={shapeOverrides}
+              setShapeOverrides={syncSetShapeOverrides}
+              onDragEnd={handleDragEnd}
+            />
+
+            {/* Remove Background & Eraser Buttons */}
+            {selectedArt?.photoImage && (
+              <div className="flex gap-2 items-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemoveBackground}
+                  disabled={isRemovingBg || isRegenerating}
+                >
+                  {isRemovingBg ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {removeBgProgress || "Processando..."}
+                    </>
+                  ) : (
+                    <>
+                      <Scissors className="h-4 w-4 mr-2" />
+                      Recortar Fundo
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEraserModalOpen(true)}
+                  disabled={isRegenerating}
+                >
+                  <Eraser className="h-4 w-4 mr-2" />
+                  Borracha
+                </Button>
+                <ImageEraserModal
+                  open={eraserModalOpen}
+                  onOpenChange={setEraserModalOpen}
+                  imageUrl={selectedArt.photoImage}
+                  onSave={handleEraserSave}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Gallery */}
       <ScrollArea className="flex-1 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
