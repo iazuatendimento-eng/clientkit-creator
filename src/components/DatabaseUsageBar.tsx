@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
-import { Database } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Database, Trash2, Loader2, HardDrive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // Estimated average row sizes in KB
 const TABLE_AVG_SIZES: Record<string, number> = {
-  batch_generations: 50,   // JSONB heavy
+  batch_generations: 50,
   project_briefs: 2,
   client_data: 3,
   card_uploads: 1,
@@ -18,19 +20,25 @@ const TABLE_AVG_SIZES: Record<string, number> = {
   teams: 0.3,
 };
 
-const MAX_MB = 500; // Limit reference in MB
+const MAX_MB = 500;
+
+const STORAGE_FOLDERS = ["artes", "videos"];
 
 export const DatabaseUsageBar = () => {
   const [usageMB, setUsageMB] = useState<number | null>(null);
   const [breakdown, setBreakdown] = useState<{ table: string; count: number; mb: number }[]>([]);
+  const [storageFiles, setStorageFiles] = useState<number>(0);
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUsage = async () => {
       const tables = Object.keys(TABLE_AVG_SIZES);
       const results: { table: string; count: number; mb: number }[] = [];
 
-      // Fetch counts in parallel
-      const promises = tables.map(async (table) => {
+      // Fetch DB counts + storage file counts in parallel
+      const dbPromises = tables.map(async (table) => {
         try {
           const { count, error } = await supabase
             .from(table as any)
@@ -42,7 +50,21 @@ export const DatabaseUsageBar = () => {
         }
       });
 
-      const counts = await Promise.all(promises);
+      const storagePromises = STORAGE_FOLDERS.map(async (folder) => {
+        try {
+          const { data } = await supabase.storage.from("card-uploads").list(folder, { limit: 1000 });
+          return data?.length || 0;
+        } catch {
+          return 0;
+        }
+      });
+
+      const [counts, storageCounts] = await Promise.all([
+        Promise.all(dbPromises),
+        Promise.all(storagePromises),
+      ]);
+
+      setStorageFiles(storageCounts.reduce((a, b) => a + b, 0));
 
       let totalKB = 0;
       for (const { table, count } of counts) {
@@ -58,7 +80,73 @@ export const DatabaseUsageBar = () => {
     };
 
     fetchUsage();
-  }, []);
+  }, [refreshKey]);
+
+  const handleCleanStorage = async () => {
+    if (!confirm("Tem certeza que deseja apagar TODOS os arquivos de artes e vídeos do Storage? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+
+    setIsCleaning(true);
+    let totalDeleted = 0;
+
+    try {
+      for (const folder of STORAGE_FOLDERS) {
+        // List all files in folder (paginate)
+        let offset = 0;
+        const batchSize = 100;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: files, error } = await supabase.storage
+            .from("card-uploads")
+            .list(folder, { limit: batchSize, offset });
+
+          if (error || !files || files.length === 0) {
+            hasMore = false;
+            break;
+          }
+
+          const paths = files.map((f) => `${folder}/${f.name}`);
+          const { error: removeError } = await supabase.storage
+            .from("card-uploads")
+            .remove(paths);
+
+          if (removeError) {
+            console.error(`Error removing files from ${folder}:`, removeError);
+          } else {
+            totalDeleted += paths.length;
+          }
+
+          if (files.length < batchSize) {
+            hasMore = false;
+          }
+          // Don't increment offset since we're deleting files
+        }
+      }
+
+      // Also clear card_uploads records and cover fields
+      await supabase.from("card_uploads").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      
+      // Clear cover_image and cover_video from project_briefs
+      await supabase
+        .from("project_briefs")
+        .update({ cover_image: null, cover_video: null, generated_art_url: null, generated_video_url: null })
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      toast({
+        title: "Storage limpo!",
+        description: `${totalDeleted} arquivos removidos do Storage.`,
+      });
+
+      setRefreshKey((k) => k + 1);
+    } catch (error) {
+      console.error("Error cleaning storage:", error);
+      toast({ title: "Erro ao limpar storage", variant: "destructive" });
+    } finally {
+      setIsCleaning(false);
+    }
+  };
 
   if (usageMB === null) return null;
 
@@ -72,9 +160,27 @@ export const DatabaseUsageBar = () => {
           <Database className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">Uso do Banco</span>
         </div>
-        <span className={`font-semibold ${color}`}>
-          ~{usageMB} MB / {MAX_MB} MB
-        </span>
+        <div className="flex items-center gap-3">
+          <span className={`font-semibold ${color}`}>
+            ~{usageMB} MB / {MAX_MB} MB
+          </span>
+          {storageFiles > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleCleanStorage}
+              disabled={isCleaning}
+            >
+              {isCleaning ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1 h-3 w-3" />
+              )}
+              Limpar Storage ({storageFiles} arquivos)
+            </Button>
+          )}
+        </div>
       </div>
       <Progress value={percentage} className="h-2" />
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -83,6 +189,12 @@ export const DatabaseUsageBar = () => {
             {b.table.replace(/_/g, " ")}: {b.count} ({b.mb}MB)
           </span>
         ))}
+        {storageFiles > 0 && (
+          <span className="flex items-center gap-1">
+            <HardDrive className="h-3 w-3" />
+            storage: {storageFiles} arquivos
+          </span>
+        )}
       </div>
     </div>
   );
