@@ -80,7 +80,9 @@ const BatchHistoryPage = () => {
     );
   }
 
-  return <BatchHistory onBack={() => navigate("/")} onEditBatch={handleEditBatch} />;
+  const filterType = searchParams.get("type") as "art" | "video" | undefined;
+
+  return <BatchHistory onBack={() => navigate("/")} onEditBatch={handleEditBatch} filterType={filterType || undefined} />;
 };
 
 export default BatchHistoryPage;
