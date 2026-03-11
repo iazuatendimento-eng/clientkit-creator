@@ -150,6 +150,10 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const [editingLayerName, setEditingLayerName] = useState("");
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<TeamFilter>(undefined);
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
+  const [inlineEditText, setInlineEditText] = useState<string | null>(null);
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  const directImageInputRef = useRef<HTMLInputElement>(null);
+  const [directImageTargetId, setDirectImageTargetId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -1410,6 +1414,68 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     }
   };
 
+  // Double-click: inline edit text OR open file picker for image/logo/mascot
+  const handleCanvasDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / SCALE;
+    const y = (e.clientY - rect.top) / SCALE;
+
+    const clickedElement = [...elements].reverse().find((el) => {
+      return x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height;
+    });
+
+    if (!clickedElement) return;
+
+    if (clickedElement.type === "text") {
+      // Inline text edit
+      setInlineEditId(clickedElement.id);
+      setInlineEditText(clickedElement.text || "");
+      setSelectedElement(clickedElement.id);
+    } else if (["image", "logo", "mascot", "contact"].includes(clickedElement.type)) {
+      // Open file picker to replace image
+      setDirectImageTargetId(clickedElement.id);
+      setSelectedElement(clickedElement.id);
+      directImageInputRef.current?.click();
+    }
+  };
+
+  // Handle direct image file selection
+  const handleDirectImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !directImageTargetId) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setElements((prev) =>
+        prev.map((el) =>
+          el.id === directImageTargetId
+            ? { ...el, imageUrl: dataUrl, placeholder: false }
+            : el
+        )
+      );
+      setDirectImageTargetId(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  // Commit inline text edit
+  const commitInlineEdit = () => {
+    if (inlineEditId && inlineEditText !== null) {
+      setElements((prev) =>
+        prev.map((el) =>
+          el.id === inlineEditId ? { ...el, text: inlineEditText } : el
+        )
+      );
+    }
+    setInlineEditId(null);
+    setInlineEditText(null);
+  };
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (selectedTool !== "move" || !selectedElement) return;
 
@@ -2453,7 +2519,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
 
         {/* Canvas Area */}
         <div className="flex-1 bg-muted/30 flex items-start justify-center pt-1 overflow-auto">
-          <div className="shadow-2xl">
+          <div className="shadow-2xl relative">
             <canvas
               ref={canvasRef}
               width={CANVAS_WIDTH}
@@ -2461,10 +2527,45 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
               style={{ width: CANVAS_WIDTH * SCALE, height: CANVAS_HEIGHT * SCALE, cursor: cursorStyle }}
               className="bg-white"
               onClick={handleCanvasClick}
+              onDoubleClick={handleCanvasDoubleClick}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMoveWithCursor}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+            />
+            {/* Inline text editor overlay */}
+            {inlineEditId && inlineEditText !== null && (() => {
+              const el = elements.find(e => e.id === inlineEditId);
+              if (!el) return null;
+              return (
+                <textarea
+                  autoFocus
+                  className="absolute border-2 border-primary bg-background/90 text-foreground p-1 resize-none outline-none"
+                  style={{
+                    left: el.x * SCALE,
+                    top: el.y * SCALE,
+                    width: el.width * SCALE,
+                    height: el.height * SCALE,
+                    fontSize: (el.fontSize || 24) * SCALE,
+                    textAlign: el.textAlign || "center",
+                    lineHeight: el.lineHeight || 1.2,
+                  }}
+                  value={inlineEditText}
+                  onChange={(e) => setInlineEditText(e.target.value)}
+                  onBlur={commitInlineEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") commitInlineEdit();
+                  }}
+                />
+              );
+            })()}
+            {/* Hidden file input for direct image replacement */}
+            <input
+              ref={directImageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleDirectImageChange}
             />
           </div>
         </div>
