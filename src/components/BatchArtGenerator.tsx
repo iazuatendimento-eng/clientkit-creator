@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { drawNewShape } from "@/lib/canvasShapes";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1859,6 +1860,106 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         </div>
       </div>
 
+      {/* Inline Adjust Panel */}
+      {isAdjustDialogOpen && selectedArt && (
+        <div className="border-b bg-card px-4 py-4">
+          <div className="max-w-2xl mx-auto space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold flex items-center gap-2">
+                  Ajustar Elementos — {selectedArt.company}
+                  {isRegenerating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Arraste para mover • Puxe nos cantos e nas laterais para redimensionar
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleCloseAdjustDialog}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <ArtAdjustOverlay
+              template={template}
+              previewUrl={livePreviewUrl || selectedArt?.imageUrl || null}
+              isBusy={isRegenerating}
+              photoOffsetX={photoOffsetX}
+              photoOffsetY={photoOffsetY}
+              photoScale={photoScale}
+              photoFrame={photoFrame}
+              setPhotoOffsetX={syncSetPhotoOffsetX}
+              setPhotoOffsetY={syncSetPhotoOffsetY}
+              setPhotoScale={syncSetPhotoScale}
+              setPhotoFrame={syncSetPhotoFrame}
+              logoX={logoX}
+              logoY={logoY}
+              logoScaleX={logoScaleX}
+              logoScaleY={logoScaleY}
+              setLogoX={syncSetLogoX}
+              setLogoY={syncSetLogoY}
+              setLogoScaleX={syncSetLogoScaleX}
+              setLogoScaleY={syncSetLogoScaleY}
+              textX={textX}
+              textY={textY}
+              textFontSize={textFontSize}
+              setTextX={syncSetTextX}
+              setTextY={syncSetTextY}
+              setTextFontSize={syncSetTextFontSize}
+              contactX={contactX}
+              contactY={contactY}
+              contactScaleX={contactScaleX}
+              contactScaleY={contactScaleY}
+              setContactX={syncSetContactX}
+              setContactY={syncSetContactY}
+              setContactScaleX={syncSetContactScaleX}
+              setContactScaleY={syncSetContactScaleY}
+              shapeOverrides={shapeOverrides}
+              setShapeOverrides={syncSetShapeOverrides}
+              onDragEnd={handleDragEnd}
+            />
+
+            {/* Remove Background & Eraser Buttons */}
+            {selectedArt?.photoImage && (
+              <div className="flex gap-2 items-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemoveBackground}
+                  disabled={isRemovingBg || isRegenerating}
+                >
+                  {isRemovingBg ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {removeBgProgress || "Processando..."}
+                    </>
+                  ) : (
+                    <>
+                      <Scissors className="h-4 w-4 mr-2" />
+                      Recortar Fundo
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEraserModalOpen(true)}
+                  disabled={isRegenerating}
+                >
+                  <Eraser className="h-4 w-4 mr-2" />
+                  Borracha
+                </Button>
+                <ImageEraserModal
+                  open={eraserModalOpen}
+                  onOpenChange={setEraserModalOpen}
+                  imageUrl={selectedArt.photoImage}
+                  onSave={handleEraserSave}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Gallery */}
       <ScrollArea className="flex-1 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -1873,15 +1974,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   : ""
               }`}
             >
-              {/* Art Preview - Double click to adjust photo position */}
+              {/* Art Preview - Click to adjust */}
               <div 
-                className="aspect-[4/5] bg-muted relative cursor-pointer"
-                onDoubleClick={() => {
+                className={cn(
+                  "aspect-[4/5] bg-muted relative cursor-pointer",
+                  isAdjustDialogOpen && selectedArt?.clientId === art.clientId && selectedArt?.cardId === art.cardId && selectedArt?.pageIndex === art.pageIndex && "ring-2 ring-primary"
+                )}
+                onClick={() => {
                   if (art.imageUrl && art.status === "pending") {
                     openAdjustDialog(art);
                   }
                 }}
-                title={art.status === "pending" ? "Duplo clique para ajustar posição" : ""}
+                title={art.status === "pending" && art.imageUrl ? "Clique para ajustar" : ""}
               >
                 {art.imageUrl ? (
                   <img
@@ -1905,12 +2009,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 {art.totalPages && art.totalPages > 1 && (
                   <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-semibold">
                     {(art.pageIndex ?? 0) + 1}/{art.totalPages}
-                  </div>
-                )}
-                
-                {art.status === "pending" && art.imageUrl && (
-                  <div className="absolute bottom-2 left-2 bg-background/80 text-foreground text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity">
-                    Duplo clique para ajustar
                   </div>
                 )}
               </div>
@@ -1940,16 +2038,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                     >
                       <ImageIcon className="h-4 w-4" />
                     </Button>
-                    {art.photoImage && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        title="Ajustar posição da foto"
-                        onClick={() => openAdjustDialog(art)}
-                      >
-                        <Move className="h-4 w-4" />
-                      </Button>
-                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -2296,122 +2384,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         </DialogContent>
       </Dialog>
 
-      {/* Element Adjustment Dialog */}
-      <Dialog open={isAdjustDialogOpen} onOpenChange={(open) => {
-        setIsAdjustDialogOpen(open);
-        if (!open) {
-          setLivePreviewUrl(null);
-          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-        }
-      }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Ajustar Elementos da Arte
-              {isRegenerating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="py-4 space-y-3">
-            <Label className="text-sm font-medium">
-              Arraste para mover • Puxe nos cantos e nas laterais para redimensionar
-            </Label>
-
-            <ArtAdjustOverlay
-              template={template}
-              previewUrl={livePreviewUrl || selectedArt?.imageUrl || null}
-              isBusy={isRegenerating}
-              photoOffsetX={photoOffsetX}
-              photoOffsetY={photoOffsetY}
-              photoScale={photoScale}
-              photoFrame={photoFrame}
-              setPhotoOffsetX={syncSetPhotoOffsetX}
-              setPhotoOffsetY={syncSetPhotoOffsetY}
-              setPhotoScale={syncSetPhotoScale}
-              setPhotoFrame={syncSetPhotoFrame}
-              logoX={logoX}
-              logoY={logoY}
-              logoScaleX={logoScaleX}
-              logoScaleY={logoScaleY}
-              setLogoX={syncSetLogoX}
-              setLogoY={syncSetLogoY}
-              setLogoScaleX={syncSetLogoScaleX}
-              setLogoScaleY={syncSetLogoScaleY}
-              textX={textX}
-              textY={textY}
-              textFontSize={textFontSize}
-              setTextX={syncSetTextX}
-              setTextY={syncSetTextY}
-              setTextFontSize={syncSetTextFontSize}
-              contactX={contactX}
-              contactY={contactY}
-              contactScaleX={contactScaleX}
-              contactScaleY={contactScaleY}
-              setContactX={syncSetContactX}
-              setContactY={syncSetContactY}
-              setContactScaleX={syncSetContactScaleX}
-              setContactScaleY={syncSetContactScaleY}
-              shapeOverrides={shapeOverrides}
-              setShapeOverrides={syncSetShapeOverrides}
-              onDragEnd={handleDragEnd}
-            />
-
-            <p className="text-xs text-muted-foreground text-center pt-2">
-              Clique no elemento para selecionar, arraste os cantos azuis para redimensionar.
-            </p>
-
-            {/* Remove Background & Eraser Buttons */}
-            {selectedArt?.photoImage && (
-              <div className="pt-4 border-t space-y-3">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={handleRemoveBackground}
-                    disabled={isRemovingBg || isRegenerating}
-                  >
-                    {isRemovingBg ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {removeBgProgress || "Processando..."}
-                      </>
-                    ) : (
-                      <>
-                        <Scissors className="h-4 w-4 mr-2" />
-                        Recortar Fundo
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setEraserModalOpen(true)}
-                    disabled={isRegenerating}
-                  >
-                    <Eraser className="h-4 w-4 mr-2" />
-                    Borracha
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Recortar remove o fundo com IA. Borracha limpa artefatos manualmente.
-                </p>
-                
-                <ImageEraserModal
-                  open={eraserModalOpen}
-                  onOpenChange={setEraserModalOpen}
-                  imageUrl={selectedArt.photoImage}
-                  onSave={handleEraserSave}
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-2 justify-end pt-4 border-t">
-            <Button variant="outline" onClick={handleCloseAdjustDialog}>
-              Fechar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
