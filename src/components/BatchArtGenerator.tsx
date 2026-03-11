@@ -2038,16 +2038,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                     >
                       <ImageIcon className="h-4 w-4" />
                     </Button>
-                    {art.photoImage && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        title="Ajustar posição da foto"
-                        onClick={() => openAdjustDialog(art)}
-                      >
-                        <Move className="h-4 w-4" />
-                      </Button>
-                    )}
                     <Button
                       size="sm"
                       variant="outline"
