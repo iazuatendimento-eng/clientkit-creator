@@ -1249,6 +1249,17 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
         return x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height;
       });
       setSelectedElement(clickedElement?.id || null);
+
+      // Direct edit on single click
+      if (clickedElement) {
+        if (clickedElement.type === "text") {
+          setInlineEditId(clickedElement.id);
+          setInlineEditText(clickedElement.text || "");
+        } else if (["image", "logo", "mascot", "contact"].includes(clickedElement.type)) {
+          setDirectImageTargetId(clickedElement.id);
+          directImageInputRef.current?.click();
+        }
+      }
     } else if (selectedTool === "rect") {
       addElement({
         type: "rect",
