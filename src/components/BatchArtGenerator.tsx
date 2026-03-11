@@ -1648,7 +1648,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   };
 
-  const [isSendingEmails, setIsSendingEmails] = useState(false);
 
   const handleSendEmails = async () => {
     const approvedArts = clientArts.filter((a) => a.status === "approved" && a.imageUrl);
