@@ -1414,7 +1414,69 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Double-click: inline edit text OR open file picker for image/logo/mascot
+  const handleCanvasDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / SCALE;
+    const y = (e.clientY - rect.top) / SCALE;
+
+    const clickedElement = [...elements].reverse().find((el) => {
+      return x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height;
+    });
+
+    if (!clickedElement) return;
+
+    if (clickedElement.type === "text") {
+      // Inline text edit
+      setInlineEditId(clickedElement.id);
+      setInlineEditText(clickedElement.text || "");
+      setSelectedElement(clickedElement.id);
+    } else if (["image", "logo", "mascot", "contact"].includes(clickedElement.type)) {
+      // Open file picker to replace image
+      setDirectImageTargetId(clickedElement.id);
+      setSelectedElement(clickedElement.id);
+      directImageInputRef.current?.click();
+    }
+  };
+
+  // Handle direct image file selection
+  const handleDirectImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !directImageTargetId) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setElements((prev) =>
+        prev.map((el) =>
+          el.id === directImageTargetId
+            ? { ...el, imageUrl: dataUrl, placeholder: false }
+            : el
+        )
+      );
+      setDirectImageTargetId(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  // Commit inline text edit
+  const commitInlineEdit = () => {
+    if (inlineEditId && inlineEditText !== null) {
+      setElements((prev) =>
+        prev.map((el) =>
+          el.id === inlineEditId ? { ...el, text: inlineEditText } : el
+        )
+      );
+    }
+    setInlineEditId(null);
+    setInlineEditText(null);
+  };
+
+
     if (selectedTool !== "move" || !selectedElement) return;
 
     const canvas = canvasRef.current;
