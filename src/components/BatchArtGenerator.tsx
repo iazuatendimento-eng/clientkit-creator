@@ -1839,12 +1839,21 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             </Button>
           ) : (
             <Button
-              onClick={handleApproveAll}
-              disabled={approvedCount === 0}
+              onClick={handleSendEmails}
+              disabled={approvedCount === 0 || isSendingEmails}
               className="bg-gradient-primary"
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Salvar {approvedCount} Aprovadas
+              {isSendingEmails ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Enviar {approvedCount} por E-mail
+                </>
+              )}
             </Button>
           )}
         </div>
