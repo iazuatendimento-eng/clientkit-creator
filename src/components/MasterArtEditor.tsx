@@ -2519,7 +2519,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
 
         {/* Canvas Area */}
         <div className="flex-1 bg-muted/30 flex items-start justify-center pt-1 overflow-auto">
-          <div className="shadow-2xl">
+          <div className="shadow-2xl relative">
             <canvas
               ref={canvasRef}
               width={CANVAS_WIDTH}
@@ -2527,10 +2527,45 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
               style={{ width: CANVAS_WIDTH * SCALE, height: CANVAS_HEIGHT * SCALE, cursor: cursorStyle }}
               className="bg-white"
               onClick={handleCanvasClick}
+              onDoubleClick={handleCanvasDoubleClick}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMoveWithCursor}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+            />
+            {/* Inline text editor overlay */}
+            {inlineEditId && inlineEditText !== null && (() => {
+              const el = elements.find(e => e.id === inlineEditId);
+              if (!el) return null;
+              return (
+                <textarea
+                  autoFocus
+                  className="absolute border-2 border-primary bg-background/90 text-foreground p-1 resize-none outline-none"
+                  style={{
+                    left: el.x * SCALE,
+                    top: el.y * SCALE,
+                    width: el.width * SCALE,
+                    height: el.height * SCALE,
+                    fontSize: (el.fontSize || 24) * SCALE,
+                    textAlign: el.textAlign || "center",
+                    lineHeight: el.lineHeight || 1.2,
+                  }}
+                  value={inlineEditText}
+                  onChange={(e) => setInlineEditText(e.target.value)}
+                  onBlur={commitInlineEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") commitInlineEdit();
+                  }}
+                />
+              );
+            })()}
+            {/* Hidden file input for direct image replacement */}
+            <input
+              ref={directImageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleDirectImageChange}
             />
           </div>
         </div>
