@@ -44,12 +44,13 @@ import {
   ChevronRight,
   MessageSquareWarning,
   GripVertical,
+  Mail,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage } from "@/lib/batchHistory";
+import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
@@ -716,6 +717,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [teamFilter, setTeamFilter] = useState<string | undefined>(initialTeamFilter);
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSendingEmails, setIsSendingEmails] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(0);
@@ -2575,174 +2577,161 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
-  const handleApproveAll = async () => {
+  const handleSendEmails = async () => {
     const approvedVideos = clientVideos.filter((v) => v.status === "approved" && v.pages.length > 0);
 
     if (approvedVideos.length === 0) {
       toast({
         title: "Nenhum vídeo aprovado",
-        description: "Aprove os vídeos antes de salvar.",
+        description: "Aprove os vídeos antes de enviar.",
         variant: "destructive",
       });
       return;
     }
 
     setIsGenerating(true);
-    setGenerationStatus("Iniciando exportação MP4...");
+    setIsSendingEmails(true);
+    setGenerationStatus("Iniciando exportação e envio...");
 
     try {
-      for (let idx = 0; idx < approvedVideos.length; idx++) {
-        const video = approvedVideos[idx];
-
-        setGenerationStatus(`Gerando MP4 (${idx + 1}/${approvedVideos.length}) • ${video.clientName}`);
-
-        toast({
-          title: `Gerando vídeo MP4...`,
-          description: `Processando ${video.clientName} (pode demorar alguns segundos)`,
-        });
-
-        // Encode video from pages to MP4
-        const videoBlob = await encodeVideoToMP4(video.pages, {
-          width: template.width,
-          height: template.height,
-          pageDuration: template.pageDuration,
-          fps: 24,
-          motionEffect,
-          transitionEffect,
-          textAnimation,
-          logoAnimation,
-          textAnimDuration: textAnimDuration / (template.pageDuration || 3),
-          backgroundVideoUrls: video.previewVideoUrls || undefined,
-          frameOverlayPages: video.frameOverlayPages || undefined,
-          overlayPages: video.overlayPages || undefined,
-          logoOverlayPages: video.logoOverlayPages || undefined,
-          imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
-          imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
-          pageImageAdjustments: video.pageImageAdjustments,
-          audioUrl: (() => {
-            const sel = video.selectedAudio || 1;
-            return sel === 2 ? template.audioUrl2 : template.audioUrl1;
-          })(),
-          onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
-        });
-
-        const isActualMP4 = videoBlob.type === "video/mp4";
-        const fileExt = isActualMP4 ? "mp4" : "webm";
-        const contentType = isActualMP4 ? "video/mp4" : "video/webm";
-        const fileName = `video_${video.cardId}_${Date.now()}.${fileExt}`;
-        const thumbFileName = `thumb_${video.cardId}_${Date.now()}.png`;
-
-        console.log("[BatchSave] Video blob type:", videoBlob.type, "size:", videoBlob.size, "ext:", fileExt);
-
-        // Prepare thumbnail blob in parallel with video upload
-        setGenerationStatus(`Subindo arquivos (${idx + 1}/${approvedVideos.length}) • ${video.clientName}`);
-
-        const thumbBlobPromise = fetch(video.pages[0]).then(r => r.blob());
-
-        // Upload video + prepare thumb simultaneously
-        const [videoUploadResult, thumbBlob] = await Promise.all([
-          supabase.storage.from("card-uploads").upload(`videos/${fileName}`, videoBlob, { contentType }),
-          thumbBlobPromise,
-        ]);
-
-        if (videoUploadResult.error) {
-          console.error("Upload error:", videoUploadResult.error);
-          throw videoUploadResult.error;
-        }
-
-        // Upload thumbnail
-        const thumbUploadResult = await supabase.storage
-          .from("card-uploads")
-          .upload(`videos/${thumbFileName}`, thumbBlob, { contentType: "image/png" });
-
-        if (thumbUploadResult.error) {
-          console.error("Thumb upload error:", thumbUploadResult.error);
-          throw thumbUploadResult.error;
-        }
-
-        const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(`videos/${fileName}`);
-        const { data: thumbUrlData } = supabase.storage.from("card-uploads").getPublicUrl(`videos/${thumbFileName}`);
-
-        // DB writes in parallel (card_upload record + brief update)
-        await Promise.all([
-          createCardUpload({
-            card_id: video.cardId,
-            file_name: fileName,
-            file_url: urlData.publicUrl,
-            file_type: contentType,
-            upload_type: "final",
-          }),
-          updateProjectBrief(video.cardId, {
-            cover_image: thumbUrlData.publicUrl,
-            cover_video: urlData.publicUrl,
-            brief_type: "video",
-          }),
-        ]);
+      // Group approved videos by clientId
+      const byClient = new Map<string, typeof approvedVideos>();
+      for (const video of approvedVideos) {
+        const list = byClient.get(video.clientId) || [];
+        list.push(video);
+        byClient.set(video.clientId, list);
       }
 
-      // Clear tags + save batch history in parallel (batch save is non-blocking)
-      const newBatchItems: BatchItem[] = approvedVideos.map((video) => ({
-        cardId: video.cardId,
-        clientId: video.clientId,
-        clientName: video.clientName,
-        company: video.company,
-        cardTitle: video.cardTitle,
-        cardText: video.cardText,
-        brandKit: sanitizeBrandKitForStorage(video.brandKit),
-        files: [], // Don't store base64 pages in DB - they're already in Storage
-        backgroundImages: video.searchedImages,
-        previewVideoUrls: video.previewVideoUrls?.map(u => u && !u.startsWith("blob:") ? u : null),
-        adjustments: video.adjustments as any,
-        pageTextAdjustments: video.pageTextAdjustments,
-        pageImageAdjustments: video.pageImageAdjustments,
-        note: video.note,
-        noteRead: video.noteRead,
-      }));
+      // Fetch emails for all clients
+      const clientIds = [...byClient.keys()];
+      const { data: clientsData } = await supabase
+        .from("client_data")
+        .select("id, email, email_2, email_3")
+        .in("id", clientIds);
 
-      // Merge with existing batch items to preserve non-edited items
-      let batchItems = newBatchItems;
-      if (currentBatchId) {
-        try {
-          const existingBatch = await getBatchById(currentBatchId);
-          if (existingBatch && existingBatch.items.length > 0) {
-            const updatedCardIds = new Set(newBatchItems.map((i) => i.cardId));
-            const preservedItems = existingBatch.items.filter((i) => !updatedCardIds.has(i.cardId));
-            batchItems = [...preservedItems, ...newBatchItems];
+      let sentCount = 0;
+      const uploadedPaths: string[] = [];
+      let videoIdx = 0;
+
+      for (const [clientId, videos] of byClient) {
+        const clientRow = clientsData?.find((c) => c.id === clientId);
+        if (!clientRow) continue;
+
+        const emails = [clientRow.email, clientRow.email_2, clientRow.email_3].filter(
+          (e): e is string => !!e && e.includes("@")
+        );
+        if (emails.length === 0) {
+          toast({ title: `${videos[0].clientName}: sem e-mail cadastrado`, variant: "destructive" });
+          continue;
+        }
+
+        // Encode and upload each video
+        const mediaUrls: string[] = [];
+        for (const video of videos) {
+          videoIdx++;
+          setGenerationStatus(`Gerando MP4 (${videoIdx}/${approvedVideos.length}) • ${video.clientName}`);
+
+          const videoBlob = await encodeVideoToMP4(video.pages, {
+            width: template.width,
+            height: template.height,
+            pageDuration: template.pageDuration,
+            fps: 24,
+            motionEffect,
+            transitionEffect,
+            textAnimation,
+            logoAnimation,
+            textAnimDuration: textAnimDuration / (template.pageDuration || 3),
+            backgroundVideoUrls: video.previewVideoUrls || undefined,
+            frameOverlayPages: video.frameOverlayPages || undefined,
+            overlayPages: video.overlayPages || undefined,
+            logoOverlayPages: video.logoOverlayPages || undefined,
+            imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
+            imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
+            pageImageAdjustments: video.pageImageAdjustments,
+            audioUrl: (() => {
+              const sel = video.selectedAudio || 1;
+              return sel === 2 ? template.audioUrl2 : template.audioUrl1;
+            })(),
+            onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
+          });
+
+          const isActualMP4 = videoBlob.type === "video/mp4";
+          const fileExt = isActualMP4 ? "mp4" : "webm";
+          const contentType = isActualMP4 ? "video/mp4" : "video/webm";
+          const fileName = `temp_email_${video.cardId}_${Date.now()}.${fileExt}`;
+          const path = `videos/${fileName}`;
+
+          setGenerationStatus(`Enviando (${videoIdx}/${approvedVideos.length}) • ${video.clientName}`);
+
+          const { error: uploadError } = await supabase.storage
+            .from("card-uploads")
+            .upload(path, videoBlob, { contentType });
+
+          if (uploadError) {
+            console.error("Upload error:", uploadError);
+            continue;
           }
-        } catch (e) {
-          console.warn("Could not merge with existing batch items:", e);
+
+          uploadedPaths.push(path);
+          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+          mediaUrls.push(urlData.publicUrl);
+        }
+
+        if (mediaUrls.length === 0) continue;
+
+        // Send email
+        setGenerationStatus(`Enviando e-mail • ${videos[0].clientName}`);
+        const { error } = await supabase.functions.invoke("send-media-email", {
+          body: {
+            emails,
+            subject: `Vídeo - ${videos[0].company || videos[0].clientName}`,
+            mediaUrls,
+            mediaUrl: mediaUrls[0],
+            mediaType: "video",
+            clientName: videos[0].company || videos[0].clientName,
+            cardText: videos[0].cardText || videos[0].cardTitle,
+            caption: undefined,
+          },
+        });
+
+        if (error) {
+          console.error("Email error:", error);
+          toast({ title: `Erro ao enviar e-mail para ${videos[0].clientName}`, variant: "destructive" });
+        } else {
+          sentCount++;
         }
       }
 
-      const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
-      const snapshotWithTeam = { ...template, teamFilter: teamFilter || (template as any).teamFilter || null, hasUnresolvedNotes };
-      await Promise.all([
-        clearArtGenerationTags(),
-        saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined).then((id) => {
-          if (id) setCurrentBatchId(id);
-        }).catch((e) =>
-          console.error("Batch history save failed (non-critical):", e)
-        ),
-      ]);
+      // Clean up temp files from storage
+      if (uploadedPaths.length > 0) {
+        await supabase.storage.from("card-uploads").remove(uploadedPaths);
+      }
 
-      // Dispatch event to notify ProjectBoard to reload
-      window.dispatchEvent(new Event("bulkBriefsUpdated"));
+      // Clear tags
+      await clearArtGenerationTags();
+
+      // Delete batch from history if exists
+      if (currentBatchId) {
+        await deleteBatch(currentBatchId);
+        setCurrentBatchId(null);
+      }
 
       toast({
-        title: "Vídeos salvos!",
-        description: `${approvedVideos.length} vídeos foram gerados e salvos.`,
+        title: "E-mails enviados!",
+        description: `${sentCount}/${byClient.size} clientes receberam os vídeos.`,
       });
 
       onComplete();
     } catch (error) {
-      console.error("Error saving videos:", error);
+      console.error("Error sending emails:", error);
       toast({
-        title: "Erro ao salvar vídeos",
+        title: "Erro ao enviar e-mails",
         description: error instanceof Error ? error.message : undefined,
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
+      setIsSendingEmails(false);
       setGenerationStatus("");
     }
   };
@@ -2912,12 +2901,21 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           )}
           
           <Button
-            onClick={handleApproveAll}
-            disabled={approvedCount === 0}
+            onClick={handleSendEmails}
+            disabled={approvedCount === 0 || isSendingEmails}
             className="bg-gradient-primary"
           >
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            Salvar Aprovados ({approvedCount})
+            {isSendingEmails ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Mail className="mr-2 h-4 w-4" />
+                Enviar {approvedCount} por E-mail
+              </>
+            )}
           </Button>
         </div>
       </div>

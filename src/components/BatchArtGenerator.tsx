@@ -25,6 +25,7 @@ import {
   Save,
   ClipboardPaste,
   MessageSquareWarning,
+  Mail,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage } from "@/lib/batchHistory";
+import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import {
   Dialog,
   DialogContent,
@@ -263,6 +264,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSendingEmails, setIsSendingEmails] = useState(false);
   const [selectedArt, setSelectedArt] = useState<ClientArt | null>(null);
   const [selectedArtIndex, setSelectedArtIndex] = useState<number>(-1);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
@@ -1646,90 +1648,126 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   };
 
-  const handleApproveAll = async () => {
+
+  const handleSendEmails = async () => {
     const approvedArts = clientArts.filter((a) => a.status === "approved" && a.imageUrl);
 
     if (approvedArts.length === 0) {
       toast({
         title: "Nenhuma arte aprovada",
-        description: "Aprove as artes antes de salvar.",
+        description: "Aprove as artes antes de enviar.",
         variant: "destructive",
       });
       return;
     }
 
+    setIsSendingEmails(true);
+
     try {
+      // Group approved arts by clientId
+      const byClient = new Map<string, typeof approvedArts>();
       for (const art of approvedArts) {
-        // Convert base64 to blob and upload
-        const response = await fetch(art.imageUrl!);
-        const blob = await response.blob();
-        const fileName = `art_${art.cardId}_${Date.now()}.png`;
+        const list = byClient.get(art.clientId) || [];
+        list.push(art);
+        byClient.set(art.clientId, list);
+      }
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("card-uploads")
-          .upload(`artes/${fileName}`, blob, {
-            contentType: "image/png",
-          });
+      // Fetch emails for all clients
+      const clientIds = [...byClient.keys()];
+      const { data: clientsData } = await supabase
+        .from("client_data")
+        .select("id, email, email_2, email_3")
+        .in("id", clientIds);
 
-        if (uploadError) {
-          console.error("Upload error:", uploadError);
+      let sentCount = 0;
+      const uploadedPaths: string[] = []; // track for cleanup
+
+      for (const [clientId, arts] of byClient) {
+        const clientRow = clientsData?.find((c) => c.id === clientId);
+        if (!clientRow) continue;
+
+        const emails = [clientRow.email, clientRow.email_2, clientRow.email_3].filter(
+          (e): e is string => !!e && e.includes("@")
+        );
+        if (emails.length === 0) {
+          toast({ title: `${arts[0].clientName}: sem e-mail cadastrado`, variant: "destructive" });
           continue;
         }
 
-        const { data: urlData } = supabase.storage
-          .from("card-uploads")
-          .getPublicUrl(`artes/${fileName}`);
+        // Upload each art image to temp storage and collect URLs
+        const mediaUrls: string[] = [];
+        for (const art of arts) {
+          const response = await fetch(art.imageUrl!);
+          const blob = await response.blob();
+          const fileName = `temp_email_${art.cardId}_${Date.now()}.png`;
+          const path = `artes/${fileName}`;
 
-        // Create card upload record
-        await createCardUpload({
-          card_id: art.cardId,
-          file_name: fileName,
-          file_url: urlData.publicUrl,
-          file_type: "image/png",
-          upload_type: "final",
+          const { error: uploadError } = await supabase.storage
+            .from("card-uploads")
+            .upload(path, blob, { contentType: "image/png" });
+
+          if (uploadError) {
+            console.error("Upload error:", uploadError);
+            continue;
+          }
+
+          uploadedPaths.push(path);
+          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+          mediaUrls.push(urlData.publicUrl);
+        }
+
+        if (mediaUrls.length === 0) continue;
+
+        // Send email
+        const { data, error } = await supabase.functions.invoke("send-media-email", {
+          body: {
+            emails,
+            subject: `Arte - ${arts[0].company || arts[0].clientName}`,
+            mediaUrls,
+            mediaUrl: mediaUrls[0],
+            mediaType: "art",
+            clientName: arts[0].company || arts[0].clientName,
+            cardText: arts[0].cardText || arts[0].cardTitle,
+            caption: undefined,
+          },
         });
 
-        // Update card cover image
-        await updateProjectBrief(art.cardId, { cover_image: urlData.publicUrl });
+        if (error) {
+          console.error("Email error:", error);
+          toast({ title: `Erro ao enviar e-mail para ${arts[0].clientName}`, variant: "destructive" });
+        } else {
+          sentCount++;
+        }
       }
 
-      // Clear the art generation tags
+      // Clean up temp files from storage
+      if (uploadedPaths.length > 0) {
+        await supabase.storage.from("card-uploads").remove(uploadedPaths);
+      }
+
+      // Clear art generation tags
       await clearArtGenerationTags();
 
-      // Save batch to history
-      const batchItems: BatchItem[] = approvedArts.map((art) => ({
-        cardId: art.cardId,
-        clientId: art.clientId,
-        clientName: art.clientName,
-        company: art.company,
-        cardTitle: art.cardTitle,
-        cardText: art.cardText,
-        brandKit: sanitizeBrandKitForStorage(art.brandKit),
-        files: [art.imageUrl!],
-        backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
-        note: art.note,
-        noteRead: art.noteRead,
-      }));
-      const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
-      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
-      const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
-      if (savedId) setCurrentBatchId(savedId);
-
-      // Dispatch event to notify all ProjectBoard instances to reload
-      window.dispatchEvent(new Event("bulkBriefsUpdated"));
+      // Delete batch from history if exists
+      if (currentBatchId) {
+        await deleteBatch(currentBatchId);
+        setCurrentBatchId(null);
+      }
 
       toast({
-        title: "Artes salvas!",
-        description: `${approvedArts.length} artes foram anexadas aos cards.`,
+        title: "E-mails enviados!",
+        description: `${sentCount}/${byClient.size} clientes receberam as artes.`,
       });
 
       onComplete();
     } catch (error) {
-      console.error("Error saving arts:", error);
+      console.error("Error sending emails:", error);
       toast({
-        title: "Erro ao salvar artes",
+        title: "Erro ao enviar e-mails",
         variant: "destructive",
       });
+    } finally {
+      setIsSendingEmails(false);
     }
   };
 
@@ -1801,12 +1839,21 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             </Button>
           ) : (
             <Button
-              onClick={handleApproveAll}
-              disabled={approvedCount === 0}
+              onClick={handleSendEmails}
+              disabled={approvedCount === 0 || isSendingEmails}
               className="bg-gradient-primary"
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Salvar {approvedCount} Aprovadas
+              {isSendingEmails ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Enviar {approvedCount} por E-mail
+                </>
+              )}
             </Button>
           )}
         </div>
