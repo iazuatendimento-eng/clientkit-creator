@@ -46,6 +46,7 @@ import {
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { removeBackground } from "@/lib/backgroundRemoval";
 import { ImageEraserModal } from "./ImageEraserModal";
+import { ArtCardWithOverlay } from "./ArtCardWithOverlay";
 
 interface CanvasElement {
   id: string;
