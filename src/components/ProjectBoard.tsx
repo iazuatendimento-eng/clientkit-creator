@@ -644,6 +644,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <Upload className="h-3 w-3 mr-1" />
                 Arquivos
               </Button>
+              {clientId && (finalArtworks.length > 0 || brief.coverImage || brief.coverVideo) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); handleSendCardEmail(); }}
+                  disabled={isSendingEmail}
+                  className="text-xs px-2 py-1 h-auto w-full"
+                >
+                  {isSendingEmail ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Mail className="h-3 w-3 mr-1" />}
+                  Enviar por E-mail
+                </Button>
+              )}
               {/* Generated video with Já Baixei + Enviar por E-mail */}
               {!dismissed && brief.generatedVideoUrl && brief.generatedVideoExpiresAt && new Date(brief.generatedVideoExpiresAt) > new Date() && (
                 <div className="border border-primary/20 rounded-lg overflow-hidden bg-primary/5">
