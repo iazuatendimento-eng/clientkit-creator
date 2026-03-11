@@ -192,7 +192,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
 
   // Load final artworks lazily - only when modal opens (avoids N+1 queries on mount)
   useEffect(() => {
-    if (!isDetailModalOpen) return;
     const loadFinalArtworks = async () => {
       try {
         const uploads = await getCardUploads(brief.id);
@@ -210,7 +209,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       }
     };
     loadFinalArtworks();
-  }, [brief.id, isDetailModalOpen]);
+  }, [brief.id]);
 
   // Auto-open modal if URL hash matches this card
   useEffect(() => {
