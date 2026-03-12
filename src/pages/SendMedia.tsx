@@ -245,7 +245,7 @@ const SendMedia = () => {
                   <input
                     ref={csvInputRef}
                     type="file"
-                    accept=".csv,.txt"
+                    accept=".csv,.txt,.xlsx,.xls"
                     className="hidden"
                     onChange={handleCsvUpload}
                   />
