@@ -84,6 +84,8 @@ const Index = () => {
   const [showOnlyWithoutText, setShowOnlyWithoutText] = useState(false);
   const [clientsWithoutText, setClientsWithoutText] = useState<Set<string>>(new Set());
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
