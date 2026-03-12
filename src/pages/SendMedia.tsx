@@ -211,7 +211,7 @@ const SendMedia = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Formato: <code className="bg-muted px-1 rounded">nome cliente, nome arquivo, e-mail, texto</code>
+                Formato: <code className="bg-muted px-1 rounded">cliente, arquivo, email1, email2, email3, texto</code>
               </p>
               <Button asChild variant="outline" className="w-full">
                 <label className="cursor-pointer">
