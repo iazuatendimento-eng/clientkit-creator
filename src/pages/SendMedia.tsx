@@ -270,6 +270,7 @@ const SendMedia = () => {
                           <td className="py-2 px-2">{row.clientName}</td>
                           <td className="py-2 px-2 font-mono text-xs">{row.fileName}</td>
                           <td className="py-2 px-2">{row.email}</td>
+                          <td className="py-2 px-2 text-xs max-w-[200px] truncate" title={row.bodyText}>{row.bodyText || "—"}</td>
                           <td className="py-2 px-2">
                             {fileFound ? (
                               <CheckCircle className="w-4 h-4 text-green-500" />
