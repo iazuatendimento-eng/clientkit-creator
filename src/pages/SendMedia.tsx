@@ -1,12 +1,13 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, Upload, FileSpreadsheet, Send, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, Send, X, CheckCircle, AlertCircle, Loader2, Palette, Video } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from "xlsx";
+
+type MediaMode = "arte" | "video";
 
 interface CsvRow {
   clientName: string;
@@ -19,11 +20,23 @@ interface CsvRow {
 
 const SendMedia = () => {
   const navigate = useNavigate();
+  const [mode, setMode] = useState<MediaMode | null>(null);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
+
+  const resetState = () => {
+    setCsvRows([]);
+    setUploadedFiles([]);
+    setIsSending(false);
+  };
+
+  const selectMode = (m: MediaMode) => {
+    resetState();
+    setMode(m);
+  };
 
   const parseCsv = (text: string) => {
     const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
@@ -31,17 +44,14 @@ const SendMedia = () => {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      // Skip header if it looks like one
       if (i === 0 && (line.toLowerCase().includes("cliente") || line.toLowerCase().includes("client") || line.toLowerCase().includes("nome"))) {
         continue;
       }
-      // Support comma or semicolon separator
       const sep = line.includes(";") ? ";" : ",";
       const parts = line.split(sep).map(p => p.trim().replace(/^"|"$/g, ""));
       if (parts.length >= 3) {
         const emailList = [parts[2], parts[3], parts[4]]
           .filter(p => p && p.includes("@"));
-        // bodyText is the first part after the emails that doesn't look like an email
         const remaining = parts.slice(2);
         const bodyParts = remaining.filter(p => !p.includes("@"));
         rows.push({
@@ -71,7 +81,6 @@ const SendMedia = () => {
         const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
         
         const rows: CsvRow[] = jsonRows.map((row) => {
-          // Support exported Excel format with named columns
           const clientName = row["Cliente"] || row["cliente"] || "";
           const fileName = row["Nome do Arquivo"] || row["arquivo"] || "";
           const email1 = row["E-mail"] || row["email1"] || row["email"] || "";
@@ -127,11 +136,29 @@ const SendMedia = () => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // For arte mode: fileName is a number like "1", "2", etc.
+  // We match by the number in the file name (e.g., "1.png", "2.jpg")
+  // For video mode: fileName is a number, match "1.mp4"
   const findFile = (fileName: string): File | undefined => {
-    // Try exact match first, then partial
-    return uploadedFiles.find(f => f.name === fileName)
-      || uploadedFiles.find(f => f.name.toLowerCase() === fileName.toLowerCase())
-      || uploadedFiles.find(f => f.name.toLowerCase().includes(fileName.toLowerCase()));
+    const num = fileName.trim();
+    
+    if (mode === "arte") {
+      // Match files like "1.png", "1.jpg", "1.jpeg" or exact name
+      return uploadedFiles.find(f => {
+        const baseName = f.name.replace(/\.[^.]+$/, "");
+        return baseName === num;
+      }) || uploadedFiles.find(f => f.name === fileName)
+        || uploadedFiles.find(f => f.name.toLowerCase() === fileName.toLowerCase())
+        || uploadedFiles.find(f => f.name.toLowerCase().includes(fileName.toLowerCase()));
+    } else {
+      // Video: match by number in name
+      return uploadedFiles.find(f => {
+        const baseName = f.name.replace(/\.[^.]+$/, "");
+        return baseName === num;
+      }) || uploadedFiles.find(f => f.name === fileName)
+        || uploadedFiles.find(f => f.name.toLowerCase() === fileName.toLowerCase())
+        || uploadedFiles.find(f => f.name.toLowerCase().includes(fileName.toLowerCase()));
+    }
   };
 
   const uploadToStorage = async (file: File, clientName: string): Promise<string> => {
@@ -149,7 +176,6 @@ const SendMedia = () => {
       return;
     }
 
-    // Check all files exist
     const missing = csvRows.filter(r => !findFile(r.fileName));
     if (missing.length > 0) {
       toast.error(`Arquivos não encontrados: ${missing.map(m => m.fileName).join(", ")}`);
@@ -169,16 +195,13 @@ const SendMedia = () => {
     const updated = [...csvRows];
 
     for (const [, indices] of groups) {
-      // Mark all rows in group as sending
       for (const i of indices) {
         updated[i] = { ...updated[i], status: "sending" };
       }
       setCsvRows([...updated]);
 
       try {
-        // Upload unique files in the group (deduplicate by fileName for repeated MP4s)
         const mediaUrls: string[] = [];
-        let hasVideo = false;
         const uploadedFileNames = new Set<string>();
         for (const i of indices) {
           const fileName = updated[i].fileName;
@@ -187,20 +210,18 @@ const SendMedia = () => {
           const file = findFile(fileName)!;
           const publicUrl = await uploadToStorage(file, updated[i].clientName);
           mediaUrls.push(publicUrl);
-          if (file.type.startsWith("video/")) hasVideo = true;
         }
 
         const firstRow = updated[indices[0]];
-        // Collect all unique emails from grouped rows
         const allEmails = [...new Set(indices.flatMap(i => updated[i].emails))];
         const bodyText = indices.map(i => updated[i].bodyText).filter(Boolean).join("\n");
 
         const { data, error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails: allEmails,
-            subject: `Arte - ${firstRow.clientName}`,
+            subject: `${mode === "video" ? "Vídeo" : "Arte"} - ${firstRow.clientName}`,
             mediaUrls,
-            mediaType: hasVideo ? "video" : "image",
+            mediaType: mode === "video" ? "video" : "image",
             clientName: firstRow.clientName,
             cardText: bodyText || undefined,
           },
@@ -235,14 +256,69 @@ const SendMedia = () => {
     }
   };
 
+  const fileAccept = mode === "arte" ? "image/png,image/jpeg,image/jpg" : "video/mp4,video/*";
+  const fileLabel = mode === "arte" ? "PNG/JPEG" : "MP4";
+  const modeLabel = mode === "arte" ? "Artes" : "Vídeos";
+
+  // Mode selection screen
+  if (!mode) {
+    return (
+      <div className="min-h-screen bg-background p-4 md:p-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold">Enviar Mídias</h1>
+          </div>
+
+          <p className="text-muted-foreground">Escolha o tipo de mídia para enviar:</p>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card
+              className="border-primary/20 cursor-pointer hover:border-primary/60 transition-colors"
+              onClick={() => selectMode("arte")}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
+                <Palette className="h-12 w-12 text-primary" />
+                <div className="text-center">
+                  <h2 className="text-lg font-semibold">Enviar Artes</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Carrossel: espera arquivos PNG/JPEG numerados (1.png, 2.png, 3.png...)
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="border-primary/20 cursor-pointer hover:border-primary/60 transition-colors"
+              onClick={() => selectMode("video")}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
+                <Video className="h-12 w-12 text-primary" />
+                <div className="text-center">
+                  <h2 className="text-lg font-semibold">Enviar Vídeos</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Espera 1 arquivo MP4 por cliente (1.mp4, 2.mp4...)
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" onClick={() => setMode(null)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Enviar Mídias</h1>
+          <h1 className="text-2xl font-bold">Enviar {modeLabel}</h1>
+          {mode === "arte" ? <Palette className="h-5 w-5 text-primary" /> : <Video className="h-5 w-5 text-primary" />}
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
@@ -251,7 +327,7 @@ const SendMedia = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <FileSpreadsheet className="h-5 w-5" />
-                1. Carregar CSV
+                1. Carregar Planilha
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -261,7 +337,7 @@ const SendMedia = () => {
               <Button asChild variant="outline" className="w-full">
                 <label className="cursor-pointer">
                   <Upload className="mr-2 h-4 w-4" />
-                  Selecionar CSV
+                  Selecionar CSV/Excel
                   <input
                     ref={csvInputRef}
                     type="file"
@@ -282,12 +358,15 @@ const SendMedia = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Upload className="h-5 w-5" />
-                2. Upload dos Arquivos
+                2. Upload dos Arquivos ({fileLabel})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Faça upload das artes/vídeos referenciados no CSV
+                {mode === "arte"
+                  ? "Faça upload dos PNGs/JPEGs numerados (1.png, 2.png, 3.png...)"
+                  : "Faça upload dos MP4s numerados (1.mp4, 2.mp4...)"
+                }
               </p>
               <Button asChild variant="outline" className="w-full">
                 <label className="cursor-pointer">
@@ -297,7 +376,7 @@ const SendMedia = () => {
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    accept="image/*,video/*"
+                    accept={fileAccept}
                     className="hidden"
                     onChange={handleFilesUpload}
                   />
