@@ -68,8 +68,28 @@ const SendMedia = () => {
         const data = new Uint8Array(ev.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const csvText = XLSX.utils.sheet_to_csv(sheet, { FS: ";" });
-        const rows = parseCsv(csvText);
+        const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+        
+        const rows: CsvRow[] = jsonRows.map((row) => {
+          // Support exported Excel format with named columns
+          const clientName = row["Cliente"] || row["cliente"] || "";
+          const fileName = row["Nome do Arquivo"] || row["arquivo"] || "";
+          const email1 = row["E-mail"] || row["email1"] || row["email"] || "";
+          const email2 = row["E-mail 2"] || row["email2"] || "";
+          const email3 = row["E-mail 3"] || row["email3"] || "";
+          const bodyText = row["Texto do Card"] || row["texto"] || "";
+          
+          const emails = [email1, email2, email3].filter((e: string) => e && e.includes("@"));
+          
+          return {
+            clientName: String(clientName),
+            fileName: String(fileName),
+            emails: emails.length > 0 ? emails : [String(email1)],
+            bodyText: String(bodyText),
+            status: "pending" as const,
+          };
+        }).filter(r => r.clientName);
+        
         if (rows.length === 0) {
           toast.error("Planilha vazia ou formato inválido.");
           return;
