@@ -415,7 +415,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           mediaType,
           clientName: brief.clientName,
           cardText: brief.description || brief.title,
-          caption: brief.generatedCaption || undefined,
         },
       });
       if (error) throw error;
