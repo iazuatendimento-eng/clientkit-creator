@@ -917,24 +917,6 @@ const Index = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleCopyUrl(client.id);
-                        }}
-                        className={`p-1 rounded transition-colors ${
-                          selectedClient?.id === client.id
-                            ? 'hover:bg-primary-foreground/20'
-                            : 'hover:bg-muted'
-                        }`}
-                        title="Copiar link do cliente"
-                      >
-                        {copiedId === client.id ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
                           setDeleteConfirmId(client.id);
                         }}
                         className={`p-1 rounded transition-colors ${
