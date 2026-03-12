@@ -1098,34 +1098,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     }
 
     try {
-      let generatedCaption = "";
-      
-      // Gerar legenda automaticamente ao criar novo card
-      if (!editingBrief && newBrief.title) {
-        try {
-          toast.info("Gerando legenda...");
-          const captionResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-              body: JSON.stringify({ text: newBrief.title }),
-            }
-          );
-
-          if (captionResponse.ok) {
-            const captionData = await captionResponse.json();
-            generatedCaption = captionData.caption;
-          }
-        } catch (captionError) {
-          console.error("Erro ao gerar legenda:", captionError);
-          // Continua mesmo se falhar a geração da legenda
-        }
-      }
-      
       const briefData = {
         client_id: clientId,
         title: newBrief.title || "",
@@ -1135,7 +1107,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         brand_kit_id: newBrief.brandKitId || null,
         brief_type: newBrief.type || "art",
         cover_image: newBrief.coverImage || null,
-        generated_caption: editingBrief ? undefined : generatedCaption,
       };
 
       if (editingBrief) {
