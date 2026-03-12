@@ -542,7 +542,92 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
             </CardContent>
           </Card>
 
-          {/* Brand Kit Section - hidden from UI but data preserved */}
+          {/* Brand Kit Section */}
+          <Card className="bg-gradient-card border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Kit de Marca
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Colors */}
+              <div className="space-y-2">
+                <Label>Cores da Marca</Label>
+                <div className="flex flex-wrap gap-2">
+                  {brandColors.map((color, index) => (
+                    <div key={index} className="flex items-center gap-1">
+                      <input
+                        type="color"
+                        value={color}
+                        onChange={(e) => {
+                          const newColors = [...brandColors];
+                          newColors[index] = e.target.value;
+                          setBrandColors(newColors);
+                        }}
+                        className="w-10 h-10 rounded border border-border cursor-pointer"
+                      />
+                      <span className="text-xs text-muted-foreground">{color}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* PNGs */}
+              <div className="space-y-2">
+                <Label>Ativos PNG (Logo, Contato, Mascote)</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {["Logo", "Info de Contato", "Mascote"].map((label, index) => (
+                    <div key={index} className="space-y-1">
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      {brandPngs[index] ? (
+                        <div className="relative border rounded-lg p-2 bg-background/50">
+                          <img src={brandPngs[index]} alt={label} className="w-full h-20 object-contain" />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6"
+                            onClick={() => {
+                              const newPngs = [...brandPngs];
+                              newPngs[index] = "";
+                              setBrandPngs(newPngs);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                          <label className="cursor-pointer">
+                            <Upload className="mr-1 h-3 w-3" />
+                            Upload
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleBrandPngUpload(e, index)}
+                            />
+                          </label>
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font */}
+              <div className="space-y-2">
+                <Label htmlFor="brandFont">Fonte (Google Fonts)</Label>
+                <Input
+                  id="brandFont"
+                  value={brandFont}
+                  onChange={(e) => setBrandFont(e.target.value)}
+                  placeholder="Ex: Roboto, Montserrat, Open Sans..."
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {client?.id && (
             <Card className="bg-gradient-card border-primary/20">

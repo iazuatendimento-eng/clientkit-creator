@@ -736,9 +736,6 @@ const Index = () => {
             </div>
           </div>
         </div>
-        <div className="container mx-auto mt-3">
-          <DatabaseUsageBar />
-        </div>
       </div>
 
       {/* Header */}
@@ -760,10 +757,6 @@ const Index = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" variant="outline" onClick={() => navigate("/send-media")}>
-              <Mail className="mr-1 h-4 w-4" />
-              Enviar
-            </Button>
             <Button size="sm" variant="outline" onClick={() => setIsDeadlineDialogOpen(true)}>
               <Calendar className="mr-1 h-4 w-4" />
               Prazo
@@ -782,7 +775,7 @@ const Index = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* <Button size="sm" variant="outline" onClick={() => navigate("/master-art")}>
+            <Button size="sm" variant="outline" onClick={() => navigate("/master-art")}>
               <Palette className="mr-1 h-4 w-4" />
               Arte
             </Button>
@@ -807,7 +800,7 @@ const Index = () => {
                   Vídeos
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu> */}
+            </DropdownMenu>
 
             <Button
               size="sm"
