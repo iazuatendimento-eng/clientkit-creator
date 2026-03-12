@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Copy, Check, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette, Mail, Sparkles } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette, Mail, Sparkles } from "lucide-react";
 import { QuickCreate } from "@/components/QuickCreate";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
@@ -230,12 +230,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     onCoverUpdate(brief.id, coverUrl, isVideo);
   };
 
-  const handleCopyCaption = () => {
-    if (brief.generatedCaption) {
-      navigator.clipboard.writeText(brief.generatedCaption);
-      toast.success("Legenda copiada!");
-    }
-  };
 
   const getMimeType = (name: string): string => {
     const ext = name.split('.').pop()?.toLowerCase();
@@ -368,7 +362,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           mediaType,
           clientName: brief.clientName,
           cardText: brief.description || brief.title,
-          caption: brief.generatedCaption || undefined,
         },
       });
       if (error) throw error;
@@ -422,7 +415,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           mediaType,
           clientName: brief.clientName,
           cardText: brief.description || brief.title,
-          caption: brief.generatedCaption || undefined,
         },
       });
       if (error) throw error;
@@ -949,7 +941,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false); // kept for compatibility
-  const [captionCopied, setCaptionCopied] = useState(false);
+  
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({});
 
   // Load briefs from Supabase
@@ -1106,34 +1098,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     }
 
     try {
-      let generatedCaption = "";
-      
-      // Gerar legenda automaticamente ao criar novo card
-      if (!editingBrief && newBrief.title) {
-        try {
-          toast.info("Gerando legenda...");
-          const captionResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-              body: JSON.stringify({ text: newBrief.title }),
-            }
-          );
-
-          if (captionResponse.ok) {
-            const captionData = await captionResponse.json();
-            generatedCaption = captionData.caption;
-          }
-        } catch (captionError) {
-          console.error("Erro ao gerar legenda:", captionError);
-          // Continua mesmo se falhar a geração da legenda
-        }
-      }
-      
       const briefData = {
         client_id: clientId,
         title: newBrief.title || "",
@@ -1143,7 +1107,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         brand_kit_id: newBrief.brandKitId || null,
         brief_type: newBrief.type || "art",
         cover_image: newBrief.coverImage || null,
-        generated_caption: editingBrief ? undefined : generatedCaption,
       };
 
       if (editingBrief) {
@@ -1151,11 +1114,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         toast.success("Briefing atualizado!");
       } else {
         await createProjectBrief(briefData);
-        if (generatedCaption) {
-          toast.success("Briefing criado com legenda!");
-        } else {
-          toast.success("Briefing criado!");
-        }
+        toast.success("Briefing criado!");
       }
 
       // Reload briefs from Supabase to ensure sync
@@ -1293,58 +1252,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       if (failedCount > 0) {
         toast.warning(`${createdIds.length} cards criados, ${failedCount} falharam.`);
       } else {
-        toast.success(`${createdIds.length} cards criados! Gerando legendas em background...`);
+        toast.success(`${createdIds.length} cards criados!`);
       }
-
-      // STEP 2: Generate captions in background (non-blocking)
-      for (const brief of data) {
-        if (brief.generated_caption) continue; // Skip if already has caption
-        try {
-          const captionResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-              body: JSON.stringify({ text: brief.title }),
-            }
-          );
-
-          if (captionResponse.ok) {
-            const captionData = await captionResponse.json();
-            await updateProjectBrief(brief.id, { generated_caption: captionData.caption });
-          }
-        } catch (err) {
-          console.error(`Erro ao gerar legenda para ${brief.id}:`, err);
-        }
-      }
-      
-      // Reload one more time to get captions
-      const updatedData = await getProjectBriefsByClient(clientId);
-      const updatedBriefs: ProjectBrief[] = updatedData.map((brief: any) => ({
-        id: brief.id,
-        clientName: clientName || "",
-        title: brief.title,
-        description: brief.description || "",
-        deadline: brief.deadline || "",
-        status: brief.status || "todo",
-        brandKitId: brief.brand_kit_id,
-        createdAt: brief.created_at || new Date().toISOString(),
-        type: brief.brief_type as "art" | "video",
-        coverImage: brief.cover_image,
-        coverVideo: brief.cover_video,
-        generatedCaption: brief.generated_caption || "",
-        published: brief.published || false,
-        artGenerationSelected: brief.art_generation_selected || false,
-        generatedVideoUrl: (brief as any).generated_video_url || undefined,
-        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
-        generatedArtUrl: (brief as any).generated_art_url || undefined,
-        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
-      }));
-      setBriefs(updatedBriefs);
-      toast.success("Legendas geradas com sucesso!");
     }
   };
 
@@ -1359,30 +1268,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         newBrief.brandKitId = brandKits[0].id;
       }
 
-      // Gerar legenda automaticamente
-      let generatedCaption = "";
-      try {
-        toast.info("Gerando legenda...");
-        const captionResponse = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({ text }),
-          }
-        );
-
-        if (captionResponse.ok) {
-          const captionData = await captionResponse.json();
-          generatedCaption = captionData.caption;
-        }
-      } catch (captionError) {
-        console.error("Erro ao gerar legenda:", captionError);
-      }
-
       const briefData = {
         client_id: clientId,
         title: text,
@@ -1390,7 +1275,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         deadline: new Date().toISOString().split('T')[0],
         status: "todo" as const,
         brand_kit_id: newBrief.brandKitId || null,
-        generated_caption: generatedCaption,
       };
 
       await createProjectBrief(briefData);
@@ -1424,11 +1308,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       setNewBrief({});
       setShowSplitDialog(false);
       setIsDialogOpen(false);
-      if (generatedCaption) {
-        toast.success("Card criado com legenda!");
-      } else {
-        toast.success("Card criado!");
-      }
+      toast.success("Card criado!");
     } catch (error: any) {
       console.error("Erro detalhado ao criar card:", error);
       
@@ -1527,23 +1407,9 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const handleEditBrief = (brief: ProjectBrief) => {
     setEditingBrief(brief);
     setNewBrief(brief);
-    setCaptionCopied(false);
     setIsDialogOpen(true);
   };
 
-  const handleCopyCaption = async () => {
-    const captionToUse = editingBrief?.generatedCaption;
-    if (!captionToUse) return;
-    
-    try {
-      await navigator.clipboard.writeText(captionToUse);
-      setCaptionCopied(true);
-      toast.success("Legenda copiada!");
-      setTimeout(() => setCaptionCopied(false), 2000);
-    } catch (error) {
-      toast.error("Erro ao copiar legenda");
-    }
-  };
 
   const handleCreateProjectFromBrief = (brief: ProjectBrief) => {
     if (brief.brandKitId) {
@@ -1677,36 +1543,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                         />
                       </div>
                       
-                      {editingBrief.generatedCaption && (
-                        <div className="border-t pt-4">
-                          <label className="text-sm font-medium mb-2 block">Legenda para Redes Sociais</label>
-                          <div className="space-y-2">
-                            <div className="relative">
-                              <Textarea
-                                value={editingBrief.generatedCaption}
-                                readOnly
-                                rows={6}
-                                className="pr-10 text-sm bg-muted/50"
-                              />
-                              <Button
-                                onClick={handleCopyCaption}
-                                variant="ghost"
-                                size="sm"
-                                className="absolute top-2 right-2 h-7 w-7 p-0"
-                              >
-                                {captionCopied ? (
-                                  <Check className="h-3 w-3 text-green-500" />
-                                ) : (
-                                  <Copy className="h-3 w-3" />
-                                )}
-                              </Button>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Esta legenda foi gerada automaticamente ao criar o card. Clique no ícone para copiar.
-                            </p>
-                          </div>
-                        </div>
-                      )}
                       
                       <Button onClick={handleSaveBrief} className="w-full">
                         Salvar Alterações
