@@ -13,6 +13,7 @@ import MasterVideo from "./pages/MasterVideo";
 import Receivables from "./pages/Receivables";
 import BatchHistoryPage from "./pages/BatchHistoryPage";
 import ExportDatabase from "./pages/ExportDatabase";
+import SendMedia from "./pages/SendMedia";
 import { useKeepAlive } from "@/hooks/useKeepAlive";
 import "./App.css";
 
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/batch-history" element={<ProtectedRoute><BatchHistoryPage /></ProtectedRoute>} />
           <Route path="/receivables" element={<ProtectedRoute><Receivables /></ProtectedRoute>} />
           <Route path="/export-db" element={<ProtectedRoute><ExportDatabase /></ProtectedRoute>} />
+          <Route path="/send-media" element={<ProtectedRoute><SendMedia /></ProtectedRoute>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/client/:clientId" element={<ClientPublicView />} />
           <Route path="/:clientSlug" element={<ClientPublicView />} />
