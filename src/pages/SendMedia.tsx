@@ -146,11 +146,13 @@ const SendMedia = () => {
         }
 
         const firstRow = updated[indices[0]];
+        // Collect all unique emails from grouped rows
+        const allEmails = [...new Set(indices.flatMap(i => updated[i].emails))];
         const bodyText = indices.map(i => updated[i].bodyText).filter(Boolean).join("\n");
 
         const { data, error } = await supabase.functions.invoke("send-media-email", {
           body: {
-            emails: [firstRow.email],
+            emails: allEmails,
             subject: `Arte - ${firstRow.clientName}`,
             mediaUrls,
             mediaType: hasVideo ? "video" : "image",
