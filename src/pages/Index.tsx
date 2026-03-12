@@ -326,20 +326,28 @@ const Index = () => {
   };
 
   const handleDeleteClient = async (id: string) => {
+    setIsDeleting(true);
     try {
       await deleteClient(id);
+      if (selectedClient?.id === id) {
+        setSelectedClient(null);
+        setCurrentView("dashboard");
+      }
       await loadClients();
       toast({
-        title: "Cliente removido!",
-        description: "O cliente foi removido com sucesso.",
+        title: "Cliente excluído!",
+        description: "O cliente e todos os dados relacionados foram removidos permanentemente.",
       });
     } catch (error) {
       console.error("Error deleting client:", error);
       toast({
-        title: "Erro ao remover cliente",
-        description: "Não foi possível remover o cliente.",
+        title: "Erro ao excluir cliente",
+        description: "Não foi possível excluir o cliente.",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmId(null);
     }
   };
 
