@@ -662,7 +662,8 @@ const Index = () => {
       ws['!cols'] = colWidths;
 
       const teamSuffix = selectedTeam ? `_${selectedTeam.replace(/[^a-zA-Z0-9]/g, '_')}` : '';
-      const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
+      const typeSuffix = exportType === 'arte' ? '_ARTE' : '_VIDEO';
+      const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}${typeSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
       XLSX.writeFile(wb, fileName);
 
       toast({
