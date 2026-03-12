@@ -112,33 +112,58 @@ const SendMedia = () => {
 
     setIsSending(true);
 
+    // Group rows by email+clientName so carousel PNGs go in one email
+    const groups = new Map<string, number[]>();
+    csvRows.forEach((row, i) => {
+      const key = `${row.email}|||${row.clientName}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(i);
+    });
+
     const updated = [...csvRows];
-    for (let i = 0; i < updated.length; i++) {
-      updated[i] = { ...updated[i], status: "sending" };
+
+    for (const [, indices] of groups) {
+      // Mark all rows in group as sending
+      for (const i of indices) {
+        updated[i] = { ...updated[i], status: "sending" };
+      }
       setCsvRows([...updated]);
 
       try {
-        const file = findFile(updated[i].fileName)!;
-        const publicUrl = await uploadToStorage(file, updated[i].clientName);
+        // Upload all files in the group
+        const mediaUrls: string[] = [];
+        let hasVideo = false;
+        for (const i of indices) {
+          const file = findFile(updated[i].fileName)!;
+          const publicUrl = await uploadToStorage(file, updated[i].clientName);
+          mediaUrls.push(publicUrl);
+          if (file.type.startsWith("video/")) hasVideo = true;
+        }
 
-        const isVideo = file.type.startsWith("video/");
+        const firstRow = updated[indices[0]];
+        const bodyText = indices.map(i => updated[i].bodyText).filter(Boolean).join("\n");
+
         const { data, error } = await supabase.functions.invoke("send-media-email", {
           body: {
-            emails: [updated[i].email],
-            subject: `Arte - ${updated[i].clientName}`,
-            mediaUrl: publicUrl,
-            mediaType: isVideo ? "video" : "image",
-            clientName: updated[i].clientName,
-            cardText: updated[i].bodyText || undefined,
+            emails: [firstRow.email],
+            subject: `Arte - ${firstRow.clientName}`,
+            mediaUrls,
+            mediaType: hasVideo ? "video" : "image",
+            clientName: firstRow.clientName,
+            cardText: bodyText || undefined,
           },
         });
 
         if (error) throw error;
         if (data && !data.success) throw new Error(data.error || "Erro no envio");
 
-        updated[i] = { ...updated[i], status: "sent" };
+        for (const i of indices) {
+          updated[i] = { ...updated[i], status: "sent" };
+        }
       } catch (err: any) {
-        updated[i] = { ...updated[i], status: "error", errorMsg: err.message };
+        for (const i of indices) {
+          updated[i] = { ...updated[i], status: "error", errorMsg: err.message };
+        }
       }
       setCsvRows([...updated]);
     }
