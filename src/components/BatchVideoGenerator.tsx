@@ -937,9 +937,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
 
       setClientVideos(videos);
-      setIsLoading(false);
 
-      // Regenerate overlay layers in background (UI is already visible)
+      // Regenerate overlay layers (text/logo/frame) using saved data
       setIsGenerating(true);
       setGenerationStatus("Reconstruindo camadas de texto...");
       try {
@@ -947,8 +946,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         // Process in parallel batches of 3 for speed
         const BATCH_SIZE = 3;
         for (let start = 0; start < updatedVideos.length; start += BATCH_SIZE) {
-          const batch = updatedVideos.slice(start, start + BATCH_SIZE);
-          const results = await Promise.all(batch.map(video => regenerateSingleVideo(video)));
+          const chunk = updatedVideos.slice(start, start + BATCH_SIZE);
+          const results = await Promise.all(chunk.map(video => regenerateSingleVideo(video)));
           for (let j = 0; j < results.length; j++) {
             const idx = start + j;
             updatedVideos[idx] = {
@@ -980,6 +979,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         title: "Erro ao carregar lote",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
