@@ -949,6 +949,20 @@ const Index = () => {
                           <Copy className="h-4 w-4" />
                         )}
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmId(client.id);
+                        }}
+                        className={`p-1 rounded transition-colors ${
+                          selectedClient?.id === client.id
+                            ? 'hover:bg-primary-foreground/20'
+                            : 'hover:bg-muted'
+                        }`}
+                        title="Excluir cliente permanentemente"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </button>
                     </div>
                   </div>
                 </button>
