@@ -74,6 +74,68 @@ export async function updateClient(id: string, updates: Partial<ClientData>) {
 }
 
 export async function deleteClient(id: string) {
+  // 1. Get all project briefs for this client
+  const { data: briefs } = await supabase
+    .from("project_briefs")
+    .select("id")
+    .eq("client_id", id);
+
+  // 2. Delete card_uploads (files + records) for each brief
+  if (briefs && briefs.length > 0) {
+    const briefIds = briefs.map(b => b.id);
+    
+    // Get all card upload file paths to delete from storage
+    const { data: cardUploads } = await supabase
+      .from("card_uploads")
+      .select("id, file_url")
+      .in("card_id", briefIds);
+    
+    if (cardUploads && cardUploads.length > 0) {
+      // Delete files from storage
+      const storagePaths = cardUploads
+        .map(u => {
+          const match = u.file_url.match(/card-uploads\/(.+)$/);
+          return match ? match[1] : null;
+        })
+        .filter(Boolean) as string[];
+      
+      if (storagePaths.length > 0) {
+        await supabase.storage.from("card-uploads").remove(storagePaths);
+      }
+      
+      // Delete card_uploads records
+      await supabase.from("card_uploads").delete().in("card_id", briefIds);
+    }
+    
+    // 3. Delete project briefs
+    await supabase.from("project_briefs").delete().eq("client_id", id);
+  }
+
+  // 4. Delete client_uploads (files + records)
+  const { data: clientUploads } = await supabase
+    .from("client_uploads")
+    .select("id, file_url")
+    .eq("client_id", id);
+  
+  if (clientUploads && clientUploads.length > 0) {
+    const storagePaths = clientUploads
+      .map(u => {
+        const match = u.file_url.match(/card-uploads\/(.+)$/);
+        return match ? match[1] : null;
+      })
+      .filter(Boolean) as string[];
+    
+    if (storagePaths.length > 0) {
+      await supabase.storage.from("card-uploads").remove(storagePaths);
+    }
+    
+    await supabase.from("client_uploads").delete().eq("client_id", id);
+  }
+
+  // 5. Delete client payments
+  await supabase.from("client_payments").delete().eq("client_id", id);
+
+  // 6. Finally delete the client itself
   const { error } = await supabase
     .from("client_data")
     .delete()
