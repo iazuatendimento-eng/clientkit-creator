@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface CsvRow {
   clientName: string;
   fileName: string;
-  email: string;
+  emails: string[];
   bodyText: string;
   status: "pending" | "sending" | "sent" | "error";
   errorMsg?: string;
