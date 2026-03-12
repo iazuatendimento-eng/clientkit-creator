@@ -1137,7 +1137,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       const briefData = {
         client_id: clientId,
         title: newBrief.title || "",
-        description: newBrief.description || "",
+        description: newBrief.title || "",
         deadline: newBrief.deadline || null,
         status: newBrief.status || "todo",
         brand_kit_id: newBrief.brandKitId || null,
