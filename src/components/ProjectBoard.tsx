@@ -1309,7 +1309,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       setShowSplitDialog(false);
       setIsDialogOpen(false);
       toast.success("Card criado!");
-      }
     } catch (error: any) {
       console.error("Erro detalhado ao criar card:", error);
       
