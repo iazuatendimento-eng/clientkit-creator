@@ -230,12 +230,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     onCoverUpdate(brief.id, coverUrl, isVideo);
   };
 
-  const handleCopyCaption = () => {
-    if (brief.generatedCaption) {
-      navigator.clipboard.writeText(brief.generatedCaption);
-      toast.success("Legenda copiada!");
-    }
-  };
 
   const getMimeType = (name: string): string => {
     const ext = name.split('.').pop()?.toLowerCase();
