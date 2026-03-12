@@ -38,6 +38,7 @@ const App = () => (
           <Route path="/batch-history" element={<ProtectedRoute><BatchHistoryPage /></ProtectedRoute>} />
           <Route path="/receivables" element={<ProtectedRoute><Receivables /></ProtectedRoute>} />
           <Route path="/export-db" element={<ProtectedRoute><ExportDatabase /></ProtectedRoute>} />
+          <Route path="/send-media" element={<ProtectedRoute><SendMedia /></ProtectedRoute>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/client/:clientId" element={<ClientPublicView />} />
           <Route path="/:clientSlug" element={<ClientPublicView />} />
