@@ -38,11 +38,16 @@ const SendMedia = () => {
       const sep = line.includes(";") ? ";" : ",";
       const parts = line.split(sep).map(p => p.trim().replace(/^"|"$/g, ""));
       if (parts.length >= 3) {
+        const emailList = [parts[2], parts[3], parts[4]]
+          .filter(p => p && p.includes("@"));
+        // bodyText is the first part after the emails that doesn't look like an email
+        const remaining = parts.slice(2);
+        const bodyParts = remaining.filter(p => !p.includes("@"));
         rows.push({
           clientName: parts[0],
           fileName: parts[1],
-          email: parts[2],
-          bodyText: parts[3] || "",
+          emails: emailList.length > 0 ? emailList : [parts[2]],
+          bodyText: bodyParts[0] || "",
           status: "pending",
         });
       }
