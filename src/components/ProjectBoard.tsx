@@ -1308,10 +1308,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       setNewBrief({});
       setShowSplitDialog(false);
       setIsDialogOpen(false);
-      if (generatedCaption) {
-        toast.success("Card criado com legenda!");
-      } else {
-        toast.success("Card criado!");
+      toast.success("Card criado!");
       }
     } catch (error: any) {
       console.error("Erro detalhado ao criar card:", error);
