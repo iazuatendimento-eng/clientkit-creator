@@ -937,30 +937,34 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
 
       setClientVideos(videos);
+      setIsLoading(false);
 
-      // Regenerate overlay layers (text/logo/frame) using saved data
-      // The base pages exclude text/logo (they're animated overlays), so we need to rebuild them
+      // Regenerate overlay layers in background (UI is already visible)
       setIsGenerating(true);
       setGenerationStatus("Reconstruindo camadas de texto...");
       try {
         const updatedVideos = [...videos];
-        for (let i = 0; i < updatedVideos.length; i++) {
-          const video = updatedVideos[i];
-          setGenerationStatus(`Reconstruindo ${video.clientName}... (${i + 1}/${updatedVideos.length})`);
-          const result = await regenerateSingleVideo(video);
-          updatedVideos[i] = {
-            ...video,
-            pages: result.pages,
-            overlayPages: result.overlayPages,
-            frameOverlayPages: result.frameOverlayPages,
-            preImageOverlayPages: result.preImageOverlayPages,
-            logoOverlayPages: result.logoOverlayPages,
-          };
+        // Process in parallel batches of 3 for speed
+        const BATCH_SIZE = 3;
+        for (let start = 0; start < updatedVideos.length; start += BATCH_SIZE) {
+          const batch = updatedVideos.slice(start, start + BATCH_SIZE);
+          const results = await Promise.all(batch.map(video => regenerateSingleVideo(video)));
+          for (let j = 0; j < results.length; j++) {
+            const idx = start + j;
+            updatedVideos[idx] = {
+              ...updatedVideos[idx],
+              pages: results[j].pages,
+              overlayPages: results[j].overlayPages,
+              frameOverlayPages: results[j].frameOverlayPages,
+              preImageOverlayPages: results[j].preImageOverlayPages,
+              logoOverlayPages: results[j].logoOverlayPages,
+            };
+          }
+          setGenerationStatus(`Reconstruindo... (${Math.min(start + BATCH_SIZE, updatedVideos.length)}/${updatedVideos.length})`);
           setClientVideos([...updatedVideos]);
         }
 
-        // If any videos lack previewVideoUrls (old batches saved before this field existed),
-        // auto-fetch from Pexels so previews show video instead of static images
+        // If any videos lack previewVideoUrls, auto-fetch from Pexels
         const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
         if (videosNeedingFetch.length > 0) {
           setGenerationStatus("Buscando vídeos de fundo...");
@@ -976,7 +980,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         title: "Erro ao carregar lote",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
