@@ -452,39 +452,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       {...(!isPublicView && !isInactive ? attributes : {})}
       {...(!isPublicView && !isInactive ? listeners : {})}
     >
-      {/* Cover Media - use brief cover fields, fallback to last final upload */}
-      {(() => {
-        const lastFinal = finalArtworks.length > 0 ? finalArtworks[finalArtworks.length - 1] : null;
-        const coverVideo = brief.coverVideo || (lastFinal && lastFinal.fileType.startsWith("video") ? lastFinal.url : null);
-        const coverImage = !coverVideo ? (brief.coverImage || (lastFinal && !lastFinal.fileType.startsWith("video") ? lastFinal.url : null)) : null;
-        
-        if (coverVideo) {
-          return (
-            <div className="w-full h-48 relative bg-muted flex items-center justify-center">
-              <video 
-                src={coverVideo} 
-                className="max-w-full max-h-full object-contain"
-                autoPlay
-                muted
-                loop
-                playsInline
-              />
-            </div>
-          );
-        }
-        if (coverImage) {
-          return (
-            <div className="w-full h-48 relative bg-muted flex items-center justify-center">
-              <img 
-                src={coverImage} 
-                alt="Cover" 
-                className="max-w-full max-h-full object-contain"
-              />
-            </div>
-          );
-        }
-        return null;
-      })()}
+      {/* Cover media removed - text-only cards */}
 
       <CardHeader className={`${isPublicView ? 'p-3 pb-2' : 'pb-2'} overflow-hidden`}>
         <div className="flex justify-between items-start">
