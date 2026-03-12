@@ -1544,36 +1544,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                         />
                       </div>
                       
-                      {editingBrief.generatedCaption && (
-                        <div className="border-t pt-4">
-                          <label className="text-sm font-medium mb-2 block">Legenda para Redes Sociais</label>
-                          <div className="space-y-2">
-                            <div className="relative">
-                              <Textarea
-                                value={editingBrief.generatedCaption}
-                                readOnly
-                                rows={6}
-                                className="pr-10 text-sm bg-muted/50"
-                              />
-                              <Button
-                                onClick={handleCopyCaption}
-                                variant="ghost"
-                                size="sm"
-                                className="absolute top-2 right-2 h-7 w-7 p-0"
-                              >
-                                {captionCopied ? (
-                                  <Check className="h-3 w-3 text-green-500" />
-                                ) : (
-                                  <Copy className="h-3 w-3" />
-                                )}
-                              </Button>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Esta legenda foi gerada automaticamente ao criar o card. Clique no ícone para copiar.
-                            </p>
-                          </div>
-                        </div>
-                      )}
                       
                       <Button onClick={handleSaveBrief} className="w-full">
                         Salvar Alterações
