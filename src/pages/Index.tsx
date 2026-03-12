@@ -752,9 +752,16 @@ const Index = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleExportToExcel()}>Todos</DropdownMenuItem>
+                <DropdownMenuLabel>🎨 Arte (PNG)</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'arte')}>Todos</DropdownMenuItem>
                 {availableTeams.map(t => (
-                  <DropdownMenuItem key={t.id} onClick={() => handleExportToExcel(t.name)}>{t.name}</DropdownMenuItem>
+                  <DropdownMenuItem key={t.id} onClick={() => handleExportToExcel(t.name, 'arte')}>{t.name}</DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>🎬 Vídeo (MP4)</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'video')}>Todos</DropdownMenuItem>
+                {availableTeams.map(t => (
+                  <DropdownMenuItem key={t.id} onClick={() => handleExportToExcel(t.name, 'video')}>{t.name}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
