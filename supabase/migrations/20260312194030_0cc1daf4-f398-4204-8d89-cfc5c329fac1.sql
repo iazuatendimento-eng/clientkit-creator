@@ -1,0 +1,1 @@
+UPDATE public.project_briefs SET description = title WHERE description IS DISTINCT FROM title;
