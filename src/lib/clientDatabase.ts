@@ -269,6 +269,14 @@ export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "tod
     .select();
 
   if (error) throw error;
+
+  // When completing, delete material uploads for those briefs
+  if (newStatus === "completed") {
+    for (const briefId of briefIdsToUpdate) {
+      await deleteCardUploadsByCardId(briefId);
+    }
+  }
+
   return data || [];
 }
 
