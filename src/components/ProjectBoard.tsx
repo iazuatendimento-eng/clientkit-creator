@@ -1408,7 +1408,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const handleEditBrief = (brief: ProjectBrief) => {
     setEditingBrief(brief);
     setNewBrief(brief);
-    setCaptionCopied(false);
     setIsDialogOpen(true);
   };
 
