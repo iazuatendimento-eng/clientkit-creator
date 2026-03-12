@@ -844,7 +844,15 @@ const Index = () => {
                   className="pl-9 h-9"
                 />
               </div>
-              {/* "Sem texto para fazer" filter hidden */}
+              <Button
+                variant={showOnlyWithoutText ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowOnlyWithoutText(!showOnlyWithoutText)}
+                className="shrink-0"
+                title="Sem texto para fazer"
+              >
+                <FileX className="h-4 w-4" />
+              </Button>
             </div>
             <p className="text-sm text-muted-foreground px-3 mb-2">
               {filteredClients.length} de {clients.length} clientes
