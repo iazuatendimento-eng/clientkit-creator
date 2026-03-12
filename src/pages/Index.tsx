@@ -224,10 +224,10 @@ const Index = () => {
       }));
 
       mappedClients.sort((a, b) => {
-        if (a.active === b.active) {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        }
-        return a.active ? -1 : 1;
+        // Ordem alfabética por empresa (ou nome se não tiver empresa)
+        const nameA = (a.company || a.name || "").toLowerCase();
+        const nameB = (b.company || b.name || "").toLowerCase();
+        return nameA.localeCompare(nameB, 'pt-BR');
       });
 
       setClients(mappedClients);
