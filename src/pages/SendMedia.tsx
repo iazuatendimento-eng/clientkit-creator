@@ -11,6 +11,7 @@ interface CsvRow {
   clientName: string;
   fileName: string;
   email: string;
+  bodyText: string;
   status: "pending" | "sending" | "sent" | "error";
   errorMsg?: string;
 }
