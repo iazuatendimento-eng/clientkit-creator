@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface CsvRow {
   clientName: string;
   fileName: string;
-  email: string;
+  emails: string[];
   bodyText: string;
   status: "pending" | "sending" | "sent" | "error";
   errorMsg?: string;
@@ -38,11 +38,16 @@ const SendMedia = () => {
       const sep = line.includes(";") ? ";" : ",";
       const parts = line.split(sep).map(p => p.trim().replace(/^"|"$/g, ""));
       if (parts.length >= 3) {
+        const emailList = [parts[2], parts[3], parts[4]]
+          .filter(p => p && p.includes("@"));
+        // bodyText is the first part after the emails that doesn't look like an email
+        const remaining = parts.slice(2);
+        const bodyParts = remaining.filter(p => !p.includes("@"));
         rows.push({
           clientName: parts[0],
           fileName: parts[1],
-          email: parts[2],
-          bodyText: parts[3] || "",
+          emails: emailList.length > 0 ? emailList : [parts[2]],
+          bodyText: bodyParts[0] || "",
           status: "pending",
         });
       }
@@ -115,7 +120,7 @@ const SendMedia = () => {
     // Group rows by email+clientName so carousel PNGs go in one email
     const groups = new Map<string, number[]>();
     csvRows.forEach((row, i) => {
-      const key = `${row.email}|||${row.clientName}`;
+      const key = `${row.emails[0]}|||${row.clientName}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(i);
     });
@@ -141,11 +146,13 @@ const SendMedia = () => {
         }
 
         const firstRow = updated[indices[0]];
+        // Collect all unique emails from grouped rows
+        const allEmails = [...new Set(indices.flatMap(i => updated[i].emails))];
         const bodyText = indices.map(i => updated[i].bodyText).filter(Boolean).join("\n");
 
         const { data, error } = await supabase.functions.invoke("send-media-email", {
           body: {
-            emails: [firstRow.email],
+            emails: allEmails,
             subject: `Arte - ${firstRow.clientName}`,
             mediaUrls,
             mediaType: hasVideo ? "video" : "image",
@@ -204,7 +211,7 @@ const SendMedia = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Formato: <code className="bg-muted px-1 rounded">nome cliente, nome arquivo, e-mail, texto</code>
+                Formato: <code className="bg-muted px-1 rounded">cliente, arquivo, email1, email2, email3, texto</code>
               </p>
               <Button asChild variant="outline" className="w-full">
                 <label className="cursor-pointer">
@@ -294,7 +301,7 @@ const SendMedia = () => {
                           <td className="py-2 px-2">{statusIcon(row.status)}</td>
                           <td className="py-2 px-2">{row.clientName}</td>
                           <td className="py-2 px-2 font-mono text-xs">{row.fileName}</td>
-                          <td className="py-2 px-2">{row.email}</td>
+                          <td className="py-2 px-2 text-xs">{row.emails.join(", ")}</td>
                           <td className="py-2 px-2 text-xs max-w-[200px] truncate" title={row.bodyText}>{row.bodyText || "—"}</td>
                           <td className="py-2 px-2">
                             {fileFound ? (
