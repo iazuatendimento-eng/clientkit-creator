@@ -1268,30 +1268,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         newBrief.brandKitId = brandKits[0].id;
       }
 
-      // Gerar legenda automaticamente
-      let generatedCaption = "";
-      try {
-        toast.info("Gerando legenda...");
-        const captionResponse = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({ text }),
-          }
-        );
-
-        if (captionResponse.ok) {
-          const captionData = await captionResponse.json();
-          generatedCaption = captionData.caption;
-        }
-      } catch (captionError) {
-        console.error("Erro ao gerar legenda:", captionError);
-      }
-
       const briefData = {
         client_id: clientId,
         title: text,
@@ -1299,7 +1275,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         deadline: new Date().toISOString().split('T')[0],
         status: "todo" as const,
         brand_kit_id: newBrief.brandKitId || null,
-        generated_caption: generatedCaption,
       };
 
       await createProjectBrief(briefData);
