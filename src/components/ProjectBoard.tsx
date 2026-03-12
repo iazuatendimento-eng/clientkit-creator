@@ -159,7 +159,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   const [isArtGenOpen, setIsArtGenOpen] = useState(false);
   const [isVideoSwapOpen, setIsVideoSwapOpen] = useState(false);
   const [finalArtworks, setFinalArtworks] = useState<Array<{ id: string; name: string; url: string; fileType: string }>>([]);
-  const [copiedLink, setCopiedLink] = useState(false);
+  // copiedLink state removed - not used in public view
   const [isDismissing, setIsDismissing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [isArtDismissing, setIsArtDismissing] = useState(false);
@@ -435,13 +435,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     }
   };
 
-  const handleCopyCardLink = () => {
-    const cardUrl = `${window.location.origin}${window.location.pathname}#card-${brief.id}`;
-    navigator.clipboard.writeText(cardUrl);
-    setCopiedLink(true);
-    toast.success("Link do card copiado!");
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
+  // copy link functionality removed from public view
 
   return (
     <Card
