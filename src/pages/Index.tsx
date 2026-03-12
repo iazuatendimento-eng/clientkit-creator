@@ -744,34 +744,34 @@ const Index = () => {
         <div className="container mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1">
-              <select
-                className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-                id="export-team-select"
-                defaultValue=""
-              >
-                <option value="">Todos</option>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Palette className="mr-1 h-4 w-4" />
+                  Exportar Arte
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'arte')}>Todos</DropdownMenuItem>
                 {availableTeams.map(t => (
-                  <option key={t.id} value={t.name}>{t.name}</option>
+                  <DropdownMenuItem key={`arte-${t.id}`} onClick={() => handleExportToExcel(t.name, 'arte')}>{t.name}</DropdownMenuItem>
                 ))}
-              </select>
-              <select
-                className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-                id="export-type-select"
-                defaultValue="arte"
-              >
-                <option value="arte">Arte</option>
-                <option value="video">Vídeo</option>
-              </select>
-              <Button size="sm" variant="outline" onClick={() => {
-                const team = (document.getElementById('export-team-select') as HTMLSelectElement)?.value || undefined;
-                const type = (document.getElementById('export-type-select') as HTMLSelectElement)?.value as 'arte' | 'video';
-                handleExportToExcel(team || undefined, type);
-              }}>
-                <FileDown className="mr-1 h-4 w-4" />
-                Exportar
-              </Button>
-            </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Video className="mr-1 h-4 w-4" />
+                  Exportar Vídeo
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'video')}>Todos</DropdownMenuItem>
+                {availableTeams.map(t => (
+                  <DropdownMenuItem key={`video-${t.id}`} onClick={() => handleExportToExcel(t.name, 'video')}>{t.name}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button size="sm" variant="outline" onClick={() => setIsDeadlineDialogOpen(true)}>
               <Calendar className="mr-1 h-4 w-4" />
               Prazo
