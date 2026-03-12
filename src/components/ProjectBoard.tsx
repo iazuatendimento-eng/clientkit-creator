@@ -1114,11 +1114,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         toast.success("Briefing atualizado!");
       } else {
         await createProjectBrief(briefData);
-        if (generatedCaption) {
-          toast.success("Briefing criado com legenda!");
-        } else {
-          toast.success("Briefing criado!");
-        }
+        toast.success("Briefing criado!");
       }
 
       // Reload briefs from Supabase to ensure sync
