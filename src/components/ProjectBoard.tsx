@@ -1252,58 +1252,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       if (failedCount > 0) {
         toast.warning(`${createdIds.length} cards criados, ${failedCount} falharam.`);
       } else {
-        toast.success(`${createdIds.length} cards criados! Gerando legendas em background...`);
+        toast.success(`${createdIds.length} cards criados!`);
       }
-
-      // STEP 2: Generate captions in background (non-blocking)
-      for (const brief of data) {
-        if (brief.generated_caption) continue; // Skip if already has caption
-        try {
-          const captionResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-caption`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-              body: JSON.stringify({ text: brief.title }),
-            }
-          );
-
-          if (captionResponse.ok) {
-            const captionData = await captionResponse.json();
-            await updateProjectBrief(brief.id, { generated_caption: captionData.caption });
-          }
-        } catch (err) {
-          console.error(`Erro ao gerar legenda para ${brief.id}:`, err);
-        }
-      }
-      
-      // Reload one more time to get captions
-      const updatedData = await getProjectBriefsByClient(clientId);
-      const updatedBriefs: ProjectBrief[] = updatedData.map((brief: any) => ({
-        id: brief.id,
-        clientName: clientName || "",
-        title: brief.title,
-        description: brief.description || "",
-        deadline: brief.deadline || "",
-        status: brief.status || "todo",
-        brandKitId: brief.brand_kit_id,
-        createdAt: brief.created_at || new Date().toISOString(),
-        type: brief.brief_type as "art" | "video",
-        coverImage: brief.cover_image,
-        coverVideo: brief.cover_video,
-        generatedCaption: brief.generated_caption || "",
-        published: brief.published || false,
-        artGenerationSelected: brief.art_generation_selected || false,
-        generatedVideoUrl: (brief as any).generated_video_url || undefined,
-        generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
-        generatedArtUrl: (brief as any).generated_art_url || undefined,
-        generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
-      }));
-      setBriefs(updatedBriefs);
-      toast.success("Legendas geradas com sucesso!");
     }
   };
 
