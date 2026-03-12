@@ -812,8 +812,8 @@ const Index = () => {
         <div className="w-80 border-r bg-card/50 overflow-y-auto">
           <div className="p-4 space-y-2">
             {/* Search and Filters */}
-            <div className="space-y-2 mb-4">
-              <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Pesquisar empresa..."
@@ -826,7 +826,7 @@ const Index = () => {
                 variant={showOnlyWithoutText ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowOnlyWithoutText(!showOnlyWithoutText)}
-                className="shrink-0"
+                className="shrink-0 h-9"
                 title="Sem texto para fazer"
               >
                 <FileX className="h-4 w-4" />
