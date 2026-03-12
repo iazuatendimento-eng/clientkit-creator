@@ -594,10 +594,27 @@ const Index = () => {
         }
       }
 
+      // Numerar arquivos: normal rows get sequential numbers, split rows (carousel) share the same number
+      let fileCounter = 1;
+      for (const row of excelData) {
+        row["Nome do Arquivo"] = String(fileCounter);
+        fileCounter++;
+      }
+      // splitRows are grouped by client/card - consecutive rows with same "Link do Card" share a number
+      let i = 0;
+      while (i < splitRows.length) {
+        const currentLink = splitRows[i]["Link do Card"];
+        const num = fileCounter;
+        while (i < splitRows.length && splitRows[i]["Link do Card"] === currentLink) {
+          splitRows[i]["Nome do Arquivo"] = String(num);
+          i++;
+        }
+        fileCounter++;
+      }
+
       const finalData = [...excelData, ...splitRows];
 
       console.log("Export: finalData rows:", finalData.length, "(normal:", excelData.length, "split:", splitRows.length, ")");
-
       if (finalData.length === 0) {
         toast({
           title: "Nenhum card encontrado",
