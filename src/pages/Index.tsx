@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History, Trash2 } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,16 @@ import { useAuth } from "@/hooks/useAuth";
 import * as XLSX from 'xlsx';
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseUsageBar } from "@/components/DatabaseUsageBar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -74,6 +84,8 @@ const Index = () => {
   const [showOnlyWithoutText, setShowOnlyWithoutText] = useState(false);
   const [clientsWithoutText, setClientsWithoutText] = useState<Set<string>>(new Set());
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -314,20 +326,28 @@ const Index = () => {
   };
 
   const handleDeleteClient = async (id: string) => {
+    setIsDeleting(true);
     try {
       await deleteClient(id);
+      if (selectedClient?.id === id) {
+        setSelectedClient(null);
+        setCurrentView("dashboard");
+      }
       await loadClients();
       toast({
-        title: "Cliente removido!",
-        description: "O cliente foi removido com sucesso.",
+        title: "Cliente excluído!",
+        description: "O cliente e todos os dados relacionados foram removidos permanentemente.",
       });
     } catch (error) {
       console.error("Error deleting client:", error);
       toast({
-        title: "Erro ao remover cliente",
-        description: "Não foi possível remover o cliente.",
+        title: "Erro ao excluir cliente",
+        description: "Não foi possível excluir o cliente.",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -929,6 +949,20 @@ const Index = () => {
                           <Copy className="h-4 w-4" />
                         )}
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmId(client.id);
+                        }}
+                        className={`p-1 rounded transition-colors ${
+                          selectedClient?.id === client.id
+                            ? 'hover:bg-primary-foreground/20'
+                            : 'hover:bg-muted'
+                        }`}
+                        title="Excluir cliente permanentemente"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </button>
                     </div>
                   </div>
                 </button>
@@ -1005,6 +1039,27 @@ const Index = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Todos os dados relacionados a este cliente serão removidos permanentemente: cards, arquivos enviados, pagamentos e artes finalizadas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirmId && handleDeleteClient(deleteConfirmId)}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
