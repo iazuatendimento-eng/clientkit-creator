@@ -940,13 +940,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       const isArtBatch = batch.type === "art";
 
-      // For art batches, show UI immediately (saved pages are complete)
-      // then rebuild overlay layers in background for editing capability
+      // Art history: open immediately and lazily prepare overlays when user opens a card
       if (isArtBatch) {
-        setIsLoading(false);
+        return;
       }
 
-      // Regenerate overlay layers (needed for interactive adjustments)
+      // Video history: regenerate overlay layers upfront
       setIsGenerating(true);
       setGenerationStatus("Reconstruindo camadas...");
       try {
@@ -970,13 +969,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           setClientVideos([...updatedVideos]);
         }
 
-        // Only fetch Pexels videos for video batches
-        if (!isArtBatch) {
-          const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
-          if (videosNeedingFetch.length > 0) {
-            setGenerationStatus("Buscando vídeos de fundo...");
-            await autoFetchPexelsCovers(updatedVideos);
-          }
+        const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
+        if (videosNeedingFetch.length > 0) {
+          setGenerationStatus("Buscando vídeos de fundo...");
+          await autoFetchPexelsCovers(updatedVideos);
         }
       } finally {
         setIsGenerating(false);
