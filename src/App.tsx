@@ -13,6 +13,7 @@ import MasterVideo from "./pages/MasterVideo";
 import Receivables from "./pages/Receivables";
 import BatchHistoryPage from "./pages/BatchHistoryPage";
 import ExportDatabase from "./pages/ExportDatabase";
+import SendMedia from "./pages/SendMedia";
 import { useKeepAlive } from "@/hooks/useKeepAlive";
 import "./App.css";
 
