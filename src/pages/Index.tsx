@@ -775,7 +775,7 @@ const Index = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* <Button size="sm" variant="outline" onClick={() => navigate("/master-art")}>
+            <Button size="sm" variant="outline" onClick={() => navigate("/master-art")}>
               <Palette className="mr-1 h-4 w-4" />
               Arte
             </Button>
@@ -800,7 +800,7 @@ const Index = () => {
                   Vídeos
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu> */}
+            </DropdownMenu>
 
             <Button
               size="sm"
