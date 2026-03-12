@@ -37,13 +37,22 @@ const BatchHistoryPage = () => {
       }
     }
 
+    // Art templates use 'elements', video templates use 'contentElements'/'signatureElements'
+    const isArt = batch.type === "art";
+    const contentElements = isArt
+      ? (snap.elements || snap.contentElements || snap.content_elements || [])
+      : (snap.contentElements || snap.content_elements || []);
+    const signatureElements = isArt
+      ? (snap.elements || snap.signatureElements || snap.signature_elements || [])
+      : (snap.signatureElements || snap.signature_elements || []);
+
     setResolvedTemplate({
       id: snap.id || batch.id,
       name: snap.name || "Template",
-      contentElements: snap.contentElements || snap.content_elements || [],
-      signatureElements: snap.signatureElements || snap.signature_elements || [],
+      contentElements,
+      signatureElements,
       width: snap.width || 1080,
-      height: snap.height || 1920,
+      height: snap.height || (isArt ? 1350 : 1920),
       backgroundColor: snap.backgroundColor || snap.background_color || "#ffffff",
       pageDuration: snap.pageDuration || snap.page_duration || 3,
       audioUrl1,
