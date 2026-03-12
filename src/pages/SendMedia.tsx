@@ -42,6 +42,7 @@ const SendMedia = () => {
           clientName: parts[0],
           fileName: parts[1],
           email: parts[2],
+          bodyText: parts[3] || "",
           status: "pending",
         });
       }
