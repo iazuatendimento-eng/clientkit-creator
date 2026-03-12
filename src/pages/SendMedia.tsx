@@ -60,18 +60,38 @@ const SendMedia = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const rows = parseCsv(text);
-      if (rows.length === 0) {
-        toast.error("CSV vazio ou formato inválido. Use: nome cliente, nome arquivo, e-mail, texto");
-        return;
-      }
-      setCsvRows(rows);
-      toast.success(`${rows.length} linha(s) carregada(s) do CSV`);
-    };
-    reader.readAsText(file);
+    const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const csvText = XLSX.utils.sheet_to_csv(sheet, { FS: ";" });
+        const rows = parseCsv(csvText);
+        if (rows.length === 0) {
+          toast.error("Planilha vazia ou formato inválido.");
+          return;
+        }
+        setCsvRows(rows);
+        toast.success(`${rows.length} linha(s) carregada(s)`);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target?.result as string;
+        const rows = parseCsv(text);
+        if (rows.length === 0) {
+          toast.error("CSV vazio ou formato inválido. Use: nome cliente, nome arquivo, e-mail, texto");
+          return;
+        }
+        setCsvRows(rows);
+        toast.success(`${rows.length} linha(s) carregada(s) do CSV`);
+      };
+      reader.readAsText(file);
+    }
     if (csvInputRef.current) csvInputRef.current.value = "";
   };
 
