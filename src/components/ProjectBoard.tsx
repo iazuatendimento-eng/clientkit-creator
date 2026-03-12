@@ -1411,19 +1411,6 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     setIsDialogOpen(true);
   };
 
-  const handleCopyCaption = async () => {
-    const captionToUse = editingBrief?.generatedCaption;
-    if (!captionToUse) return;
-    
-    try {
-      await navigator.clipboard.writeText(captionToUse);
-      setCaptionCopied(true);
-      toast.success("Legenda copiada!");
-      setTimeout(() => setCaptionCopied(false), 2000);
-    } catch (error) {
-      toast.error("Erro ao copiar legenda");
-    }
-  };
 
   const handleCreateProjectFromBrief = (brief: ProjectBrief) => {
     if (brief.brandKitId) {
