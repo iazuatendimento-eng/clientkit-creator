@@ -941,7 +941,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false); // kept for compatibility
-  const [captionCopied, setCaptionCopied] = useState(false);
+  
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({});
 
   // Load briefs from Supabase
