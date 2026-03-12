@@ -435,13 +435,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     }
   };
 
-  const handleCopyCardLink = () => {
-    const cardUrl = `${window.location.origin}${window.location.pathname}#card-${brief.id}`;
-    navigator.clipboard.writeText(cardUrl);
-    setCopiedLink(true);
-    toast.success("Link do card copiado!");
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
+  // copy link functionality removed from public view
 
   return (
     <Card
