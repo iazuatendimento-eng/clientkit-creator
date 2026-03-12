@@ -606,7 +606,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                               type="file"
                               accept="image/*"
                               className="hidden"
-                              onChange={(e) => handlePngUpload(index, e)}
+                              onChange={(e) => handleBrandPngUpload(index, e)}
                             />
                           </label>
                         </Button>
