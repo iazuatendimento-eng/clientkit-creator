@@ -257,6 +257,7 @@ const SendMedia = () => {
                       <th className="text-left py-2 px-2">Cliente</th>
                       <th className="text-left py-2 px-2">Arquivo</th>
                       <th className="text-left py-2 px-2">E-mail</th>
+                      <th className="text-left py-2 px-2">Texto</th>
                       <th className="text-left py-2 px-2">Arquivo OK?</th>
                     </tr>
                   </thead>
