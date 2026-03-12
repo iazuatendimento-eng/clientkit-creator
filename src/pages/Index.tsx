@@ -614,22 +614,29 @@ const Index = () => {
         }
       }
 
-      // Numerar arquivos: normal rows get sequential numbers, split rows (carousel) share the same number
+      // Numerar arquivos
       let fileCounter = 1;
       for (const row of excelData) {
         row["Nome do Arquivo"] = String(fileCounter);
         fileCounter++;
       }
-      // splitRows are grouped by client/card - consecutive rows with same "Link do Card" share a number
-      let i = 0;
-      while (i < splitRows.length) {
-        const currentLink = splitRows[i]["Link do Card"];
-        const num = fileCounter;
-        while (i < splitRows.length && splitRows[i]["Link do Card"] === currentLink) {
-          splitRows[i]["Nome do Arquivo"] = String(num);
-          i++;
+      // splitRows: for arte each page gets its own number; for video carousel pages share a number
+      if (exportType === 'arte') {
+        for (const row of splitRows) {
+          row["Nome do Arquivo"] = String(fileCounter);
+          fileCounter++;
         }
-        fileCounter++;
+      } else {
+        let i = 0;
+        while (i < splitRows.length) {
+          const currentLink = splitRows[i]["Link do Card"];
+          const num = fileCounter;
+          while (i < splitRows.length && splitRows[i]["Link do Card"] === currentLink) {
+            splitRows[i]["Nome do Arquivo"] = String(num);
+            i++;
+          }
+          fileCounter++;
+        }
       }
 
       const finalData = [...excelData, ...splitRows];
