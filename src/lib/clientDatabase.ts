@@ -348,6 +348,28 @@ export async function deleteCardUpload(id: string) {
   if (error) throw error;
 }
 
+export async function deleteCardUploadsByCardId(cardId: string) {
+  const { data: uploads } = await supabase
+    .from("card_uploads")
+    .select("id, file_url")
+    .eq("card_id", cardId);
+
+  if (uploads && uploads.length > 0) {
+    const storagePaths = uploads
+      .map(u => {
+        const match = u.file_url.match(/card-uploads\/(.+)$/);
+        return match ? match[1] : null;
+      })
+      .filter(Boolean) as string[];
+
+    if (storagePaths.length > 0) {
+      await supabase.storage.from("card-uploads").remove(storagePaths);
+    }
+
+    await supabase.from("card_uploads").delete().eq("card_id", cardId);
+  }
+}
+
 // Art Generation Selection functions
 export async function tagFirstCardsForArtGeneration(clientIds: string[]) {
   // First, clear all existing tags

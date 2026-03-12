@@ -1487,7 +1487,12 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     
     try {
       await updateProjectBrief(briefId, { status: newStatus as "todo" | "completed" });
-      
+
+      // When moving to completed, delete material uploads
+      if (newStatus === "completed") {
+        const { deleteCardUploadsByCardId } = await import("@/lib/clientDatabase");
+        await deleteCardUploadsByCardId(briefId);
+      }
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
       const mappedBriefs: ProjectBrief[] = data.map((brief: any) => ({
