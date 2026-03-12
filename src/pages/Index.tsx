@@ -224,10 +224,7 @@ const Index = () => {
       }));
 
       mappedClients.sort((a, b) => {
-        // Ordem alfabética por empresa (ou nome se não tiver empresa)
-        const nameA = (a.company || a.name || "").toLowerCase();
-        const nameB = (b.company || b.name || "").toLowerCase();
-        return nameA.localeCompare(nameB, 'pt-BR');
+        return (a.name || "").localeCompare(b.name || "", 'pt-BR', { numeric: true });
       });
 
       setClients(mappedClients);
