@@ -2979,11 +2979,43 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    imageClipShape={getImageClipShape(template.contentElements as CanvasElement[])}
                    templateWidth={template.width}
                    templateHeight={template.height}
-                   onClick={() => {
-                    setSelectedVideo(video);
-                    setCurrentPreviewPage(0);
-                    setIsPlayingPreview(true);
-                  }}
+                   onClick={async () => {
+                     setSelectedVideo(video);
+                     setCurrentPreviewPage(0);
+                     setIsPlayingPreview(true);
+
+                     // Art history loads overlays lazily only when opening a card
+                     const needsOverlayBuild =
+                       initialBatch?.type === "art" &&
+                       (!video.overlayPages?.length || !video.frameOverlayPages?.length || !video.logoOverlayPages?.length);
+
+                     if (needsOverlayBuild) {
+                       try {
+                         setIsApplyingAdjustments(true);
+                         const result = await regenerateSingleVideo(video);
+                         const updatedVideo = {
+                           ...video,
+                           pages: result.pages,
+                           overlayPages: result.overlayPages,
+                           frameOverlayPages: result.frameOverlayPages,
+                           preImageOverlayPages: result.preImageOverlayPages,
+                           logoOverlayPages: result.logoOverlayPages,
+                         };
+
+                         setClientVideos((prev) => prev.map((v, i) => (i === index ? updatedVideo : v)));
+                         setSelectedVideo(updatedVideo);
+                       } catch (error) {
+                         console.error("Error preparing overlays for art edit:", error);
+                         toast({
+                           title: "Erro ao preparar edição",
+                           description: "Tente abrir novamente este card.",
+                           variant: "destructive",
+                         });
+                       } finally {
+                         setIsApplyingAdjustments(false);
+                       }
+                     }
+                   }}
                 />
 
                 {/* Info */}
