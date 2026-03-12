@@ -11,6 +11,7 @@ interface CsvRow {
   clientName: string;
   fileName: string;
   email: string;
+  bodyText: string;
   status: "pending" | "sending" | "sent" | "error";
   errorMsg?: string;
 }
@@ -41,6 +42,7 @@ const SendMedia = () => {
           clientName: parts[0],
           fileName: parts[1],
           email: parts[2],
+          bodyText: parts[3] || "",
           status: "pending",
         });
       }
@@ -57,7 +59,7 @@ const SendMedia = () => {
       const text = ev.target?.result as string;
       const rows = parseCsv(text);
       if (rows.length === 0) {
-        toast.error("CSV vazio ou formato inválido. Use: nome cliente, nome arquivo, e-mail");
+        toast.error("CSV vazio ou formato inválido. Use: nome cliente, nome arquivo, e-mail, texto");
         return;
       }
       setCsvRows(rows);
@@ -127,6 +129,7 @@ const SendMedia = () => {
             mediaUrl: publicUrl,
             mediaType: isVideo ? "video" : "image",
             clientName: updated[i].clientName,
+            cardText: updated[i].bodyText || undefined,
           },
         });
 
@@ -176,7 +179,7 @@ const SendMedia = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Formato: <code className="bg-muted px-1 rounded">nome cliente, nome arquivo, e-mail</code>
+                Formato: <code className="bg-muted px-1 rounded">nome cliente, nome arquivo, e-mail, texto</code>
               </p>
               <Button asChild variant="outline" className="w-full">
                 <label className="cursor-pointer">
@@ -254,6 +257,7 @@ const SendMedia = () => {
                       <th className="text-left py-2 px-2">Cliente</th>
                       <th className="text-left py-2 px-2">Arquivo</th>
                       <th className="text-left py-2 px-2">E-mail</th>
+                      <th className="text-left py-2 px-2">Texto</th>
                       <th className="text-left py-2 px-2">Arquivo OK?</th>
                     </tr>
                   </thead>
@@ -266,6 +270,7 @@ const SendMedia = () => {
                           <td className="py-2 px-2">{row.clientName}</td>
                           <td className="py-2 px-2 font-mono text-xs">{row.fileName}</td>
                           <td className="py-2 px-2">{row.email}</td>
+                          <td className="py-2 px-2 text-xs max-w-[200px] truncate" title={row.bodyText}>{row.bodyText || "—"}</td>
                           <td className="py-2 px-2">
                             {fileFound ? (
                               <CheckCircle className="w-4 h-4 text-green-500" />
