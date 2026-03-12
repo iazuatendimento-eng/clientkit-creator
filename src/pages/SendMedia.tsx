@@ -120,7 +120,7 @@ const SendMedia = () => {
     // Group rows by email+clientName so carousel PNGs go in one email
     const groups = new Map<string, number[]>();
     csvRows.forEach((row, i) => {
-      const key = `${row.email}|||${row.clientName}`;
+      const key = `${row.emails[0]}|||${row.clientName}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(i);
     });
