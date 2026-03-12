@@ -74,7 +74,7 @@ serve(async (req) => {
         <p style="color: #555;">Olá! Segue ${isVideo ? 'o vídeo' : 'a arte'} gerada para <strong>${clientName}</strong>.</p>
         ${textSection}
         ${mediaSection}
-        <p style="color: #999; font-size: 12px; margin-top: 30px;">Enviado via IAZU</p>
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">Enviado via iazu</p>
       </div>
     `;
 
@@ -87,7 +87,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'IAZU <noreply@contato.iazu.com.br>',
+          from: 'iazu <noreply@contato.iazu.com.br>',
           to: [email],
           subject: subject || `${mediaLabel} - ${clientName}`,
           html: htmlBody,
