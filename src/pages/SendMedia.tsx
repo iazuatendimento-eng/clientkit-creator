@@ -129,6 +129,7 @@ const SendMedia = () => {
             mediaUrl: publicUrl,
             mediaType: isVideo ? "video" : "image",
             clientName: updated[i].clientName,
+            cardText: updated[i].bodyText || undefined,
           },
         });
 
