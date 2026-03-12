@@ -59,7 +59,7 @@ const SendMedia = () => {
       const text = ev.target?.result as string;
       const rows = parseCsv(text);
       if (rows.length === 0) {
-        toast.error("CSV vazio ou formato inválido. Use: nome cliente, nome arquivo, e-mail");
+        toast.error("CSV vazio ou formato inválido. Use: nome cliente, nome arquivo, e-mail, texto");
         return;
       }
       setCsvRows(rows);
