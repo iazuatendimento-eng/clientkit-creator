@@ -940,13 +940,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       const isArtBatch = batch.type === "art";
 
-      // For art batches, show UI immediately (saved pages are complete)
-      // then rebuild overlay layers in background for editing capability
+      // Art history: open immediately and lazily prepare overlays when user opens a card
       if (isArtBatch) {
-        setIsLoading(false);
+        return;
       }
 
-      // Regenerate overlay layers (needed for interactive adjustments)
+      // Video history: regenerate overlay layers upfront
       setIsGenerating(true);
       setGenerationStatus("Reconstruindo camadas...");
       try {
@@ -970,13 +969,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           setClientVideos([...updatedVideos]);
         }
 
-        // Only fetch Pexels videos for video batches
-        if (!isArtBatch) {
-          const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
-          if (videosNeedingFetch.length > 0) {
-            setGenerationStatus("Buscando vídeos de fundo...");
-            await autoFetchPexelsCovers(updatedVideos);
-          }
+        const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
+        if (videosNeedingFetch.length > 0) {
+          setGenerationStatus("Buscando vídeos de fundo...");
+          await autoFetchPexelsCovers(updatedVideos);
         }
       } finally {
         setIsGenerating(false);
@@ -2983,11 +2979,43 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    imageClipShape={getImageClipShape(template.contentElements as CanvasElement[])}
                    templateWidth={template.width}
                    templateHeight={template.height}
-                   onClick={() => {
-                    setSelectedVideo(video);
-                    setCurrentPreviewPage(0);
-                    setIsPlayingPreview(true);
-                  }}
+                   onClick={async () => {
+                     setSelectedVideo(video);
+                     setCurrentPreviewPage(0);
+                     setIsPlayingPreview(true);
+
+                     // Art history loads overlays lazily only when opening a card
+                     const needsOverlayBuild =
+                       initialBatch?.type === "art" &&
+                       (!video.overlayPages?.length || !video.frameOverlayPages?.length || !video.logoOverlayPages?.length);
+
+                     if (needsOverlayBuild) {
+                       try {
+                         setIsApplyingAdjustments(true);
+                         const result = await regenerateSingleVideo(video);
+                         const updatedVideo = {
+                           ...video,
+                           pages: result.pages,
+                           overlayPages: result.overlayPages,
+                           frameOverlayPages: result.frameOverlayPages,
+                           preImageOverlayPages: result.preImageOverlayPages,
+                           logoOverlayPages: result.logoOverlayPages,
+                         };
+
+                         setClientVideos((prev) => prev.map((v, i) => (i === index ? updatedVideo : v)));
+                         setSelectedVideo(updatedVideo);
+                       } catch (error) {
+                         console.error("Error preparing overlays for art edit:", error);
+                         toast({
+                           title: "Erro ao preparar edição",
+                           description: "Tente abrir novamente este card.",
+                           variant: "destructive",
+                         });
+                       } finally {
+                         setIsApplyingAdjustments(false);
+                       }
+                     }
+                   }}
                 />
 
                 {/* Info */}
