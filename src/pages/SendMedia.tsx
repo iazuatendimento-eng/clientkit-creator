@@ -135,11 +135,15 @@ const SendMedia = () => {
       setCsvRows([...updated]);
 
       try {
-        // Upload all files in the group
+        // Upload unique files in the group (deduplicate by fileName for repeated MP4s)
         const mediaUrls: string[] = [];
         let hasVideo = false;
+        const uploadedFileNames = new Set<string>();
         for (const i of indices) {
-          const file = findFile(updated[i].fileName)!;
+          const fileName = updated[i].fileName;
+          if (uploadedFileNames.has(fileName.toLowerCase())) continue;
+          uploadedFileNames.add(fileName.toLowerCase());
+          const file = findFile(fileName)!;
           const publicUrl = await uploadToStorage(file, updated[i].clientName);
           mediaUrls.push(publicUrl);
           if (file.type.startsWith("video/")) hasVideo = true;
