@@ -488,7 +488,7 @@ const Index = () => {
       });
     }
   };
-  const handleExportToExcel = async (selectedTeam?: string) => {
+  const handleExportToExcel = async (selectedTeam?: string, exportType: 'arte' | 'video' = 'video') => {
     try {
       const excelData: any[] = [];
       const splitRows: any[] = [];
@@ -662,7 +662,8 @@ const Index = () => {
       ws['!cols'] = colWidths;
 
       const teamSuffix = selectedTeam ? `_${selectedTeam.replace(/[^a-zA-Z0-9]/g, '_')}` : '';
-      const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
+      const typeSuffix = exportType === 'arte' ? '_ARTE' : '_VIDEO';
+      const fileName = `Primeiros_Cards_A_Fazer${teamSuffix}${typeSuffix}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
       XLSX.writeFile(wb, fileName);
 
       toast({
@@ -751,9 +752,16 @@ const Index = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleExportToExcel()}>Todos</DropdownMenuItem>
+                <DropdownMenuLabel>🎨 Arte (PNG)</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'arte')}>Todos</DropdownMenuItem>
                 {availableTeams.map(t => (
-                  <DropdownMenuItem key={t.id} onClick={() => handleExportToExcel(t.name)}>{t.name}</DropdownMenuItem>
+                  <DropdownMenuItem key={t.id} onClick={() => handleExportToExcel(t.name, 'arte')}>{t.name}</DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>🎬 Vídeo (MP4)</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'video')}>Todos</DropdownMenuItem>
+                {availableTeams.map(t => (
+                  <DropdownMenuItem key={t.id} onClick={() => handleExportToExcel(t.name, 'video')}>{t.name}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
