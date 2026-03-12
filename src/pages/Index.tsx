@@ -488,7 +488,7 @@ const Index = () => {
       });
     }
   };
-  const handleExportToExcel = async (selectedTeam?: string) => {
+  const handleExportToExcel = async (selectedTeam?: string, exportType: 'arte' | 'video' = 'video') => {
     try {
       const excelData: any[] = [];
       const splitRows: any[] = [];
