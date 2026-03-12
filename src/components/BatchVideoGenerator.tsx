@@ -938,40 +938,46 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       setClientVideos(videos);
 
-      // Regenerate overlay layers (text/logo/frame) using saved data
-      setIsGenerating(true);
-      setGenerationStatus("Reconstruindo camadas de texto...");
-      try {
-        const updatedVideos = [...videos];
-        // Process in parallel batches of 3 for speed
-        const BATCH_SIZE = 3;
-        for (let start = 0; start < updatedVideos.length; start += BATCH_SIZE) {
-          const chunk = updatedVideos.slice(start, start + BATCH_SIZE);
-          const results = await Promise.all(chunk.map(video => regenerateSingleVideo(video)));
-          for (let j = 0; j < results.length; j++) {
-            const idx = start + j;
-            updatedVideos[idx] = {
-              ...updatedVideos[idx],
-              pages: results[j].pages,
-              overlayPages: results[j].overlayPages,
-              frameOverlayPages: results[j].frameOverlayPages,
-              preImageOverlayPages: results[j].preImageOverlayPages,
-              logoOverlayPages: results[j].logoOverlayPages,
-            };
-          }
-          setGenerationStatus(`Reconstruindo... (${Math.min(start + BATCH_SIZE, updatedVideos.length)}/${updatedVideos.length})`);
-          setClientVideos([...updatedVideos]);
-        }
+      // For art batches, saved pages already contain complete rendered images
+      // Skip the heavy overlay regeneration and video fetching
+      const isArtBatch = batch.type === "art";
 
-        // If any videos lack previewVideoUrls, auto-fetch from Pexels
-        const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
-        if (videosNeedingFetch.length > 0) {
-          setGenerationStatus("Buscando vídeos de fundo...");
-          await autoFetchPexelsCovers(updatedVideos);
+      if (!isArtBatch) {
+        // Regenerate overlay layers (text/logo/frame) using saved data
+        setIsGenerating(true);
+        setGenerationStatus("Reconstruindo camadas de texto...");
+        try {
+          const updatedVideos = [...videos];
+          // Process in parallel batches of 3 for speed
+          const BATCH_SIZE = 3;
+          for (let start = 0; start < updatedVideos.length; start += BATCH_SIZE) {
+            const chunk = updatedVideos.slice(start, start + BATCH_SIZE);
+            const results = await Promise.all(chunk.map(video => regenerateSingleVideo(video)));
+            for (let j = 0; j < results.length; j++) {
+              const idx = start + j;
+              updatedVideos[idx] = {
+                ...updatedVideos[idx],
+                pages: results[j].pages,
+                overlayPages: results[j].overlayPages,
+                frameOverlayPages: results[j].frameOverlayPages,
+                preImageOverlayPages: results[j].preImageOverlayPages,
+                logoOverlayPages: results[j].logoOverlayPages,
+              };
+            }
+            setGenerationStatus(`Reconstruindo... (${Math.min(start + BATCH_SIZE, updatedVideos.length)}/${updatedVideos.length})`);
+            setClientVideos([...updatedVideos]);
+          }
+
+          // If any videos lack previewVideoUrls, auto-fetch from Pexels
+          const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
+          if (videosNeedingFetch.length > 0) {
+            setGenerationStatus("Buscando vídeos de fundo...");
+            await autoFetchPexelsCovers(updatedVideos);
+          }
+        } finally {
+          setIsGenerating(false);
+          setGenerationStatus("");
         }
-      } finally {
-        setIsGenerating(false);
-        setGenerationStatus("");
       }
     } catch (error) {
       console.error("Error loading batch:", error);
