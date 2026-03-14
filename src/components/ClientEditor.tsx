@@ -224,7 +224,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     const { data, error } = await supabase
       .from("teams")
       .select("*")
-      .order("created_at", { ascending: true });
+      .order("name", { ascending: true });
     if (!error && data) setTeams(data);
   };
 
