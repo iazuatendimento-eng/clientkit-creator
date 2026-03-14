@@ -1,0 +1,1 @@
+UPDATE teams SET name = TRIM(name) WHERE name != TRIM(name);

@@ -92,7 +92,7 @@ const Index = () => {
 
   useEffect(() => {
     loadClients();
-    supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
+    supabase.from("teams").select("*").order("name", { ascending: true }).then(({ data }) => {
       if (data) setAvailableTeams(data);
     });
 

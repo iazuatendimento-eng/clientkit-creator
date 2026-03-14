@@ -157,7 +157,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
   const { toast } = useToast();
 
   useEffect(() => {
-    supabase.from("teams").select("*").order("created_at", { ascending: true }).then(({ data }) => {
+    supabase.from("teams").select("*").order("name", { ascending: true }).then(({ data }) => {
       if (data) setAvailableTeams(data);
     });
   }, []);
