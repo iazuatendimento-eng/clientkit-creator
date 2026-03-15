@@ -1083,13 +1083,17 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           : Math.max(0, Math.min(el.y, template.height - frameH));
 
         if (img) {
-          const offset = art.photoOffset || { x: 0, y: 0 };
+          const offsetRaw = art.photoOffset || { x: 0, y: 0 };
+          const offsetX = Number.isFinite(offsetRaw.x) ? offsetRaw.x : 0;
+          const offsetY = Number.isFinite(offsetRaw.y) ? offsetRaw.y : 0;
           const zoomRaw = (art.elementOverrides?.photoScale || 100) / 100; // < 1 = zoom out, > 1 = zoom in
           const zoom = Number.isFinite(zoomRaw) && zoomRaw > 0 ? zoomRaw : 1;
 
-          const imgAspect = img.width / img.height;
-          const frameAspect = frameW / frameH;
-          if (!Number.isFinite(frameAspect) || frameAspect <= 0) continue;
+          const imgAspect = img.width > 0 && img.height > 0 ? img.width / img.height : 1;
+          const frameAspectRaw = frameW / frameH;
+          const frameAspect = Number.isFinite(frameAspectRaw) && frameAspectRaw > 0
+            ? frameAspectRaw
+            : Math.max(0.0001, el.width / Math.max(1, el.height));
 
           // Start with "cover" crop
           let sw = img.width;
