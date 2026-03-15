@@ -1127,8 +1127,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
           const maxPanX = (img.width - sw) / 2;
           const maxPanY = (img.height - sh) / 2;
-          sx += (offset.x / 100) * maxPanX;
-          sy += (offset.y / 100) * maxPanY;
+          sx += (offsetX / 100) * maxPanX;
+          sy += (offsetY / 100) * maxPanY;
 
           sx = Math.max(0, Math.min(sx, img.width - sw));
           sy = Math.max(0, Math.min(sy, img.height - sh));
