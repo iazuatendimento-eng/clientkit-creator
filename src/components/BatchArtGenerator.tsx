@@ -2087,20 +2087,23 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 const currentTicket = (onRegenerateTicketRef.current.get(artKey) ?? 0) + 1;
                 onRegenerateTicketRef.current.set(artKey, currentTicket);
 
-                // Always get the LATEST photo from ref to avoid stale closure issues
+                // Always get the LATEST card state from ref to avoid stale closure issues
                 const latestArt = clientArtsRef.current.find((a) =>
                   a.clientId === updatedArt.clientId &&
                   a.cardId === updatedArt.cardId &&
                   (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
                 );
 
-                // Lock to the current card photo during resize/regeneration to avoid swapping to another image.
-                const lockedPhoto =
-                  latestArt?.photoImage ||
-                  updatedArt.photoImage ||
-                  null;
+                // Keep both photo source and last valid preview locked to this card.
+                const lockedPhoto = latestArt?.photoImage || updatedArt.photoImage || null;
+                const lastValidPreview = latestArt?.imageUrl || updatedArt.imageUrl || null;
 
-                const artToRender = { ...updatedArt, photoImage: lockedPhoto || undefined };
+                const artToRender: ClientArt = {
+                  ...(latestArt || updatedArt),
+                  ...updatedArt,
+                  imageUrl: lastValidPreview,
+                  photoImage: lockedPhoto || undefined,
+                };
 
                 // During in-card adjustments, do not auto-resolve/search another photo.
                 // If photo source is temporarily unavailable, render keeps previous image URL.
