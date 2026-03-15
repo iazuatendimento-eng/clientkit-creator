@@ -700,9 +700,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     // Draw elements
     for (const el of template.elements) {
       ctx.save();
-      applyElementStyles(el);
+      try {
+        applyElementStyles(el);
       
-      if (el.type === "rect") {
+        if (el.type === "rect") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
         const y = ov?.y ?? el.y;
@@ -1082,13 +1083,17 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           : Math.max(0, Math.min(el.y, template.height - frameH));
 
         if (img) {
-          const offset = art.photoOffset || { x: 0, y: 0 };
+          const offsetRaw = art.photoOffset || { x: 0, y: 0 };
+          const offsetX = Number.isFinite(offsetRaw.x) ? offsetRaw.x : 0;
+          const offsetY = Number.isFinite(offsetRaw.y) ? offsetRaw.y : 0;
           const zoomRaw = (art.elementOverrides?.photoScale || 100) / 100; // < 1 = zoom out, > 1 = zoom in
           const zoom = Number.isFinite(zoomRaw) && zoomRaw > 0 ? zoomRaw : 1;
 
-          const imgAspect = img.width / img.height;
-          const frameAspect = frameW / frameH;
-          if (!Number.isFinite(frameAspect) || frameAspect <= 0) continue;
+          const imgAspect = img.width > 0 && img.height > 0 ? img.width / img.height : 1;
+          const frameAspectRaw = frameW / frameH;
+          const frameAspect = Number.isFinite(frameAspectRaw) && frameAspectRaw > 0
+            ? frameAspectRaw
+            : Math.max(0.0001, el.width / Math.max(1, el.height));
 
           // Start with "cover" crop
           let sw = img.width;
@@ -1122,8 +1127,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
           const maxPanX = (img.width - sw) / 2;
           const maxPanY = (img.height - sh) / 2;
-          sx += (offset.x / 100) * maxPanX;
-          sy += (offset.y / 100) * maxPanY;
+          sx += (offsetX / 100) * maxPanX;
+          sy += (offsetY / 100) * maxPanY;
 
           sx = Math.max(0, Math.min(sx, img.width - sw));
           sy = Math.max(0, Math.min(sy, img.height - sh));
@@ -1150,8 +1155,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
-          ctx.fillStyle = "#e5e7eb";
-          ctx.fillRect(frameX, frameY, frameW, frameH);
+          console.warn("[photo] Falha ao carregar foto, mantendo layout sem cobrir o canvas");
+          ctx.save();
+          ctx.strokeStyle = "rgba(148, 163, 184, 0.7)";
+          ctx.lineWidth = Math.max(1, Math.min(frameW, frameH) * 0.01);
+          ctx.strokeRect(frameX, frameY, frameW, frameH);
+          ctx.restore();
         }
       } else if (el.type === "logo") {
         // Logo uses PNG[0] from brand kit with optional overrides
@@ -1209,7 +1218,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           console.warn("[mascot] ⚠️ No mascot URL in brand kit for", art.clientName);
         }
       }
-      ctx.restore();
+      } finally {
+        ctx.restore();
+      }
     }
 
     return canvas.toDataURL("image/png");

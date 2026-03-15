@@ -164,14 +164,30 @@ export function ArtAdjustOverlay({
     if (part === "photo") {
       if (!els.photoFrame) return null;
 
-      // If caller provides a resized frame, use it (this is "resize photo" without zoom).
+      // If caller provides a resized frame, sanitize and use it.
       if (photoFrame) {
-        return {
-          x: photoFrame.x,
-          y: photoFrame.y,
-          w: photoFrame.width,
-          h: photoFrame.height,
-        };
+        const safeW = clamp(
+          Number.isFinite(photoFrame.width) ? photoFrame.width : els.photoFrame.width,
+          20,
+          template.width
+        );
+        const safeH = clamp(
+          Number.isFinite(photoFrame.height) ? photoFrame.height : els.photoFrame.height,
+          20,
+          template.height
+        );
+        const safeX = clamp(
+          Number.isFinite(photoFrame.x) ? photoFrame.x : els.photoFrame.x,
+          0,
+          Math.max(0, template.width - safeW)
+        );
+        const safeY = clamp(
+          Number.isFinite(photoFrame.y) ? photoFrame.y : els.photoFrame.y,
+          0,
+          Math.max(0, template.height - safeH)
+        );
+
+        return { x: safeX, y: safeY, w: safeW, h: safeH };
       }
 
       // Backwards-compat fallback: represent zoom as a scaled box.
