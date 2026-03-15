@@ -1501,6 +1501,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     const updatedArt = { ...clientArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
     lockPhotoForArt(updatedArt, image.urls.regular);
+    const updatedArts = [...clientArts];
     updatedArts[index] = updatedArt;
     setClientArts(updatedArts);
     setSelectedArt(updatedArt); // Update selectedArt too
