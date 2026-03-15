@@ -2071,10 +2071,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 );
 
                 // Priority: latest state > updatedArt prop > cache
+                const artKey = getClientArtKey(updatedArt);
                 const lockedPhoto =
-                  latestArt?.photoImage ||
                   updatedArt.photoImage ||
-                  photoResolveCacheRef.current.get(updatedArt.cardId)?.url ||
+                  latestArt?.photoImage ||
+                  photoResolveCacheRef.current.get(artKey)?.url ||
                   null;
 
                 let artToRender = { ...updatedArt, photoImage: lockedPhoto || updatedArt.photoImage };
