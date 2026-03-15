@@ -569,11 +569,19 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   const generateArtForClient = async (art: ClientArt): Promise<string> => {
     console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
-    
+
+    const hasPhotoPlaceholder = template.elements.some((el) => el.type === "image" && el.placeholder);
+    // If the original source photo is missing, keep the last valid render to avoid "sumir" after resize.
+    if (hasPhotoPlaceholder && !art.photoImage && art.imageUrl) {
+      console.warn("[photo] Fonte original ausente; mantendo preview existente");
+      return art.imageUrl;
+    }
+
     const canvas = document.createElement("canvas");
     canvas.width = template.width;
     canvas.height = template.height;
     const ctx = canvas.getContext("2d")!;
+    let photoSourceFailed = false;
 
     // Color mapping from brand kit:
     // colors[0] = background color
@@ -1155,12 +1163,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
-          console.warn("[photo] Falha ao carregar foto, mantendo layout sem cobrir o canvas");
-          ctx.save();
-          ctx.strokeStyle = "rgba(148, 163, 184, 0.7)";
-          ctx.lineWidth = Math.max(1, Math.min(frameW, frameH) * 0.01);
-          ctx.strokeRect(frameX, frameY, frameW, frameH);
-          ctx.restore();
+          console.warn("[photo] Falha ao carregar foto; mantendo imagem anterior para não sumir");
+          photoSourceFailed = true;
         }
       } else if (el.type === "logo") {
         // Logo uses PNG[0] from brand kit with optional overrides
@@ -1221,6 +1225,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       } finally {
         ctx.restore();
       }
+    }
+
+    if (photoSourceFailed && art.imageUrl) {
+      return art.imageUrl;
     }
 
     return canvas.toDataURL("image/png");
