@@ -1255,6 +1255,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
+          missingPhotoSource = true;
           // Visible placeholder so resize never looks like "sumiu tudo"
           ctx.save();
           ctx.setLineDash([10, 8]);
