@@ -634,7 +634,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     return null;
   }, []);
 
-  const generateArtForClient = async (art: ClientArt): Promise<string> => {
+  const generateArtForClient = async (
+    art: ClientArt,
+    options?: { allowAutoPhotoResolve?: boolean }
+  ): Promise<string> => {
     console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
 
     // Note: even without photoImage, we must re-render so shape/text/logo overrides apply.
@@ -754,8 +757,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
     };
-    
-    const resolvedPhotoImage = art.photoImage || await resolvePhotoImageForArt(art);
+
+    const allowAutoPhotoResolve = options?.allowAutoPhotoResolve ?? true;
+    const resolvedPhotoImage = art.photoImage || (allowAutoPhotoResolve ? await resolvePhotoImageForArt(art) : null);
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
@@ -1394,11 +1398,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   const regenerateArt = async (index: number) => {
     const art = clientArts[index];
-    const resolvedPhotoImage = art.photoImage || await resolvePhotoImageForArt(art);
-    const artToRender = resolvedPhotoImage ? { ...art, photoImage: resolvedPhotoImage } : art;
-    const imageUrl = await generateArtForClient(artToRender);
+    const imageUrl = await generateArtForClient(art, { allowAutoPhotoResolve: false });
     const updatedArts = [...clientArts];
-    updatedArts[index] = { ...artToRender, imageUrl };
+    updatedArts[index] = { ...art, imageUrl };
     setClientArts(updatedArts);
   };
 
@@ -1593,7 +1595,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     
     setIsRegenerating(true);
     try {
-      const newImageUrl = await generateArtForClient(tempArt);
+      const newImageUrl = await generateArtForClient(tempArt, { allowAutoPhotoResolve: false });
       setLivePreviewUrl(newImageUrl);
     } catch (error) {
       console.error("Error regenerating preview:", error);
@@ -1684,7 +1686,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         shapes: ov.shapeOverrides,
       }
     };
-    const imageUrl = await generateArtForClient(updatedArts[index]);
+    const imageUrl = await generateArtForClient(updatedArts[index], { allowAutoPhotoResolve: false });
     updatedArts[index] = { ...updatedArts[index], imageUrl };
     setClientArts([...updatedArts]);
   }, [commitOverridesToArt, regenerateFromRefs, generateArtForClient]);
@@ -2023,20 +2025,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 setClientArts(updated);
               }}
               onRegenerate={async (updatedArt) => {
-                const resolvedPhotoImage = updatedArt.photoImage || await resolvePhotoImageForArt(updatedArt);
-                const artToRender = resolvedPhotoImage
-                  ? { ...updatedArt, photoImage: resolvedPhotoImage }
+                const currentPhoto = clientArts[index]?.photoImage;
+                const artToRender = currentPhoto && !updatedArt.photoImage
+                  ? { ...updatedArt, photoImage: currentPhoto }
                   : updatedArt;
 
-                if (resolvedPhotoImage && !updatedArt.photoImage) {
-                  setClientArts((prev) => {
-                    const next = [...prev];
-                    next[index] = { ...next[index], photoImage: resolvedPhotoImage };
-                    return next;
-                  });
-                }
-
-                return generateArtForClient(artToRender);
+                return generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
               }}
               onApprove={handleApprove}
               onReject={handleReject}
