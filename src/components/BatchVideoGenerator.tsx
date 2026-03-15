@@ -49,6 +49,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/lib/imageSearch";
+import { translateToEnglishLocal } from "@/lib/localTranslate";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
@@ -1073,14 +1074,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (!firstText) continue;
       try {
         const combinedText = firstText.split(" ").slice(0, 15).join(" ");
-        let searchTerms = combinedText;
-        try {
-          const { data, error } = await Promise.race([
-            supabase.functions.invoke("translate-text", { body: { text: combinedText } }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
-          ]);
-          if (!error && data?.translatedText) searchTerms = data.translatedText;
-        } catch {}
+        let searchTerms = translateToEnglishLocal(combinedText);
 
         // Try search - fetch enough results for all content pages
         const contentPageCount = video.pageTexts.length;
@@ -2164,26 +2158,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           try {
             // Prioritize imageType and briefing for search context (most relevant for visual content)
             const fullContext = [video.imageType, video.briefing, video.cardTitle, text].filter(Boolean).join(" ").split(" ").slice(0, 15).join(" ");
-            let searchTerms = fullContext;
-
-            // Translate to English for better search results (with timeout)
-            try {
-              const translatePromise = supabase.functions.invoke("translate-text", {
-                body: { text: fullContext },
-              });
-
-              const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("Timeout na tradução")), 15000)
-              );
-
-              const { data, error } = await Promise.race([translatePromise, timeoutPromise]);
-
-              if (!error && data?.translatedText) {
-                searchTerms = data.translatedText;
-              }
-            } catch (translateError) {
-              console.error("Translation failed, using original text:", translateError);
-            }
+            let searchTerms = translateToEnglishLocal(fullContext);
 
             // Search Pexels videos with multiple fallback strategies
             let foundVideo = false;

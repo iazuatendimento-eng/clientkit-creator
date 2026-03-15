@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
+import { translateToEnglishLocal } from "@/lib/localTranslate";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import {
@@ -1216,32 +1217,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         // Search for relevant image if template has image placeholder
         if (hasImagePlaceholder && !art.photoImage) {
           try {
-            // Build rich search context from client metadata + page text
-            const contextParts = [art.imageType, art.narrationType, art.briefing, art.cardText].filter(Boolean);
-            const fullContext = contextParts.join(" ").split(" ").slice(0, 15).join(" ");
-            let searchTerms = fullContext;
-            
-            try {
-              const translateResponse = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-text`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-                  },
-                  body: JSON.stringify({ text: fullContext }),
-                }
-              );
-              
-              if (translateResponse.ok) {
-                const { translatedText } = await translateResponse.json();
-                searchTerms = translatedText;
-                console.log("Searching images with translated terms:", searchTerms);
-              }
-            } catch (translateError) {
-              console.error("Translation failed, using original text:", translateError);
-            }
+            // Build search query from card text + image type (no AI)
+            const rawParts = [art.imageType, art.cardText].filter(Boolean);
+            const rawQuery = rawParts.join(" ").substring(0, 120);
+            const searchTerms = translateToEnglishLocal(rawQuery);
+            console.log("Searching images (local translate):", searchTerms);
             
             const images = await searchImages(searchTerms, 1);
             if (images.length > 0) {
