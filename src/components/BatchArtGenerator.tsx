@@ -2044,44 +2044,51 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               index={index}
               template={template}
               onArtUpdate={(idx, updates) => {
-                const updated = [...clientArts];
-                updated[idx] = { ...updated[idx], ...updates };
-                setClientArts(updated);
+                setClientArts((prev) => {
+                  const next = [...prev];
+                  next[idx] = { ...next[idx], ...updates };
+                  return next;
+                });
               }}
               onRegenerate={async (updatedArt) => {
+                // Always get the LATEST photo from ref to avoid stale closure issues
                 const latestArt = clientArtsRef.current.find((a) =>
                   a.clientId === updatedArt.clientId &&
                   a.cardId === updatedArt.cardId &&
                   (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
                 );
 
+                // Priority: latest state > updatedArt prop > cache
                 const lockedPhoto =
-                  updatedArt.photoImage ||
                   latestArt?.photoImage ||
+                  updatedArt.photoImage ||
                   photoResolveCacheRef.current.get(updatedArt.cardId)?.url ||
                   null;
 
-                let artToRender = lockedPhoto
-                  ? { ...updatedArt, photoImage: lockedPhoto }
-                  : updatedArt;
+                let artToRender = { ...updatedArt, photoImage: lockedPhoto || updatedArt.photoImage };
 
+                // Only if we truly have no photo at all, try DB (no search)
                 if (!artToRender.photoImage) {
                   const resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: false });
                   if (resolved) {
                     artToRender = { ...artToRender, photoImage: resolved };
-                    setClientArts((prev) => {
-                      const next = [...prev];
-                      const targetIndex = next.findIndex((a) =>
-                        a.clientId === updatedArt.clientId &&
-                        a.cardId === updatedArt.cardId &&
-                        (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
-                      );
-                      if (targetIndex !== -1) {
-                        next[targetIndex] = { ...next[targetIndex], photoImage: resolved };
-                      }
-                      return next;
-                    });
                   }
+                }
+
+                // Always persist the resolved photo back to state to prevent future loss
+                if (artToRender.photoImage) {
+                  setClientArts((prev) => {
+                    const next = [...prev];
+                    const targetIndex = next.findIndex((a) =>
+                      a.clientId === updatedArt.clientId &&
+                      a.cardId === updatedArt.cardId &&
+                      (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
+                    );
+                    if (targetIndex !== -1 && !next[targetIndex].photoImage) {
+                      next[targetIndex] = { ...next[targetIndex], photoImage: artToRender.photoImage };
+                    }
+                    return next;
+                  });
                 }
 
                 return generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
