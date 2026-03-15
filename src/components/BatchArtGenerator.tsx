@@ -1343,8 +1343,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
 
     return renderedDataUrl;
-
-    return renderedDataUrl;
   };
 
   const generateAllArts = async () => {
