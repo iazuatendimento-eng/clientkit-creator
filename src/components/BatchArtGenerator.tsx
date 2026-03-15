@@ -1686,7 +1686,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         shapes: ov.shapeOverrides,
       }
     };
-    const imageUrl = await generateArtForClient(updatedArts[index]);
+    const imageUrl = await generateArtForClient(updatedArts[index], { allowAutoPhotoResolve: false });
     updatedArts[index] = { ...updatedArts[index], imageUrl };
     setClientArts([...updatedArts]);
   }, [commitOverridesToArt, regenerateFromRefs, generateArtForClient]);
