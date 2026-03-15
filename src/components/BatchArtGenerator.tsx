@@ -145,6 +145,9 @@ interface ClientArt {
   noteRead?: boolean; // Se a anotação foi marcada como lida
 }
 
+const getClientArtKey = (art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex">) =>
+  `${art.clientId}::${art.cardId}::${art.pageIndex ?? 0}`;
+
 // Image cache to avoid reloading
 const imageCache = new Map<string, HTMLImageElement>();
 
