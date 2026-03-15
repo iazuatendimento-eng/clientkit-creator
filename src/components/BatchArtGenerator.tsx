@@ -2098,16 +2098,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
                 const artToRender = { ...updatedArt, photoImage: lockedPhoto || undefined };
 
-                // If photo is missing, first try DB-only resolution, then fallback to search once.
-                if (!artToRender.photoImage) {
-                  let resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: false });
-                  if (!resolved) {
-                    resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: true });
-                  }
-                  if (resolved) {
-                    artToRender = { ...artToRender, photoImage: resolved };
-                  }
-                }
+                // During in-card adjustments, do not auto-resolve/search another photo.
+                // If photo source is temporarily unavailable, render keeps previous image URL.
+
 
                 // Always persist the resolved photo back to state to prevent future loss
                 if (artToRender.photoImage) {
