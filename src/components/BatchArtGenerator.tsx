@@ -570,18 +570,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const generateArtForClient = async (art: ClientArt): Promise<string> => {
     console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
 
-    const hasPhotoPlaceholder = template.elements.some((el) => el.type === "image" && el.placeholder);
-    // If the original source photo is missing, keep the last valid render to avoid "sumir" after resize.
-    if (hasPhotoPlaceholder && !art.photoImage && art.imageUrl) {
-      console.warn("[photo] Fonte original ausente; mantendo preview existente");
-      return art.imageUrl;
-    }
+    // Note: even without photoImage, we must re-render so shape/text/logo overrides apply.
 
     const canvas = document.createElement("canvas");
     canvas.width = template.width;
     canvas.height = template.height;
     const ctx = canvas.getContext("2d")!;
-    let photoSourceFailed = false;
 
     // Color mapping from brand kit:
     // colors[0] = background color
@@ -1163,8 +1157,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
-          console.warn("[photo] Falha ao carregar foto; mantendo imagem anterior para não sumir");
-          photoSourceFailed = true;
+          // Photo failed to load — just skip drawing it, don't block the rest
+          console.warn("[photo] Falha ao carregar foto, pulando elemento");
         }
       } else if (el.type === "logo") {
         // Logo uses PNG[0] from brand kit with optional overrides
@@ -1227,9 +1221,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       }
     }
 
-    if (photoSourceFailed && art.imageUrl) {
-      return art.imageUrl;
-    }
 
     return canvas.toDataURL("image/png");
   };
