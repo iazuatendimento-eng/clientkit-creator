@@ -1221,9 +1221,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       }
     }
 
-    if (photoSourceFailed && art.imageUrl) {
-      return art.imageUrl;
-    }
 
     return canvas.toDataURL("image/png");
   };
