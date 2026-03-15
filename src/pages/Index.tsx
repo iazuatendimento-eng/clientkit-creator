@@ -750,9 +750,9 @@ const Index = () => {
           <div className="flex flex-wrap gap-1.5 items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <Palette className="mr-1 h-4 w-4" />
-                  Exportar Arte
+                <Button size="sm" variant="outline" className="px-2">
+                  <Palette className="h-4 w-4 mr-1" />
+                  <span className="hidden xl:inline">Exp.</span> Arte
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-60 overflow-y-auto">
