@@ -755,6 +755,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       ctx.shadowOffsetY = 0;
     };
     
+    const resolvedPhotoImage = art.photoImage || await resolvePhotoImageForArt(art);
+
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
 
