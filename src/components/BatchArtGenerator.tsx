@@ -2025,20 +2025,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 setClientArts(updated);
               }}
               onRegenerate={async (updatedArt) => {
-                const resolvedPhotoImage = updatedArt.photoImage || await resolvePhotoImageForArt(updatedArt);
-                const artToRender = resolvedPhotoImage
-                  ? { ...updatedArt, photoImage: resolvedPhotoImage }
+                const currentPhoto = clientArts[index]?.photoImage;
+                const artToRender = currentPhoto && !updatedArt.photoImage
+                  ? { ...updatedArt, photoImage: currentPhoto }
                   : updatedArt;
 
-                if (resolvedPhotoImage && !updatedArt.photoImage) {
-                  setClientArts((prev) => {
-                    const next = [...prev];
-                    next[index] = { ...next[index], photoImage: resolvedPhotoImage };
-                    return next;
-                  });
-                }
-
-                return generateArtForClient(artToRender);
+                return generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
               }}
               onApprove={handleApprove}
               onReject={handleReject}
