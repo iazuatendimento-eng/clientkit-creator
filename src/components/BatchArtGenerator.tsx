@@ -769,13 +769,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     const allowAutoPhotoResolve = options?.allowAutoPhotoResolve ?? true;
     const cachedPhotoImage = photoResolveCacheRef.current.get(art.cardId)?.url ?? null;
-    const shouldAllowSearchInLockedMode = !allowAutoPhotoResolve && !art.photoImage && !cachedPhotoImage;
     const resolvedPhotoImage =
       art.photoImage ||
       cachedPhotoImage ||
       (allowAutoPhotoResolve
         ? await resolvePhotoImageForArt(art, { allowSearch: true })
-        : await resolvePhotoImageForArt(art, { allowSearch: shouldAllowSearchInLockedMode }));
+        : await resolvePhotoImageForArt(art, { allowSearch: false }));
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
