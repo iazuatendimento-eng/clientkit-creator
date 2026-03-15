@@ -700,9 +700,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     // Draw elements
     for (const el of template.elements) {
       ctx.save();
-      applyElementStyles(el);
+      try {
+        applyElementStyles(el);
       
-      if (el.type === "rect") {
+        if (el.type === "rect") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
         const y = ov?.y ?? el.y;
