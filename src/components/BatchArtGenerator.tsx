@@ -567,6 +567,73 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   };
 
+  // Cache photo resolution per card to avoid hammering the backend during resize
+  const photoResolveCacheRef = useRef(new Map<string, { url: string | null; ts: number }>());
+
+  const resolvePhotoImageForArt = useCallback(async (art: ClientArt): Promise<string | null> => {
+    const key = art.cardId;
+    const cached = photoResolveCacheRef.current.get(key);
+    if (cached) {
+      // cache hit: keep positive forever; negative for 60s
+      if (cached.url) return cached.url;
+      if (Date.now() - cached.ts < 60_000) return null;
+    }
+
+    // 1) Prefer uploads (material)
+    try {
+      const { data } = await supabase
+        .from("card_uploads")
+        .select("file_url, uploaded_at")
+        .eq("card_id", art.cardId)
+        .eq("upload_type", "material")
+        .order("uploaded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data?.file_url) {
+        photoResolveCacheRef.current.set(key, { url: data.file_url, ts: Date.now() });
+        return data.file_url;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2) Then cover image from the card
+    try {
+      const { data } = await supabase
+        .from("project_briefs")
+        .select("cover_image")
+        .eq("id", art.cardId)
+        .maybeSingle();
+
+      const cover = (data as any)?.cover_image as string | null | undefined;
+      if (cover) {
+        photoResolveCacheRef.current.set(key, { url: cover, ts: Date.now() });
+        return cover;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3) Last resort: automated search
+    try {
+      const rawParts = [art.imageType, art.cardTitle, art.cardText, art.clientName].filter(Boolean);
+      const rawQuery = rawParts.join(" ").slice(0, 120);
+      const query = translateToEnglishLocal(rawQuery);
+      const images = await searchImages(query, 1);
+      const url = images?.[0]?.urls?.regular;
+      if (url) {
+        photoResolveCacheRef.current.set(key, { url, ts: Date.now() });
+        return url;
+      }
+    } catch {
+      // ignore
+    }
+
+    photoResolveCacheRef.current.set(key, { url: null, ts: Date.now() });
+    return null;
+  }, []);
+
   const generateArtForClient = async (art: ClientArt): Promise<string> => {
     console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
 
