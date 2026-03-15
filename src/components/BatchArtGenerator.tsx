@@ -634,7 +634,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     return null;
   }, []);
 
-  const generateArtForClient = async (art: ClientArt): Promise<string> => {
+  const generateArtForClient = async (
+    art: ClientArt,
+    options?: { allowAutoPhotoResolve?: boolean }
+  ): Promise<string> => {
     console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
 
     // Note: even without photoImage, we must re-render so shape/text/logo overrides apply.
@@ -754,8 +757,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
     };
-    
-    const resolvedPhotoImage = art.photoImage || await resolvePhotoImageForArt(art);
+
+    const allowAutoPhotoResolve = options?.allowAutoPhotoResolve ?? true;
+    const resolvedPhotoImage = art.photoImage || (allowAutoPhotoResolve ? await resolvePhotoImageForArt(art) : null);
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
