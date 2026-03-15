@@ -1412,7 +1412,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   };
 
   const regenerateArt = async (index: number) => {
-    const art = clientArts[index];
+    const art = clientArtsRef.current[index] || clientArts[index];
     let artToRender = art;
 
     if (art && !art.photoImage) {
@@ -1423,9 +1423,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
 
     const imageUrl = await generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
-    const updatedArts = [...clientArts];
-    updatedArts[index] = { ...artToRender, imageUrl };
-    setClientArts(updatedArts);
+    setClientArts((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...artToRender, imageUrl };
+      return next;
+    });
   };
 
   const handleApprove = (index: number) => {
