@@ -764,9 +764,9 @@ const Index = () => {
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <Video className="mr-1 h-4 w-4" />
-                  Exportar Vídeo
+                <Button size="sm" variant="outline" className="px-2">
+                  <Video className="h-4 w-4 mr-1" />
+                  <span className="hidden xl:inline">Exp.</span> Vídeo
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-60 overflow-y-auto">
