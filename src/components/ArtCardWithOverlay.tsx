@@ -177,21 +177,23 @@ export function ArtCardWithOverlay({
   }, []);
 
   const handleDragEnd = useCallback(async () => {
-    // Build updated art with current overrides
+    // Read from refs to get the absolute latest values (pointerup fires before React re-renders)
+    const v = latestRef.current;
+
     const updatedOverrides: ElementOverrides = {
-      logoX, logoY,
-      logoScaleX, logoScaleY,
-      textX, textY, textFontSize,
-      contactX, contactY,
-      contactScaleX, contactScaleY,
-      photoScale,
-      photoFrame: photoFrame || undefined,
-      shapes: shapeOverrides,
+      logoX: v.logoX, logoY: v.logoY,
+      logoScaleX: v.logoScaleX, logoScaleY: v.logoScaleY,
+      textX: v.textX, textY: v.textY, textFontSize: v.textFontSize,
+      contactX: v.contactX, contactY: v.contactY,
+      contactScaleX: v.contactScaleX, contactScaleY: v.contactScaleY,
+      photoScale: v.photoScale,
+      photoFrame: v.photoFrame || undefined,
+      shapes: v.shapeOverrides,
     };
 
     const updatedArt: ClientArt = {
       ...art,
-      photoOffset: { x: photoOffsetX, y: photoOffsetY },
+      photoOffset: { x: v.photoOffsetX, y: v.photoOffsetY },
       elementOverrides: updatedOverrides,
     };
 
@@ -216,7 +218,7 @@ export function ArtCardWithOverlay({
 
         onArtUpdate(index, {
           imageUrl: newImageUrl,
-          photoOffset: { x: photoOffsetX, y: photoOffsetY },
+          photoOffset: { x: v.photoOffsetX, y: v.photoOffsetY },
           elementOverrides: updatedOverrides,
         });
       } catch (e) {
@@ -227,13 +229,7 @@ export function ArtCardWithOverlay({
         }
       }
     }, 150);
-  }, [
-    art, index, photoOffsetX, photoOffsetY, photoScale, photoFrame,
-    logoX, logoY, logoScaleX, logoScaleY,
-    textX, textY, textFontSize,
-    contactX, contactY, contactScaleX, contactScaleY,
-    shapeOverrides, onArtUpdate, onRegenerate,
-  ]);
+  }, [art, index, onArtUpdate, onRegenerate]);
 
   const showOverlay = art.imageUrl && art.status === "pending";
 
