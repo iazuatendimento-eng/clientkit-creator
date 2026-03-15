@@ -1210,7 +1210,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           console.warn("[mascot] ⚠️ No mascot URL in brand kit for", art.clientName);
         }
       }
-      ctx.restore();
+      } finally {
+        ctx.restore();
+      }
     }
 
     return canvas.toDataURL("image/png");
