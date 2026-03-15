@@ -769,13 +769,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     const allowAutoPhotoResolve = options?.allowAutoPhotoResolve ?? true;
     const cachedPhotoImage = photoResolveCacheRef.current.get(art.cardId)?.url ?? null;
-    const shouldAllowSearchInLockedMode = !allowAutoPhotoResolve && !art.photoImage && !cachedPhotoImage;
     const resolvedPhotoImage =
       art.photoImage ||
       cachedPhotoImage ||
       (allowAutoPhotoResolve
         ? await resolvePhotoImageForArt(art, { allowSearch: true })
-        : await resolvePhotoImageForArt(art, { allowSearch: shouldAllowSearchInLockedMode }));
+        : await resolvePhotoImageForArt(art, { allowSearch: false }));
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
@@ -2050,18 +2049,36 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 setClientArts(updated);
               }}
               onRegenerate={async (updatedArt) => {
-                const currentPhoto = clientArts[index]?.photoImage;
-                let artToRender = currentPhoto && !updatedArt.photoImage
-                  ? { ...updatedArt, photoImage: currentPhoto }
+                const latestArt = clientArtsRef.current.find((a) =>
+                  a.clientId === updatedArt.clientId &&
+                  a.cardId === updatedArt.cardId &&
+                  (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
+                );
+
+                const lockedPhoto =
+                  updatedArt.photoImage ||
+                  latestArt?.photoImage ||
+                  photoResolveCacheRef.current.get(updatedArt.cardId)?.url ||
+                  null;
+
+                let artToRender = lockedPhoto
+                  ? { ...updatedArt, photoImage: lockedPhoto }
                   : updatedArt;
 
                 if (!artToRender.photoImage) {
-                  const resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: true });
+                  const resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: false });
                   if (resolved) {
                     artToRender = { ...artToRender, photoImage: resolved };
                     setClientArts((prev) => {
                       const next = [...prev];
-                      if (next[index]) next[index] = { ...next[index], photoImage: resolved };
+                      const targetIndex = next.findIndex((a) =>
+                        a.clientId === updatedArt.clientId &&
+                        a.cardId === updatedArt.cardId &&
+                        (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
+                      );
+                      if (targetIndex !== -1) {
+                        next[targetIndex] = { ...next[targetIndex], photoImage: resolved };
+                      }
                       return next;
                     });
                   }
