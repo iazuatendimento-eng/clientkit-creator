@@ -336,6 +336,9 @@ export function ArtAdjustOverlay({
       },
     };
 
+    let hasMoved = false;
+    const moveThresholdPx = 1;
+
     const onMove = (ev: PointerEvent) => {
       const s = startRef.current;
       const r = containerRef.current?.getBoundingClientRect();
@@ -343,6 +346,10 @@ export function ArtAdjustOverlay({
 
       const dxClient = ev.clientX - s.startClientX;
       const dyClient = ev.clientY - s.startClientY;
+
+      // Avoid triggering regeneration on simple click/tap without actual movement.
+      if (Math.abs(dxClient) < moveThresholdPx && Math.abs(dyClient) < moveThresholdPx) return;
+      hasMoved = true;
 
       const dx = (dxClient / r.width) * template.width;
       const dy = (dyClient / r.height) * template.height;
@@ -613,7 +620,7 @@ export function ArtAdjustOverlay({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       startRef.current = null;
-      onDragEndRef.current?.();
+      if (hasMoved) onDragEndRef.current?.();
     };
 
     window.addEventListener("pointermove", onMove);

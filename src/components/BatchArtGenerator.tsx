@@ -1866,7 +1866,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {clientArts.map((art, index) => (
             <ArtCardWithOverlay
-              key={`${art.clientId}-${art.cardId}-${art.pageIndex ?? 0}`}
+              key={`${art.clientId}-${art.cardId}-${art.pageIndex ?? 0}-${index}`}
               art={art}
               index={index}
               template={template}
