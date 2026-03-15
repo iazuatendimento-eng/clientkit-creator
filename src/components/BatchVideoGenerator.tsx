@@ -1073,14 +1073,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (!firstText) continue;
       try {
         const combinedText = firstText.split(" ").slice(0, 15).join(" ");
-        let searchTerms = combinedText;
-        try {
-          const { data, error } = await Promise.race([
-            supabase.functions.invoke("translate-text", { body: { text: combinedText } }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
-          ]);
-          if (!error && data?.translatedText) searchTerms = data.translatedText;
-        } catch {}
+        let searchTerms = translateToEnglishLocal(combinedText);
 
         // Try search - fetch enough results for all content pages
         const contentPageCount = video.pageTexts.length;
