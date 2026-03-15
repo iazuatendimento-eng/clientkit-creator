@@ -1336,28 +1336,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     const renderedDataUrl = canvas.toDataURL("image/png");
 
-    // Keep old image only when photo source is missing AND no non-photo override was applied.
-    // This preserves previous "no IMAGEM placeholder" behavior for unchanged cards,
-    // while still allowing logo/text/contact/shape adjustments to visibly update.
-    const ov = art.elementOverrides;
-    const hasNonPhotoOverrides = Boolean(
-      (ov?.logoX ?? 0) !== 0 ||
-      (ov?.logoY ?? 0) !== 0 ||
-      (ov?.textX ?? 0) !== 0 ||
-      (ov?.textY ?? 0) !== 0 ||
-      (ov?.contactX ?? 0) !== 0 ||
-      (ov?.contactY ?? 0) !== 0 ||
-      (ov?.logoScaleX ?? ov?.logoScale ?? 100) !== 100 ||
-      (ov?.logoScaleY ?? ov?.logoScale ?? 100) !== 100 ||
-      (ov?.textFontSize ?? 100) !== 100 ||
-      (ov?.contactScaleX ?? ov?.contactScale ?? 100) !== 100 ||
-      (ov?.contactScaleY ?? ov?.contactScale ?? 100) !== 100 ||
-      !!(ov?.shapes && Object.keys(ov.shapes).length > 0)
-    );
-
-    if (missingPhotoSource && art.imageUrl && !hasNonPhotoOverrides) {
+    // Never replace a previously valid preview with placeholder when photo source fails.
+    // Keep the current image stable while we try to re-resolve photo source in subsequent regenerations.
+    if (missingPhotoSource && art.imageUrl) {
       return art.imageUrl;
     }
+
+    return renderedDataUrl;
 
     return renderedDataUrl;
   };
