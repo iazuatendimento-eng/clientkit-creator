@@ -471,17 +471,19 @@ export function ArtAdjustOverlay({
           setLogoScaleY(newScaleY);
           if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
         } else {
-          // Corner handles - update both X and Y
+          // Corner handles - proportional resize
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
-          const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
-          const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
+          // Use the dominant axis delta to compute a uniform scale
+          const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
+          const newW = clamp(s.start.logoW + dominant * baseW, baseW * 0.25, baseW * 3);
+          const newH = clamp(s.start.logoH + dominant * baseH, baseH * 0.25, baseH * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setLogoScaleX(newScaleX);
           setLogoScaleY(newScaleY);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
+          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + (s.start.logoW - newW), -200, 200));
+          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + (s.start.logoH - newH), -200, 200));
         }
         return;
       }
