@@ -127,6 +127,23 @@ export function ArtCardWithOverlay({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regenerateRequestRef = useRef(0);
 
+  // Refs to always have the latest values available for handleDragEnd
+  // (pointerup fires before React re-renders with the latest setState from onMove)
+  const latestRef = useRef({
+    photoOffsetX, photoOffsetY, photoScale, photoFrame,
+    logoX, logoY, logoScaleX, logoScaleY,
+    textX, textY, textFontSize,
+    contactX, contactY, contactScaleX, contactScaleY,
+    shapeOverrides,
+  });
+  latestRef.current = {
+    photoOffsetX, photoOffsetY, photoScale, photoFrame,
+    logoX, logoY, logoScaleX, logoScaleY,
+    textX, textY, textFontSize,
+    contactX, contactY, contactScaleX, contactScaleY,
+    shapeOverrides,
+  };
+
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
   useEffect(() => {
