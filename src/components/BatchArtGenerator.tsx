@@ -1163,12 +1163,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
-          console.warn("[photo] Falha ao carregar foto, mantendo layout sem cobrir o canvas");
-          ctx.save();
-          ctx.strokeStyle = "rgba(148, 163, 184, 0.7)";
-          ctx.lineWidth = Math.max(1, Math.min(frameW, frameH) * 0.01);
-          ctx.strokeRect(frameX, frameY, frameW, frameH);
-          ctx.restore();
+          console.warn("[photo] Falha ao carregar foto; mantendo imagem anterior para não sumir");
+          photoSourceFailed = true;
         }
       } else if (el.type === "logo") {
         // Logo uses PNG[0] from brand kit with optional overrides
