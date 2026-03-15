@@ -141,23 +141,6 @@ export function ArtAdjustOverlay({
     return { photoFrame, logoEl, contactEl, textEl, shapes };
   }, [template.elements]);
 
-  const partOptions = useMemo(() => {
-    const opts: { value: Part; label: string }[] = [];
-
-    if (els.photoFrame) opts.push({ value: "photo", label: "Foto" });
-    if (els.logoEl) opts.push({ value: "logo", label: "Logo" });
-    if (els.textEl) opts.push({ value: "text", label: "Texto" });
-    if (els.contactEl) opts.push({ value: "contact", label: "Contato" });
-
-    els.shapes.forEach((s, idx) => {
-      opts.push({
-        value: `shape:${s.id}`,
-        label: s.type === "circle" ? `Círculo ${idx + 1}` : `Retângulo ${idx + 1}`,
-      });
-    });
-
-    return opts;
-  }, [els]);
 
   const getRect = (part: Part) => {
     if (part === "photo") {
