@@ -1595,7 +1595,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     
     setIsRegenerating(true);
     try {
-      const newImageUrl = await generateArtForClient(tempArt);
+      const newImageUrl = await generateArtForClient(tempArt, { allowAutoPhotoResolve: false });
       setLivePreviewUrl(newImageUrl);
     } catch (error) {
       console.error("Error regenerating preview:", error);
