@@ -125,6 +125,7 @@ export function ArtCardWithOverlay({
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const regenerateRequestRef = useRef(0);
 
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
@@ -150,6 +151,13 @@ export function ArtCardWithOverlay({
       setShapeOverrides(art.elementOverrides?.shapes || {});
     }
   }, [art]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      regenerateRequestRef.current += 1;
+    };
+  }, []);
 
   const handleDragEnd = useCallback(async () => {
     // Build updated art with current overrides
