@@ -37,6 +37,14 @@ export interface BatchItem {
   brandKit: any;
   files: string[]; // URLs of generated images/pages
   backgroundImages?: string[];
+  photoImage?: string;
+  photoOffset?: { x: number; y: number };
+  elementOverrides?: any;
+  pageIndex?: number;
+  totalPages?: number;
+  imageType?: string;
+  narrationType?: string;
+  briefing?: string;
   previewVideoUrls?: (string | null)[];
   adjustments?: {
     logoScale?: { x: number; y: number };
