@@ -800,6 +800,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
 
     // Draw elements
+    let missingPhotoSource = false;
     for (const el of template.elements) {
       ctx.save();
       try {
