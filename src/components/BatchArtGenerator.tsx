@@ -1334,7 +1334,15 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
 
 
-    return canvas.toDataURL("image/png");
+    const renderedDataUrl = canvas.toDataURL("image/png");
+
+    // If regeneration lost the photo source, keep the previously rendered art
+    // instead of replacing it with the IMAGEM placeholder.
+    if (missingPhotoSource && art.imageUrl) {
+      return art.imageUrl;
+    }
+
+    return renderedDataUrl;
   };
 
   const generateAllArts = async () => {
