@@ -570,69 +570,78 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   // Cache photo resolution per card to avoid hammering the backend during resize
   const photoResolveCacheRef = useRef(new Map<string, { url: string | null; ts: number }>());
 
-  const resolvePhotoImageForArt = useCallback(async (art: ClientArt): Promise<string | null> => {
-    const key = art.cardId;
-    const cached = photoResolveCacheRef.current.get(key);
-    if (cached) {
-      // cache hit: keep positive forever; negative for 60s
-      if (cached.url) return cached.url;
-      if (Date.now() - cached.ts < 60_000) return null;
-    }
-
-    // 1) Prefer uploads (material)
-    try {
-      const { data } = await supabase
-        .from("card_uploads")
-        .select("file_url, uploaded_at")
-        .eq("card_id", art.cardId)
-        .eq("upload_type", "material")
-        .order("uploaded_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (data?.file_url) {
-        photoResolveCacheRef.current.set(key, { url: data.file_url, ts: Date.now() });
-        return data.file_url;
+  const resolvePhotoImageForArt = useCallback(
+    async (art: ClientArt, options?: { allowSearch?: boolean }): Promise<string | null> => {
+      const key = art.cardId;
+      const allowSearch = options?.allowSearch ?? true;
+      const cached = photoResolveCacheRef.current.get(key);
+      if (cached) {
+        // cache hit: keep positive forever; negative cache only applies to full (with search) resolution
+        if (cached.url) return cached.url;
+        if (allowSearch && Date.now() - cached.ts < 60_000) return null;
       }
-    } catch {
-      // ignore
-    }
 
-    // 2) Then cover image from the card
-    try {
-      const { data } = await supabase
-        .from("project_briefs")
-        .select("cover_image")
-        .eq("id", art.cardId)
-        .maybeSingle();
+      // 1) Prefer uploads (material)
+      try {
+        const { data } = await supabase
+          .from("card_uploads")
+          .select("file_url, uploaded_at")
+          .eq("card_id", art.cardId)
+          .eq("upload_type", "material")
+          .order("uploaded_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      const cover = (data as any)?.cover_image as string | null | undefined;
-      if (cover) {
-        photoResolveCacheRef.current.set(key, { url: cover, ts: Date.now() });
-        return cover;
+        if (data?.file_url) {
+          photoResolveCacheRef.current.set(key, { url: data.file_url, ts: Date.now() });
+          return data.file_url;
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
 
-    // 3) Last resort: automated search
-    try {
-      const rawParts = [art.imageType, art.cardTitle, art.cardText, art.clientName].filter(Boolean);
-      const rawQuery = rawParts.join(" ").slice(0, 120);
-      const query = translateToEnglishLocal(rawQuery);
-      const images = await searchImages(query, 1);
-      const url = images?.[0]?.urls?.regular;
-      if (url) {
-        photoResolveCacheRef.current.set(key, { url, ts: Date.now() });
-        return url;
+      // 2) Then cover image from the card
+      try {
+        const { data } = await supabase
+          .from("project_briefs")
+          .select("cover_image")
+          .eq("id", art.cardId)
+          .maybeSingle();
+
+        const cover = (data as any)?.cover_image as string | null | undefined;
+        if (cover) {
+          photoResolveCacheRef.current.set(key, { url: cover, ts: Date.now() });
+          return cover;
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
 
-    photoResolveCacheRef.current.set(key, { url: null, ts: Date.now() });
-    return null;
-  }, []);
+      // 3) Last resort: automated search (only in full auto mode)
+      if (allowSearch) {
+        try {
+          const rawParts = [art.imageType, art.cardTitle, art.cardText, art.clientName].filter(Boolean);
+          const rawQuery = rawParts.join(" ").slice(0, 120);
+          const query = translateToEnglishLocal(rawQuery);
+          const images = await searchImages(query, 1);
+          const url = images?.[0]?.urls?.regular;
+          if (url) {
+            photoResolveCacheRef.current.set(key, { url, ts: Date.now() });
+            return url;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // Only cache negative results when full search was allowed
+      if (allowSearch) {
+        photoResolveCacheRef.current.set(key, { url: null, ts: Date.now() });
+      }
+      return null;
+    },
+    []
+  );
 
   const generateArtForClient = async (
     art: ClientArt,
@@ -759,7 +768,14 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     };
 
     const allowAutoPhotoResolve = options?.allowAutoPhotoResolve ?? true;
-    const resolvedPhotoImage = art.photoImage || (allowAutoPhotoResolve ? await resolvePhotoImageForArt(art) : null);
+    const cachedPhotoImage = photoResolveCacheRef.current.get(art.cardId)?.url ?? null;
+    const shouldAllowSearchInLockedMode = !allowAutoPhotoResolve && !art.photoImage && !cachedPhotoImage;
+    const resolvedPhotoImage =
+      art.photoImage ||
+      cachedPhotoImage ||
+      (allowAutoPhotoResolve
+        ? await resolvePhotoImageForArt(art, { allowSearch: true })
+        : await resolvePhotoImageForArt(art, { allowSearch: shouldAllowSearchInLockedMode }));
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
@@ -1398,9 +1414,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   const regenerateArt = async (index: number) => {
     const art = clientArts[index];
-    const imageUrl = await generateArtForClient(art, { allowAutoPhotoResolve: false });
+    let artToRender = art;
+
+    if (art && !art.photoImage) {
+      const resolved = await resolvePhotoImageForArt(art, { allowSearch: true });
+      if (resolved) {
+        artToRender = { ...art, photoImage: resolved };
+      }
+    }
+
+    const imageUrl = await generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
     const updatedArts = [...clientArts];
-    updatedArts[index] = { ...art, imageUrl };
+    updatedArts[index] = { ...artToRender, imageUrl };
     setClientArts(updatedArts);
   };
 
@@ -2026,9 +2051,21 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               }}
               onRegenerate={async (updatedArt) => {
                 const currentPhoto = clientArts[index]?.photoImage;
-                const artToRender = currentPhoto && !updatedArt.photoImage
+                let artToRender = currentPhoto && !updatedArt.photoImage
                   ? { ...updatedArt, photoImage: currentPhoto }
                   : updatedArt;
+
+                if (!artToRender.photoImage) {
+                  const resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: true });
+                  if (resolved) {
+                    artToRender = { ...artToRender, photoImage: resolved };
+                    setClientArts((prev) => {
+                      const next = [...prev];
+                      if (next[index]) next[index] = { ...next[index], photoImage: resolved };
+                      return next;
+                    });
+                  }
+                }
 
                 return generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
               }}
