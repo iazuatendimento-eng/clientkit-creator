@@ -731,6 +731,10 @@ export function ArtAdjustOverlay({
             <HandleDot h="ne" />
             <HandleDot h="sw" />
             <HandleDot h="se" />
+            <HandleDot h="n" />
+            <HandleDot h="s" />
+            <HandleDot h="w" />
+            <HandleDot h="e" />
           </>
         )}
       </div>
