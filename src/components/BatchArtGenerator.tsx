@@ -1128,9 +1128,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         ctx.fillText(line.trim(), drawX, y);
         ctx.textAlign = "left";
         console.log("Drew text at:", baseX, baseY, "Text:", text.substring(0, 50), "Font:", fontFamily);
-      } else if (el.type === "image" && el.placeholder && art.photoImage) {
-        // Draw photo with pan (offset) + zoom (photoScale)
-        const img = await loadImage(art.photoImage);
+      } else if (el.type === "image" && el.placeholder) {
         const frameOv = art.elementOverrides?.photoFrame;
 
         const rawFrameW = frameOv?.width ?? el.width;
@@ -1151,11 +1149,15 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           ? Math.max(0, Math.min(rawFrameY, template.height - frameH))
           : Math.max(0, Math.min(el.y, template.height - frameH));
 
+        const directTemplatePhoto = typeof (el as any).imageUrl === "string" ? (el as any).imageUrl : null;
+        const resolvedPhoto = art.photoImage || art.backgroundImage || directTemplatePhoto;
+        const img = resolvedPhoto ? await loadImage(resolvedPhoto) : null;
+
         if (img) {
           const offsetRaw = art.photoOffset || { x: 0, y: 0 };
           const offsetX = Number.isFinite(offsetRaw.x) ? offsetRaw.x : 0;
           const offsetY = Number.isFinite(offsetRaw.y) ? offsetRaw.y : 0;
-          const zoomRaw = (art.elementOverrides?.photoScale || 100) / 100; // < 1 = zoom out, > 1 = zoom in
+          const zoomRaw = (art.elementOverrides?.photoScale || 100) / 100;
           const zoom = Number.isFinite(zoomRaw) && zoomRaw > 0 ? zoomRaw : 1;
 
           const imgAspect = img.width > 0 && img.height > 0 ? img.width / img.height : 1;
@@ -1164,7 +1166,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ? frameAspectRaw
             : Math.max(0.0001, el.width / Math.max(1, el.height));
 
-          // Start with "cover" crop
           let sw = img.width;
           let sh = img.height;
 
@@ -1176,11 +1177,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             sh = sw / frameAspect;
           }
 
-          // Apply zoom: zoom < 1 = zoom out (show more), zoom > 1 = zoom in
           sw = sw / zoom;
           sh = sh / zoom;
 
-          // Clamp crop to image bounds
           if (sw > img.width) {
             sw = img.width;
             sh = sw / frameAspect;
@@ -1190,7 +1189,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             sw = sh * frameAspect;
           }
 
-          // Center and apply panning
           let sx = (img.width - sw) / 2;
           let sy = (img.height - sh) / 2;
 
@@ -1202,10 +1200,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           sx = Math.max(0, Math.min(sx, img.width - sw));
           sy = Math.max(0, Math.min(sy, img.height - sh));
 
-          // Apply clip shape (circle or rounded rect)
           const clipShape = (el as any).clipShape || "rect";
           const radius = el.borderRadius || 0;
-          
+
           if (clipShape === "circle") {
             ctx.save();
             ctx.beginPath();
@@ -1224,8 +1221,21 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
-          // Photo failed to load — just skip drawing it, don't block the rest
-          console.warn("[photo] Falha ao carregar foto, pulando elemento");
+          // Visible placeholder so resize never looks like "sumiu tudo"
+          ctx.save();
+          ctx.setLineDash([10, 8]);
+          ctx.lineWidth = Math.max(2, Math.min(frameW, frameH) * 0.015);
+          ctx.strokeStyle = "rgba(255,255,255,0.9)";
+          ctx.strokeRect(frameX, frameY, frameW, frameH);
+          ctx.setLineDash([]);
+          ctx.fillStyle = "rgba(0,0,0,0.45)";
+          ctx.fillRect(frameX, frameY, frameW, frameH);
+          ctx.fillStyle = "rgba(255,255,255,0.95)";
+          ctx.textAlign = "center";
+          ctx.font = `${Math.max(14, Math.round(Math.min(frameW, frameH) * 0.08))}px Arial`;
+          ctx.fillText("IMAGEM", frameX + frameW / 2, frameY + frameH / 2);
+          ctx.textAlign = "left";
+          ctx.restore();
         }
       } else if (el.type === "logo") {
         // Logo uses PNG[0] from brand kit with optional overrides
