@@ -458,23 +458,10 @@ export function ArtAdjustOverlay({
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        if (isHorizontalHandle) {
-          const signedDx = handleSignX(h) * dx;
-          const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
-          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
-          setLogoScaleX(newScaleX);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
-        } else if (isVerticalHandle) {
-          const signedDy = handleSignY(h) * dy;
-          const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
-          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
-          setLogoScaleY(newScaleY);
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
-        } else {
-          // Corner handles - proportional resize
+        {
+          // Corner handles only - always proportional resize
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
-          // Use the dominant axis delta to compute a uniform scale
           const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
           const newW = clamp(s.start.logoW + dominant * baseW, baseW * 0.25, baseW * 3);
           const newH = clamp(s.start.logoH + dominant * baseH, baseH * 0.25, baseH * 3);
