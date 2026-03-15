@@ -514,17 +514,18 @@ export function ArtAdjustOverlay({
           setContactScaleY(newScaleY);
           if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
         } else {
-          // Corner handles - update both X and Y
+          // Corner handles - proportional resize
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
-          const newW = clamp(s.start.contactW + signedDx, baseW * 0.25, baseW * 3);
-          const newH = clamp(s.start.contactH + signedDy, baseH * 0.25, baseH * 3);
+          const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
+          const newW = clamp(s.start.contactW + dominant * baseW, baseW * 0.25, baseW * 3);
+          const newH = clamp(s.start.contactH + dominant * baseH, baseH * 0.25, baseH * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setContactScaleX(newScaleX);
           setContactScaleY(newScaleY);
-          if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -200, 200));
-          if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
+          if (handleHasW(h)) setContactX(clamp(s.start.contactX + (s.start.contactW - newW), -200, 200));
+          if (handleHasN(h)) setContactY(clamp(s.start.contactY + (s.start.contactH - newH), -200, 200));
         }
         return;
       }
