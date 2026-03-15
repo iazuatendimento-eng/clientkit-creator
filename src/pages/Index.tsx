@@ -794,6 +794,14 @@ const Index = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button size="sm" variant="outline" onClick={() => navigate("/master-art")}>
+              <Palette className="mr-1 h-4 w-4" />
+              Arte
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate("/master-video")}>
+              <Video className="mr-1 h-4 w-4" />
+              Vídeo
+            </Button>
             <Button size="sm" variant="outline" onClick={() => navigate("/send-media")}>
               <Mail className="mr-1 h-4 w-4" />
               Enviar
