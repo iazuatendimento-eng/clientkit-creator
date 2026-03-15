@@ -370,7 +370,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       if (index === -1) return;
 
       const updatedArt = { ...clientArts[index], photoImage: newImageUrl, photoOffset: { x: 0, y: 0 } };
-      const updatedArts = [...clientArts];
+      lockPhotoForArt(updatedArt, newImageUrl);
       updatedArts[index] = updatedArt;
       setClientArts(updatedArts);
       setSelectedArt(updatedArt);
