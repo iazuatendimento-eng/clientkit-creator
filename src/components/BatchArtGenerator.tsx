@@ -569,11 +569,19 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   const generateArtForClient = async (art: ClientArt): Promise<string> => {
     console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
-    
+
+    const hasPhotoPlaceholder = template.elements.some((el) => el.type === "image" && el.placeholder);
+    // If the original source photo is missing, keep the last valid render to avoid "sumir" after resize.
+    if (hasPhotoPlaceholder && !art.photoImage && art.imageUrl) {
+      console.warn("[photo] Fonte original ausente; mantendo preview existente");
+      return art.imageUrl;
+    }
+
     const canvas = document.createElement("canvas");
     canvas.width = template.width;
     canvas.height = template.height;
     const ctx = canvas.getContext("2d")!;
+    let photoSourceFailed = false;
 
     // Color mapping from brand kit:
     // colors[0] = background color
