@@ -325,6 +325,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     if (index === -1) return;
 
     const updatedArt = { ...clientArts[index], photoImage: newImageUrl };
+    lockPhotoForArt(updatedArt, newImageUrl);
     const updatedArts = [...clientArts];
     updatedArts[index] = updatedArt;
     setClientArts(updatedArts);
@@ -370,6 +371,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       if (index === -1) return;
 
       const updatedArt = { ...clientArts[index], photoImage: newImageUrl, photoOffset: { x: 0, y: 0 } };
+      lockPhotoForArt(updatedArt, newImageUrl);
       const updatedArts = [...clientArts];
       updatedArts[index] = updatedArt;
       setClientArts(updatedArts);
@@ -575,6 +577,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   // Cache photo resolution per art to avoid hammering the backend during resize
   const photoResolveCacheRef = useRef(new Map<string, { url: string | null; ts: number }>());
   const onRegenerateTicketRef = useRef(new Map<string, number>());
+  const lockPhotoForArt = useCallback((art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex">, url?: string | null) => {
+    if (!url) return;
+    photoResolveCacheRef.current.set(getClientArtKey(art), { url, ts: Date.now() });
+  }, []);
 
   const resolvePhotoImageForArt = useCallback(
     async (art: ClientArt, options?: { allowSearch?: boolean }): Promise<string | null> => {
@@ -1494,6 +1500,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     if (index >= clientArts.length) return;
 
     const updatedArt = { ...clientArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
+    lockPhotoForArt(updatedArt, image.urls.regular);
     const updatedArts = [...clientArts];
     updatedArts[index] = updatedArt;
     setClientArts(updatedArts);
@@ -1537,6 +1544,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     if (index >= clientArts.length) return;
 
     const updatedArt = { ...clientArts[index], photoImage: imageUrl, photoOffset: { x: 0, y: 0 } };
+    lockPhotoForArt(updatedArt, imageUrl);
     const updatedArts = [...clientArts];
     updatedArts[index] = updatedArt;
     setClientArts(updatedArts);
@@ -2086,28 +2094,21 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
                 );
 
-                // Priority: updated art > latest state > cache
+                // Lock to the current card photo during resize/regeneration to avoid swapping to another image.
                 const lockedPhoto =
-                  updatedArt.photoImage ||
                   latestArt?.photoImage ||
-                  photoResolveCacheRef.current.get(artKey)?.url ||
+                  updatedArt.photoImage ||
                   null;
 
-                let artToRender = { ...updatedArt, photoImage: lockedPhoto || updatedArt.photoImage };
+                const artToRender = { ...updatedArt, photoImage: lockedPhoto || undefined };
 
-                // If photo is missing, first try DB-only resolution, then fallback to search once.
-                if (!artToRender.photoImage) {
-                  let resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: false });
-                  if (!resolved) {
-                    resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: true });
-                  }
-                  if (resolved) {
-                    artToRender = { ...artToRender, photoImage: resolved };
-                  }
-                }
+                // During in-card adjustments, do not auto-resolve/search another photo.
+                // If photo source is temporarily unavailable, render keeps previous image URL.
 
-                // Always persist the resolved photo back to state to prevent future loss
+
+                // Persist and lock the photo source whenever it exists to prevent future swaps.
                 if (artToRender.photoImage) {
+                  lockPhotoForArt(updatedArt, artToRender.photoImage);
                   setClientArts((prev) => {
                     const next = [...prev];
                     const targetIndex = next.findIndex((a) =>
