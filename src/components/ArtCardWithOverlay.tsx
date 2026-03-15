@@ -184,12 +184,19 @@ export function ArtCardWithOverlay({
       elementOverrides: updatedOverrides,
     });
 
-    // Debounce regeneration
+    // Debounce regeneration (latest-only to prevent stale image swaps)
+    const requestId = regenerateRequestRef.current + 1;
+    regenerateRequestRef.current = requestId;
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setIsRegenerating(true);
       try {
         const newImageUrl = await onRegenerate(updatedArt);
+
+        // Ignore stale async responses
+        if (requestId !== regenerateRequestRef.current) return;
+
         onArtUpdate(index, {
           imageUrl: newImageUrl,
           photoOffset: { x: photoOffsetX, y: photoOffsetY },
@@ -198,7 +205,9 @@ export function ArtCardWithOverlay({
       } catch (e) {
         console.error("Error regenerating:", e);
       } finally {
-        setIsRegenerating(false);
+        if (requestId === regenerateRequestRef.current) {
+          setIsRegenerating(false);
+        }
       }
     }, 150);
   }, [
