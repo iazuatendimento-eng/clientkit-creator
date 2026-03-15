@@ -2102,8 +2102,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 // If photo source is temporarily unavailable, render keeps previous image URL.
 
 
-                // Always persist the resolved photo back to state to prevent future loss
+                // Persist and lock the photo source whenever it exists to prevent future swaps.
                 if (artToRender.photoImage) {
+                  lockPhotoForArt(updatedArt, artToRender.photoImage);
                   setClientArts((prev) => {
                     const next = [...prev];
                     const targetIndex = next.findIndex((a) =>
