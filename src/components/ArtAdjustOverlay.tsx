@@ -377,29 +377,41 @@ export function ArtAdjustOverlay({
           const h = s.handle || "se";
           const startW = Math.max(minSize, startRect.width);
           const startH = Math.max(minSize, startRect.height);
+          const isVerticalHandle = h === "n" || h === "s";
+          const isHorizontalHandle = h === "e" || h === "w";
 
-          // Corner-only proportional resize to preserve aspect ratio
-          const signedDx = handleSignX(h) * dx;
-          const signedDy = handleSignY(h) * dy;
-          const dominant = Math.abs(signedDx / startW) > Math.abs(signedDy / startH)
-            ? signedDx / startW
-            : signedDy / startH;
-
-          let newW = Math.max(minSize, startW + dominant * startW);
-          let newH = Math.max(minSize, startH + dominant * startH);
-
-          // Keep exact aspect ratio from resize start
-          const aspect = startW / startH;
-          if (newW / newH > aspect) {
-            newH = newW / aspect;
+          if (isHorizontalHandle) {
+            // Side: stretch width only
+            let newW = handleHasE(h) ? Math.max(minSize, startW + dx) : Math.max(minSize, startW - dx);
+            const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
+            setPhotoFrame({ x: newX, y: startRect.y, width: newW, height: startH });
+          } else if (isVerticalHandle) {
+            // Side: stretch height only
+            let newH = handleHasS(h) ? Math.max(minSize, startH + dy) : Math.max(minSize, startH - dy);
+            const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
+            setPhotoFrame({ x: startRect.x, y: newY, width: startW, height: newH });
           } else {
-            newW = newH * aspect;
+            // Corner: proportional resize
+            const signedDx = handleSignX(h) * dx;
+            const signedDy = handleSignY(h) * dy;
+            const dominant = Math.abs(signedDx / startW) > Math.abs(signedDy / startH)
+              ? signedDx / startW
+              : signedDy / startH;
+
+            let newW = Math.max(minSize, startW + dominant * startW);
+            let newH = Math.max(minSize, startH + dominant * startH);
+
+            const aspect = startW / startH;
+            if (newW / newH > aspect) {
+              newH = newW / aspect;
+            } else {
+              newW = newH * aspect;
+            }
+
+            const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
+            const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
+            setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
           }
-
-          const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
-          const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
-
-          setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
           return;
         }
 
@@ -462,8 +474,24 @@ export function ArtAdjustOverlay({
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        {
-          // Corner handles only - always proportional resize
+        const isCorner = !isVerticalHandle && !isHorizontalHandle;
+
+        if (isHorizontalHandle) {
+          // Side handles: stretch X only
+          const signedDx = handleSignX(h) * dx;
+          const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          setLogoScaleX(newScaleX);
+          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
+        } else if (isVerticalHandle) {
+          // Side handles: stretch Y only
+          const signedDy = handleSignY(h) * dy;
+          const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setLogoScaleY(newScaleY);
+          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
+        } else {
+          // Corner handles: proportional resize
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
@@ -492,8 +520,22 @@ export function ArtAdjustOverlay({
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        {
-          // Corner handles only - always proportional resize
+        const isCorner = !isVerticalHandle && !isHorizontalHandle;
+
+        if (isHorizontalHandle) {
+          const signedDx = handleSignX(h) * dx;
+          const newW = clamp(s.start.contactW + signedDx, baseW * 0.25, baseW * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          setContactScaleX(newScaleX);
+          if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -200, 200));
+        } else if (isVerticalHandle) {
+          const signedDy = handleSignY(h) * dy;
+          const newH = clamp(s.start.contactH + signedDy, baseH * 0.25, baseH * 3);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setContactScaleY(newScaleY);
+          if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
+        } else {
+          // Corner: proportional
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
@@ -522,8 +564,22 @@ export function ArtAdjustOverlay({
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        {
-          // Corner handles only - proportional resize
+        const isCorner = !isVerticalHandle && !isHorizontalHandle;
+
+        if (isHorizontalHandle) {
+          const signedDx = handleSignX(h) * dx;
+          const newW = clamp(s.start.textW + signedDx, baseW * 0.5, baseW * 2);
+          const newScale = clamp((newW / baseW) * 100, 50, 200);
+          setTextFontSize(newScale);
+          if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
+        } else if (isVerticalHandle) {
+          const signedDy = handleSignY(h) * dy;
+          const newH = clamp(s.start.textW + signedDy, baseH * 0.5, baseH * 2);
+          const newScale = clamp((newH / baseH) * 100, 50, 200);
+          setTextFontSize(newScale);
+          if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
+        } else {
+          // Corner: proportional
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
@@ -687,6 +743,10 @@ export function ArtAdjustOverlay({
             <HandleDot h="ne" />
             <HandleDot h="sw" />
             <HandleDot h="se" />
+            <HandleDot h="n" />
+            <HandleDot h="s" />
+            <HandleDot h="w" />
+            <HandleDot h="e" />
           </>
         )}
       </div>
