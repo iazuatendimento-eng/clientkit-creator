@@ -1062,17 +1062,33 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         // Draw photo with pan (offset) + zoom (photoScale)
         const img = await loadImage(art.photoImage);
         const frameOv = art.elementOverrides?.photoFrame;
-        const frameW = frameOv?.width ?? el.width;
-        const frameH = frameOv?.height ?? el.height;
-        const frameX = frameOv?.x ?? el.x;
-        const frameY = frameOv?.y ?? el.y;
+
+        const rawFrameW = frameOv?.width ?? el.width;
+        const rawFrameH = frameOv?.height ?? el.height;
+        const frameW = Number.isFinite(rawFrameW)
+          ? Math.max(1, Math.min(rawFrameW, template.width))
+          : Math.max(1, Math.min(el.width, template.width));
+        const frameH = Number.isFinite(rawFrameH)
+          ? Math.max(1, Math.min(rawFrameH, template.height))
+          : Math.max(1, Math.min(el.height, template.height));
+
+        const rawFrameX = frameOv?.x ?? el.x;
+        const rawFrameY = frameOv?.y ?? el.y;
+        const frameX = Number.isFinite(rawFrameX)
+          ? Math.max(0, Math.min(rawFrameX, template.width - frameW))
+          : Math.max(0, Math.min(el.x, template.width - frameW));
+        const frameY = Number.isFinite(rawFrameY)
+          ? Math.max(0, Math.min(rawFrameY, template.height - frameH))
+          : Math.max(0, Math.min(el.y, template.height - frameH));
 
         if (img) {
           const offset = art.photoOffset || { x: 0, y: 0 };
-          const zoom = (art.elementOverrides?.photoScale || 100) / 100; // < 1 = zoom out, > 1 = zoom in
+          const zoomRaw = (art.elementOverrides?.photoScale || 100) / 100; // < 1 = zoom out, > 1 = zoom in
+          const zoom = Number.isFinite(zoomRaw) && zoomRaw > 0 ? zoomRaw : 1;
 
           const imgAspect = img.width / img.height;
           const frameAspect = frameW / frameH;
+          if (!Number.isFinite(frameAspect) || frameAspect <= 0) continue;
 
           // Start with "cover" crop
           let sw = img.width;

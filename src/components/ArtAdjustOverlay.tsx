@@ -363,14 +363,29 @@ export function ArtAdjustOverlay({
           const startRect = s.start.photoRect || { x: base.x, y: base.y, width: base.width, height: base.height };
           const minSize = 20;
 
+          const clampPhotoRect = (rect: ShapeOverride): ShapeOverride => {
+            const safeW = clamp(Number.isFinite(rect.width) ? rect.width : startRect.width, minSize, template.width);
+            const safeH = clamp(Number.isFinite(rect.height) ? rect.height : startRect.height, minSize, template.height);
+            const safeX = clamp(
+              Number.isFinite(rect.x) ? rect.x : startRect.x,
+              0,
+              Math.max(0, template.width - safeW)
+            );
+            const safeY = clamp(
+              Number.isFinite(rect.y) ? rect.y : startRect.y,
+              0,
+              Math.max(0, template.height - safeH)
+            );
+            return { x: safeX, y: safeY, width: safeW, height: safeH };
+          };
+
           if (s.mode === "move") {
-            const next: ShapeOverride = {
-              x: clamp(startRect.x + dx, 0, template.width - minSize),
-              y: clamp(startRect.y + dy, 0, template.height - minSize),
+            setPhotoFrame(clampPhotoRect({
+              x: startRect.x + dx,
+              y: startRect.y + dy,
               width: startRect.width,
               height: startRect.height,
-            };
-            setPhotoFrame(next);
+            }));
             return;
           }
 
@@ -382,14 +397,14 @@ export function ArtAdjustOverlay({
 
           if (isHorizontalHandle) {
             // Side: stretch width only
-            let newW = handleHasE(h) ? Math.max(minSize, startW + dx) : Math.max(minSize, startW - dx);
+            const newW = handleHasE(h) ? Math.max(minSize, startW + dx) : Math.max(minSize, startW - dx);
             const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
-            setPhotoFrame({ x: newX, y: startRect.y, width: newW, height: startH });
+            setPhotoFrame(clampPhotoRect({ x: newX, y: startRect.y, width: newW, height: startH }));
           } else if (isVerticalHandle) {
             // Side: stretch height only
-            let newH = handleHasS(h) ? Math.max(minSize, startH + dy) : Math.max(minSize, startH - dy);
+            const newH = handleHasS(h) ? Math.max(minSize, startH + dy) : Math.max(minSize, startH - dy);
             const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
-            setPhotoFrame({ x: startRect.x, y: newY, width: startW, height: newH });
+            setPhotoFrame(clampPhotoRect({ x: startRect.x, y: newY, width: startW, height: newH }));
           } else {
             // Corner: proportional resize
             const signedDx = handleSignX(h) * dx;
@@ -410,7 +425,7 @@ export function ArtAdjustOverlay({
 
             const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
             const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
-            setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
+            setPhotoFrame(clampPhotoRect({ x: newX, y: newY, width: newW, height: newH }));
           }
           return;
         }
