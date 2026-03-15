@@ -1152,7 +1152,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           : Math.max(0, Math.min(el.y, template.height - frameH));
 
         const directTemplatePhoto = typeof (el as any).imageUrl === "string" ? (el as any).imageUrl : null;
-        const resolvedPhoto = art.photoImage || art.backgroundImage || directTemplatePhoto;
+        const resolvedPhoto = resolvedPhotoImage || art.backgroundImage || directTemplatePhoto;
         const img = resolvedPhoto ? await loadImage(resolvedPhoto) : null;
 
         if (img) {
