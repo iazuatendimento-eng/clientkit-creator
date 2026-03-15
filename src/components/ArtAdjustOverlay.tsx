@@ -377,29 +377,41 @@ export function ArtAdjustOverlay({
           const h = s.handle || "se";
           const startW = Math.max(minSize, startRect.width);
           const startH = Math.max(minSize, startRect.height);
+          const isVerticalHandle = h === "n" || h === "s";
+          const isHorizontalHandle = h === "e" || h === "w";
 
-          // Corner-only proportional resize to preserve aspect ratio
-          const signedDx = handleSignX(h) * dx;
-          const signedDy = handleSignY(h) * dy;
-          const dominant = Math.abs(signedDx / startW) > Math.abs(signedDy / startH)
-            ? signedDx / startW
-            : signedDy / startH;
-
-          let newW = Math.max(minSize, startW + dominant * startW);
-          let newH = Math.max(minSize, startH + dominant * startH);
-
-          // Keep exact aspect ratio from resize start
-          const aspect = startW / startH;
-          if (newW / newH > aspect) {
-            newH = newW / aspect;
+          if (isHorizontalHandle) {
+            // Side: stretch width only
+            let newW = handleHasE(h) ? Math.max(minSize, startW + dx) : Math.max(minSize, startW - dx);
+            const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
+            setPhotoFrame({ x: newX, y: startRect.y, width: newW, height: startH });
+          } else if (isVerticalHandle) {
+            // Side: stretch height only
+            let newH = handleHasS(h) ? Math.max(minSize, startH + dy) : Math.max(minSize, startH - dy);
+            const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
+            setPhotoFrame({ x: startRect.x, y: newY, width: startW, height: newH });
           } else {
-            newW = newH * aspect;
+            // Corner: proportional resize
+            const signedDx = handleSignX(h) * dx;
+            const signedDy = handleSignY(h) * dy;
+            const dominant = Math.abs(signedDx / startW) > Math.abs(signedDy / startH)
+              ? signedDx / startW
+              : signedDy / startH;
+
+            let newW = Math.max(minSize, startW + dominant * startW);
+            let newH = Math.max(minSize, startH + dominant * startH);
+
+            const aspect = startW / startH;
+            if (newW / newH > aspect) {
+              newH = newW / aspect;
+            } else {
+              newW = newH * aspect;
+            }
+
+            const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
+            const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
+            setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
           }
-
-          const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
-          const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
-
-          setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
           return;
         }
 
