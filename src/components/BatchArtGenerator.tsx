@@ -145,6 +145,9 @@ interface ClientArt {
   noteRead?: boolean; // Se a anotação foi marcada como lida
 }
 
+const getClientArtKey = (art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex">) =>
+  `${art.clientId}::${art.cardId}::${art.pageIndex ?? 0}`;
+
 // Image cache to avoid reloading
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -567,12 +570,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   };
 
-  // Cache photo resolution per card to avoid hammering the backend during resize
+  // Cache photo resolution per art to avoid hammering the backend during resize
   const photoResolveCacheRef = useRef(new Map<string, { url: string | null; ts: number }>());
+  const onRegenerateTicketRef = useRef(new Map<string, number>());
 
   const resolvePhotoImageForArt = useCallback(
     async (art: ClientArt, options?: { allowSearch?: boolean }): Promise<string | null> => {
-      const key = art.cardId;
+      const key = getClientArtKey(art);
       const allowSearch = options?.allowSearch ?? true;
       const cached = photoResolveCacheRef.current.get(key);
       if (cached) {
@@ -768,7 +772,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     };
 
     const allowAutoPhotoResolve = options?.allowAutoPhotoResolve ?? true;
-    const cachedPhotoImage = photoResolveCacheRef.current.get(art.cardId)?.url ?? null;
+    const artKey = getClientArtKey(art);
+    const cachedPhotoImage = photoResolveCacheRef.current.get(artKey)?.url ?? null;
     const resolvedPhotoImage =
       art.photoImage ||
       cachedPhotoImage ||
@@ -777,8 +782,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         : await resolvePhotoImageForArt(art, { allowSearch: false }));
 
     // Always keep the cache populated so future resize/drag calls find the photo
-    if (resolvedPhotoImage && !photoResolveCacheRef.current.get(art.cardId)?.url) {
-      photoResolveCacheRef.current.set(art.cardId, { url: resolvedPhotoImage, ts: Date.now() });
+    if (resolvedPhotoImage && !photoResolveCacheRef.current.get(artKey)?.url) {
+      photoResolveCacheRef.current.set(artKey, { url: resolvedPhotoImage, ts: Date.now() });
     }
 
     ctx.fillStyle = bgColor;
@@ -2058,6 +2063,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 });
               }}
               onRegenerate={async (updatedArt) => {
+                const artKey = getClientArtKey(updatedArt);
+                const currentTicket = (onRegenerateTicketRef.current.get(artKey) ?? 0) + 1;
+                onRegenerateTicketRef.current.set(artKey, currentTicket);
+
                 // Always get the LATEST photo from ref to avoid stale closure issues
                 const latestArt = clientArtsRef.current.find((a) =>
                   a.clientId === updatedArt.clientId &&
@@ -2065,11 +2074,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
                 );
 
-                // Priority: latest state > updatedArt prop > cache
+                // Priority: updated art > latest state > cache
                 const lockedPhoto =
-                  latestArt?.photoImage ||
                   updatedArt.photoImage ||
-                  photoResolveCacheRef.current.get(updatedArt.cardId)?.url ||
+                  latestArt?.photoImage ||
+                  photoResolveCacheRef.current.get(artKey)?.url ||
                   null;
 
                 let artToRender = { ...updatedArt, photoImage: lockedPhoto || updatedArt.photoImage };
@@ -2091,14 +2100,22 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                       a.cardId === updatedArt.cardId &&
                       (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
                     );
-                    if (targetIndex !== -1 && !next[targetIndex].photoImage) {
+                    if (targetIndex !== -1 && next[targetIndex].photoImage !== artToRender.photoImage) {
                       next[targetIndex] = { ...next[targetIndex], photoImage: artToRender.photoImage };
                     }
                     return next;
                   });
                 }
 
-                return generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
+                const generated = await generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
+
+                // Ignore stale generations and keep newest preview
+                if (onRegenerateTicketRef.current.get(artKey) !== currentTicket) {
+                  const newest = clientArtsRef.current.find((a) => getClientArtKey(a) === artKey)?.imageUrl;
+                  return newest || generated;
+                }
+
+                return generated;
               }}
               onApprove={handleApprove}
               onReject={handleReject}
