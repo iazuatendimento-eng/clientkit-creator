@@ -375,25 +375,29 @@ export function ArtAdjustOverlay({
           }
 
           const h = s.handle || "se";
-          let newX = startRect.x;
-          let newY = startRect.y;
-          let newW = startRect.width;
-          let newH = startRect.height;
+          const startW = Math.max(minSize, startRect.width);
+          const startH = Math.max(minSize, startRect.height);
 
-          if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
-          if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
-          if (handleHasW(h)) {
-            newW = Math.max(minSize, startRect.width - dx);
-            newX = startRect.x + (startRect.width - newW);
-          }
-          if (handleHasN(h)) {
-            newH = Math.max(minSize, startRect.height - dy);
-            newY = startRect.y + (startRect.height - newH);
+          // Corner-only proportional resize to preserve aspect ratio
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          const dominant = Math.abs(signedDx / startW) > Math.abs(signedDy / startH)
+            ? signedDx / startW
+            : signedDy / startH;
+
+          let newW = Math.max(minSize, startW + dominant * startW);
+          let newH = Math.max(minSize, startH + dominant * startH);
+
+          // Keep exact aspect ratio from resize start
+          const aspect = startW / startH;
+          if (newW / newH > aspect) {
+            newH = newW / aspect;
+          } else {
+            newW = newH * aspect;
           }
 
-          // Allow extending beyond canvas (no restrictive clamping)
-          newW = Math.max(minSize, newW);
-          newH = Math.max(minSize, newH);
+          const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
+          const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
 
           setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
           return;
