@@ -747,12 +747,12 @@ const Index = () => {
       <div className="border-b bg-background/80 backdrop-blur-sm px-6 py-4">
         <div className="container mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <Palette className="mr-1 h-4 w-4" />
-                  Exportar Arte
+                <Button size="sm" variant="outline" className="px-2">
+                  <Palette className="h-4 w-4 mr-1" />
+                  <span className="hidden xl:inline">Exp.</span> Arte
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-60 overflow-y-auto">
@@ -764,9 +764,9 @@ const Index = () => {
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <Video className="mr-1 h-4 w-4" />
-                  Exportar Vídeo
+                <Button size="sm" variant="outline" className="px-2">
+                  <Video className="h-4 w-4 mr-1" />
+                  <span className="hidden xl:inline">Exp.</span> Vídeo
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-60 overflow-y-auto">
