@@ -155,7 +155,9 @@ const imageCache = new Map<string, HTMLImageElement>();
 const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | null> => {
   if (!url) return null;
   
-  const cacheKey = url.length > 200 ? url.substring(0, 100) + url.length : url;
+  // Use the full URL as cache key to avoid collisions between different signed URLs
+  // that share the same prefix/length (which could swap images across cards).
+  const cacheKey = url;
   const cached = imageCache.get(cacheKey);
   if (cached) return cached;
   
