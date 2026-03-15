@@ -1158,8 +1158,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
-          console.warn("[photo] Falha ao carregar foto; mantendo imagem anterior para não sumir");
-          photoSourceFailed = true;
+          // Photo failed to load — just skip drawing it, don't block the rest
+          console.warn("[photo] Falha ao carregar foto, pulando elemento");
         }
       } else if (el.type === "logo") {
         // Logo uses PNG[0] from brand kit with optional overrides
