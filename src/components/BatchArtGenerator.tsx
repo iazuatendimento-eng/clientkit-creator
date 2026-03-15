@@ -776,6 +776,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         ? await resolvePhotoImageForArt(art, { allowSearch: true })
         : await resolvePhotoImageForArt(art, { allowSearch: false }));
 
+    // Always keep the cache populated so future resize/drag calls find the photo
+    if (resolvedPhotoImage && !photoResolveCacheRef.current.get(art.cardId)?.url) {
+      photoResolveCacheRef.current.set(art.cardId, { url: resolvedPhotoImage, ts: Date.now() });
+    }
+
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
 
