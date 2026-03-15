@@ -155,7 +155,9 @@ const imageCache = new Map<string, HTMLImageElement>();
 const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | null> => {
   if (!url) return null;
   
-  const cacheKey = url.length > 200 ? url.substring(0, 100) + url.length : url;
+  // Use the full URL as cache key to avoid collisions between different signed URLs
+  // that share the same prefix/length (which could swap images across cards).
+  const cacheKey = url;
   const cached = imageCache.get(cacheKey);
   if (cached) return cached;
   
@@ -798,6 +800,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
 
     // Draw elements
+    let missingPhotoSource = false;
     for (const el of template.elements) {
       ctx.save();
       try {
@@ -1252,6 +1255,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
+          missingPhotoSource = true;
           // Visible placeholder so resize never looks like "sumiu tudo"
           ctx.save();
           ctx.setLineDash([10, 8]);
@@ -1330,7 +1334,15 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
 
 
-    return canvas.toDataURL("image/png");
+    const renderedDataUrl = canvas.toDataURL("image/png");
+
+    // If regeneration lost the photo source, keep the previously rendered art
+    // instead of replacing it with the IMAGEM placeholder.
+    if (missingPhotoSource && art.imageUrl) {
+      return art.imageUrl;
+    }
+
+    return renderedDataUrl;
   };
 
   const generateAllArts = async () => {
