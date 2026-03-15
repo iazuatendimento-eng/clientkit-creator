@@ -2063,6 +2063,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 });
               }}
               onRegenerate={async (updatedArt) => {
+                const artKey = getClientArtKey(updatedArt);
+                const currentTicket = (onRegenerateTicketRef.current.get(artKey) ?? 0) + 1;
+                onRegenerateTicketRef.current.set(artKey, currentTicket);
+
                 // Always get the LATEST photo from ref to avoid stale closure issues
                 const latestArt = clientArtsRef.current.find((a) =>
                   a.clientId === updatedArt.clientId &&
@@ -2070,8 +2074,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
                 );
 
-                // Priority: latest state > updatedArt prop > cache
-                const artKey = getClientArtKey(updatedArt);
+                // Priority: updated art > latest state > cache
                 const lockedPhoto =
                   updatedArt.photoImage ||
                   latestArt?.photoImage ||
@@ -2097,14 +2100,22 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                       a.cardId === updatedArt.cardId &&
                       (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
                     );
-                    if (targetIndex !== -1 && !next[targetIndex].photoImage) {
+                    if (targetIndex !== -1 && next[targetIndex].photoImage !== artToRender.photoImage) {
                       next[targetIndex] = { ...next[targetIndex], photoImage: artToRender.photoImage };
                     }
                     return next;
                   });
                 }
 
-                return generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
+                const generated = await generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
+
+                // Ignore stale generations and keep newest preview
+                if (onRegenerateTicketRef.current.get(artKey) !== currentTicket) {
+                  const newest = clientArtsRef.current.find((a) => getClientArtKey(a) === artKey)?.imageUrl;
+                  return newest || generated;
+                }
+
+                return generated;
               }}
               onApprove={handleApprove}
               onReject={handleReject}
