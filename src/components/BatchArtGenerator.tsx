@@ -410,38 +410,82 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   }, [clientArts, isLoading]);
 
   const loadFromExistingBatch = async (batch: import("@/lib/batchHistory").BatchGeneration) => {
-    // Collect unique client IDs to fetch image_type, narration_type, briefing
-    const clientIds = [...new Set(batch.items.map(item => item.clientId))];
-    const { data: clientsData } = await supabase
-      .from("client_data")
-      .select("id, image_type, narration_type, briefing")
-      .in("id", clientIds);
+    const clientIds = [...new Set(batch.items.map(item => item.clientId).filter(Boolean))];
+    const cardIds = [...new Set(batch.items.map(item => item.cardId).filter(Boolean))];
+
+    const [{ data: clientsData }, { data: briefsData }] = await Promise.all([
+      supabase
+        .from("client_data")
+        .select("id, image_type, narration_type, briefing, brand_kit")
+        .in("id", clientIds),
+      supabase
+        .from("project_briefs")
+        .select("id, cover_image")
+        .in("id", cardIds),
+    ]);
+
     const imageTypeMap: Record<string, string> = {};
     const narrationTypeMap: Record<string, string> = {};
     const briefingMap: Record<string, string> = {};
-    clientsData?.forEach(c => { 
+    const brandKitMap: Record<string, any> = {};
+    const coverImageMap: Record<string, string> = {};
+
+    clientsData?.forEach(c => {
       if (c.image_type) imageTypeMap[c.id] = c.image_type;
       if (c.narration_type) narrationTypeMap[c.id] = c.narration_type;
       if (c.briefing) briefingMap[c.id] = c.briefing;
+      if ((c as any).brand_kit) brandKitMap[c.id] = (c as any).brand_kit;
     });
 
-    const arts: ClientArt[] = batch.items.map((item, index) => ({
-      clientId: item.clientId,
-      clientName: item.clientName,
-      company: item.company,
-      cardId: item.cardId,
-      cardTitle: item.cardTitle,
-      cardText: item.cardText,
-      brandKit: item.brandKit,
-      imageUrl: item.files?.[0] || null,
-      backgroundImage: item.backgroundImages?.[0],
-      imageType: (item as any).imageType || imageTypeMap[item.clientId] || undefined,
-      narrationType: (item as any).narrationType || narrationTypeMap[item.clientId] || undefined,
-      briefing: (item as any).briefing || briefingMap[item.clientId] || undefined,
-      status: "pending" as const,
-      note: item.note,
-      noteRead: item.noteRead,
-    }));
+    briefsData?.forEach(b => {
+      if (b.cover_image) coverImageMap[b.id] = b.cover_image;
+    });
+
+    const mergeBrandKitAssets = (itemBrandKit: any, latestBrandKit: any) => {
+      const itemBk = itemBrandKit || {};
+      const latestBk = latestBrandKit || {};
+
+      const logo = itemBk?.pngs?.[0] || itemBk?.logo || latestBk?.pngs?.[0] || latestBk?.logo || "";
+      const contact = itemBk?.pngs?.[1] || itemBk?.contactInfo || latestBk?.pngs?.[1] || latestBk?.contactInfo || "";
+      const mascot = itemBk?.pngs?.[2] || itemBk?.mascot || latestBk?.pngs?.[2] || latestBk?.mascot || "";
+
+      return {
+        ...latestBk,
+        ...itemBk,
+        logo,
+        contactInfo: contact,
+        mascot,
+        pngs: [logo, contact, mascot],
+      };
+    };
+
+    const arts: ClientArt[] = batch.items.map((item) => {
+      const itemData = item as any;
+
+      return {
+        clientId: item.clientId,
+        clientName: item.clientName,
+        company: item.company,
+        cardId: item.cardId,
+        cardTitle: item.cardTitle,
+        cardText: item.cardText,
+        brandKit: mergeBrandKitAssets(item.brandKit, brandKitMap[item.clientId]),
+        imageUrl: item.files?.[0] || null,
+        backgroundImage: item.backgroundImages?.[0],
+        photoImage: itemData.photoImage || coverImageMap[item.cardId] || undefined,
+        photoOffset: itemData.photoOffset,
+        elementOverrides: itemData.elementOverrides,
+        pageIndex: itemData.pageIndex,
+        totalPages: itemData.totalPages,
+        imageType: itemData.imageType || imageTypeMap[item.clientId] || undefined,
+        narrationType: itemData.narrationType || narrationTypeMap[item.clientId] || undefined,
+        briefing: itemData.briefing || briefingMap[item.clientId] || undefined,
+        status: "pending" as const,
+        note: item.note,
+        noteRead: item.noteRead,
+      };
+    });
+
     setClientArts(arts);
     setIsLoading(false);
   };
