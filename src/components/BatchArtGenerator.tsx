@@ -1398,11 +1398,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   const regenerateArt = async (index: number) => {
     const art = clientArts[index];
-    const resolvedPhotoImage = art.photoImage || await resolvePhotoImageForArt(art);
-    const artToRender = resolvedPhotoImage ? { ...art, photoImage: resolvedPhotoImage } : art;
-    const imageUrl = await generateArtForClient(artToRender);
+    const imageUrl = await generateArtForClient(art, { allowAutoPhotoResolve: false });
     const updatedArts = [...clientArts];
-    updatedArts[index] = { ...artToRender, imageUrl };
+    updatedArts[index] = { ...art, imageUrl };
     setClientArts(updatedArts);
   };
 
