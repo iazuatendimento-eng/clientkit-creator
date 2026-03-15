@@ -106,29 +106,29 @@ export function ArtCardWithOverlay({
   removeBgProgress,
 }: ArtCardWithOverlayProps) {
   // Local override states initialized from art
-  const [photoOffsetX, setPhotoOffsetX] = useState(art.photoOffset?.x || 0);
-  const [photoOffsetY, setPhotoOffsetY] = useState(art.photoOffset?.y || 0);
-  const [photoScale, setPhotoScale] = useState(art.elementOverrides?.photoScale || 100);
-  const [photoFrame, setPhotoFrame] = useState<ShapeOverride | null>(art.elementOverrides?.photoFrame || null);
-  const [logoX, setLogoX] = useState(art.elementOverrides?.logoX || 0);
-  const [logoY, setLogoY] = useState(art.elementOverrides?.logoY || 0);
-  const [logoScaleX, setLogoScaleX] = useState(art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100);
-  const [logoScaleY, setLogoScaleY] = useState(art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100);
-  const [textX, setTextX] = useState(art.elementOverrides?.textX || 0);
-  const [textY, setTextY] = useState(art.elementOverrides?.textY || 0);
-  const [textFontSize, setTextFontSize] = useState(art.elementOverrides?.textFontSize || 100);
-  const [contactX, setContactX] = useState(art.elementOverrides?.contactX || 0);
-  const [contactY, setContactY] = useState(art.elementOverrides?.contactY || 0);
-  const [contactScaleX, setContactScaleX] = useState(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
-  const [contactScaleY, setContactScaleY] = useState(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
-  const [shapeOverrides, setShapeOverrides] = useState<Record<string, ShapeOverride>>(art.elementOverrides?.shapes || {});
+  const [photoOffsetX, _setPhotoOffsetX] = useState(art.photoOffset?.x || 0);
+  const [photoOffsetY, _setPhotoOffsetY] = useState(art.photoOffset?.y || 0);
+  const [photoScale, _setPhotoScale] = useState(art.elementOverrides?.photoScale || 100);
+  const [photoFrame, _setPhotoFrame] = useState<ShapeOverride | null>(art.elementOverrides?.photoFrame || null);
+  const [logoX, _setLogoX] = useState(art.elementOverrides?.logoX || 0);
+  const [logoY, _setLogoY] = useState(art.elementOverrides?.logoY || 0);
+  const [logoScaleX, _setLogoScaleX] = useState(art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100);
+  const [logoScaleY, _setLogoScaleY] = useState(art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100);
+  const [textX, _setTextX] = useState(art.elementOverrides?.textX || 0);
+  const [textY, _setTextY] = useState(art.elementOverrides?.textY || 0);
+  const [textFontSize, _setTextFontSize] = useState(art.elementOverrides?.textFontSize || 100);
+  const [contactX, _setContactX] = useState(art.elementOverrides?.contactX || 0);
+  const [contactY, _setContactY] = useState(art.elementOverrides?.contactY || 0);
+  const [contactScaleX, _setContactScaleX] = useState(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
+  const [contactScaleY, _setContactScaleY] = useState(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
+  const [shapeOverrides, _setShapeOverrides] = useState<Record<string, ShapeOverride>>(art.elementOverrides?.shapes || {});
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regenerateRequestRef = useRef(0);
 
-  // Refs to always have the latest values available for handleDragEnd
-  // (pointerup fires before React re-renders with the latest setState from onMove)
+  // Ref that always holds the latest values — updated synchronously by wrapped setters
+  // so handleDragEnd (fired on pointerup before React re-renders) reads fresh data.
   const latestRef = useRef({
     photoOffsetX, photoOffsetY, photoScale, photoFrame,
     logoX, logoY, logoScaleX, logoScaleY,
@@ -136,13 +136,24 @@ export function ArtCardWithOverlay({
     contactX, contactY, contactScaleX, contactScaleY,
     shapeOverrides,
   });
-  latestRef.current = {
-    photoOffsetX, photoOffsetY, photoScale, photoFrame,
-    logoX, logoY, logoScaleX, logoScaleY,
-    textX, textY, textFontSize,
-    contactX, contactY, contactScaleX, contactScaleY,
-    shapeOverrides,
-  };
+
+  // Wrapped setters that update both React state AND the ref synchronously
+  const setPhotoOffsetX = useCallback((v: number) => { latestRef.current.photoOffsetX = v; _setPhotoOffsetX(v); }, []);
+  const setPhotoOffsetY = useCallback((v: number) => { latestRef.current.photoOffsetY = v; _setPhotoOffsetY(v); }, []);
+  const setPhotoScale = useCallback((v: number) => { latestRef.current.photoScale = v; _setPhotoScale(v); }, []);
+  const setPhotoFrame = useCallback((v: ShapeOverride | null) => { latestRef.current.photoFrame = v; _setPhotoFrame(v); }, []);
+  const setLogoX = useCallback((v: number) => { latestRef.current.logoX = v; _setLogoX(v); }, []);
+  const setLogoY = useCallback((v: number) => { latestRef.current.logoY = v; _setLogoY(v); }, []);
+  const setLogoScaleX = useCallback((v: number) => { latestRef.current.logoScaleX = v; _setLogoScaleX(v); }, []);
+  const setLogoScaleY = useCallback((v: number) => { latestRef.current.logoScaleY = v; _setLogoScaleY(v); }, []);
+  const setTextX = useCallback((v: number) => { latestRef.current.textX = v; _setTextX(v); }, []);
+  const setTextY = useCallback((v: number) => { latestRef.current.textY = v; _setTextY(v); }, []);
+  const setTextFontSize = useCallback((v: number) => { latestRef.current.textFontSize = v; _setTextFontSize(v); }, []);
+  const setContactX = useCallback((v: number) => { latestRef.current.contactX = v; _setContactX(v); }, []);
+  const setContactY = useCallback((v: number) => { latestRef.current.contactY = v; _setContactY(v); }, []);
+  const setContactScaleX = useCallback((v: number) => { latestRef.current.contactScaleX = v; _setContactScaleX(v); }, []);
+  const setContactScaleY = useCallback((v: number) => { latestRef.current.contactScaleY = v; _setContactScaleY(v); }, []);
+  const setShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => { latestRef.current.shapeOverrides = v; _setShapeOverrides(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
