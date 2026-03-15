@@ -2042,9 +2042,21 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               }}
               onRegenerate={async (updatedArt) => {
                 const currentPhoto = clientArts[index]?.photoImage;
-                const artToRender = currentPhoto && !updatedArt.photoImage
+                let artToRender = currentPhoto && !updatedArt.photoImage
                   ? { ...updatedArt, photoImage: currentPhoto }
                   : updatedArt;
+
+                if (!artToRender.photoImage) {
+                  const resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: true });
+                  if (resolved) {
+                    artToRender = { ...artToRender, photoImage: resolved };
+                    setClientArts((prev) => {
+                      const next = [...prev];
+                      if (next[index]) next[index] = { ...next[index], photoImage: resolved };
+                      return next;
+                    });
+                  }
+                }
 
                 return generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
               }}
