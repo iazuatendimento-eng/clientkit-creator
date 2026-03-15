@@ -570,12 +570,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   };
 
-  // Cache photo resolution per card to avoid hammering the backend during resize
+  // Cache photo resolution per art to avoid hammering the backend during resize
   const photoResolveCacheRef = useRef(new Map<string, { url: string | null; ts: number }>());
+  const onRegenerateTicketRef = useRef(new Map<string, number>());
 
   const resolvePhotoImageForArt = useCallback(
     async (art: ClientArt, options?: { allowSearch?: boolean }): Promise<string | null> => {
-      const key = art.cardId;
+      const key = getClientArtKey(art);
       const allowSearch = options?.allowSearch ?? true;
       const cached = photoResolveCacheRef.current.get(key);
       if (cached) {
