@@ -2037,7 +2037,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 }
 
                 return generateArtForClient(artToRender);
-              }
+              }}
               onApprove={handleApprove}
               onReject={handleReject}
               onOpenImageDialog={(a, idx) => {
