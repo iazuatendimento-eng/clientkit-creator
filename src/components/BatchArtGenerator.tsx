@@ -2097,9 +2097,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
                 let artToRender = { ...updatedArt, photoImage: lockedPhoto || updatedArt.photoImage };
 
-                // Only if we truly have no photo at all, try DB (no search)
+                // If photo is missing, first try DB-only resolution, then fallback to search once.
                 if (!artToRender.photoImage) {
-                  const resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: false });
+                  let resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: false });
+                  if (!resolved) {
+                    resolved = await resolvePhotoImageForArt(artToRender, { allowSearch: true });
+                  }
                   if (resolved) {
                     artToRender = { ...artToRender, photoImage: resolved };
                   }
