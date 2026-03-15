@@ -2090,14 +2090,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
                 );
 
-                // Priority: updated art > latest state > cache
+                // Lock to the current card photo during resize/regeneration to avoid swapping to another image.
                 const lockedPhoto =
-                  updatedArt.photoImage ||
                   latestArt?.photoImage ||
-                  photoResolveCacheRef.current.get(artKey)?.url ||
+                  updatedArt.photoImage ||
                   null;
 
-                let artToRender = { ...updatedArt, photoImage: lockedPhoto || updatedArt.photoImage };
+                const artToRender = { ...updatedArt, photoImage: lockedPhoto || undefined };
 
                 // If photo is missing, first try DB-only resolution, then fallback to search once.
                 if (!artToRender.photoImage) {
