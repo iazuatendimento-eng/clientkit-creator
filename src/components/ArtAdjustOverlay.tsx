@@ -458,23 +458,10 @@ export function ArtAdjustOverlay({
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        if (isHorizontalHandle) {
-          const signedDx = handleSignX(h) * dx;
-          const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
-          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
-          setLogoScaleX(newScaleX);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
-        } else if (isVerticalHandle) {
-          const signedDy = handleSignY(h) * dy;
-          const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
-          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
-          setLogoScaleY(newScaleY);
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
-        } else {
-          // Corner handles - proportional resize
+        {
+          // Corner handles only - always proportional resize
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
-          // Use the dominant axis delta to compute a uniform scale
           const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
           const newW = clamp(s.start.logoW + dominant * baseW, baseW * 0.25, baseW * 3);
           const newH = clamp(s.start.logoH + dominant * baseH, baseH * 0.25, baseH * 3);
@@ -501,20 +488,8 @@ export function ArtAdjustOverlay({
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        if (isHorizontalHandle) {
-          const signedDx = handleSignX(h) * dx;
-          const newW = clamp(s.start.contactW + signedDx, baseW * 0.25, baseW * 3);
-          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
-          setContactScaleX(newScaleX);
-          if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -200, 200));
-        } else if (isVerticalHandle) {
-          const signedDy = handleSignY(h) * dy;
-          const newH = clamp(s.start.contactH + signedDy, baseH * 0.25, baseH * 3);
-          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
-          setContactScaleY(newScaleY);
-          if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
-        } else {
-          // Corner handles - proportional resize
+        {
+          // Corner handles only - always proportional resize
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
@@ -543,20 +518,8 @@ export function ArtAdjustOverlay({
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        if (isHorizontalHandle) {
-          const signedDx = handleSignX(h) * dx;
-          const newW = clamp(s.start.textW + signedDx, baseW * 0.5, baseW * 2);
-          const newScale = clamp((newW / baseW) * 100, 50, 200);
-          setTextFontSize(newScale);
-          if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
-        } else if (isVerticalHandle) {
-          const signedDy = handleSignY(h) * dy;
-          const newH = clamp(s.start.textW + signedDy, baseH * 0.5, baseH * 2);
-          const newScale = clamp((newH / baseH) * 100, 50, 200);
-          setTextFontSize(newScale);
-          if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
-        } else {
-          // Corner handles - use dominant axis
+        {
+          // Corner handles only - proportional resize
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
@@ -720,10 +683,6 @@ export function ArtAdjustOverlay({
             <HandleDot h="ne" />
             <HandleDot h="sw" />
             <HandleDot h="se" />
-            <HandleDot h="n" />
-            <HandleDot h="s" />
-            <HandleDot h="w" />
-            <HandleDot h="e" />
           </>
         )}
       </div>
