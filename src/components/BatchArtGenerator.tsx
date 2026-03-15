@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
+import { translateToEnglishLocal } from "@/lib/localTranslate";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import {

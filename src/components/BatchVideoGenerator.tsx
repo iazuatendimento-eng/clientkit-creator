@@ -2157,26 +2157,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           try {
             // Prioritize imageType and briefing for search context (most relevant for visual content)
             const fullContext = [video.imageType, video.briefing, video.cardTitle, text].filter(Boolean).join(" ").split(" ").slice(0, 15).join(" ");
-            let searchTerms = fullContext;
-
-            // Translate to English for better search results (with timeout)
-            try {
-              const translatePromise = supabase.functions.invoke("translate-text", {
-                body: { text: fullContext },
-              });
-
-              const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("Timeout na tradução")), 15000)
-              );
-
-              const { data, error } = await Promise.race([translatePromise, timeoutPromise]);
-
-              if (!error && data?.translatedText) {
-                searchTerms = data.translatedText;
-              }
-            } catch (translateError) {
-              console.error("Translation failed, using original text:", translateError);
-            }
+            let searchTerms = translateToEnglishLocal(fullContext);
 
             // Search Pexels videos with multiple fallback strategies
             let foundVideo = false;
