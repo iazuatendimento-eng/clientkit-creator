@@ -66,6 +66,7 @@ interface CanvasElement {
   color?: string;
   text?: string;
   fontSize?: number;
+  fontFamily?: string;
   textAlign?: "left" | "center" | "right";
   lineHeight?: number; // multiplier e.g. 1.2
   imageUrl?: string;
