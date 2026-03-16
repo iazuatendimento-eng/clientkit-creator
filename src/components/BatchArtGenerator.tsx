@@ -1456,10 +1456,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     const renderedDataUrl = canvas.toDataURL("image/png");
 
-    // Never replace a previously valid preview with placeholder when photo source fails.
-    // Keep the current image stable while we try to re-resolve photo source in subsequent regenerations.
+    // Keep rendering live changes (logo/text/grid) even when photo source is missing.
+    // Photo area already tries pixel-slicing fallback above; if it still fails,
+    // we prefer fresh render over freezing the whole card preview.
     if (missingPhotoSource && art.imageUrl) {
-      return art.imageUrl;
+      console.warn("[generateArtForClient] Photo source missing; keeping live render for non-photo updates.");
     }
 
     return renderedDataUrl;
