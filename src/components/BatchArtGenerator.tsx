@@ -588,6 +588,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         }
       });
 
+      arts.sort((a, b) => a.company.localeCompare(b.company, "pt-BR", { numeric: true }));
       setClientArts(arts);
 
       if (arts.length === 0) {
