@@ -1934,6 +1934,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   // Save current state as draft to history (without finalizing)
   const handleSaveDraft = async () => {
+    await waitForPendingRegenerations();
     const currentArts = clientArtsRef.current;
     const artsWithImages = currentArts.filter((a) => a.imageUrl);
     
