@@ -81,6 +81,8 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([array], { type: mime });
 }
 
+const withCacheBuster = (url: string) => `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+
 /**
  * Upload base64/blob files from batch items to Supabase Storage and replace with URLs.
  * Processes uploads in parallel batches of 5.
