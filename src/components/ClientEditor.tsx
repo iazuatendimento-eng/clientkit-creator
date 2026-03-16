@@ -624,9 +624,10 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   <SelectTrigger>
                     <SelectValue placeholder="Escolha uma fonte..." />
                   </SelectTrigger>
-                  <SelectContent>
+                   <SelectContent>
+                    <SelectItem value="Impact">Impact</SelectItem>
                     <SelectItem value="Montserrat">Montserrat</SelectItem>
-                    <SelectItem value="Montserrat Arabic">Montserrat Arabic</SelectItem>
+                    <SelectItem value="Montserrat Arabic">Montserrat Arabic (ExtraBold)</SelectItem>
                     <SelectItem value="Roboto">Roboto</SelectItem>
                     <SelectItem value="Open Sans">Open Sans</SelectItem>
                     <SelectItem value="Poppins">Poppins</SelectItem>
