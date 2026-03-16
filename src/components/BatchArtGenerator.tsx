@@ -2117,7 +2117,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             mediaUrl: mediaUrls[0],
             mediaType: "art",
             clientName: arts[0].company || arts[0].clientName,
-            cardText: arts[0].cardText || arts[0].cardTitle,
+            cardText: arts.map(a => a.cardText || a.cardTitle).filter(Boolean).join("\n\n"),
             caption: undefined,
           },
         });

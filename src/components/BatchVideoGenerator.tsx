@@ -2667,7 +2667,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             mediaUrl: mediaUrls[0],
             mediaType: "video",
             clientName: videos[0].company || videos[0].clientName,
-            cardText: videos[0].cardText || videos[0].cardTitle,
+            cardText: videos.map(v => v.cardText || v.cardTitle).filter(Boolean).join("\n\n"),
             caption: undefined,
           },
         });
