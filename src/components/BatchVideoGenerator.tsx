@@ -719,6 +719,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmails, setIsSendingEmails] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(0);
