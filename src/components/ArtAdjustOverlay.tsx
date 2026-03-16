@@ -574,15 +574,35 @@ export function ArtAdjustOverlay({
       }
     };
 
-    const onUp = () => {
+    const finishDrag = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("blur", onWindowBlur);
+      pointerTarget.removeEventListener("lostpointercapture", onCancel);
       startRef.current = null;
       if (hasMoved) onDragEndRef.current?.();
     };
 
+    const onUp = () => {
+      finishDrag();
+    };
+
+    const onCancel = () => {
+      finishDrag();
+    };
+
+    const onWindowBlur = () => {
+      finishDrag();
+    };
+
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("blur", onWindowBlur);
+    pointerTarget.addEventListener("lostpointercapture", onCancel);
   };
 
   const Box = ({
