@@ -45,28 +45,10 @@ const MasterVideo = () => {
     setView("history");
   };
 
-  const handleEditBatch = async (batch: BatchGeneration) => {
-    // Extract template from batch snapshot and open in BatchVideoGenerator
+  const handleEditBatch = (batch: BatchGeneration) => {
     const snap = batch.template_snapshot as any;
-    let audioUrl1 = snap.audioUrl1 || snap.audio_url_1 || undefined;
-    let audioUrl2 = snap.audioUrl2 || snap.audio_url_2 || undefined;
-
-    // If no audio in snapshot, try to load from the master video template
-    if (!audioUrl1 && !audioUrl2 && snap.id) {
-      try {
-        const { data } = await supabase
-          .from("master_video_templates")
-          .select("audio_url_1, audio_url_2")
-          .eq("id", snap.id)
-          .maybeSingle();
-        if (data) {
-          audioUrl1 = (data as any).audio_url_1 || undefined;
-          audioUrl2 = (data as any).audio_url_2 || undefined;
-        }
-      } catch (e) {
-        console.error("Failed to load master template audio:", e);
-      }
-    }
+    const audioUrl1 = snap.audioUrl1 || snap.audio_url_1 || undefined;
+    const audioUrl2 = snap.audioUrl2 || snap.audio_url_2 || undefined;
 
     const batchTemplate: VideoTemplate = {
       id: snap.id || batch.id,
@@ -84,6 +66,29 @@ const MasterVideo = () => {
     setTeamFilter(snap.teamFilter || undefined);
     setEditingBatch(batch);
     setView("batch");
+
+    // Load audio from master template asynchronously if missing
+    if (!audioUrl1 && !audioUrl2 && snap.id) {
+      supabase
+        .from("master_video_templates")
+        .select("audio_url_1, audio_url_2")
+        .eq("id", snap.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setTemplate((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    audioUrl1: (data as any).audio_url_1 || prev.audioUrl1,
+                    audioUrl2: (data as any).audio_url_2 || prev.audioUrl2,
+                  }
+                : prev
+            );
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   if (view === "history") {
