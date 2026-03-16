@@ -1706,14 +1706,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   const openAdjustDialog = (art: ClientArt) => {
     const idx = clientArts.indexOf(art);
-    const cleanOverrides = sanitizeElementOverrides(art.elementOverrides);
     setSelectedArt(art);
     setSelectedArtIndex(idx);
     setLivePreviewUrl(art.imageUrl); // Start with current image
     setPhotoOffsetX(art.photoOffset?.x || 0);
     setPhotoOffsetY(art.photoOffset?.y || 0);
-    setPhotoScale(cleanOverrides?.photoScale || 100);
-    setPhotoFrame(null);
+    setPhotoScale(art.elementOverrides?.photoScale || 100);
+    setPhotoFrame(art.elementOverrides?.photoFrame || null);
     // Load element overrides
     setLogoX(cleanOverrides?.logoX || 0);
     setLogoY(cleanOverrides?.logoY || 0);
