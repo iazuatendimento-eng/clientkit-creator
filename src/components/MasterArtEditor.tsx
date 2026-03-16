@@ -1953,7 +1953,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                               const link = document.createElement("link");
                               link.id = id;
                               link.rel = "stylesheet";
-                              link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(v)}:wght@400;700&display=swap`;
+                              link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(v)}:wght@400;700;800;900&display=swap`;
                               document.head.appendChild(link);
                             }
                           }

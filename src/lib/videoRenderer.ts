@@ -165,7 +165,7 @@ export async function loadGoogleFont(fontFamily: string): Promise<void> {
   const link = document.createElement("link");
   link.id = id;
   link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;700&display=swap`;
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;700;800;900&display=swap`;
   document.head.appendChild(link);
   try { await document.fonts.load(`16px "${fontFamily}"`); } catch { /* may still work */ }
 }

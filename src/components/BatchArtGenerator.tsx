@@ -1188,7 +1188,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         const fontSizeMultiplier = (art.elementOverrides?.textFontSize || 100) / 100;
         const fontSize = Math.round(baseFontSize * fontSizeMultiplier);
         const fontFamily = art.brandKit?.font || art.brandKit?.fontFamily || "Arial";
-        ctx.font = `${fontSize}px ${fontFamily}`;
+        ctx.font = `900 ${fontSize}px ${fontFamily}`;
         
         // Use card text for text elements
         const text = art.cardText || el.text || "";
