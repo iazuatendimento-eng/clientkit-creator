@@ -109,7 +109,7 @@ export function ArtCardWithOverlay({
   const [photoOffsetX, _setPhotoOffsetX] = useState(art.photoOffset?.x || 0);
   const [photoOffsetY, _setPhotoOffsetY] = useState(art.photoOffset?.y || 0);
   const [photoScale, _setPhotoScale] = useState(art.elementOverrides?.photoScale || 100);
-  const [photoFrame, _setPhotoFrame] = useState<ShapeOverride | null>(art.elementOverrides?.photoFrame || null);
+  const [photoFrame, _setPhotoFrame] = useState<ShapeOverride | null>(null);
   const [logoX, _setLogoX] = useState(art.elementOverrides?.logoX || 0);
   const [logoY, _setLogoY] = useState(art.elementOverrides?.logoY || 0);
   const [logoScaleX, _setLogoScaleX] = useState(art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100);
