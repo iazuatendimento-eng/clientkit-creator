@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History, Trash2, Mail, Sparkles } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History, Trash2, Mail, Sparkles, Layers } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { QuickCreate } from "@/components/QuickCreate";
@@ -814,14 +814,30 @@ const Index = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" variant="outline" onClick={() => navigate("/master-art")}>
-              <Palette className="mr-1 h-4 w-4" />
-              Arte
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate("/master-video")}>
-              <Video className="mr-1 h-4 w-4" />
-              Vídeo
-            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Layers className="mr-1 h-4 w-4" />
+                  Gerar Lote
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-xs">
+                <DialogHeader>
+                  <DialogTitle>Gerar Lote</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <p className="text-sm text-muted-foreground">Escolha o tipo de geração:</p>
+                  <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/master-art")}>
+                    <Palette className="h-4 w-4 mr-2" />
+                    Gerar Lote de Artes
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/master-video")}>
+                    <Video className="h-4 w-4 mr-2" />
+                    Gerar Lote de Vídeos
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button size="sm" variant="outline" onClick={() => navigate("/send-media")}>
               <Mail className="mr-1 h-4 w-4" />
               Enviar
