@@ -356,91 +356,20 @@ export function ArtAdjustOverlay({
         const base = els.photoFrame;
         if (!base) return;
 
-        // New behavior: resize/move the photo frame (no zoom) when photoFrame is enabled.
-        if (setPhotoFrame) {
-          const startRect = s.start.photoRect || { x: base.x, y: base.y, width: base.width, height: base.height };
-          const minSize = 20;
-
-          const clampPhotoRect = (rect: ShapeOverride): ShapeOverride => {
-            const safeW = clamp(Number.isFinite(rect.width) ? rect.width : startRect.width, minSize, template.width);
-            const safeH = clamp(Number.isFinite(rect.height) ? rect.height : startRect.height, minSize, template.height);
-            const safeX = clamp(
-              Number.isFinite(rect.x) ? rect.x : startRect.x,
-              0,
-              Math.max(0, template.width - safeW)
-            );
-            const safeY = clamp(
-              Number.isFinite(rect.y) ? rect.y : startRect.y,
-              0,
-              Math.max(0, template.height - safeH)
-            );
-            return { x: safeX, y: safeY, width: safeW, height: safeH };
-          };
-
-          if (s.mode === "move") {
-            setPhotoFrame(clampPhotoRect({
-              x: startRect.x + dx,
-              y: startRect.y + dy,
-              width: startRect.width,
-              height: startRect.height,
-            }));
-            return;
-          }
-
-          const h = s.handle || "se";
-          const startW = Math.max(minSize, startRect.width);
-          const startH = Math.max(minSize, startRect.height);
-          const isVerticalHandle = h === "n" || h === "s";
-          const isHorizontalHandle = h === "e" || h === "w";
-
-          if (isHorizontalHandle) {
-            // Side: stretch width only
-            const newW = handleHasE(h) ? Math.max(minSize, startW + dx) : Math.max(minSize, startW - dx);
-            const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
-            setPhotoFrame(clampPhotoRect({ x: newX, y: startRect.y, width: newW, height: startH }));
-          } else if (isVerticalHandle) {
-            // Side: stretch height only
-            const newH = handleHasS(h) ? Math.max(minSize, startH + dy) : Math.max(minSize, startH - dy);
-            const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
-            setPhotoFrame(clampPhotoRect({ x: startRect.x, y: newY, width: startW, height: newH }));
-          } else {
-            // Corner: proportional resize
-            const signedDx = handleSignX(h) * dx;
-            const signedDy = handleSignY(h) * dy;
-            const dominant = Math.abs(signedDx / startW) > Math.abs(signedDy / startH)
-              ? signedDx / startW
-              : signedDy / startH;
-
-            let newW = Math.max(minSize, startW + dominant * startW);
-            let newH = Math.max(minSize, startH + dominant * startH);
-
-            const aspect = startW / startH;
-            if (newW / newH > aspect) {
-              newH = newW / aspect;
-            } else {
-              newW = newH * aspect;
-            }
-
-            const newX = handleHasW(h) ? startRect.x + (startRect.width - newW) : startRect.x;
-            const newY = handleHasN(h) ? startRect.y + (startRect.height - newH) : startRect.y;
-            setPhotoFrame(clampPhotoRect({ x: newX, y: newY, width: newW, height: newH }));
-          }
-          return;
-        }
-
-        // Legacy behavior: move = pan, resize = zoom
+        // Move = pan the photo inside the frame
         if (s.mode === "move") {
-          setPhotoOffsetX(clamp(s.start.photoOffsetX + dx, -100, 100));
-          setPhotoOffsetY(clamp(s.start.photoOffsetY + dy, -100, 100));
+          setPhotoOffsetX(clamp(s.start.photoOffsetX + dx, -500, 500));
+          setPhotoOffsetY(clamp(s.start.photoOffsetY + dy, -500, 500));
           return;
         }
 
+        // Resize = zoom the photo (change photoScale), NOT resize the frame
         const h = s.handle as Handle;
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        const baseW = els.photoFrame?.width || 1;
-        const baseH = els.photoFrame?.height || 1;
+        const baseW = base.width || 1;
+        const baseH = base.height || 1;
 
         let signedDelta: number;
         let baseDimension: number;
