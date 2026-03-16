@@ -2160,7 +2160,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   });
                 }
 
-                const generated = await generateArtForClient(artToRender, { allowAutoPhotoResolve: false });
+                const generated = await generateArtForClient(artToRender, {
+                  allowAutoPhotoResolve: true,
+                  allowPhotoSearch: false,
+                });
 
                 // Ignore stale generations and keep newest preview
                 if (onRegenerateTicketRef.current.get(artKey) !== currentTicket) {
