@@ -268,9 +268,11 @@ export function ArtAdjustOverlay({
     e.preventDefault();
     e.stopPropagation();
 
+    const pointerTarget = e.currentTarget as HTMLElement;
+
     // Important for touch devices: ensure we can prevent scrolling/zooming during drag/resize
     try {
-      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      pointerTarget.setPointerCapture?.(e.pointerId);
     } catch {
       // ignore
     }
