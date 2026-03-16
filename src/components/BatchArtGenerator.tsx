@@ -1775,6 +1775,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const clientArtsRef = useRef(clientArts);
   useEffect(() => { clientArtsRef.current = clientArts; });
 
+  const waitForPendingRegenerations = useCallback(async () => {
+    const pending = Array.from(pendingRegenerationsRef.current.values());
+    if (pending.length === 0) return;
+    await Promise.allSettled(pending);
+  }, []);
+
   // Live preview regeneration using refs (always current values)
   const regenerateFromRefs = useCallback(async () => {
     const art = selectedArtRef.current;
