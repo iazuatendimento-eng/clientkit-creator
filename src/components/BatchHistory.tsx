@@ -72,20 +72,9 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     });
   }, [batches, searchQuery]);
 
-  const handleEdit = async (batch: BatchGeneration) => {
-    // Load full batch data (with items) on demand
-    setLoadingEditId(batch.id);
-    try {
-      const fullBatch = await getBatchById(batch.id);
-      if (fullBatch) {
-        onEditBatch(fullBatch);
-      } else {
-        toast({ title: "Erro ao carregar lote", variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Erro ao carregar lote", variant: "destructive" });
-    }
-    setLoadingEditId(null);
+  const handleEdit = (batch: BatchGeneration) => {
+    // Pass lightweight batch immediately — the generator will fetch items lazily
+    onEditBatch(batch);
   };
 
   const handleDelete = async (id: string) => {
