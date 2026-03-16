@@ -252,7 +252,7 @@ const loadGoogleFont = async (fontFamily: string): Promise<void> => {
   const link = document.createElement("link");
   link.id = id;
   link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;700&display=swap`;
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;700;800;900&display=swap`;
   document.head.appendChild(link);
   try {
     await document.fonts.load(`16px "${fontFamily}"`);
@@ -1188,7 +1188,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         const fontSizeMultiplier = (art.elementOverrides?.textFontSize || 100) / 100;
         const fontSize = Math.round(baseFontSize * fontSizeMultiplier);
         const fontFamily = art.brandKit?.font || art.brandKit?.fontFamily || "Arial";
-        ctx.font = `${fontSize}px ${fontFamily}`;
+        ctx.font = `900 ${fontSize}px ${fontFamily}`;
         
         // Use card text for text elements
         const text = art.cardText || el.text || "";

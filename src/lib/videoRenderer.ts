@@ -165,7 +165,7 @@ export async function loadGoogleFont(fontFamily: string): Promise<void> {
   const link = document.createElement("link");
   link.id = id;
   link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;700&display=swap`;
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;700;800;900&display=swap`;
   document.head.appendChild(link);
   try { await document.fonts.load(`16px "${fontFamily}"`); } catch { /* may still work */ }
 }
@@ -513,7 +513,7 @@ export async function generatePageImage(
       const baseFontSize = el.fontSize || 48;
       const fontSize = Math.round(baseFontSize * (textAdjustment.textScale / 100));
       const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
-      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.font = `900 ${fontSize}px ${fontFamily}`;
       const displayText = isSignature ? (el.text || "") : text;
       const align = el.textAlign || "left";
       ctx.textAlign = align;
