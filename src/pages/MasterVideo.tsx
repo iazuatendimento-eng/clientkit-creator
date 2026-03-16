@@ -86,8 +86,7 @@ const MasterVideo = () => {
                 : prev
             );
           }
-        })
-        .catch(() => {});
+        });
     }
   };
 
