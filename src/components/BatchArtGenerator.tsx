@@ -418,8 +418,21 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   }, [clientArts, isLoading]);
 
   const loadFromExistingBatch = async (batch: import("@/lib/batchHistory").BatchGeneration) => {
-    const clientIds = [...new Set(batch.items.map(item => item.clientId).filter(Boolean))];
-    const cardIds = [...new Set(batch.items.map(item => item.cardId).filter(Boolean))];
+    // The list query excludes heavy 'items' column, so fetch full batch data if needed
+    let batchItems = batch.items;
+    if (!batchItems || batchItems.length === 0) {
+      const { getBatchById } = await import("@/lib/batchHistory");
+      const fullBatch = await getBatchById(batch.id);
+      if (!fullBatch || !fullBatch.items || fullBatch.items.length === 0) {
+        toast({ title: "Lote sem itens", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+      batchItems = fullBatch.items;
+    }
+
+    const clientIds = [...new Set(batchItems.map(item => item.clientId).filter(Boolean))];
+    const cardIds = [...new Set(batchItems.map(item => item.cardId).filter(Boolean))];
 
     const [{ data: clientsData }, { data: briefsData }] = await Promise.all([
       supabase
