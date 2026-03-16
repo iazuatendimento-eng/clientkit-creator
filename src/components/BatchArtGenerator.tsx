@@ -1493,7 +1493,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       try {
         const artsToSave = updatedArts.filter((a) => a.imageUrl);
         if (artsToSave.length > 0) {
-          const batchItems: BatchItem[] = artsToSave.map((art) => ({
+          // Save ALL arts preserving order (including ones without images)
+          const batchItems: BatchItem[] = updatedArts.map((art) => ({
             cardId: art.cardId,
             clientId: art.clientId,
             clientName: art.clientName,
@@ -1501,7 +1502,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             cardTitle: art.cardTitle,
             cardText: art.cardText,
             brandKit: sanitizeBrandKitForStorage(art.brandKit),
-            files: [art.imageUrl!],
+            files: art.imageUrl ? [art.imageUrl] : [],
             backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
             photoImage: art.photoImage,
             photoOffset: art.photoOffset,
