@@ -1568,8 +1568,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const handleSearchImages = async () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
+    setSearchPage(1);
     try {
-      const images = await searchImages(searchQuery, 15);
+      const images = await searchImages(searchQuery, 12, 1);
       setSearchImagesResults(images);
       
       const apis = getConfiguredApis();
@@ -1586,6 +1587,23 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleLoadMoreImages = async () => {
+    if (!searchQuery.trim()) return;
+    const nextPage = searchPage + 1;
+    setIsLoadingMore(true);
+    try {
+      const images = await searchImages(searchQuery, 12, nextPage);
+      if (images.length > 0) {
+        setSearchImagesResults(prev => [...prev, ...images]);
+        setSearchPage(nextPage);
+      }
+    } catch (error) {
+      console.error("Error loading more images:", error);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
