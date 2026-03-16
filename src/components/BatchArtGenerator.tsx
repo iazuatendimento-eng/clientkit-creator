@@ -284,6 +284,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [searchQuery, setSearchQuery] = useState("");
   const [searchImages_results, setSearchImagesResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
   const [customImageUrl, setCustomImageUrl] = useState("");
   // Team filter is now fixed based on initial selection - no runtime switching
   const teamFilter = initialTeamFilter;
@@ -1566,8 +1568,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const handleSearchImages = async () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
+    setSearchPage(1);
     try {
-      const images = await searchImages(searchQuery, 15);
+      const images = await searchImages(searchQuery, 12, 1);
       setSearchImagesResults(images);
       
       const apis = getConfiguredApis();
@@ -1584,6 +1587,23 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleLoadMoreImages = async () => {
+    if (!searchQuery.trim()) return;
+    const nextPage = searchPage + 1;
+    setIsLoadingMore(true);
+    try {
+      const images = await searchImages(searchQuery, 12, nextPage);
+      if (images.length > 0) {
+        setSearchImagesResults(prev => [...prev, ...images]);
+        setSearchPage(nextPage);
+      }
+    } catch (error) {
+      console.error("Error loading more images:", error);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -2356,6 +2376,19 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                     </div>
                   ))}
                 </div>
+                {searchImages_results.length > 0 && (
+                  <div className="flex justify-center py-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLoadMoreImages}
+                      disabled={isLoadingMore}
+                    >
+                      {isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                      Carregar Mais
+                    </Button>
+                  </div>
+                )}
                 {searchImages_results.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Busque por imagens acima</p>
