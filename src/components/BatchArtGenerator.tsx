@@ -614,6 +614,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   // Tracks the last frame where the photo was successfully rendered for robust fallback scaling.
   const photoRenderedFrameRef = useRef(new Map<string, ShapeOverride>());
   const onRegenerateTicketRef = useRef(new Map<string, number>());
+  const pendingRegenerationsRef = useRef(new Map<string, Promise<string>>());
+
   const lockPhotoForArt = useCallback((art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex">, url?: string | null) => {
     if (!url) return;
     photoResolveCacheRef.current.set(getClientArtKey(art), { url, ts: Date.now() });
