@@ -826,6 +826,10 @@ const Index = () => {
               <Mail className="mr-1 h-4 w-4" />
               Enviar
             </Button>
+            <Button size="sm" variant="outline" onClick={() => setIsQuickCreateOpen(true)}>
+              <Sparkles className="mr-1 h-4 w-4" />
+              Alteração
+            </Button>
 
             <Button
               size="sm"
