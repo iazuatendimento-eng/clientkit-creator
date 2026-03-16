@@ -81,6 +81,8 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([array], { type: mime });
 }
 
+const withCacheBuster = (url: string) => `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+
 /**
  * Upload base64/blob files from batch items to Supabase Storage and replace with URLs.
  * Processes uploads in parallel batches of 5.
@@ -109,7 +111,7 @@ async function uploadItemFilesToStorage(items: BatchItem[], batchId: string): Pr
 
           if (!error) {
             const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
-            uploadedFiles.push(urlData.publicUrl);
+            uploadedFiles.push(withCacheBuster(urlData.publicUrl));
           } else {
             console.error("Upload error:", error);
           }
@@ -132,7 +134,7 @@ async function uploadItemFilesToStorage(items: BatchItem[], batchId: string): Pr
           .upload(fileName, blob, { contentType: blob.type, upsert: true });
         if (!error) {
           const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
-          persistedPhotoImage = urlData.publicUrl;
+          persistedPhotoImage = withCacheBuster(urlData.publicUrl);
         } else {
           console.error("Upload photo error:", error);
         }
@@ -162,7 +164,7 @@ async function uploadItemFilesToStorage(items: BatchItem[], batchId: string): Pr
               .upload(fileName, blob, { contentType: blob.type, upsert: true });
             if (!error) {
               const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
-              uploaded.push(urlData.publicUrl);
+              uploaded.push(withCacheBuster(urlData.publicUrl));
             }
           } catch (e) {
             console.error("Failed to upload backgroundImage:", e);
