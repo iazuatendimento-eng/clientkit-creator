@@ -198,6 +198,7 @@ export function ArtCardWithOverlay({
       contactX: v.contactX, contactY: v.contactY,
       contactScaleX: v.contactScaleX, contactScaleY: v.contactScaleY,
       photoScale: v.photoScale,
+      photoFrame: v.photoFrame || undefined,
       shapes: v.shapeOverrides,
     };
 
