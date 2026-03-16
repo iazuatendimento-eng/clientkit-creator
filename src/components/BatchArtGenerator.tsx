@@ -1464,11 +1464,21 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         // Search for relevant image if template has image placeholder
         if (hasImagePlaceholder && !art.photoImage) {
           try {
-            // Build search query from card text + image type (no AI)
+            // Build search query from card text + image type
             const rawParts = [art.imageType, art.cardText].filter(Boolean);
-            const rawQuery = rawParts.join(" ").substring(0, 120);
-            const searchTerms = translateToEnglishLocal(rawQuery);
-            console.log("Searching images (local translate):", searchTerms);
+            const rawQuery = rawParts.join(" ").substring(0, 150);
+            
+            // Try AI translation first, fallback to local dictionary
+            let searchTerms: string;
+            try {
+              const { data: fnData } = await supabase.functions.invoke("translate-text", {
+                body: { text: rawQuery },
+              });
+              searchTerms = fnData?.translatedText || translateToEnglishLocal(rawQuery);
+            } catch {
+              searchTerms = translateToEnglishLocal(rawQuery);
+            }
+            console.log("Searching images:", rawQuery, "→", searchTerms);
             
             const images = await searchImages(searchTerms, 1);
             if (images.length > 0) {
