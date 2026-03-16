@@ -2220,7 +2220,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 );
 
                 // Keep both photo source and last valid preview locked to this card.
-                const lockedPhoto = latestArt?.photoImage || updatedArt.photoImage || null;
+                const lockedPhoto = getEffectivePhotoImage((latestArt || updatedArt) as ClientArt) || null;
                 const lastValidPreview = latestArt?.imageUrl || updatedArt.imageUrl || null;
 
                 const artToRender: ClientArt = {
