@@ -1333,43 +1333,39 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               const clipShape = (el as any).clipShape || "rect";
               const radius = el.borderRadius || 0;
 
-              const lastRenderedFrame = photoRenderedFrameRef.current.get(artKey) || {
-                x: el.x,
-                y: el.y,
-                width: el.width,
-                height: el.height,
-              };
+              const lastRenderedFrame = photoRenderedFrameRef.current.get(artKey);
+              if (lastRenderedFrame) {
+                const srcX = Math.max(0, Math.min(lastRenderedFrame.x, previousPreview.width - 1));
+                const srcY = Math.max(0, Math.min(lastRenderedFrame.y, previousPreview.height - 1));
+                const srcW = Math.max(1, Math.min(lastRenderedFrame.width, previousPreview.width - srcX));
+                const srcH = Math.max(1, Math.min(lastRenderedFrame.height, previousPreview.height - srcY));
 
-              const srcX = Math.max(0, Math.min(lastRenderedFrame.x, previousPreview.width - 1));
-              const srcY = Math.max(0, Math.min(lastRenderedFrame.y, previousPreview.height - 1));
-              const srcW = Math.max(1, Math.min(lastRenderedFrame.width, previousPreview.width - srcX));
-              const srcH = Math.max(1, Math.min(lastRenderedFrame.height, previousPreview.height - srcY));
+                if (clipShape === "circle") {
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
+                  ctx.clip();
+                  ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
+                  ctx.restore();
+                } else if (radius > 0) {
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.roundRect(frameX, frameY, frameW, frameH, radius);
+                  ctx.clip();
+                  ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
+                  ctx.restore();
+                } else {
+                  ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
+                }
 
-              if (clipShape === "circle") {
-                ctx.save();
-                ctx.beginPath();
-                ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
-                ctx.restore();
-              } else if (radius > 0) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.roundRect(frameX, frameY, frameW, frameH, radius);
-                ctx.clip();
-                ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
-                ctx.restore();
-              } else {
-                ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
+                photoRenderedFrameRef.current.set(artKey, {
+                  x: frameX,
+                  y: frameY,
+                  width: frameW,
+                  height: frameH,
+                });
+                usedPreviewFallback = true;
               }
-
-              photoRenderedFrameRef.current.set(artKey, {
-                x: frameX,
-                y: frameY,
-                width: frameW,
-                height: frameH,
-              });
-              usedPreviewFallback = true;
             }
           }
 
