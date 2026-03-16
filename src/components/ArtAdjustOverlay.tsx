@@ -348,8 +348,9 @@ export function ArtAdjustOverlay({
       if (Math.abs(dxClient) < moveThresholdPx && Math.abs(dyClient) < moveThresholdPx) return;
       hasMoved = true;
 
-      const dx = (dxClient / r.width) * template.width;
-      const dy = (dyClient / r.height) * template.height;
+      const resizeBoost = s.mode === "resize" ? 2 : 1;
+      const dx = (dxClient / r.width) * template.width * resizeBoost;
+      const dy = (dyClient / r.height) * template.height * resizeBoost;
 
       if (s.part === "photo") {
         const base = els.photoFrame;
