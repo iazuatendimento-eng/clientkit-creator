@@ -120,10 +120,65 @@ async function uploadItemFilesToStorage(items: BatchItem[], batchId: string): Pr
       // Skip blob: URLs — they can't be uploaded
     }
 
+    // Upload photoImage if it's a base64 data URL
+    let persistedPhotoImage = item.photoImage;
+    if (typeof persistedPhotoImage === "string" && persistedPhotoImage.startsWith("data:")) {
+      try {
+        const blob = dataUrlToBlob(persistedPhotoImage);
+        const ext = blob.type === "image/png" ? "png" : "jpg";
+        const fileName = `batch-previews/${batchId}/${item.cardId}_p${item.pageIndex ?? 0}_photo.${ext}`;
+        const { error } = await supabase.storage
+          .from("card-uploads")
+          .upload(fileName, blob, { contentType: blob.type, upsert: true });
+        if (!error) {
+          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
+          persistedPhotoImage = urlData.publicUrl;
+        } else {
+          console.error("Upload photo error:", error);
+        }
+      } catch (e) {
+        console.error("Failed to upload photoImage:", e);
+      }
+    } else if (typeof persistedPhotoImage === "string" && persistedPhotoImage.startsWith("blob:")) {
+      // Blob URLs can't be uploaded and won't survive page reload — clear them
+      persistedPhotoImage = undefined;
+    }
+
+    // Upload backgroundImages if they are base64 data URLs
+    let persistedBackgroundImages = item.backgroundImages;
+    if (Array.isArray(persistedBackgroundImages)) {
+      const uploaded: string[] = [];
+      for (let bi = 0; bi < persistedBackgroundImages.length; bi++) {
+        const bg = persistedBackgroundImages[bi];
+        if (typeof bg === "string" && bg.startsWith("http")) {
+          uploaded.push(bg);
+        } else if (typeof bg === "string" && bg.startsWith("data:")) {
+          try {
+            const blob = dataUrlToBlob(bg);
+            const ext = blob.type === "image/png" ? "png" : "jpg";
+            const fileName = `batch-previews/${batchId}/${item.cardId}_p${item.pageIndex ?? 0}_bg${bi}.${ext}`;
+            const { error } = await supabase.storage
+              .from("card-uploads")
+              .upload(fileName, blob, { contentType: blob.type, upsert: true });
+            if (!error) {
+              const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
+              uploaded.push(urlData.publicUrl);
+            }
+          } catch (e) {
+            console.error("Failed to upload backgroundImage:", e);
+          }
+        }
+        // Skip blob: URLs
+      }
+      persistedBackgroundImages = uploaded.length > 0 ? uploaded : undefined;
+    }
+
     results.push({
       ...item,
       brandKit: sanitizeBrandKitForStorage(item.brandKit),
       files: uploadedFiles,
+      photoImage: persistedPhotoImage,
+      backgroundImages: persistedBackgroundImages,
       previewVideoUrls: (item.previewVideoUrls || []).map(u =>
         typeof u === "string" && (u.startsWith("data:") || u.startsWith("blob:")) ? null : u
       ),
