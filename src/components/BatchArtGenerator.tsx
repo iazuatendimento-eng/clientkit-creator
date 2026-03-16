@@ -503,7 +503,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         backgroundImage: item.backgroundImages?.[0],
         photoImage: itemData.photoImage || coverImageMap[item.cardId] || undefined,
         photoOffset: itemData.photoOffset,
-        elementOverrides: itemData.elementOverrides,
+        elementOverrides: sanitizeElementOverrides(itemData.elementOverrides),
         pageIndex: itemData.pageIndex,
         totalPages: itemData.totalPages,
         imageType: itemData.imageType || imageTypeMap[item.clientId] || undefined,
