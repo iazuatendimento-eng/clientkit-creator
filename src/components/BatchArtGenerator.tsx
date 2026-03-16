@@ -1945,7 +1945,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         brandKit: sanitizeBrandKitForStorage(art.brandKit),
         files: art.imageUrl ? [art.imageUrl] : [],
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
-        photoImage: art.photoImage,
+        photoImage: getEffectivePhotoImage(art),
         photoOffset: art.photoOffset,
         elementOverrides: art.elementOverrides,
         pageIndex: art.pageIndex,
