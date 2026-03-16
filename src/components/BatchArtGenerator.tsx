@@ -1262,22 +1262,55 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
         } else {
-          missingPhotoSource = true;
-          // Visible placeholder so resize never looks like "sumiu tudo"
-          ctx.save();
-          ctx.setLineDash([10, 8]);
-          ctx.lineWidth = Math.max(2, Math.min(frameW, frameH) * 0.015);
-          ctx.strokeStyle = "rgba(255,255,255,0.9)";
-          ctx.strokeRect(frameX, frameY, frameW, frameH);
-          ctx.setLineDash([]);
-          ctx.fillStyle = "rgba(0,0,0,0.45)";
-          ctx.fillRect(frameX, frameY, frameW, frameH);
-          ctx.fillStyle = "rgba(255,255,255,0.95)";
-          ctx.textAlign = "center";
-          ctx.font = `${Math.max(14, Math.round(Math.min(frameW, frameH) * 0.08))}px Arial`;
-          ctx.fillText("IMAGEM", frameX + frameW / 2, frameY + frameH / 2);
-          ctx.textAlign = "left";
-          ctx.restore();
+          // Fallback: reuse the previous rendered preview area so logo/text/photo-frame
+          // updates still appear even when the original photo source is temporarily unavailable.
+          let usedPreviewFallback = false;
+          if (art.imageUrl) {
+            const previousPreview = await loadImage(art.imageUrl);
+            if (previousPreview) {
+              const clipShape = (el as any).clipShape || "rect";
+              const radius = el.borderRadius || 0;
+
+              if (clipShape === "circle") {
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(previousPreview, frameX, frameY, frameW, frameH, frameX, frameY, frameW, frameH);
+                ctx.restore();
+              } else if (radius > 0) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(frameX, frameY, frameW, frameH, radius);
+                ctx.clip();
+                ctx.drawImage(previousPreview, frameX, frameY, frameW, frameH, frameX, frameY, frameW, frameH);
+                ctx.restore();
+              } else {
+                ctx.drawImage(previousPreview, frameX, frameY, frameW, frameH, frameX, frameY, frameW, frameH);
+              }
+
+              usedPreviewFallback = true;
+            }
+          }
+
+          if (!usedPreviewFallback) {
+            missingPhotoSource = true;
+            // Visible placeholder only when we also fail to reuse previous preview
+            ctx.save();
+            ctx.setLineDash([10, 8]);
+            ctx.lineWidth = Math.max(2, Math.min(frameW, frameH) * 0.015);
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.strokeRect(frameX, frameY, frameW, frameH);
+            ctx.setLineDash([]);
+            ctx.fillStyle = "rgba(0,0,0,0.45)";
+            ctx.fillRect(frameX, frameY, frameW, frameH);
+            ctx.fillStyle = "rgba(255,255,255,0.95)";
+            ctx.textAlign = "center";
+            ctx.font = `${Math.max(14, Math.round(Math.min(frameW, frameH) * 0.08))}px Arial`;
+            ctx.fillText("IMAGEM", frameX + frameW / 2, frameY + frameH / 2);
+            ctx.textAlign = "left";
+            ctx.restore();
+          }
         }
       } else if (el.type === "logo") {
         // Logo uses PNG[0] from brand kit with optional overrides
