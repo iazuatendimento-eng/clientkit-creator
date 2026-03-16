@@ -1783,7 +1783,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
         contactX: ov.contactX, contactY: ov.contactY,
         contactScale: ov.contactScale, contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
-        photoScale: ov.photoScale,
+        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
         shapes: ov.shapeOverrides,
       }
     };
