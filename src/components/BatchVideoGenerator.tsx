@@ -2867,6 +2867,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             </Badge>
           </div>
           
+          {/* Email subject input */}
+          <Input
+            placeholder="Título do e-mail (opcional)"
+            value={emailSubject}
+            onChange={(e) => setEmailSubject(e.target.value)}
+            className="w-56 h-9 text-sm"
+          />
+
           {/* Save Draft button */}
           {clientVideos.some((v) => v.pages.length > 0) && (
             <Button
