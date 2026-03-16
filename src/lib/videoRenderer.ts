@@ -513,7 +513,7 @@ export async function generatePageImage(
       const baseFontSize = el.fontSize || 48;
       const fontSize = Math.round(baseFontSize * (textAdjustment.textScale / 100));
       const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
-      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.font = `900 ${fontSize}px ${fontFamily}`;
       const displayText = isSignature ? (el.text || "") : text;
       const align = el.textAlign || "left";
       ctx.textAlign = align;

@@ -300,7 +300,7 @@ async function renderArt(
         const fontSizeMultiplier = (overrides.textFontSize || 100) / 100;
         const fontSize = Math.round(baseFontSize * fontSizeMultiplier);
         const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
-        ctx.font = `${fontSize}px ${fontFamily}`;
+        ctx.font = `900 ${fontSize}px ${fontFamily}`;
         const text = cardText || el.text || "";
         const textOffsetX = overrides.textX || 0;
         const textOffsetY = overrides.textY || 0;
