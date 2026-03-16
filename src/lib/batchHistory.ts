@@ -100,7 +100,7 @@ export async function saveBatchGeneration(
         .from("batch_generations")
         .update({
           template_snapshot: templateSnapshot,
-          items: items as any,
+          items: cleanItems as any,
         })
         .eq("id", existingId);
 
