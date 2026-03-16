@@ -614,6 +614,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   // Tracks the last frame where the photo was successfully rendered for robust fallback scaling.
   const photoRenderedFrameRef = useRef(new Map<string, ShapeOverride>());
   const onRegenerateTicketRef = useRef(new Map<string, number>());
+  const pendingRegenerationsRef = useRef(new Map<string, Promise<string>>());
+
   const lockPhotoForArt = useCallback((art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex">, url?: string | null) => {
     if (!url) return;
     photoResolveCacheRef.current.set(getClientArtKey(art), { url, ts: Date.now() });
@@ -1773,6 +1775,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const clientArtsRef = useRef(clientArts);
   useEffect(() => { clientArtsRef.current = clientArts; });
 
+  const waitForPendingRegenerations = useCallback(async () => {
+    const pending = Array.from(pendingRegenerationsRef.current.values());
+    if (pending.length === 0) return;
+    await Promise.allSettled(pending);
+  }, []);
+
   // Live preview regeneration using refs (always current values)
   const regenerateFromRefs = useCallback(async () => {
     const art = selectedArtRef.current;
@@ -1926,6 +1934,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   // Save current state as draft to history (without finalizing)
   const handleSaveDraft = async () => {
+    await waitForPendingRegenerations();
     const currentArts = clientArtsRef.current;
     const artsWithImages = currentArts.filter((a) => a.imageUrl);
     
@@ -2217,57 +2226,79 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 const currentTicket = (onRegenerateTicketRef.current.get(artKey) ?? 0) + 1;
                 onRegenerateTicketRef.current.set(artKey, currentTicket);
 
-                // Always get the LATEST card state from ref to avoid stale closure issues
-                const latestArt = clientArtsRef.current.find((a) =>
-                  a.clientId === updatedArt.clientId &&
-                  a.cardId === updatedArt.cardId &&
-                  (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
-                );
+                const regenerationPromise = (async () => {
+                  // Always get the LATEST card state from ref to avoid stale closure issues
+                  const latestArt = clientArtsRef.current.find((a) =>
+                    a.clientId === updatedArt.clientId &&
+                    a.cardId === updatedArt.cardId &&
+                    (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
+                  );
 
-                // Keep both photo source and last valid preview locked to this card.
-                const lockedPhoto = getEffectivePhotoImage(latestArt || updatedArt) || null;
-                const lastValidPreview = latestArt?.imageUrl || updatedArt.imageUrl || null;
+                  // Keep both photo source and last valid preview locked to this card.
+                  const lockedPhoto = getEffectivePhotoImage(latestArt || updatedArt) || null;
+                  const lastValidPreview = latestArt?.imageUrl || updatedArt.imageUrl || null;
 
-                const artToRender: ClientArt = {
-                  ...(latestArt || updatedArt),
-                  ...updatedArt,
-                  imageUrl: lastValidPreview,
-                  photoImage: lockedPhoto || undefined,
-                };
+                  const artToRender: ClientArt = {
+                    ...(latestArt || updatedArt),
+                    ...updatedArt,
+                    imageUrl: lastValidPreview,
+                    photoImage: lockedPhoto || undefined,
+                  };
 
-                // During in-card adjustments, do not auto-resolve/search another photo.
-                // If photo source is temporarily unavailable, render keeps previous image URL.
+                  // Persist and lock the photo source whenever it exists to prevent future swaps.
+                  if (artToRender.photoImage) {
+                    lockPhotoForArt(updatedArt, artToRender.photoImage);
+                    setClientArts((prev) => {
+                      const next = [...prev];
+                      const targetIndex = next.findIndex((a) =>
+                        a.clientId === updatedArt.clientId &&
+                        a.cardId === updatedArt.cardId &&
+                        (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
+                      );
+                      if (targetIndex !== -1 && next[targetIndex].photoImage !== artToRender.photoImage) {
+                        next[targetIndex] = { ...next[targetIndex], photoImage: artToRender.photoImage };
+                      }
+                      return next;
+                    });
+                  }
 
+                  const generated = await generateArtForClient(artToRender, {
+                    allowAutoPhotoResolve: true,
+                    allowPhotoSearch: false,
+                  });
 
-                // Persist and lock the photo source whenever it exists to prevent future swaps.
-                if (artToRender.photoImage) {
-                  lockPhotoForArt(updatedArt, artToRender.photoImage);
+                  // Ignore stale generations and keep newest preview
+                  if (onRegenerateTicketRef.current.get(artKey) !== currentTicket) {
+                    const newest = clientArtsRef.current.find((a) => getClientArtKey(a) === artKey)?.imageUrl;
+                    return newest || generated;
+                  }
+
+                  // Persist latest rendered preview in parent state immediately
                   setClientArts((prev) => {
                     const next = [...prev];
-                    const targetIndex = next.findIndex((a) =>
-                      a.clientId === updatedArt.clientId &&
-                      a.cardId === updatedArt.cardId &&
-                      (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
-                    );
-                    if (targetIndex !== -1 && next[targetIndex].photoImage !== artToRender.photoImage) {
-                      next[targetIndex] = { ...next[targetIndex], photoImage: artToRender.photoImage };
+                    const targetIndex = next.findIndex((a) => getClientArtKey(a) === artKey);
+                    if (targetIndex !== -1) {
+                      next[targetIndex] = {
+                        ...next[targetIndex],
+                        imageUrl: generated,
+                        photoOffset: updatedArt.photoOffset,
+                        elementOverrides: updatedArt.elementOverrides,
+                      };
                     }
                     return next;
                   });
+
+                  return generated;
+                })();
+
+                pendingRegenerationsRef.current.set(artKey, regenerationPromise);
+                try {
+                  return await regenerationPromise;
+                } finally {
+                  if (pendingRegenerationsRef.current.get(artKey) === regenerationPromise) {
+                    pendingRegenerationsRef.current.delete(artKey);
+                  }
                 }
-
-                const generated = await generateArtForClient(artToRender, {
-                  allowAutoPhotoResolve: true,
-                  allowPhotoSearch: false,
-                });
-
-                // Ignore stale generations and keep newest preview
-                if (onRegenerateTicketRef.current.get(artKey) !== currentTicket) {
-                  const newest = clientArtsRef.current.find((a) => getClientArtKey(a) === artKey)?.imageUrl;
-                  return newest || generated;
-                }
-
-                return generated;
               }}
               onApprove={handleApprove}
               onReject={handleReject}
