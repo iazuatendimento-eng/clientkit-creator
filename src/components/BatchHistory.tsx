@@ -164,8 +164,8 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge variant="secondary">
-                      <Film className="mr-1 h-3 w-3" />
-                      Vídeo
+                      {batch.type === "art" ? <ImageIcon className="mr-1 h-3 w-3" /> : <Film className="mr-1 h-3 w-3" />}
+                      {batch.type === "art" ? "Arte" : "Vídeo"}
                     </Badge>
                     {teamName && (
                       <Badge variant="outline" className="text-xs">
