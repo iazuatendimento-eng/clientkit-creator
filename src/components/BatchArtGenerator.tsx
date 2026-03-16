@@ -2201,6 +2201,16 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             <Badge className="bg-green-500">{approvedCount} aprovadas</Badge>
           </div>
           
+          {/* Email subject input */}
+          {clientArts.some((a) => a.imageUrl) && (
+            <Input
+              placeholder="Título do e-mail (opcional)"
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              className="w-56 h-9 text-sm"
+            />
+          )}
+
           {/* Save Draft button - always visible when arts are generated */}
           {clientArts.some((a) => a.imageUrl) && (
             <Button
