@@ -1964,12 +1964,13 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Arial">Arial</SelectItem>
+                          <SelectItem value="Impact">Impact</SelectItem>
                           <SelectItem value="Verdana">Verdana</SelectItem>
                           <SelectItem value="Georgia">Georgia</SelectItem>
                           <SelectItem value="Times New Roman">Times New Roman</SelectItem>
                           <SelectItem value="Courier New">Courier New</SelectItem>
                           <SelectItem value="Montserrat">Montserrat</SelectItem>
-                          <SelectItem value="Montserrat Arabic">Montserrat Arabic</SelectItem>
+                          <SelectItem value="Montserrat Arabic">Montserrat Arabic (ExtraBold)</SelectItem>
                           <SelectItem value="Roboto">Roboto</SelectItem>
                           <SelectItem value="Open Sans">Open Sans</SelectItem>
                           <SelectItem value="Poppins">Poppins</SelectItem>
