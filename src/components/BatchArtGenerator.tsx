@@ -619,6 +619,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     photoResolveCacheRef.current.set(getClientArtKey(art), { url, ts: Date.now() });
   }, []);
 
+  const getEffectivePhotoImage = useCallback(
+    (art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex"> & { photoImage?: string }) => {
+      return art.photoImage || photoResolveCacheRef.current.get(getClientArtKey(art))?.url || undefined;
+    },
+    []
+  );
+
   const resolvePhotoImageForArt = useCallback(
     async (art: ClientArt, options?: { allowSearch?: boolean }): Promise<string | null> => {
       const key = getClientArtKey(art);
