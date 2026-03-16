@@ -8,6 +8,7 @@ import {
   Trash2,
   Edit,
   Film,
+  Image as ImageIcon,
   Loader2,
   Calendar,
   Search,
@@ -155,7 +156,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                 {/* Icon */}
                 <div className="flex items-center shrink-0">
                   <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                    <Film className="h-6 w-6 text-muted-foreground" />
+                    {batch.type === "art" ? <ImageIcon className="h-6 w-6 text-muted-foreground" /> : <Film className="h-6 w-6 text-muted-foreground" />}
                   </div>
                 </div>
 
@@ -163,8 +164,8 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge variant="secondary">
-                      <Film className="mr-1 h-3 w-3" />
-                      Vídeo
+                      {batch.type === "art" ? <ImageIcon className="mr-1 h-3 w-3" /> : <Film className="mr-1 h-3 w-3" />}
+                      {batch.type === "art" ? "Arte" : "Vídeo"}
                     </Badge>
                     {teamName && (
                       <Badge variant="outline" className="text-xs">
