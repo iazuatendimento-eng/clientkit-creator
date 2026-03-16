@@ -1930,7 +1930,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     try {
       // Save ALL clientArts preserving their exact order
-      const batchItems: BatchItem[] = clientArts.map((art) => ({
+      const batchItems: BatchItem[] = currentArts.map((art) => ({
         cardId: art.cardId,
         clientId: art.clientId,
         clientName: art.clientName,
