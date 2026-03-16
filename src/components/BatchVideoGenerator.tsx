@@ -2662,7 +2662,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const { error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails,
-            subject: `Vídeo - ${videos[0].company || videos[0].clientName}`,
+            subject: emailSubject.trim() || `Vídeo - ${videos[0].company || videos[0].clientName}`,
             mediaUrls,
             mediaUrl: mediaUrls[0],
             mediaType: "video",
