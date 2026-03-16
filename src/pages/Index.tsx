@@ -88,6 +88,8 @@ const Index = () => {
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [quickCreateClientId, setQuickCreateClientId] = useState<string>("");
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
