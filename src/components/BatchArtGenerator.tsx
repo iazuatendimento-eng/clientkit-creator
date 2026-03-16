@@ -657,7 +657,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   const generateArtForClient = async (
     art: ClientArt,
-    options?: { allowAutoPhotoResolve?: boolean }
+    options?: { allowAutoPhotoResolve?: boolean; allowPhotoSearch?: boolean }
   ): Promise<string> => {
     console.log("Generating art for:", art.clientName, "Template elements:", template.elements.length);
 
@@ -780,13 +780,14 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     };
 
     const allowAutoPhotoResolve = options?.allowAutoPhotoResolve ?? true;
+    const allowPhotoSearch = options?.allowPhotoSearch ?? allowAutoPhotoResolve;
     const artKey = getClientArtKey(art);
     const cachedPhotoImage = photoResolveCacheRef.current.get(artKey)?.url ?? null;
     const resolvedPhotoImage =
       art.photoImage ||
       cachedPhotoImage ||
       (allowAutoPhotoResolve
-        ? await resolvePhotoImageForArt(art, { allowSearch: true })
+        ? await resolvePhotoImageForArt(art, { allowSearch: allowPhotoSearch })
         : await resolvePhotoImageForArt(art, { allowSearch: false }));
 
     // Always keep the cache populated so future resize/drag calls find the photo
