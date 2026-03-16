@@ -111,7 +111,7 @@ async function uploadItemFilesToStorage(items: BatchItem[], batchId: string): Pr
 
           if (!error) {
             const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
-            uploadedFiles.push(urlData.publicUrl);
+            uploadedFiles.push(withCacheBuster(urlData.publicUrl));
           } else {
             console.error("Upload error:", error);
           }
