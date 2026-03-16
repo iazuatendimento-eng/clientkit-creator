@@ -742,13 +742,6 @@ export function ArtAdjustOverlay({
           isActive ? "border-primary" : "border-primary/40 hover:border-primary/70"
         )} />
 
-        {/* Label badge */}
-        <div className={cn(
-          "absolute -top-5 left-1/2 -translate-x-1/2 rounded-sm px-1.5 py-0.5 text-[9px] font-medium shadow-sm whitespace-nowrap",
-          isActive ? "bg-primary text-primary-foreground" : "bg-background/90 text-muted-foreground border border-border/50"
-        )}>
-          {label}
-        </div>
 
         {isActive && resizable && (
           <>
