@@ -1531,7 +1531,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
             photoImage: getEffectivePhotoImage(art),
             photoOffset: art.photoOffset,
-            elementOverrides: sanitizeElementOverrides(art.elementOverrides),
+            elementOverrides: art.elementOverrides,
             pageIndex: art.pageIndex,
             totalPages: art.totalPages,
             imageType: art.imageType,
