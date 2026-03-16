@@ -1714,20 +1714,20 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setPhotoScale(art.elementOverrides?.photoScale || 100);
     setPhotoFrame(art.elementOverrides?.photoFrame || null);
     // Load element overrides
-    setLogoX(cleanOverrides?.logoX || 0);
-    setLogoY(cleanOverrides?.logoY || 0);
-    setLogoScale(cleanOverrides?.logoScale || 100);
-    setLogoScaleX(cleanOverrides?.logoScaleX || cleanOverrides?.logoScale || 100);
-    setLogoScaleY(cleanOverrides?.logoScaleY || cleanOverrides?.logoScale || 100);
-    setTextX(cleanOverrides?.textX || 0);
-    setTextY(cleanOverrides?.textY || 0);
-    setTextFontSize(cleanOverrides?.textFontSize || 100);
-    setContactX(cleanOverrides?.contactX || 0);
-    setContactY(cleanOverrides?.contactY || 0);
-    setContactScale(cleanOverrides?.contactScale || 100);
-    setContactScaleX(cleanOverrides?.contactScaleX || cleanOverrides?.contactScale || 100);
-    setContactScaleY(cleanOverrides?.contactScaleY || cleanOverrides?.contactScale || 100);
-    setShapeOverrides(cleanOverrides?.shapes || {});
+    setLogoX(art.elementOverrides?.logoX || 0);
+    setLogoY(art.elementOverrides?.logoY || 0);
+    setLogoScale(art.elementOverrides?.logoScale || 100);
+    setLogoScaleX(art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100);
+    setLogoScaleY(art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100);
+    setTextX(art.elementOverrides?.textX || 0);
+    setTextY(art.elementOverrides?.textY || 0);
+    setTextFontSize(art.elementOverrides?.textFontSize || 100);
+    setContactX(art.elementOverrides?.contactX || 0);
+    setContactY(art.elementOverrides?.contactY || 0);
+    setContactScale(art.elementOverrides?.contactScale || 100);
+    setContactScaleX(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
+    setContactScaleY(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
+    setShapeOverrides(art.elementOverrides?.shapes || {});
     setIsAdjustDialogOpen(true);
   };
 
