@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History, Trash2, Mail, Sparkles } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History, Trash2, Mail, Sparkles, Layers } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
 import { QuickCreate } from "@/components/QuickCreate";
