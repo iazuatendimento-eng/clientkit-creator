@@ -273,6 +273,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmails, setIsSendingEmails] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
   const [selectedArt, setSelectedArt] = useState<ClientArt | null>(null);
   const [selectedArtIndex, setSelectedArtIndex] = useState<number>(-1);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
