@@ -117,7 +117,7 @@ export async function saveBatchGeneration(
       .insert({
         type,
         template_snapshot: templateSnapshot,
-        items: items as any,
+        items: cleanItems as any,
         created_by: user.id,
       })
       .select("id")
