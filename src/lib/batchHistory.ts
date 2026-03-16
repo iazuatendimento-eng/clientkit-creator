@@ -69,12 +69,27 @@ export interface BatchGeneration {
   created_at: string;
 }
 
+/**
+ * Strip base64 data URLs and blob URLs from batch item files before persisting.
+ */
+function sanitizeItemsForStorage(items: BatchItem[]): BatchItem[] {
+  return items.map(item => ({
+    ...item,
+    brandKit: sanitizeBrandKitForStorage(item.brandKit),
+    files: (item.files || []).filter(f => typeof f === "string" && f.startsWith("http")),
+    previewVideoUrls: (item.previewVideoUrls || []).map(u =>
+      typeof u === "string" && (u.startsWith("data:") || u.startsWith("blob:")) ? null : u
+    ),
+  }));
+}
+
 export async function saveBatchGeneration(
   type: "art" | "video",
   templateSnapshot: any,
   items: BatchItem[],
   existingId?: string
 ): Promise<string | null> {
+  const cleanItems = sanitizeItemsForStorage(items);
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
