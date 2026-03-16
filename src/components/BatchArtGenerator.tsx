@@ -480,7 +480,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       };
     };
 
-    const arts: ClientArt[] = batch.items.map((item) => {
+    const arts: ClientArt[] = batchItems.map((item) => {
       const itemData = item as any;
 
       return {
