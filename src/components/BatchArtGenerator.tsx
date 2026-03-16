@@ -1916,7 +1916,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   // Save current state as draft to history (without finalizing)
   const handleSaveDraft = async () => {
-    const artsWithImages = clientArts.filter((a) => a.imageUrl);
+    const currentArts = clientArtsRef.current;
+    const artsWithImages = currentArts.filter((a) => a.imageUrl);
     
     if (artsWithImages.length === 0) {
       toast({
@@ -1929,7 +1930,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     try {
       // Save ALL clientArts preserving their exact order
-      const batchItems: BatchItem[] = clientArts.map((art) => ({
+      const batchItems: BatchItem[] = currentArts.map((art) => ({
         cardId: art.cardId,
         clientId: art.clientId,
         clientName: art.clientName,
