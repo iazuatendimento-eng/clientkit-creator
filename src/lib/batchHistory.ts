@@ -164,7 +164,7 @@ async function uploadItemFilesToStorage(items: BatchItem[], batchId: string): Pr
               .upload(fileName, blob, { contentType: blob.type, upsert: true });
             if (!error) {
               const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
-              uploaded.push(urlData.publicUrl);
+              uploaded.push(withCacheBuster(urlData.publicUrl));
             }
           } catch (e) {
             console.error("Failed to upload backgroundImage:", e);
