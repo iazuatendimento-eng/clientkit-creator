@@ -219,7 +219,9 @@ export function ArtCardWithOverlay({
     regenerateRequestRef.current = requestId;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
+
+    // Fire immediately (no debounce) for real-time feel
+    const runRegenerate = async () => {
       setIsRegenerating(true);
       try {
         const newImageUrl = await onRegenerate(updatedArt);
@@ -239,7 +241,8 @@ export function ArtCardWithOverlay({
           setIsRegenerating(false);
         }
       }
-    }, 150);
+    };
+    runRegenerate();
   }, [art, index, onArtUpdate, onRegenerate]);
 
   const showOverlay = art.imageUrl && art.status === "pending";
