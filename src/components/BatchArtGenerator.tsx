@@ -1247,8 +1247,41 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           : Math.max(0, Math.min(el.y, template.height - frameH));
 
         const directTemplatePhoto = typeof (el as any).imageUrl === "string" ? (el as any).imageUrl : null;
-        const resolvedPhoto = resolvedPhotoImage || art.backgroundImage || directTemplatePhoto;
-        const img = resolvedPhoto ? await loadImage(resolvedPhoto) : null;
+
+        // Try multiple sources before falling back to previous preview pixels.
+        // This avoids visual artifacts (duplicated logo/text) when one URL expires/fails.
+        const photoCandidates = [resolvedPhotoImage, art.backgroundImage, directTemplatePhoto]
+          .filter((u): u is string => typeof u === "string" && u.length > 0);
+
+        let img: HTMLImageElement | null = null;
+        let usedPhotoUrl: string | null = null;
+        for (const candidate of photoCandidates) {
+          img = await loadImage(candidate);
+          if (img) {
+            usedPhotoUrl = candidate;
+            break;
+          }
+        }
+
+        // If all direct candidates failed, force a fresh resolve (ignoring stale candidate order)
+        // before using preview pixel-slicing fallback.
+        if (!img && allowAutoPhotoResolve) {
+          const refreshed = await resolvePhotoImageForArt(
+            { ...art, photoImage: undefined },
+            { allowSearch: allowPhotoSearch }
+          );
+          if (refreshed) {
+            const refreshedImg = await loadImage(refreshed);
+            if (refreshedImg) {
+              img = refreshedImg;
+              usedPhotoUrl = refreshed;
+            }
+          }
+        }
+
+        if (usedPhotoUrl) {
+          photoResolveCacheRef.current.set(artKey, { url: usedPhotoUrl, ts: Date.now() });
+        }
 
         if (img) {
           const offsetRaw = art.photoOffset || { x: 0, y: 0 };
