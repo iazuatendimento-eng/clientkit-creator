@@ -9,13 +9,6 @@ import { ArrowLeft, Save, User, CreditCard, QrCode, Calendar, DollarSign, Plus, 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createClientUpload, getClientUploads, deleteClientUpload, type ClientUpload } from "@/lib/clientDatabase";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface Team {
   id: string;
