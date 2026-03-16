@@ -1252,15 +1252,10 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
       });
       setSelectedElement(clickedElement?.id || null);
 
-      // Direct edit on single click
-      if (clickedElement) {
-        if (clickedElement.type === "text") {
-          setInlineEditId(clickedElement.id);
-          setInlineEditText(clickedElement.text || "");
-        } else if (["image", "logo", "mascot", "contact"].includes(clickedElement.type)) {
-          setDirectImageTargetId(clickedElement.id);
-          directImageInputRef.current?.click();
-        }
+      // Single click only selects; double-click opens edit/file picker
+      if (clickedElement && clickedElement.type === "text") {
+        setInlineEditId(clickedElement.id);
+        setInlineEditText(clickedElement.text || "");
       }
     } else if (selectedTool === "rect") {
       addElement({
