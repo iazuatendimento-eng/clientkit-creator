@@ -2226,57 +2226,79 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 const currentTicket = (onRegenerateTicketRef.current.get(artKey) ?? 0) + 1;
                 onRegenerateTicketRef.current.set(artKey, currentTicket);
 
-                // Always get the LATEST card state from ref to avoid stale closure issues
-                const latestArt = clientArtsRef.current.find((a) =>
-                  a.clientId === updatedArt.clientId &&
-                  a.cardId === updatedArt.cardId &&
-                  (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
-                );
+                const regenerationPromise = (async () => {
+                  // Always get the LATEST card state from ref to avoid stale closure issues
+                  const latestArt = clientArtsRef.current.find((a) =>
+                    a.clientId === updatedArt.clientId &&
+                    a.cardId === updatedArt.cardId &&
+                    (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
+                  );
 
-                // Keep both photo source and last valid preview locked to this card.
-                const lockedPhoto = getEffectivePhotoImage(latestArt || updatedArt) || null;
-                const lastValidPreview = latestArt?.imageUrl || updatedArt.imageUrl || null;
+                  // Keep both photo source and last valid preview locked to this card.
+                  const lockedPhoto = getEffectivePhotoImage(latestArt || updatedArt) || null;
+                  const lastValidPreview = latestArt?.imageUrl || updatedArt.imageUrl || null;
 
-                const artToRender: ClientArt = {
-                  ...(latestArt || updatedArt),
-                  ...updatedArt,
-                  imageUrl: lastValidPreview,
-                  photoImage: lockedPhoto || undefined,
-                };
+                  const artToRender: ClientArt = {
+                    ...(latestArt || updatedArt),
+                    ...updatedArt,
+                    imageUrl: lastValidPreview,
+                    photoImage: lockedPhoto || undefined,
+                  };
 
-                // During in-card adjustments, do not auto-resolve/search another photo.
-                // If photo source is temporarily unavailable, render keeps previous image URL.
+                  // Persist and lock the photo source whenever it exists to prevent future swaps.
+                  if (artToRender.photoImage) {
+                    lockPhotoForArt(updatedArt, artToRender.photoImage);
+                    setClientArts((prev) => {
+                      const next = [...prev];
+                      const targetIndex = next.findIndex((a) =>
+                        a.clientId === updatedArt.clientId &&
+                        a.cardId === updatedArt.cardId &&
+                        (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
+                      );
+                      if (targetIndex !== -1 && next[targetIndex].photoImage !== artToRender.photoImage) {
+                        next[targetIndex] = { ...next[targetIndex], photoImage: artToRender.photoImage };
+                      }
+                      return next;
+                    });
+                  }
 
+                  const generated = await generateArtForClient(artToRender, {
+                    allowAutoPhotoResolve: true,
+                    allowPhotoSearch: false,
+                  });
 
-                // Persist and lock the photo source whenever it exists to prevent future swaps.
-                if (artToRender.photoImage) {
-                  lockPhotoForArt(updatedArt, artToRender.photoImage);
+                  // Ignore stale generations and keep newest preview
+                  if (onRegenerateTicketRef.current.get(artKey) !== currentTicket) {
+                    const newest = clientArtsRef.current.find((a) => getClientArtKey(a) === artKey)?.imageUrl;
+                    return newest || generated;
+                  }
+
+                  // Persist latest rendered preview in parent state immediately
                   setClientArts((prev) => {
                     const next = [...prev];
-                    const targetIndex = next.findIndex((a) =>
-                      a.clientId === updatedArt.clientId &&
-                      a.cardId === updatedArt.cardId &&
-                      (a.pageIndex ?? 0) === (updatedArt.pageIndex ?? 0)
-                    );
-                    if (targetIndex !== -1 && next[targetIndex].photoImage !== artToRender.photoImage) {
-                      next[targetIndex] = { ...next[targetIndex], photoImage: artToRender.photoImage };
+                    const targetIndex = next.findIndex((a) => getClientArtKey(a) === artKey);
+                    if (targetIndex !== -1) {
+                      next[targetIndex] = {
+                        ...next[targetIndex],
+                        imageUrl: generated,
+                        photoOffset: updatedArt.photoOffset,
+                        elementOverrides: updatedArt.elementOverrides,
+                      };
                     }
                     return next;
                   });
+
+                  return generated;
+                })();
+
+                pendingRegenerationsRef.current.set(artKey, regenerationPromise);
+                try {
+                  return await regenerationPromise;
+                } finally {
+                  if (pendingRegenerationsRef.current.get(artKey) === regenerationPromise) {
+                    pendingRegenerationsRef.current.delete(artKey);
+                  }
                 }
-
-                const generated = await generateArtForClient(artToRender, {
-                  allowAutoPhotoResolve: true,
-                  allowPhotoSearch: false,
-                });
-
-                // Ignore stale generations and keep newest preview
-                if (onRegenerateTicketRef.current.get(artKey) !== currentTicket) {
-                  const newest = clientArtsRef.current.find((a) => getClientArtKey(a) === artKey)?.imageUrl;
-                  return newest || generated;
-                }
-
-                return generated;
               }}
               onApprove={handleApprove}
               onReject={handleReject}
