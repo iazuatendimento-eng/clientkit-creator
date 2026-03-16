@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent";
@@ -814,10 +813,7 @@ export function ArtAdjustOverlay({
         <img
           src={previewUrl}
           alt="Prévia da arte gerada"
-          className={cn(
-            "absolute inset-0 h-full w-full object-cover pointer-events-none select-none",
-            isBusy ? "opacity-80" : "opacity-100"
-          )}
+          className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
           draggable={false}
         />
       ) : (
@@ -846,12 +842,6 @@ export function ArtAdjustOverlay({
           />
         ))}
       </div>
-
-      {isBusy && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/20 pointer-events-none">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      )}
     </div>
   );
 }
