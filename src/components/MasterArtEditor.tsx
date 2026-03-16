@@ -1941,6 +1941,47 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                       />
                     </div>
                     <div>
+                      <Label className="text-xs">Fonte</Label>
+                      <Select
+                        value={selectedEl.fontFamily || "Arial"}
+                        onValueChange={(v) => {
+                          updateSelectedElement({ fontFamily: v });
+                          // Load Google Font dynamically
+                          if (!["Arial", "Verdana", "Georgia", "Times New Roman", "Courier New"].includes(v)) {
+                            const id = `google-font-${v.replace(/\s+/g, "-")}`;
+                            if (!document.getElementById(id)) {
+                              const link = document.createElement("link");
+                              link.id = id;
+                              link.rel = "stylesheet";
+                              link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(v)}:wght@400;700&display=swap`;
+                              document.head.appendChild(link);
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Arial">Arial</SelectItem>
+                          <SelectItem value="Verdana">Verdana</SelectItem>
+                          <SelectItem value="Georgia">Georgia</SelectItem>
+                          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                          <SelectItem value="Courier New">Courier New</SelectItem>
+                          <SelectItem value="Montserrat">Montserrat</SelectItem>
+                          <SelectItem value="Montserrat Arabic">Montserrat Arabic</SelectItem>
+                          <SelectItem value="Roboto">Roboto</SelectItem>
+                          <SelectItem value="Open Sans">Open Sans</SelectItem>
+                          <SelectItem value="Poppins">Poppins</SelectItem>
+                          <SelectItem value="Lato">Lato</SelectItem>
+                          <SelectItem value="Oswald">Oswald</SelectItem>
+                          <SelectItem value="Playfair Display">Playfair Display</SelectItem>
+                          <SelectItem value="Raleway">Raleway</SelectItem>
+                          <SelectItem value="Bebas Neue">Bebas Neue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
                       <Label className="text-xs">Tamanho: {selectedEl.fontSize}px</Label>
                       <Slider
                         value={[selectedEl.fontSize || 32]}
