@@ -50,11 +50,11 @@ export function ArtAdjustOverlay({
   photoOffsetX,
   photoOffsetY,
   photoScale,
-  photoFrame: _photoFrame,
+  photoFrame,
   setPhotoOffsetX,
   setPhotoOffsetY,
   setPhotoScale,
-  setPhotoFrame: _setPhotoFrame,
+  setPhotoFrame,
   logoX,
   logoY,
   logoScaleX,
@@ -145,30 +145,39 @@ export function ArtAdjustOverlay({
     if (part === "photo") {
       if (!els.photoFrame) return null;
 
-      // Keep photo frame fixed to template placeholder.
-      // Only the photo crop (offset/zoom) changes, never the grid/frame itself.
-      const safeW = clamp(
-        Number.isFinite(els.photoFrame.width) ? els.photoFrame.width : template.width,
-        20,
-        template.width
-      );
-      const safeH = clamp(
-        Number.isFinite(els.photoFrame.height) ? els.photoFrame.height : template.height,
-        20,
-        template.height
-      );
-      const safeX = clamp(
-        Number.isFinite(els.photoFrame.x) ? els.photoFrame.x : 0,
-        0,
-        Math.max(0, template.width - safeW)
-      );
-      const safeY = clamp(
-        Number.isFinite(els.photoFrame.y) ? els.photoFrame.y : 0,
-        0,
-        Math.max(0, template.height - safeH)
-      );
+      // If caller provides a resized frame, sanitize and use it.
+      if (photoFrame) {
+        const safeW = clamp(
+          Number.isFinite(photoFrame.width) ? photoFrame.width : els.photoFrame.width,
+          20,
+          template.width
+        );
+        const safeH = clamp(
+          Number.isFinite(photoFrame.height) ? photoFrame.height : els.photoFrame.height,
+          20,
+          template.height
+        );
+        const safeX = clamp(
+          Number.isFinite(photoFrame.x) ? photoFrame.x : els.photoFrame.x,
+          0,
+          Math.max(0, template.width - safeW)
+        );
+        const safeY = clamp(
+          Number.isFinite(photoFrame.y) ? photoFrame.y : els.photoFrame.y,
+          0,
+          Math.max(0, template.height - safeH)
+        );
 
-      return { x: safeX, y: safeY, w: safeW, h: safeH };
+        return { x: safeX, y: safeY, w: safeW, h: safeH };
+      }
+
+      // Default: use template element dimensions directly
+      return {
+        x: els.photoFrame.x,
+        y: els.photoFrame.y,
+        w: els.photoFrame.width,
+        h: els.photoFrame.height,
+      };
     }
 
     if (part === "logo") {
@@ -350,46 +359,35 @@ export function ArtAdjustOverlay({
           return;
         }
 
-        // Resize = zoom the photo (change photoScale), NOT resize the frame
-        const h = s.handle as Handle;
-        const isVerticalHandle = h === "n" || h === "s";
-        const isHorizontalHandle = h === "e" || h === "w";
+        // Resize = resize the frame/grid
+        if (setPhotoFrame && s.start.photoRect) {
+          const h = s.handle as Handle;
+          const startRect = s.start.photoRect;
+          const minSize = 20;
 
-        const baseW = base.width || 1;
-        const baseH = base.height || 1;
-        const currentScale = Number.isFinite(s.start.photoScale) && s.start.photoScale > 0
-          ? s.start.photoScale
-          : 100;
+          let newX = startRect.x;
+          let newY = startRect.y;
+          let newW = startRect.width;
+          let newH = startRect.height;
 
-        let signedDelta: number;
-        let baseDimension: number;
-        let startDimension: number;
-
-        if (isVerticalHandle) {
-          signedDelta = handleSignY(h) * dy;
-          baseDimension = baseH;
-          startDimension = baseH * (currentScale / 100);
-        } else if (isHorizontalHandle) {
-          signedDelta = handleSignX(h) * dx;
-          baseDimension = baseW;
-          startDimension = baseW * (currentScale / 100);
-        } else {
-          const signedDx = handleSignX(h) * dx;
-          const signedDy = handleSignY(h) * dy;
-          if (Math.abs(signedDx) > Math.abs(signedDy)) {
-            signedDelta = signedDx;
-            baseDimension = baseW;
-            startDimension = baseW * (currentScale / 100);
-          } else {
-            signedDelta = signedDy;
-            baseDimension = baseH;
-            startDimension = baseH * (currentScale / 100);
+          if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+          if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+          if (handleHasW(h)) {
+            newW = Math.max(minSize, startRect.width - dx);
+            newX = startRect.x + (startRect.width - newW);
           }
-        }
+          if (handleHasN(h)) {
+            newH = Math.max(minSize, startRect.height - dy);
+            newY = startRect.y + (startRect.height - newH);
+          }
 
-        const newDimension = clamp(startDimension + signedDelta, baseDimension * 0.1, baseDimension * 3);
-        const newScale = clamp((newDimension / baseDimension) * 100, 10, 300);
-        setPhotoScale(newScale);
+          newX = clamp(newX, 0, template.width - minSize);
+          newY = clamp(newY, 0, template.height - minSize);
+          newW = clamp(newW, minSize, template.width);
+          newH = clamp(newH, minSize, template.height);
+
+          setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
+        }
         return;
       }
 
