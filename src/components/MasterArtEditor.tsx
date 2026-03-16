@@ -1047,7 +1047,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#000000";
         const fontSize = el.fontSize || 32;
-        ctx.font = `${fontSize}px Arial`;
+        const fontFam = el.fontFamily || "Arial";
+        ctx.font = `${fontSize}px ${fontFam}`;
         const align = el.textAlign || "left";
         ctx.textAlign = align;
         const lh = (el.lineHeight || 1.2) * fontSize;
