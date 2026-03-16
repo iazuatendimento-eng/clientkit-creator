@@ -719,6 +719,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmails, setIsSendingEmails] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(0);
@@ -2661,7 +2662,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const { error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails,
-            subject: `Vídeo - ${videos[0].company || videos[0].clientName}`,
+            subject: emailSubject.trim() || `Vídeo - ${videos[0].company || videos[0].clientName}`,
             mediaUrls,
             mediaUrl: mediaUrls[0],
             mediaType: "video",
@@ -2866,6 +2867,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             </Badge>
           </div>
           
+          {/* Email subject input */}
+          <Input
+            placeholder="Título do e-mail (opcional)"
+            value={emailSubject}
+            onChange={(e) => setEmailSubject(e.target.value)}
+            className="w-56 h-9 text-sm"
+          />
+
           {/* Save Draft button */}
           {clientVideos.some((v) => v.pages.length > 0) && (
             <Button

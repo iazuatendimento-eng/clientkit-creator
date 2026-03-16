@@ -273,6 +273,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmails, setIsSendingEmails] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
   const [selectedArt, setSelectedArt] = useState<ClientArt | null>(null);
   const [selectedArtIndex, setSelectedArtIndex] = useState<number>(-1);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
@@ -2111,7 +2112,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         const { data, error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails,
-            subject: `Arte - ${arts[0].company || arts[0].clientName}`,
+            subject: emailSubject.trim() || `Arte - ${arts[0].company || arts[0].clientName}`,
             mediaUrls,
             mediaUrl: mediaUrls[0],
             mediaType: "art",
@@ -2200,6 +2201,16 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             <Badge className="bg-green-500">{approvedCount} aprovadas</Badge>
           </div>
           
+          {/* Email subject input */}
+          {clientArts.some((a) => a.imageUrl) && (
+            <Input
+              placeholder="Título do e-mail (opcional)"
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              className="w-56 h-9 text-sm"
+            />
+          )}
+
           {/* Save Draft button - always visible when arts are generated */}
           {clientArts.some((a) => a.imageUrl) && (
             <Button
