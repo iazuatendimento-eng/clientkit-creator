@@ -2112,7 +2112,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         const { data, error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails,
-            subject: `Arte - ${arts[0].company || arts[0].clientName}`,
+            subject: emailSubject.trim() || `Arte - ${arts[0].company || arts[0].clientName}`,
             mediaUrls,
             mediaUrl: mediaUrls[0],
             mediaType: "art",
