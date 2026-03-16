@@ -1224,16 +1224,25 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         ctx.textAlign = "left";
         console.log("Drew text at:", baseX, baseY, "Text:", text.substring(0, 50), "Font:", fontFamily);
       } else if (el.type === "image" && el.placeholder) {
-        // Keep placeholder frame fixed to template (legacy photoFrame is ignored).
-        const rawFrameW = Number.isFinite(el.width) ? el.width : template.width;
-        const rawFrameH = Number.isFinite(el.height) ? el.height : template.height;
-        const frameW = Math.max(1, Math.min(rawFrameW, template.width));
-        const frameH = Math.max(1, Math.min(rawFrameH, template.height));
+        const frameOv = art.elementOverrides?.photoFrame;
 
-        const rawFrameX = Number.isFinite(el.x) ? el.x : 0;
-        const rawFrameY = Number.isFinite(el.y) ? el.y : 0;
-        const frameX = Math.max(0, Math.min(rawFrameX, template.width - frameW));
-        const frameY = Math.max(0, Math.min(rawFrameY, template.height - frameH));
+        const rawFrameW = frameOv?.width ?? el.width;
+        const rawFrameH = frameOv?.height ?? el.height;
+        const frameW = Number.isFinite(rawFrameW)
+          ? Math.max(1, Math.min(rawFrameW, template.width))
+          : Math.max(1, Math.min(el.width, template.width));
+        const frameH = Number.isFinite(rawFrameH)
+          ? Math.max(1, Math.min(rawFrameH, template.height))
+          : Math.max(1, Math.min(el.height, template.height));
+
+        const rawFrameX = frameOv?.x ?? el.x;
+        const rawFrameY = frameOv?.y ?? el.y;
+        const frameX = Number.isFinite(rawFrameX)
+          ? Math.max(0, Math.min(rawFrameX, template.width - frameW))
+          : Math.max(0, Math.min(el.x, template.width - frameW));
+        const frameY = Number.isFinite(rawFrameY)
+          ? Math.max(0, Math.min(rawFrameY, template.height - frameH))
+          : Math.max(0, Math.min(el.y, template.height - frameH));
 
         const directTemplatePhoto = typeof (el as any).imageUrl === "string" ? (el as any).imageUrl : null;
         const resolvedPhoto = resolvedPhotoImage || art.backgroundImage || directTemplatePhoto;
