@@ -357,6 +357,9 @@ export function ArtAdjustOverlay({
 
         const baseW = base.width || 1;
         const baseH = base.height || 1;
+        const currentScale = Number.isFinite(s.start.photoScale) && s.start.photoScale > 0
+          ? s.start.photoScale
+          : 100;
 
         let signedDelta: number;
         let baseDimension: number;
@@ -365,22 +368,22 @@ export function ArtAdjustOverlay({
         if (isVerticalHandle) {
           signedDelta = handleSignY(h) * dy;
           baseDimension = baseH;
-          startDimension = s.start.photoH;
+          startDimension = baseH * (currentScale / 100);
         } else if (isHorizontalHandle) {
           signedDelta = handleSignX(h) * dx;
           baseDimension = baseW;
-          startDimension = s.start.photoW;
+          startDimension = baseW * (currentScale / 100);
         } else {
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           if (Math.abs(signedDx) > Math.abs(signedDy)) {
             signedDelta = signedDx;
             baseDimension = baseW;
-            startDimension = s.start.photoW;
+            startDimension = baseW * (currentScale / 100);
           } else {
             signedDelta = signedDy;
             baseDimension = baseH;
-            startDimension = s.start.photoH;
+            startDimension = baseH * (currentScale / 100);
           }
         }
 
