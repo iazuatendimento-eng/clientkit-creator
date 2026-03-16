@@ -1342,10 +1342,20 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 height: frameH,
               };
 
-              const srcX = Math.max(0, Math.min(fallbackFrame.x, previousPreview.width - 1));
-              const srcY = Math.max(0, Math.min(fallbackFrame.y, previousPreview.height - 1));
-              const srcW = Math.max(1, Math.min(fallbackFrame.width, previousPreview.width - srcX));
-              const srcH = Math.max(1, Math.min(fallbackFrame.height, previousPreview.height - srcY));
+              // fallbackFrame is stored in template-space; convert to preview pixel-space
+              // to avoid disproportion between grid/frame and photo when preview dimensions differ.
+              const scaleX = previousPreview.width / Math.max(1, template.width);
+              const scaleY = previousPreview.height / Math.max(1, template.height);
+
+              const srcXRaw = fallbackFrame.x * scaleX;
+              const srcYRaw = fallbackFrame.y * scaleY;
+              const srcWRaw = fallbackFrame.width * scaleX;
+              const srcHRaw = fallbackFrame.height * scaleY;
+
+              const srcX = Math.max(0, Math.min(srcXRaw, previousPreview.width - 1));
+              const srcY = Math.max(0, Math.min(srcYRaw, previousPreview.height - 1));
+              const srcW = Math.max(1, Math.min(srcWRaw, previousPreview.width - srcX));
+              const srcH = Math.max(1, Math.min(srcHRaw, previousPreview.height - srcY));
 
               if (clipShape === "circle") {
                 ctx.save();
