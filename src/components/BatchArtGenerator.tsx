@@ -1493,7 +1493,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       try {
         const artsToSave = updatedArts.filter((a) => a.imageUrl);
         if (artsToSave.length > 0) {
-          const batchItems: BatchItem[] = artsToSave.map((art) => ({
+          // Save ALL arts preserving order (including ones without images)
+          const batchItems: BatchItem[] = updatedArts.map((art) => ({
             cardId: art.cardId,
             clientId: art.clientId,
             clientName: art.clientName,
@@ -1501,7 +1502,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             cardTitle: art.cardTitle,
             cardText: art.cardText,
             brandKit: sanitizeBrandKitForStorage(art.brandKit),
-            files: [art.imageUrl!],
+            files: art.imageUrl ? [art.imageUrl] : [],
             backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
             photoImage: art.photoImage,
             photoOffset: art.photoOffset,
@@ -1907,8 +1908,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
 
     try {
-      // Save batch to history as draft (not finalized)
-      const newBatchItems: BatchItem[] = artsWithImages.map((art) => ({
+      // Save ALL clientArts preserving their exact order
+      const batchItems: BatchItem[] = clientArts.map((art) => ({
         cardId: art.cardId,
         clientId: art.clientId,
         clientName: art.clientName,
@@ -1916,7 +1917,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         cardTitle: art.cardTitle,
         cardText: art.cardText,
         brandKit: sanitizeBrandKitForStorage(art.brandKit),
-        files: [art.imageUrl!],
+        files: art.imageUrl ? [art.imageUrl] : [],
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
         photoImage: art.photoImage,
         photoOffset: art.photoOffset,
@@ -1929,21 +1930,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         note: art.note,
         noteRead: art.noteRead,
       }));
-
-      // Merge with existing batch items to preserve non-edited items
-      let batchItems = newBatchItems;
-      if (currentBatchId) {
-        try {
-          const existingBatch = await getBatchById(currentBatchId);
-          if (existingBatch && existingBatch.items.length > 0) {
-            const updatedCardIds = new Set(newBatchItems.map((i) => i.cardId));
-            const preservedItems = existingBatch.items.filter((i) => !updatedCardIds.has(i.cardId));
-            batchItems = [...preservedItems, ...newBatchItems];
-          }
-        } catch (e) {
-          console.warn("Could not merge with existing batch items:", e);
-        }
-      }
 
       const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
       const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
