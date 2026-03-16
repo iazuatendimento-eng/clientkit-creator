@@ -294,11 +294,6 @@ export function ArtCardWithOverlay({
               setShapeOverrides={setShapeOverrides}
               onDragEnd={handleDragEnd}
             />
-            {isRegenerating && (
-              <div className="absolute top-2 right-2">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              </div>
-            )}
           </div>
         ) : art.imageUrl ? (
           <img
