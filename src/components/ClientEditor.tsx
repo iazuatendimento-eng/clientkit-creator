@@ -624,12 +624,31 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
               {/* Font */}
               <div className="space-y-2">
                 <Label htmlFor="brandFont">Fonte Google Fonts</Label>
-                <Input
-                  id="brandFont"
-                  value={brandFont}
-                  onChange={(e) => setBrandFont(e.target.value)}
-                  placeholder="Ex: Roboto, Open Sans, Montserrat..."
-                />
+                <Select
+                  value={brandFont || ""}
+                  onValueChange={(v) => setBrandFont(v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha uma fonte..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Montserrat">Montserrat</SelectItem>
+                    <SelectItem value="Montserrat Arabic">Montserrat Arabic</SelectItem>
+                    <SelectItem value="Roboto">Roboto</SelectItem>
+                    <SelectItem value="Open Sans">Open Sans</SelectItem>
+                    <SelectItem value="Poppins">Poppins</SelectItem>
+                    <SelectItem value="Lato">Lato</SelectItem>
+                    <SelectItem value="Oswald">Oswald</SelectItem>
+                    <SelectItem value="Playfair Display">Playfair Display</SelectItem>
+                    <SelectItem value="Raleway">Raleway</SelectItem>
+                    <SelectItem value="Bebas Neue">Bebas Neue</SelectItem>
+                    <SelectItem value="Inter">Inter</SelectItem>
+                    <SelectItem value="Nunito">Nunito</SelectItem>
+                    <SelectItem value="Quicksand">Quicksand</SelectItem>
+                    <SelectItem value="Barlow">Barlow</SelectItem>
+                    <SelectItem value="Mulish">Mulish</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
