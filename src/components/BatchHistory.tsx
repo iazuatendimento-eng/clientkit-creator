@@ -156,7 +156,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                 {/* Icon */}
                 <div className="flex items-center shrink-0">
                   <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                    <Film className="h-6 w-6 text-muted-foreground" />
+                    {batch.type === "art" ? <ImageIcon className="h-6 w-6 text-muted-foreground" /> : <Film className="h-6 w-6 text-muted-foreground" />}
                   </div>
                 </div>
 
