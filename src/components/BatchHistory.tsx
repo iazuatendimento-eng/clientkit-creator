@@ -114,7 +114,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
               Voltar
             </Button>
             <div>
-              <h1 className="text-lg font-semibold">Histórico de Vídeos em Lote</h1>
+              <h1 className="text-lg font-semibold">Histórico de {filterType === "art" ? "Artes" : "Vídeos"} em Lote</h1>
               <p className="text-sm text-muted-foreground">
                 {filteredBatches.length} de {batches.length} lote(s)
               </p>
