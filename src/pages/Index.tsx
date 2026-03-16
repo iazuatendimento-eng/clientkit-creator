@@ -1077,6 +1077,36 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick Create / Alteração Dialog */}
+      <Dialog open={isQuickCreateOpen} onOpenChange={(open) => { setIsQuickCreateOpen(open); if (!open) setQuickCreateClientId(""); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Alteração</DialogTitle>
+          </DialogHeader>
+          {!quickCreateClientId ? (
+            <div className="space-y-3 pt-2">
+              <p className="text-sm text-muted-foreground">Selecione o cliente:</p>
+              <Select value={quickCreateClientId} onValueChange={setQuickCreateClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha um cliente..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {clients.filter(c => c.active).map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <QuickCreate
+              clientId={quickCreateClientId}
+              clientName={clients.find(c => c.id === quickCreateClientId)?.company || clients.find(c => c.id === quickCreateClientId)?.name || ""}
+              brandKit={clients.find(c => c.id === quickCreateClientId)?.brand_kit}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
