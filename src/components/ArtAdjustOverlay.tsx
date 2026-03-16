@@ -50,11 +50,11 @@ export function ArtAdjustOverlay({
   photoOffsetX,
   photoOffsetY,
   photoScale,
-  photoFrame,
+  photoFrame: _photoFrame,
   setPhotoOffsetX,
   setPhotoOffsetY,
   setPhotoScale,
-  setPhotoFrame,
+  setPhotoFrame: _setPhotoFrame,
   logoX,
   logoY,
   logoScaleX,
@@ -145,43 +145,30 @@ export function ArtAdjustOverlay({
     if (part === "photo") {
       if (!els.photoFrame) return null;
 
-      // If caller provides a resized frame, sanitize and use it.
-      if (photoFrame) {
-        const safeW = clamp(
-          Number.isFinite(photoFrame.width) ? photoFrame.width : els.photoFrame.width,
-          20,
-          template.width
-        );
-        const safeH = clamp(
-          Number.isFinite(photoFrame.height) ? photoFrame.height : els.photoFrame.height,
-          20,
-          template.height
-        );
-        const safeX = clamp(
-          Number.isFinite(photoFrame.x) ? photoFrame.x : els.photoFrame.x,
-          0,
-          Math.max(0, template.width - safeW)
-        );
-        const safeY = clamp(
-          Number.isFinite(photoFrame.y) ? photoFrame.y : els.photoFrame.y,
-          0,
-          Math.max(0, template.height - safeH)
-        );
+      // Keep photo frame fixed to template placeholder.
+      // Only the photo crop (offset/zoom) changes, never the grid/frame itself.
+      const safeW = clamp(
+        Number.isFinite(els.photoFrame.width) ? els.photoFrame.width : template.width,
+        20,
+        template.width
+      );
+      const safeH = clamp(
+        Number.isFinite(els.photoFrame.height) ? els.photoFrame.height : template.height,
+        20,
+        template.height
+      );
+      const safeX = clamp(
+        Number.isFinite(els.photoFrame.x) ? els.photoFrame.x : 0,
+        0,
+        Math.max(0, template.width - safeW)
+      );
+      const safeY = clamp(
+        Number.isFinite(els.photoFrame.y) ? els.photoFrame.y : 0,
+        0,
+        Math.max(0, template.height - safeH)
+      );
 
-        return { x: safeX, y: safeY, w: safeW, h: safeH };
-      }
-
-      // Backwards-compat fallback: represent zoom as a scaled box.
-      const scaledW = els.photoFrame.width * (photoScale / 100);
-      const scaledH = els.photoFrame.height * (photoScale / 100);
-      const centerX = els.photoFrame.x + els.photoFrame.width / 2;
-      const centerY = els.photoFrame.y + els.photoFrame.height / 2;
-      return {
-        x: centerX - scaledW / 2 + photoOffsetX,
-        y: centerY - scaledH / 2 + photoOffsetY,
-        w: scaledW,
-        h: scaledH,
-      };
+      return { x: safeX, y: safeY, w: safeW, h: safeH };
     }
 
     if (part === "logo") {
@@ -370,6 +357,9 @@ export function ArtAdjustOverlay({
 
         const baseW = base.width || 1;
         const baseH = base.height || 1;
+        const currentScale = Number.isFinite(s.start.photoScale) && s.start.photoScale > 0
+          ? s.start.photoScale
+          : 100;
 
         let signedDelta: number;
         let baseDimension: number;
@@ -378,22 +368,22 @@ export function ArtAdjustOverlay({
         if (isVerticalHandle) {
           signedDelta = handleSignY(h) * dy;
           baseDimension = baseH;
-          startDimension = s.start.photoH;
+          startDimension = baseH * (currentScale / 100);
         } else if (isHorizontalHandle) {
           signedDelta = handleSignX(h) * dx;
           baseDimension = baseW;
-          startDimension = s.start.photoW;
+          startDimension = baseW * (currentScale / 100);
         } else {
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
           if (Math.abs(signedDx) > Math.abs(signedDy)) {
             signedDelta = signedDx;
             baseDimension = baseW;
-            startDimension = s.start.photoW;
+            startDimension = baseW * (currentScale / 100);
           } else {
             signedDelta = signedDy;
             baseDimension = baseH;
-            startDimension = s.start.photoH;
+            startDimension = baseH * (currentScale / 100);
           }
         }
 

@@ -148,6 +148,12 @@ interface ClientArt {
 const getClientArtKey = (art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex">) =>
   `${art.clientId}::${art.cardId}::${art.pageIndex ?? 0}`;
 
+const sanitizeElementOverrides = (overrides?: ElementOverrides): ElementOverrides | undefined => {
+  if (!overrides) return undefined;
+  const { photoFrame: _photoFrame, ...rest } = overrides;
+  return rest;
+};
+
 // Image cache to avoid reloading
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -497,7 +503,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         backgroundImage: item.backgroundImages?.[0],
         photoImage: itemData.photoImage || coverImageMap[item.cardId] || undefined,
         photoOffset: itemData.photoOffset,
-        elementOverrides: itemData.elementOverrides,
+        elementOverrides: sanitizeElementOverrides(itemData.elementOverrides),
         pageIndex: itemData.pageIndex,
         totalPages: itemData.totalPages,
         imageType: itemData.imageType || imageTypeMap[item.clientId] || undefined,
@@ -1224,25 +1230,16 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         ctx.textAlign = "left";
         console.log("Drew text at:", baseX, baseY, "Text:", text.substring(0, 50), "Font:", fontFamily);
       } else if (el.type === "image" && el.placeholder) {
-        const frameOv = art.elementOverrides?.photoFrame;
+        // Keep placeholder frame fixed to template (legacy photoFrame is ignored).
+        const rawFrameW = Number.isFinite(el.width) ? el.width : template.width;
+        const rawFrameH = Number.isFinite(el.height) ? el.height : template.height;
+        const frameW = Math.max(1, Math.min(rawFrameW, template.width));
+        const frameH = Math.max(1, Math.min(rawFrameH, template.height));
 
-        const rawFrameW = frameOv?.width ?? el.width;
-        const rawFrameH = frameOv?.height ?? el.height;
-        const frameW = Number.isFinite(rawFrameW)
-          ? Math.max(1, Math.min(rawFrameW, template.width))
-          : Math.max(1, Math.min(el.width, template.width));
-        const frameH = Number.isFinite(rawFrameH)
-          ? Math.max(1, Math.min(rawFrameH, template.height))
-          : Math.max(1, Math.min(el.height, template.height));
-
-        const rawFrameX = frameOv?.x ?? el.x;
-        const rawFrameY = frameOv?.y ?? el.y;
-        const frameX = Number.isFinite(rawFrameX)
-          ? Math.max(0, Math.min(rawFrameX, template.width - frameW))
-          : Math.max(0, Math.min(el.x, template.width - frameW));
-        const frameY = Number.isFinite(rawFrameY)
-          ? Math.max(0, Math.min(rawFrameY, template.height - frameH))
-          : Math.max(0, Math.min(el.y, template.height - frameH));
+        const rawFrameX = Number.isFinite(el.x) ? el.x : 0;
+        const rawFrameY = Number.isFinite(el.y) ? el.y : 0;
+        const frameX = Math.max(0, Math.min(rawFrameX, template.width - frameW));
+        const frameY = Math.max(0, Math.min(rawFrameY, template.height - frameH));
 
         const directTemplatePhoto = typeof (el as any).imageUrl === "string" ? (el as any).imageUrl : null;
         const resolvedPhoto = resolvedPhotoImage || art.backgroundImage || directTemplatePhoto;
@@ -1531,7 +1528,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
             photoImage: getEffectivePhotoImage(art),
             photoOffset: art.photoOffset,
-            elementOverrides: art.elementOverrides,
+            elementOverrides: sanitizeElementOverrides(art.elementOverrides),
             pageIndex: art.pageIndex,
             totalPages: art.totalPages,
             imageType: art.imageType,
@@ -1706,28 +1703,29 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   const openAdjustDialog = (art: ClientArt) => {
     const idx = clientArts.indexOf(art);
+    const cleanOverrides = sanitizeElementOverrides(art.elementOverrides);
     setSelectedArt(art);
     setSelectedArtIndex(idx);
     setLivePreviewUrl(art.imageUrl); // Start with current image
     setPhotoOffsetX(art.photoOffset?.x || 0);
     setPhotoOffsetY(art.photoOffset?.y || 0);
-    setPhotoScale(art.elementOverrides?.photoScale || 100);
-    setPhotoFrame(art.elementOverrides?.photoFrame || null);
+    setPhotoScale(cleanOverrides?.photoScale || 100);
+    setPhotoFrame(null);
     // Load element overrides
-    setLogoX(art.elementOverrides?.logoX || 0);
-    setLogoY(art.elementOverrides?.logoY || 0);
-    setLogoScale(art.elementOverrides?.logoScale || 100);
-    setLogoScaleX(art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100);
-    setLogoScaleY(art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100);
-    setTextX(art.elementOverrides?.textX || 0);
-    setTextY(art.elementOverrides?.textY || 0);
-    setTextFontSize(art.elementOverrides?.textFontSize || 100);
-    setContactX(art.elementOverrides?.contactX || 0);
-    setContactY(art.elementOverrides?.contactY || 0);
-    setContactScale(art.elementOverrides?.contactScale || 100);
-    setContactScaleX(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
-    setContactScaleY(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
-    setShapeOverrides(art.elementOverrides?.shapes || {});
+    setLogoX(cleanOverrides?.logoX || 0);
+    setLogoY(cleanOverrides?.logoY || 0);
+    setLogoScale(cleanOverrides?.logoScale || 100);
+    setLogoScaleX(cleanOverrides?.logoScaleX || cleanOverrides?.logoScale || 100);
+    setLogoScaleY(cleanOverrides?.logoScaleY || cleanOverrides?.logoScale || 100);
+    setTextX(cleanOverrides?.textX || 0);
+    setTextY(cleanOverrides?.textY || 0);
+    setTextFontSize(cleanOverrides?.textFontSize || 100);
+    setContactX(cleanOverrides?.contactX || 0);
+    setContactY(cleanOverrides?.contactY || 0);
+    setContactScale(cleanOverrides?.contactScale || 100);
+    setContactScaleX(cleanOverrides?.contactScaleX || cleanOverrides?.contactScale || 100);
+    setContactScaleY(cleanOverrides?.contactScaleY || cleanOverrides?.contactScale || 100);
+    setShapeOverrides(cleanOverrides?.shapes || {});
     setIsAdjustDialogOpen(true);
   };
 
@@ -1783,7 +1781,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
         contactX: ov.contactX, contactY: ov.contactY,
         contactScale: ov.contactScale, contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
-        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
+        photoScale: ov.photoScale,
         shapes: ov.shapeOverrides,
       }
     };
@@ -1822,7 +1820,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
         contactX: ov.contactX, contactY: ov.contactY,
         contactScale: ov.contactScale, contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
-        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
+        photoScale: ov.photoScale,
         shapes: ov.shapeOverrides,
       }
     };
@@ -1877,7 +1875,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         textX: ov.textX, textY: ov.textY, textFontSize: ov.textFontSize,
         contactX: ov.contactX, contactY: ov.contactY,
         contactScale: ov.contactScale, contactScaleX: ov.contactScaleX, contactScaleY: ov.contactScaleY,
-        photoScale: ov.photoScale, photoFrame: ov.photoFrame || undefined,
+        photoScale: ov.photoScale,
         shapes: ov.shapeOverrides,
       }
     };
@@ -1947,7 +1945,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
         photoImage: getEffectivePhotoImage(art),
         photoOffset: art.photoOffset,
-        elementOverrides: art.elementOverrides,
+        elementOverrides: sanitizeElementOverrides(art.elementOverrides),
         pageIndex: art.pageIndex,
         totalPages: art.totalPages,
         imageType: art.imageType,
