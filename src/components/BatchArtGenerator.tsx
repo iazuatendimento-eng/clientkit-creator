@@ -843,8 +843,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, template.width, template.height);
 
-    // Draw background image if set
-    if (art.backgroundImage) {
+    // Draw background image if set — but only as full-canvas background when
+    // no image placeholder exists, otherwise it will be drawn inside the frame.
+    const hasImagePlaceholderEl = template.elements.some(e => e.type === "image" && e.placeholder);
+    if (art.backgroundImage && !hasImagePlaceholderEl) {
       const bgImg = await loadImage(art.backgroundImage);
       if (bgImg) {
         ctx.drawImage(bgImg, 0, 0, template.width, template.height);
