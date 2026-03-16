@@ -813,10 +813,7 @@ export function ArtAdjustOverlay({
         <img
           src={previewUrl}
           alt="Prévia da arte gerada"
-          className={cn(
-            "absolute inset-0 h-full w-full object-cover pointer-events-none select-none",
-            isBusy ? "opacity-80" : "opacity-100"
-          )}
+          className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
           draggable={false}
         />
       ) : (
@@ -845,12 +842,6 @@ export function ArtAdjustOverlay({
           />
         ))}
       </div>
-
-      {isBusy && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/20 pointer-events-none">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      )}
     </div>
   );
 }
