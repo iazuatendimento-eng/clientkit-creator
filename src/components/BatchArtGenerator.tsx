@@ -2376,6 +2376,19 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                     </div>
                   ))}
                 </div>
+                {searchImages_results.length > 0 && (
+                  <div className="flex justify-center py-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLoadMoreImages}
+                      disabled={isLoadingMore}
+                    >
+                      {isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                      Carregar Mais
+                    </Button>
+                  </div>
+                )}
                 {searchImages_results.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Busque por imagens acima</p>
