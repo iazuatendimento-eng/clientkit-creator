@@ -70,17 +70,67 @@ export interface BatchGeneration {
 }
 
 /**
- * Strip base64 data URLs and blob URLs from batch item files before persisting.
+ * Convert a base64 data URL to a Blob.
  */
-function sanitizeItemsForStorage(items: BatchItem[]): BatchItem[] {
-  return items.map(item => ({
-    ...item,
-    brandKit: sanitizeBrandKitForStorage(item.brandKit),
-    files: (item.files || []).filter(f => typeof f === "string" && f.startsWith("http")),
-    previewVideoUrls: (item.previewVideoUrls || []).map(u =>
-      typeof u === "string" && (u.startsWith("data:") || u.startsWith("blob:")) ? null : u
-    ),
-  }));
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(",");
+  const mime = header.match(/:(.*?);/)?.[1] || "image/png";
+  const binary = atob(base64);
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+  return new Blob([array], { type: mime });
+}
+
+/**
+ * Upload base64/blob files from batch items to Supabase Storage and replace with URLs.
+ * Processes uploads in parallel batches of 5.
+ */
+async function uploadItemFilesToStorage(items: BatchItem[], batchId: string): Promise<BatchItem[]> {
+  const results: BatchItem[] = [];
+
+  for (const item of items) {
+    const uploadedFiles: string[] = [];
+
+    for (let fi = 0; fi < (item.files || []).length; fi++) {
+      const file = item.files[fi];
+      if (typeof file === "string" && file.startsWith("http")) {
+        uploadedFiles.push(file);
+        continue;
+      }
+      if (typeof file === "string" && file.startsWith("data:")) {
+        try {
+          const blob = dataUrlToBlob(file);
+          const ext = blob.type === "image/png" ? "png" : "jpg";
+          const fileName = `batch-previews/${batchId}/${item.cardId}_p${item.pageIndex ?? 0}_${fi}.${ext}`;
+
+          const { error } = await supabase.storage
+            .from("card-uploads")
+            .upload(fileName, blob, { contentType: blob.type, upsert: true });
+
+          if (!error) {
+            const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(fileName);
+            uploadedFiles.push(urlData.publicUrl);
+          } else {
+            console.error("Upload error:", error);
+          }
+        } catch (e) {
+          console.error("Failed to upload preview:", e);
+        }
+      }
+      // Skip blob: URLs — they can't be uploaded
+    }
+
+    results.push({
+      ...item,
+      brandKit: sanitizeBrandKitForStorage(item.brandKit),
+      files: uploadedFiles,
+      previewVideoUrls: (item.previewVideoUrls || []).map(u =>
+        typeof u === "string" && (u.startsWith("data:") || u.startsWith("blob:")) ? null : u
+      ),
+    });
+  }
+
+  return results;
 }
 
 export async function saveBatchGeneration(
@@ -89,12 +139,16 @@ export async function saveBatchGeneration(
   items: BatchItem[],
   existingId?: string
 ): Promise<string | null> {
-  const cleanItems = sanitizeItemsForStorage(items);
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    // If existingId provided, update instead of insert
+    // Determine the batch ID for storage paths
+    const batchId = existingId || crypto.randomUUID();
+
+    // Upload base64 previews to Storage and get clean URLs
+    const cleanItems = await uploadItemFilesToStorage(items, batchId);
+
     if (existingId) {
       const { error } = await supabase
         .from("batch_generations")
@@ -115,6 +169,7 @@ export async function saveBatchGeneration(
     const { data, error } = await supabase
       .from("batch_generations")
       .insert({
+        id: batchId,
         type,
         template_snapshot: templateSnapshot,
         items: cleanItems as any,
