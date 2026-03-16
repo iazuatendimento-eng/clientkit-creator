@@ -8,6 +8,7 @@ import {
   Trash2,
   Edit,
   Film,
+  Image as ImageIcon,
   Loader2,
   Calendar,
   Search,
