@@ -139,12 +139,16 @@ export async function saveBatchGeneration(
   items: BatchItem[],
   existingId?: string
 ): Promise<string | null> {
-  const cleanItems = sanitizeItemsForStorage(items);
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    // If existingId provided, update instead of insert
+    // Determine the batch ID for storage paths
+    const batchId = existingId || crypto.randomUUID();
+
+    // Upload base64 previews to Storage and get clean URLs
+    const cleanItems = await uploadItemFilesToStorage(items, batchId);
+
     if (existingId) {
       const { error } = await supabase
         .from("batch_generations")
@@ -165,6 +169,7 @@ export async function saveBatchGeneration(
     const { data, error } = await supabase
       .from("batch_generations")
       .insert({
+        id: batchId,
         type,
         template_snapshot: templateSnapshot,
         items: cleanItems as any,
