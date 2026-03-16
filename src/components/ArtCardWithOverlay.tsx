@@ -164,7 +164,7 @@ export function ArtCardWithOverlay({
       setPhotoOffsetX(art.photoOffset?.x || 0);
       setPhotoOffsetY(art.photoOffset?.y || 0);
       setPhotoScale(art.elementOverrides?.photoScale || 100);
-      setPhotoFrame(null);
+      setPhotoFrame(art.elementOverrides?.photoFrame || null);
       setLogoX(art.elementOverrides?.logoX || 0);
       setLogoY(art.elementOverrides?.logoY || 0);
       setLogoScaleX(art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100);
