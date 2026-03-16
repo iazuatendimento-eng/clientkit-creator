@@ -66,6 +66,7 @@ interface CanvasElement {
   color?: string;
   text?: string;
   fontSize?: number;
+  fontFamily?: string;
   textAlign?: "left" | "center" | "right";
   lineHeight?: number; // multiplier e.g. 1.2
   imageUrl?: string;
@@ -1046,7 +1047,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
       } else if (el.type === "text") {
         ctx.fillStyle = el.color || "#000000";
         const fontSize = el.fontSize || 32;
-        ctx.font = `${fontSize}px Arial`;
+        const fontFam = el.fontFamily || "Arial";
+        ctx.font = `${fontSize}px ${fontFam}`;
         const align = el.textAlign || "left";
         ctx.textAlign = align;
         const lh = (el.lineHeight || 1.2) * fontSize;
@@ -1937,6 +1939,47 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
                         value={selectedEl.text || ""}
                         onChange={(e) => updateSelectedElement({ text: e.target.value })}
                       />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Fonte</Label>
+                      <Select
+                        value={selectedEl.fontFamily || "Arial"}
+                        onValueChange={(v) => {
+                          updateSelectedElement({ fontFamily: v });
+                          // Load Google Font dynamically
+                          if (!["Arial", "Verdana", "Georgia", "Times New Roman", "Courier New"].includes(v)) {
+                            const id = `google-font-${v.replace(/\s+/g, "-")}`;
+                            if (!document.getElementById(id)) {
+                              const link = document.createElement("link");
+                              link.id = id;
+                              link.rel = "stylesheet";
+                              link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(v)}:wght@400;700&display=swap`;
+                              document.head.appendChild(link);
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Arial">Arial</SelectItem>
+                          <SelectItem value="Verdana">Verdana</SelectItem>
+                          <SelectItem value="Georgia">Georgia</SelectItem>
+                          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                          <SelectItem value="Courier New">Courier New</SelectItem>
+                          <SelectItem value="Montserrat">Montserrat</SelectItem>
+                          <SelectItem value="Montserrat Arabic">Montserrat Arabic</SelectItem>
+                          <SelectItem value="Roboto">Roboto</SelectItem>
+                          <SelectItem value="Open Sans">Open Sans</SelectItem>
+                          <SelectItem value="Poppins">Poppins</SelectItem>
+                          <SelectItem value="Lato">Lato</SelectItem>
+                          <SelectItem value="Oswald">Oswald</SelectItem>
+                          <SelectItem value="Playfair Display">Playfair Display</SelectItem>
+                          <SelectItem value="Raleway">Raleway</SelectItem>
+                          <SelectItem value="Bebas Neue">Bebas Neue</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label className="text-xs">Tamanho: {selectedEl.fontSize}px</Label>
