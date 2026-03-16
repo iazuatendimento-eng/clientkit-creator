@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History, Trash2, Mail } from "lucide-react";
+import { Plus, Users, Copy, Check, LogOut, Loader2, FileDown, CheckCircle2, Calendar, Power, PowerOff, Pencil, Search, FileX, Palette, Video, History, Trash2, Mail, Sparkles } from "lucide-react";
 import { ClientEditor } from "@/components/ClientEditor";
 import { ClientDashboard } from "@/components/ClientDashboard";
+import { QuickCreate } from "@/components/QuickCreate";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import * as XLSX from 'xlsx';
@@ -86,6 +88,8 @@ const Index = () => {
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [quickCreateClientId, setQuickCreateClientId] = useState<string>("");
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -822,6 +826,10 @@ const Index = () => {
               <Mail className="mr-1 h-4 w-4" />
               Enviar
             </Button>
+            <Button size="sm" variant="outline" onClick={() => setIsQuickCreateOpen(true)}>
+              <Sparkles className="mr-1 h-4 w-4" />
+              Alteração
+            </Button>
 
             <Button
               size="sm"
@@ -1069,6 +1077,36 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick Create / Alteração Dialog */}
+      <Dialog open={isQuickCreateOpen} onOpenChange={(open) => { setIsQuickCreateOpen(open); if (!open) setQuickCreateClientId(""); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Alteração</DialogTitle>
+          </DialogHeader>
+          {!quickCreateClientId ? (
+            <div className="space-y-3 pt-2">
+              <p className="text-sm text-muted-foreground">Selecione o cliente:</p>
+              <Select value={quickCreateClientId} onValueChange={setQuickCreateClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha um cliente..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {clients.filter(c => c.active).map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <QuickCreate
+              clientId={quickCreateClientId}
+              clientName={clients.find(c => c.id === quickCreateClientId)?.company || clients.find(c => c.id === quickCreateClientId)?.name || ""}
+              brandKit={clients.find(c => c.id === quickCreateClientId)?.brand_kit}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
