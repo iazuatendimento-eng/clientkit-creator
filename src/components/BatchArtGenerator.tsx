@@ -1263,9 +1263,17 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           } else {
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
           }
+
+          // Persist successful frame to support stable fallback scaling if source disappears.
+          photoRenderedFrameRef.current.set(artKey, {
+            x: frameX,
+            y: frameY,
+            width: frameW,
+            height: frameH,
+          });
         } else {
-          // Fallback: reuse the previous rendered preview area so logo/text/photo-frame
-          // updates still appear even when the original photo source is temporarily unavailable.
+          // Fallback: reuse the previous rendered photo area (not the current frame area)
+          // so increasing size does not just stretch grid/background pixels.
           let usedPreviewFallback = false;
           if (art.imageUrl) {
             const previousPreview = await loadImage(art.imageUrl);
@@ -1273,24 +1281,42 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               const clipShape = (el as any).clipShape || "rect";
               const radius = el.borderRadius || 0;
 
+              const lastRenderedFrame = photoRenderedFrameRef.current.get(artKey) || {
+                x: el.x,
+                y: el.y,
+                width: el.width,
+                height: el.height,
+              };
+
+              const srcX = Math.max(0, Math.min(lastRenderedFrame.x, previousPreview.width - 1));
+              const srcY = Math.max(0, Math.min(lastRenderedFrame.y, previousPreview.height - 1));
+              const srcW = Math.max(1, Math.min(lastRenderedFrame.width, previousPreview.width - srcX));
+              const srcH = Math.max(1, Math.min(lastRenderedFrame.height, previousPreview.height - srcY));
+
               if (clipShape === "circle") {
                 ctx.save();
                 ctx.beginPath();
                 ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
                 ctx.clip();
-                ctx.drawImage(previousPreview, frameX, frameY, frameW, frameH, frameX, frameY, frameW, frameH);
+                ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
                 ctx.restore();
               } else if (radius > 0) {
                 ctx.save();
                 ctx.beginPath();
                 ctx.roundRect(frameX, frameY, frameW, frameH, radius);
                 ctx.clip();
-                ctx.drawImage(previousPreview, frameX, frameY, frameW, frameH, frameX, frameY, frameW, frameH);
+                ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
                 ctx.restore();
               } else {
-                ctx.drawImage(previousPreview, frameX, frameY, frameW, frameH, frameX, frameY, frameW, frameH);
+                ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
               }
 
+              photoRenderedFrameRef.current.set(artKey, {
+                x: frameX,
+                y: frameY,
+                width: frameW,
+                height: frameH,
+              });
               usedPreviewFallback = true;
             }
           }
