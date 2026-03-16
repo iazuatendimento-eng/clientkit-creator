@@ -148,6 +148,12 @@ interface ClientArt {
 const getClientArtKey = (art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex">) =>
   `${art.clientId}::${art.cardId}::${art.pageIndex ?? 0}`;
 
+const sanitizeElementOverrides = (overrides?: ElementOverrides): ElementOverrides | undefined => {
+  if (!overrides) return undefined;
+  const { photoFrame: _photoFrame, ...rest } = overrides;
+  return rest;
+};
+
 // Image cache to avoid reloading
 const imageCache = new Map<string, HTMLImageElement>();
 
