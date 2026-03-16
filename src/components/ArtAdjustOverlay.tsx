@@ -145,30 +145,39 @@ export function ArtAdjustOverlay({
     if (part === "photo") {
       if (!els.photoFrame) return null;
 
-      // Keep photo frame fixed to template placeholder.
-      // Only the photo crop (offset/zoom) changes, never the grid/frame itself.
-      const safeW = clamp(
-        Number.isFinite(els.photoFrame.width) ? els.photoFrame.width : template.width,
-        20,
-        template.width
-      );
-      const safeH = clamp(
-        Number.isFinite(els.photoFrame.height) ? els.photoFrame.height : template.height,
-        20,
-        template.height
-      );
-      const safeX = clamp(
-        Number.isFinite(els.photoFrame.x) ? els.photoFrame.x : 0,
-        0,
-        Math.max(0, template.width - safeW)
-      );
-      const safeY = clamp(
-        Number.isFinite(els.photoFrame.y) ? els.photoFrame.y : 0,
-        0,
-        Math.max(0, template.height - safeH)
-      );
+      // If caller provides a resized frame, sanitize and use it.
+      if (photoFrame) {
+        const safeW = clamp(
+          Number.isFinite(photoFrame.width) ? photoFrame.width : els.photoFrame.width,
+          20,
+          template.width
+        );
+        const safeH = clamp(
+          Number.isFinite(photoFrame.height) ? photoFrame.height : els.photoFrame.height,
+          20,
+          template.height
+        );
+        const safeX = clamp(
+          Number.isFinite(photoFrame.x) ? photoFrame.x : els.photoFrame.x,
+          0,
+          Math.max(0, template.width - safeW)
+        );
+        const safeY = clamp(
+          Number.isFinite(photoFrame.y) ? photoFrame.y : els.photoFrame.y,
+          0,
+          Math.max(0, template.height - safeH)
+        );
 
-      return { x: safeX, y: safeY, w: safeW, h: safeH };
+        return { x: safeX, y: safeY, w: safeW, h: safeH };
+      }
+
+      // Default: use template element dimensions directly
+      return {
+        x: els.photoFrame.x,
+        y: els.photoFrame.y,
+        w: els.photoFrame.width,
+        h: els.photoFrame.height,
+      };
     }
 
     if (part === "logo") {
