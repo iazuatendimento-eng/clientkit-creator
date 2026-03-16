@@ -1916,7 +1916,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
   // Save current state as draft to history (without finalizing)
   const handleSaveDraft = async () => {
-    const artsWithImages = clientArts.filter((a) => a.imageUrl);
+    const currentArts = clientArtsRef.current;
+    const artsWithImages = currentArts.filter((a) => a.imageUrl);
     
     if (artsWithImages.length === 0) {
       toast({
