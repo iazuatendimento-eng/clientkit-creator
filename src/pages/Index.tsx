@@ -748,34 +748,50 @@ const Index = () => {
         <div className="container mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
           <div className="flex flex-wrap gap-1.5 items-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <Dialog>
+              <DialogTrigger asChild>
                 <Button size="sm" variant="outline" className="px-2">
-                  <Palette className="h-4 w-4 mr-1" />
-                  <span className="hidden xl:inline">Exp.</span> Arte
+                  <FileDown className="h-4 w-4 mr-1" />
+                  Exportar
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-60 overflow-y-auto">
-                <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'arte')}>Todos</DropdownMenuItem>
-                {availableTeams.map(t => (
-                  <DropdownMenuItem key={`arte-${t.id}`} onClick={() => handleExportToExcel(t.name, 'arte')}>{t.name}</DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="px-2">
-                  <Video className="h-4 w-4 mr-1" />
-                  <span className="hidden xl:inline">Exp.</span> Vídeo
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-60 overflow-y-auto">
-                <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'video')}>Todos</DropdownMenuItem>
-                {availableTeams.map(t => (
-                  <DropdownMenuItem key={`video-${t.id}`} onClick={() => handleExportToExcel(t.name, 'video')}>{t.name}</DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </DialogTrigger>
+              <DialogContent className="max-w-xs">
+                <DialogHeader>
+                  <DialogTitle>Exportar Excel</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <p className="text-sm text-muted-foreground">Escolha o tipo de exportação:</p>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <Palette className="h-4 w-4 mr-2" />
+                        Exportar Arte
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                      <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'arte')}>Todos</DropdownMenuItem>
+                      {availableTeams.map(t => (
+                        <DropdownMenuItem key={`arte-${t.id}`} onClick={() => handleExportToExcel(t.name, 'arte')}>{t.name}</DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <Video className="h-4 w-4 mr-2" />
+                        Exportar Vídeo
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                      <DropdownMenuItem onClick={() => handleExportToExcel(undefined, 'video')}>Todos</DropdownMenuItem>
+                      {availableTeams.map(t => (
+                        <DropdownMenuItem key={`video-${t.id}`} onClick={() => handleExportToExcel(t.name, 'video')}>{t.name}</DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button size="sm" variant="outline" onClick={() => setIsDeadlineDialogOpen(true)}>
               <Calendar className="mr-1 h-4 w-4" />
               Prazo
