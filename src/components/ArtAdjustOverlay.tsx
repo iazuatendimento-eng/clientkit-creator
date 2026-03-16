@@ -359,46 +359,35 @@ export function ArtAdjustOverlay({
           return;
         }
 
-        // Resize = zoom the photo (change photoScale), NOT resize the frame
-        const h = s.handle as Handle;
-        const isVerticalHandle = h === "n" || h === "s";
-        const isHorizontalHandle = h === "e" || h === "w";
+        // Resize = resize the frame/grid
+        if (setPhotoFrame && s.start.photoRect) {
+          const h = s.handle as Handle;
+          const startRect = s.start.photoRect;
+          const minSize = 20;
 
-        const baseW = base.width || 1;
-        const baseH = base.height || 1;
-        const currentScale = Number.isFinite(s.start.photoScale) && s.start.photoScale > 0
-          ? s.start.photoScale
-          : 100;
+          let newX = startRect.x;
+          let newY = startRect.y;
+          let newW = startRect.width;
+          let newH = startRect.height;
 
-        let signedDelta: number;
-        let baseDimension: number;
-        let startDimension: number;
-
-        if (isVerticalHandle) {
-          signedDelta = handleSignY(h) * dy;
-          baseDimension = baseH;
-          startDimension = baseH * (currentScale / 100);
-        } else if (isHorizontalHandle) {
-          signedDelta = handleSignX(h) * dx;
-          baseDimension = baseW;
-          startDimension = baseW * (currentScale / 100);
-        } else {
-          const signedDx = handleSignX(h) * dx;
-          const signedDy = handleSignY(h) * dy;
-          if (Math.abs(signedDx) > Math.abs(signedDy)) {
-            signedDelta = signedDx;
-            baseDimension = baseW;
-            startDimension = baseW * (currentScale / 100);
-          } else {
-            signedDelta = signedDy;
-            baseDimension = baseH;
-            startDimension = baseH * (currentScale / 100);
+          if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+          if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+          if (handleHasW(h)) {
+            newW = Math.max(minSize, startRect.width - dx);
+            newX = startRect.x + (startRect.width - newW);
           }
-        }
+          if (handleHasN(h)) {
+            newH = Math.max(minSize, startRect.height - dy);
+            newY = startRect.y + (startRect.height - newH);
+          }
 
-        const newDimension = clamp(startDimension + signedDelta, baseDimension * 0.1, baseDimension * 3);
-        const newScale = clamp((newDimension / baseDimension) * 100, 10, 300);
-        setPhotoScale(newScale);
+          newX = clamp(newX, 0, template.width - minSize);
+          newY = clamp(newY, 0, template.height - minSize);
+          newW = clamp(newW, minSize, template.width);
+          newH = clamp(newH, minSize, template.height);
+
+          setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
+        }
         return;
       }
 
