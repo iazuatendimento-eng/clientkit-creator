@@ -43,7 +43,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   }) as Promise<T>;
 }
 
-async function loadFFmpeg(): Promise<FFmpeg> {
+export async function loadFFmpeg(): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
 
   if (ffmpegLoading) {
@@ -60,16 +60,23 @@ async function loadFFmpeg(): Promise<FFmpeg> {
 
     const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
 
+    // Pre-fetch URLs in parallel first
+    const [coreURL, wasmURL] = await Promise.all([
+      toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+      toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+    ]);
+
     await withTimeout(
-      ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-      }),
-      120_000,
+      ffmpeg.load({ coreURL, wasmURL }),
+      180_000,
       "carregar conversor MP4"
     );
 
     return ffmpeg;
+  } catch (err) {
+    // Reset so next call can retry
+    ffmpeg = null;
+    throw err;
   } finally {
     ffmpegLoading = false;
   }

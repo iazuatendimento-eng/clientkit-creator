@@ -52,7 +52,7 @@ import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/l
 import { translateToEnglishLocal } from "@/lib/localTranslate";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
-import { encodeVideoToMP4, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
+import { encodeVideoToMP4, loadFFmpeg, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
@@ -809,6 +809,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     supabase.from("teams").select("id, name").order("name").then(({ data }) => {
       if (data) setTeams(data.filter(t => /^T\d{4}/.test(t.name.trim())));
     });
+    // Pre-load FFmpeg in background if template has audio (avoids timeout during encoding)
+    if (template.audioUrl1 || template.audioUrl2) {
+      loadFFmpeg().catch((err) => console.warn("[BatchVideo] FFmpeg preload failed:", err));
+    }
   }, []);
 
   useEffect(() => {
