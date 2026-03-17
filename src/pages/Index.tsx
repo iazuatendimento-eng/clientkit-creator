@@ -978,8 +978,9 @@ const Index = () => {
             <p className="text-sm text-muted-foreground px-3 mb-2">
               {filteredClients.length} de {clients.length} clientes
             </p>
-            {filteredClients.length > 0 ? (
-              filteredClients.map((client) => (
+            {visibleClients.length > 0 ? (
+              <>
+              {visibleClients.map((client) => (
                 <button
                   key={client.id}
                   onClick={async () => {
