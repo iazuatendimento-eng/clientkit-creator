@@ -2994,9 +2994,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                      setCurrentPreviewPage(0);
                      setIsPlayingPreview(true);
 
-                      // Rebuild overlays lazily whenever this card is missing any layer
-                      const needsOverlayBuild =
-                        (!video.overlayPages?.length || !video.frameOverlayPages?.length || !video.logoOverlayPages?.length);
+                      // Rebuild overlays lazily whenever layers are missing OR only contain empty entries
+                      const hasRenderableText = (video.overlayPages || []).some((p) => typeof p === "string" && p !== "");
+                      const hasRenderableFrame = (video.frameOverlayPages || []).some((p) => typeof p === "string" && p !== "");
+                      const hasRenderableLogo = (video.logoOverlayPages || []).some((p) => typeof p === "string" && p !== "");
+                      const needsOverlayBuild = !hasRenderableText || !hasRenderableFrame || !hasRenderableLogo;
 
                      if (needsOverlayBuild) {
                        try {
