@@ -2263,10 +2263,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           {/* Email subject input */}
           {clientArts.some((a) => a.imageUrl) && (
             <Input
-              placeholder="Título do e-mail (opcional)"
+              placeholder="Título do e-mail (obrigatório)"
               value={emailSubject}
               onChange={(e) => setEmailSubject(e.target.value)}
-              className="w-56 h-9 text-sm"
+              className={`w-56 h-9 text-sm ${!emailSubject.trim() ? 'border-destructive' : ''}`}
             />
           )}
 
