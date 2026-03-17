@@ -1980,7 +1980,25 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
       if (cardRes.data) {
         freshArt.cardTitle = cardRes.data.title || art.cardTitle;
-        freshArt.cardText = cardRes.data.title || cardRes.data.description || art.cardText;
+        const fullText = cardRes.data.description || cardRes.data.title || art.cardText;
+        // For carousel pages, split by semicolon and use only the part for this page
+        if (art.pageIndex !== undefined && art.totalPages && art.totalPages > 1) {
+          const textParts = fullText.split(';').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+          freshArt.cardText = textParts[art.pageIndex] || art.cardText;
+          // Update totalPages in case text changed
+          freshArt.totalPages = textParts.length;
+        } else {
+          // Check if the updated text now has semicolons (became a carousel)
+          const textParts = fullText.split(';').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+          if (textParts.length > 1) {
+            // Text became a carousel - use first part for this card
+            freshArt.cardText = textParts[0];
+            freshArt.pageIndex = 0;
+            freshArt.totalPages = textParts.length;
+          } else {
+            freshArt.cardText = fullText;
+          }
+        }
       }
 
       updatedArts[index] = { ...updatedArts[index], ...freshArt };
