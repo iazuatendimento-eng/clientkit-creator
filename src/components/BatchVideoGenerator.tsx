@@ -421,33 +421,48 @@ const CardCoverPreview = memo(({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
   const totalPages = video.pages.length;
+  const canPaginate = totalPages > 1;
+  const safeCurrentPage = Number.isFinite(currentPage) && currentPage >= 0 && currentPage < totalPages ? currentPage : 0;
 
   useEffect(() => {
     if (totalPages <= 1) return;
     const interval = window.setInterval(() => {
       setIsTransitioning(true);
       setTimeout(() => {
-        setCurrentPage((p) => (p + 1) % totalPages);
+        setCurrentPage((p) => {
+          const base = Number.isFinite(p) ? p : 0;
+          return (base + 1) % totalPages;
+        });
         setTimeout(() => setIsTransitioning(false), 300);
       }, 300);
     }, pageDuration * 1000);
     return () => window.clearInterval(interval);
   }, [totalPages, pageDuration]);
 
+  useEffect(() => {
+    if (totalPages === 0) {
+      if (currentPage !== 0) setCurrentPage(0);
+      return;
+    }
+    if (!Number.isFinite(currentPage) || currentPage < 0 || currentPage >= totalPages) {
+      setCurrentPage(0);
+    }
+  }, [currentPage, totalPages]);
+
   // Reset video failed state when video URLs change
   useEffect(() => {
     setVideoFailed({});
   }, [video.previewVideoUrls]);
 
-  const isSignaturePage = currentPage === totalPages - 1 && totalPages > 1;
-  const currentVideoUrl = video.previewVideoUrls?.[currentPage] || null;
+  const isSignaturePage = safeCurrentPage === totalPages - 1 && totalPages > 1;
+  const currentVideoUrl = video.previewVideoUrls?.[safeCurrentPage] || null;
   const fallbackVideoUrl = !isSignaturePage ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
   const activeVideoUrl = currentVideoUrl || fallbackVideoUrl;
-  const hasVideo = !!activeVideoUrl && !videoFailed[currentPage];
-  const overlayPage = video.overlayPages?.[currentPage];
-  const frameOverlay = video.frameOverlayPages?.[currentPage];
-  const preImageOverlay = video.preImageOverlayPages?.[currentPage];
-  const logoOverlay = video.logoOverlayPages?.[currentPage];
+  const hasVideo = !!activeVideoUrl && !videoFailed[safeCurrentPage];
+  const overlayPage = video.overlayPages?.[safeCurrentPage];
+  const frameOverlay = video.frameOverlayPages?.[safeCurrentPage];
+  const preImageOverlay = video.preImageOverlayPages?.[safeCurrentPage];
+  const logoOverlay = video.logoOverlayPages?.[safeCurrentPage];
 
   const transitionClass = isTransitioning ? "opacity-0" : "opacity-100";
 
