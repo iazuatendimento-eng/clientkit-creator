@@ -439,9 +439,18 @@ export async function generatePageImage(
     // ── Shape rendering ──
     if (el.type === "rect") {
       ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
-      if (el.borderRadius && el.borderRadius > 0) { ctx.beginPath(); ctx.roundRect(el.x, el.y, el.width, el.height, el.borderRadius); ctx.fill(); }
-      else ctx.fillRect(el.x, el.y, el.width, el.height);
-      if (el.borderWidth && el.borderWidth > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth; ctx.stroke(); }
+      ctx.beginPath();
+      if (el.borderRadius && el.borderRadius > 0) ctx.roundRect(el.x, el.y, el.width, el.height, el.borderRadius);
+      else ctx.rect(el.x, el.y, el.width, el.height);
+      ctx.fill();
+      if (el.borderWidth && el.borderWidth > 0) {
+        const prevAlpha = ctx.globalAlpha;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = getBorderColor(el);
+        ctx.lineWidth = el.borderWidth;
+        ctx.stroke();
+        ctx.globalAlpha = prevAlpha;
+      }
     } else if (el.type === "circle") {
       ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor2);
       ctx.beginPath(); ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2); ctx.fill();
