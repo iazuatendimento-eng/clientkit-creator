@@ -604,14 +604,9 @@ const CardCoverPreview = memo(({
       className="bg-muted relative group cursor-pointer overflow-hidden"
       onClick={onClick}
     >
-      {renderSinglePage(currentPage)}
-
-      {/* Page indicator */}
-      {totalPages > 1 && (
-        <div className="absolute top-1 right-1 bg-black/60 px-1.5 py-0.5 rounded text-[9px] text-white/80 z-[9]">
-          {currentPage + 1}/{totalPages}
-        </div>
-      )}
+      <div className="flex gap-0.5">
+        {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
+      </div>
 
       {/* Status overlay */}
       {video.status !== "pending" && (
