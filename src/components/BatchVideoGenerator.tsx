@@ -2599,51 +2599,87 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           (e): e is string => !!e && e.includes("@")
         );
         if (emails.length === 0) {
-          toast({ title: `${videos[0].clientName}: sem e-mail cadastrado`, variant: "destructive" });
-          continue;
+          throw new Error(`${videos[0].clientName}: sem e-mail cadastrado`);
         }
 
         // Encode and upload each video
         const mediaUrls: string[] = [];
         for (const video of videos) {
           videoIdx++;
-          setGenerationStatus(`Gerando MP4 (${videoIdx}/${approvedVideos.length}) • ${video.clientName}`);
 
-          let videoBlob: Blob;
-          try {
-            const encodingPromise = encodeVideoToMP4(video.pages, {
-              width: template.width,
-              height: template.height,
-              pageDuration: template.pageDuration,
-              fps: 24,
-              motionEffect,
-              transitionEffect,
-              textAnimation,
-              logoAnimation,
-              textAnimDuration: textAnimDuration / (template.pageDuration || 3),
-              backgroundVideoUrls: video.previewVideoUrls || undefined,
-              frameOverlayPages: video.frameOverlayPages || undefined,
-              overlayPages: video.overlayPages || undefined,
-              logoOverlayPages: video.logoOverlayPages || undefined,
-              imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
-              imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
-              pageImageAdjustments: video.pageImageAdjustments,
-              audioUrl: (() => {
-                const sel = video.selectedAudio || 1;
-                return sel === 2 ? template.audioUrl2 : template.audioUrl1;
-              })(),
-              onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
-            });
+          const reducedWidth = Math.max(480, Math.round(template.width * 0.67));
+          const reducedHeight = Math.max(854, Math.round(template.height * 0.67));
 
-            // Timeout de 3 minutos por vídeo para evitar travar
-            const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Timeout: encoding took too long")), 180_000)
+          const baseOptions = {
+            width: template.width,
+            height: template.height,
+            pageDuration: template.pageDuration,
+            fps: 24,
+            motionEffect,
+            transitionEffect,
+            textAnimation,
+            logoAnimation,
+            textAnimDuration: textAnimDuration / (template.pageDuration || 3),
+            backgroundVideoUrls: video.previewVideoUrls || undefined,
+            frameOverlayPages: video.frameOverlayPages || undefined,
+            overlayPages: video.overlayPages || undefined,
+            logoOverlayPages: video.logoOverlayPages || undefined,
+            imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
+            imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
+            pageImageAdjustments: video.pageImageAdjustments,
+            audioUrl: (() => {
+              const sel = video.selectedAudio || 1;
+              return sel === 2 ? template.audioUrl2 : template.audioUrl1;
+            })(),
+            onProgress: (p: number) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
+          };
+
+          const encodeAttempts: Array<{
+            label: string;
+            timeoutMs: number;
+            overrides: Partial<typeof baseOptions>;
+          }> = [
+            { label: "qualidade original", timeoutMs: 300_000, overrides: {} },
+            { label: "retry original", timeoutMs: 300_000, overrides: {} },
+            { label: "resolução reduzida", timeoutMs: 240_000, overrides: { width: reducedWidth, height: reducedHeight } },
+            {
+              label: "resolução reduzida sem vídeo de fundo",
+              timeoutMs: 240_000,
+              overrides: { width: reducedWidth, height: reducedHeight, backgroundVideoUrls: undefined },
+            },
+          ];
+
+          let videoBlob: Blob | null = null;
+          let lastEncodeError: unknown = null;
+
+          for (let attemptIndex = 0; attemptIndex < encodeAttempts.length; attemptIndex++) {
+            const attempt = encodeAttempts[attemptIndex];
+            setGenerationStatus(
+              `Gerando MP4 (${videoIdx}/${approvedVideos.length}) • ${video.clientName} • ${attemptIndex + 1}/${encodeAttempts.length}`
             );
-            videoBlob = await Promise.race([encodingPromise, timeoutPromise]);
-          } catch (encodeErr: any) {
-            console.error(`Encoding failed for ${video.clientName}:`, encodeErr);
-            toast({ title: `Erro ao gerar vídeo de ${video.clientName}`, description: encodeErr?.message || "Timeout", variant: "destructive" });
-            continue;
+
+            try {
+              const encodingPromise = encodeVideoToMP4(video.pages, {
+                ...baseOptions,
+                ...attempt.overrides,
+              });
+              const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error(`Timeout na tentativa (${attempt.label})`)), attempt.timeoutMs)
+              );
+              videoBlob = await Promise.race([encodingPromise, timeoutPromise]);
+              break;
+            } catch (encodeErr) {
+              lastEncodeError = encodeErr;
+              console.error(`Tentativa ${attemptIndex + 1} falhou para ${video.clientName}:`, encodeErr);
+            }
+          }
+
+          if (!videoBlob) {
+            throw new Error(
+              `Falha ao gerar vídeo de ${video.clientName} após ${encodeAttempts.length} tentativas. ${
+                lastEncodeError instanceof Error ? lastEncodeError.message : ""
+              }`
+            );
           }
 
           const isActualMP4 = videoBlob.type === "video/mp4";
@@ -2660,15 +2696,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
           if (uploadError) {
             console.error("Upload error:", uploadError);
-            continue;
+            throw new Error(`Erro ao subir vídeo de ${video.clientName}: ${uploadError.message}`);
           }
 
           uploadedPaths.push(path);
           const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
           mediaUrls.push(urlData.publicUrl);
         }
-
-        if (mediaUrls.length === 0) continue;
 
         // Send email
         setGenerationStatus(`Enviando e-mail • ${videos[0].clientName}`);
@@ -2687,10 +2721,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
         if (error) {
           console.error("Email error:", error);
-          toast({ title: `Erro ao enviar e-mail para ${videos[0].clientName}`, variant: "destructive" });
-        } else {
-          sentCount++;
+          throw new Error(`Erro ao enviar e-mail para ${videos[0].clientName}: ${error.message}`);
         }
+
+        sentCount++;
       }
 
       // Clean up temp files from storage
