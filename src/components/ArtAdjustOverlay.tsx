@@ -203,7 +203,9 @@ export function ArtAdjustOverlay({
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textFontSize / 100;
-      const w = els.textEl.width * scale;
+      // Width stays fixed at original element width so text wraps to more lines
+      const w = els.textEl.width;
+      // Height grows with font size to accommodate extra lines from wrapping
       const h = els.textEl.height * scale;
       const rawX = els.textEl.x + textX;
       const rawY = els.textEl.y + textY;
@@ -259,6 +261,7 @@ export function ArtAdjustOverlay({
           contactW: number;
           contactH: number;
           textW: number;
+          textH: number;
           shapeRect?: ShapeOverride;
         };
       }
@@ -284,7 +287,8 @@ export function ArtAdjustOverlay({
     const logoH = els.logoEl ? els.logoEl.height * (logoScaleY / 100) : 0;
     const contactW = els.contactEl ? els.contactEl.width * (contactScaleX / 100) : 0;
     const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
-    const textW = els.textEl ? els.textEl.width * (textFontSize / 100) : 0;
+    const textW = els.textEl ? els.textEl.width : 0;
+    const textH = els.textEl ? els.textEl.height * (textFontSize / 100) : 0;
 
     const photoR = getRect("photo");
     const photoW = photoR ? photoR.w : 0;
@@ -327,6 +331,7 @@ export function ArtAdjustOverlay({
         contactW,
         contactH,
         textW,
+        textH,
         shapeRect,
       },
     };
@@ -490,37 +495,20 @@ export function ArtAdjustOverlay({
           return;
         }
 
-        const baseW = els.textEl?.width || 1;
         const baseH = els.textEl?.height || 1;
         const h = s.handle as Handle;
-        const isVerticalHandle = h === "n" || h === "s";
+
+        // All handles (side, corner) change font size based on vertical delta
+        // Width stays fixed - font size increase causes more line wrapping
+        const signedDy = handleSignY(h) * dy;
+        // For horizontal-only handles, use dx mapped to height change
         const isHorizontalHandle = h === "e" || h === "w";
-
-        const isCorner = !isVerticalHandle && !isHorizontalHandle;
-
-        if (isHorizontalHandle) {
-          const signedDx = handleSignX(h) * dx;
-          const newW = clamp(s.start.textW + signedDx, baseW * 0.5, baseW * 2);
-          const newScale = clamp((newW / baseW) * 100, 50, 200);
-          setTextFontSize(newScale);
-          if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
-        } else if (isVerticalHandle) {
-          const signedDy = handleSignY(h) * dy;
-          const newH = clamp(s.start.textW + signedDy, baseH * 0.5, baseH * 2);
-          const newScale = clamp((newH / baseH) * 100, 50, 200);
-          setTextFontSize(newScale);
-          if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
-        } else {
-          // Corner: proportional
-          const signedDx = handleSignX(h) * dx;
-          const signedDy = handleSignY(h) * dy;
-          const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
-          const newW = clamp(s.start.textW + signedDelta, baseW * 0.5, baseW * 2);
-          const newScale = clamp((newW / baseW) * 100, 50, 200);
-          setTextFontSize(newScale);
-          if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
-          if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
-        }
+        const delta = isHorizontalHandle ? handleSignX(h) * dx : signedDy;
+        
+        const newH = clamp(s.start.textH + delta, baseH * 0.5, baseH * 3);
+        const newScale = clamp((newH / baseH) * 100, 50, 300);
+        setTextFontSize(newScale);
+        if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
         return;
       }
 
