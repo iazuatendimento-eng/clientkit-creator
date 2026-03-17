@@ -838,6 +838,29 @@ const Index = () => {
                 </div>
               </DialogContent>
             </Dialog>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <History className="mr-1 h-4 w-4" />
+                  Histórico
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-xs">
+                <DialogHeader>
+                  <DialogTitle>Histórico de Lotes</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/batch-history?type=art")}>
+                    <Palette className="h-4 w-4 mr-2" />
+                    Histórico de Artes
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/batch-history?type=video")}>
+                    <Video className="h-4 w-4 mr-2" />
+                    Histórico de Vídeos
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button size="sm" variant="outline" onClick={() => navigate("/send-media")}>
               <Mail className="mr-1 h-4 w-4" />
               Enviar
