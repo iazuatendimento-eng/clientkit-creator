@@ -251,7 +251,7 @@ export function VideoGeneratorModal({
       const { data, error } = await supabase.functions.invoke("send-media-email", {
         body: {
           emails,
-          subject: `Vídeo - ${clientName}`,
+          subject: emailSubject.trim() || `Vídeo - ${clientName}`,
           mediaUrl: videoUrl,
           mediaType: "video",
           clientName,
