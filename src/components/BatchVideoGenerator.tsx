@@ -404,6 +404,7 @@ const CardCoverPreview = memo(({
   templateHeight,
   hideSignature,
   onDropVideo,
+  displayPage,
 }: {
   video: ClientVideo;
   motionEffect: MotionEffect;
@@ -422,12 +423,13 @@ const CardCoverPreview = memo(({
   templateHeight?: number;
   hideSignature?: boolean;
   onDropVideo?: (pageIdx: number, file: File) => void;
+  displayPage?: number;
 }) => {
   const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
   const allPages = video.pages.length;
   const totalPages = hideSignature && allPages > 1 ? allPages - 1 : allPages;
   const [dragOverPage, setDragOverPage] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(0);
+  const currentPage = Math.min(displayPage || 0, Math.max(0, totalPages - 1));
 
   // Reset video failed state when video URLs change
   useEffect(() => {
@@ -602,9 +604,14 @@ const CardCoverPreview = memo(({
       className="bg-muted relative group cursor-pointer overflow-hidden"
       onClick={onClick}
     >
-      <div className="flex gap-0.5">
-        {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
-      </div>
+      {renderSinglePage(currentPage)}
+
+      {/* Page indicator */}
+      {totalPages > 1 && (
+        <div className="absolute top-1 right-1 bg-black/60 px-1.5 py-0.5 rounded text-[9px] text-white/80 z-[9]">
+          {currentPage + 1}/{totalPages}
+        </div>
+      )}
 
       {/* Status overlay */}
       {video.status !== "pending" && (
@@ -675,6 +682,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
   const [hideSignature, setHideSignature] = useState(false);
+  // Track which page each card is currently displaying (by cardId)
+  const [cardPageMap, setCardPageMap] = useState<Record<string, number>>({});
   // Extract animation settings from template elements
   const getTemplateTextAnimation = (): TextAnimation => {
     const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
@@ -2827,14 +2836,29 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                 <div className="px-3 pt-2 flex items-center gap-2">
                   <button
                     className="h-5 w-5 rounded border border-primary flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0"
-                    title="Enviar para o final da lista"
+                    title="Próxima página / Enviar para o final"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setClientVideos((prev) => {
-                        const item = prev[index];
-                        const rest = prev.filter((_, i) => i !== index);
-                        return [...rest, item];
-                      });
+                      const allPgs = video.pages.length;
+                      const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
+                      const curPage = cardPageMap[video.cardId] || 0;
+                      if (curPage < totalPgs - 1) {
+                        // Advance to next page and send to end
+                        setCardPageMap((prev) => ({ ...prev, [video.cardId]: curPage + 1 }));
+                        setClientVideos((prev) => {
+                          const item = prev[index];
+                          const rest = prev.filter((_, i) => i !== index);
+                          return [...rest, item];
+                        });
+                      } else {
+                        // Last page: reset to page 0 and send to end
+                        setCardPageMap((prev) => ({ ...prev, [video.cardId]: 0 }));
+                        setClientVideos((prev) => {
+                          const item = prev[index];
+                          const rest = prev.filter((_, i) => i !== index);
+                          return [...rest, item];
+                        });
+                      }
                     }}
                   >
                     <Check className="h-3 w-3 text-primary" />
@@ -2859,22 +2883,30 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    templateWidth={template.width}
                    templateHeight={template.height}
                    hideSignature={hideSignature}
+                   displayPage={cardPageMap[video.cardId] || 0}
                    onDropVideo={(pageIdx, file) => {
                      const url = URL.createObjectURL(file);
-                     setClientVideos((prev) => {
-                       const updated = prev.map((v, i) => {
+                     setClientVideos((prev) =>
+                       prev.map((v, i) => {
                          if (i !== index) return v;
                          const urls = [...(v.previewVideoUrls || [])];
                          while (urls.length <= pageIdx) urls.push(null);
                          urls[pageIdx] = url;
                          return { ...v, previewVideoUrls: urls };
-                       });
-                       // Move this card to the end of the list
-                       const card = updated[index];
-                       const rest = updated.filter((_, i) => i !== index);
-                       return [...rest, card];
+                       })
+                     );
+                     const allPgs = video.pages.length;
+                     const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
+                     const curPage = cardPageMap[video.cardId] || 0;
+                     setCardPageMap((prev) => ({ ...prev, [video.cardId]: curPage < totalPgs - 1 ? curPage + 1 : 0 }));
+                     setClientVideos((prev) => {
+                       const idx = prev.findIndex((v) => v.cardId === video.cardId);
+                       if (idx === -1) return prev;
+                       const item = prev[idx];
+                       const rest = prev.filter((_, i) => i !== idx);
+                       return [...rest, item];
                      });
-                     toast({ title: `Vídeo aplicado na página ${pageIdx + 1} — card enviado ao final` });
+                     toast({ title: `Vídeo na pág. ${pageIdx + 1} — próxima página` });
                    }}
                    onClick={async () => {
                      setSelectedVideo(video);
