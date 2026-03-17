@@ -248,7 +248,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
   useEffect(() => {
     supabase.from("teams").select("*").order("name", { ascending: true }).then(({ data }) => {
-      if (data) setAvailableTeams(data);
+      if (data) setAvailableTeams(data.filter(t => /^T\d{4}/.test(t.name.trim())));
     });
   }, []);
   
