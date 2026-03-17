@@ -2889,15 +2889,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   <h3 className="font-medium truncate text-sm flex-1">{video.clientName} <span className="text-muted-foreground">({(cardPageMap[video.cardId] || 0) + 1}/{Math.max(1, hideSignature && video.pages.length > 1 ? video.pages.length - 1 : video.pages.length)})</span></h3>
                   <button
                     className="shrink-0 p-1 rounded hover:bg-muted transition-colors"
-                    title="Copiar texto do card"
+                    title="Copiar texto da página ativa"
                     onClick={(e) => {
                       e.stopPropagation();
+                      const curPage = cardPageMap[video.cardId] || 0;
+                      const pageText = video.pageTexts?.[curPage] || video.cardTitle || "";
                       const parts = [
-                        video.cardTitle,
+                        pageText,
                         video.imageType,
                       ].filter(Boolean).join("\n");
                       navigator.clipboard.writeText(parts);
-                      toast({ title: "Texto copiado!" });
+                      toast({ title: `Texto da página ${curPage + 1} copiado!` });
                     }}
                   >
                     <ClipboardCopy className="h-3.5 w-3.5 text-muted-foreground" />
