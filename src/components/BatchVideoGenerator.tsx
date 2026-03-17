@@ -421,40 +421,55 @@ const CardCoverPreview = memo(({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
   const totalPages = video.pages.length;
+  const canPaginate = totalPages > 1;
+  const safeCurrentPage = Number.isFinite(currentPage) && currentPage >= 0 && currentPage < totalPages ? currentPage : 0;
 
   useEffect(() => {
     if (totalPages <= 1) return;
     const interval = window.setInterval(() => {
       setIsTransitioning(true);
       setTimeout(() => {
-        setCurrentPage((p) => (p + 1) % totalPages);
+        setCurrentPage((p) => {
+          const base = Number.isFinite(p) ? p : 0;
+          return (base + 1) % totalPages;
+        });
         setTimeout(() => setIsTransitioning(false), 300);
       }, 300);
     }, pageDuration * 1000);
     return () => window.clearInterval(interval);
   }, [totalPages, pageDuration]);
 
+  useEffect(() => {
+    if (totalPages === 0) {
+      if (currentPage !== 0) setCurrentPage(0);
+      return;
+    }
+    if (!Number.isFinite(currentPage) || currentPage < 0 || currentPage >= totalPages) {
+      setCurrentPage(0);
+    }
+  }, [currentPage, totalPages]);
+
   // Reset video failed state when video URLs change
   useEffect(() => {
     setVideoFailed({});
   }, [video.previewVideoUrls]);
 
-  const isSignaturePage = currentPage === totalPages - 1 && totalPages > 1;
-  const currentVideoUrl = video.previewVideoUrls?.[currentPage] || null;
+  const isSignaturePage = safeCurrentPage === totalPages - 1 && totalPages > 1;
+  const currentVideoUrl = video.previewVideoUrls?.[safeCurrentPage] || null;
   const fallbackVideoUrl = !isSignaturePage ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
   const activeVideoUrl = currentVideoUrl || fallbackVideoUrl;
-  const hasVideo = !!activeVideoUrl && !videoFailed[currentPage];
-  const overlayPage = video.overlayPages?.[currentPage];
-  const frameOverlay = video.frameOverlayPages?.[currentPage];
-  const preImageOverlay = video.preImageOverlayPages?.[currentPage];
-  const logoOverlay = video.logoOverlayPages?.[currentPage];
+  const hasVideo = !!activeVideoUrl && !videoFailed[safeCurrentPage];
+  const overlayPage = video.overlayPages?.[safeCurrentPage];
+  const frameOverlay = video.frameOverlayPages?.[safeCurrentPage];
+  const preImageOverlay = video.preImageOverlayPages?.[safeCurrentPage];
+  const logoOverlay = video.logoOverlayPages?.[safeCurrentPage];
 
   const transitionClass = isTransitioning ? "opacity-0" : "opacity-100";
 
   // Debug: log video state on mount and changes
   useEffect(() => {
-    console.log(`[CardCover] ${video.clientName} page=${currentPage}: hasVideo=${hasVideo}, url=${activeVideoUrl?.substring(0, 80) || 'NONE'}, previewVideoUrls=`, video.previewVideoUrls, 'imageRect=', imageRect);
-  }, [hasVideo, activeVideoUrl, currentPage, video.clientName]);
+    console.log(`[CardCover] ${video.clientName} page=${safeCurrentPage} (raw=${currentPage}): hasVideo=${hasVideo}, url=${activeVideoUrl?.substring(0, 80) || 'NONE'}, previewVideoUrls=`, video.previewVideoUrls, 'imageRect=', imageRect);
+  }, [hasVideo, activeVideoUrl, safeCurrentPage, currentPage, video.clientName, imageRect, video.previewVideoUrls]);
 
   return (
     <div
@@ -464,10 +479,10 @@ const CardCoverPreview = memo(({
     >
       <div className={`absolute inset-0 overflow-hidden transition-opacity duration-300 ease-out ${transitionClass} ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}>
         {/* Layer 0: Always render static page as base (z-0) */}
-        {video.pages[currentPage] ? (
+        {video.pages[safeCurrentPage] ? (
           <img
-            key={`card-base-${video.cardId}-${currentPage}`}
-            src={video.pages[currentPage]}
+            key={`card-base-${video.cardId}-${safeCurrentPage}`}
+            src={video.pages[safeCurrentPage]}
             alt={video.clientName}
             className="absolute inset-0 w-full h-full object-contain z-0"
           />
@@ -480,7 +495,7 @@ const CardCoverPreview = memo(({
         {/* Layer 0.5: Pre-image overlay (shapes before image element, animated, below video) */}
         {preImageOverlay && preImageOverlay !== "" && (
           <img
-            key={`pre-img-${video.cardId}-${currentPage}-${shapeAnimation}`}
+            key={`pre-img-${video.cardId}-${safeCurrentPage}-${shapeAnimation}`}
             src={preImageOverlay}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
@@ -491,7 +506,7 @@ const CardCoverPreview = memo(({
 
         {/* Layer 1: Video playing IN the image frame (z-[2]) */}
         {hasVideo && imageRect && (() => {
-          const adj = video.pageImageAdjustments?.[currentPage];
+          const adj = video.pageImageAdjustments?.[safeCurrentPage];
           const videoTransform: React.CSSProperties = {};
           if (adj && imageElSize && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
             const scale = adj.imageScale / 100;
@@ -549,7 +564,7 @@ const CardCoverPreview = memo(({
                   playsInline
                   onError={() => {
                     console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
-                    setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+                    setVideoFailed(prev => ({ ...prev, [safeCurrentPage]: true }));
                   }}
                   onLoadedData={() => {
                     console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
@@ -579,7 +594,7 @@ const CardCoverPreview = memo(({
                 playsInline
                 onError={() => {
                   console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
-                  setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+                  setVideoFailed(prev => ({ ...prev, [safeCurrentPage]: true }));
                 }}
                 onLoadedData={() => {
                   console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
@@ -592,7 +607,7 @@ const CardCoverPreview = memo(({
         {/* Layer 3: Frame overlay (shapes AFTER image, with animation) - z-[3] */}
         {frameOverlay && frameOverlay !== "" && (
           <img
-            key={`frame-${video.cardId}-${currentPage}-${shapeAnimation}`}
+            key={`frame-${video.cardId}-${safeCurrentPage}-${shapeAnimation}`}
             src={frameOverlay}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
@@ -604,7 +619,7 @@ const CardCoverPreview = memo(({
         {/* Layer 4: Text overlay (animated) - z-[4] */}
         {overlayPage && overlayPage !== "" && (
           <img
-            key={`overlay-${video.cardId}-${currentPage}-${textAnimation}`}
+            key={`overlay-${video.cardId}-${safeCurrentPage}-${textAnimation}`}
             src={overlayPage}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
@@ -616,7 +631,7 @@ const CardCoverPreview = memo(({
         {/* Layer 5: Logo overlay (animated) - z-[5] */}
         {logoOverlay && logoOverlay !== "" && (
           <img
-            key={`logo-${video.cardId}-${currentPage}-${logoAnimation}`}
+            key={`logo-${video.cardId}-${safeCurrentPage}-${logoAnimation}`}
             src={logoOverlay}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
@@ -628,26 +643,36 @@ const CardCoverPreview = memo(({
       {/* Page indicator with navigation arrows */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 px-1.5 py-1 rounded text-xs text-white z-10 flex items-center gap-1.5">
         <button
-          className="hover:text-primary transition-colors p-0.5"
+          className="hover:text-primary transition-colors p-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!canPaginate}
           onClick={(e) => {
             e.stopPropagation();
+            if (!canPaginate) return;
             setIsTransitioning(true);
             setTimeout(() => {
-              setCurrentPage((p) => (p - 1 + totalPages) % totalPages);
+              setCurrentPage((p) => {
+                const base = Number.isFinite(p) ? p : 0;
+                return (base - 1 + totalPages) % totalPages;
+              });
               setTimeout(() => setIsTransitioning(false), 100);
             }, 100);
           }}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
-        <span>{totalPages > 0 ? `${currentPage + 1} / ${totalPages}` : "..."}</span>
+        <span>{totalPages > 0 ? `${safeCurrentPage + 1} / ${totalPages}` : "..."}</span>
         <button
-          className="hover:text-primary transition-colors p-0.5"
+          className="hover:text-primary transition-colors p-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!canPaginate}
           onClick={(e) => {
             e.stopPropagation();
+            if (!canPaginate) return;
             setIsTransitioning(true);
             setTimeout(() => {
-              setCurrentPage((p) => (p + 1) % totalPages);
+              setCurrentPage((p) => {
+                const base = Number.isFinite(p) ? p : 0;
+                return (base + 1) % totalPages;
+              });
               setTimeout(() => setIsTransitioning(false), 100);
             }, 100);
           }}
