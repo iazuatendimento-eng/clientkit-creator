@@ -45,6 +45,8 @@ import {
   MessageSquareWarning,
   GripVertical,
   Mail,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
@@ -400,6 +402,8 @@ const CardCoverPreview = memo(({
   imageClipShape,
   templateWidth,
   templateHeight,
+  hideSignature,
+  onDropVideo,
 }: {
   video: ClientVideo;
   motionEffect: MotionEffect;
@@ -416,9 +420,13 @@ const CardCoverPreview = memo(({
   imageClipShape?: string;
   templateWidth?: number;
   templateHeight?: number;
+  hideSignature?: boolean;
+  onDropVideo?: (pageIdx: number, file: File) => void;
 }) => {
   const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
-  const totalPages = video.pages.length;
+  const allPages = video.pages.length;
+  const totalPages = hideSignature && allPages > 1 ? allPages - 1 : allPages;
+  const [dragOverPage, setDragOverPage] = useState<number | null>(null);
 
   // Reset video failed state when video URLs change
   useEffect(() => {
@@ -426,7 +434,7 @@ const CardCoverPreview = memo(({
   }, [video.previewVideoUrls]);
 
   const renderSinglePage = (pageIdx: number) => {
-    const isSignature = pageIdx === totalPages - 1 && totalPages > 1;
+    const isSignature = pageIdx === allPages - 1 && allPages > 1;
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
     const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
@@ -435,12 +443,38 @@ const CardCoverPreview = memo(({
     const pgFrame = video.frameOverlayPages?.[pageIdx];
     const pgPreImage = video.preImageOverlayPages?.[pageIdx];
     const pgLogo = video.logoOverlayPages?.[pageIdx];
+    const isDragOver = dragOverPage === pageIdx;
+
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer.types.includes("Files")) {
+        setDragOverPage(pageIdx);
+      }
+    };
+    const handleDragLeave = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverPage(null);
+    };
+    const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverPage(null);
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith("video/") && onDropVideo) {
+        onDropVideo(pageIdx, file);
+      }
+    };
 
     return (
       <div
         key={`page-${video.cardId}-${pageIdx}`}
-        className="relative overflow-hidden flex-1"
+        className={`relative overflow-hidden flex-1 rounded border ${isDragOver ? "border-primary ring-2 ring-primary/40" : "border-border/50"}`}
         style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         {video.pages[pageIdx] ? (
           <img
@@ -531,6 +565,18 @@ const CardCoverPreview = memo(({
         {pgLogo && pgLogo !== "" && (
           <img src={pgLogo} alt="" className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`} draggable={false} />
         )}
+
+        {/* Drag-over indicator */}
+        {isDragOver && (
+          <div className="absolute inset-0 z-[8] bg-primary/20 border-2 border-dashed border-primary flex items-center justify-center pointer-events-none">
+            <Film className="h-8 w-8 text-primary" />
+          </div>
+        )}
+
+        {/* Page label */}
+        <div className="absolute top-1 left-1 bg-black/50 px-1.5 py-0.5 rounded text-[9px] text-white/70 z-[6] pointer-events-none">
+          {pageIdx + 1}
+        </div>
       </div>
     );
   };
@@ -627,6 +673,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [videoSearchPage, setVideoSearchPage] = useState(1);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
+  const [hideSignatureCards, setHideSignatureCards] = useState<Set<string>>(new Set());
   // Extract animation settings from template elements
   const getTemplateTextAnimation = (): TextAnimation => {
     const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
@@ -2764,7 +2811,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   const index = clientVideos.indexOf(video);
                   return (
                   <SortableVideoCard key={`${video.cardId}-${index}`} id={`${video.cardId}-${index}`} status={video.status}>
-                {/* Checkbox to send to end */}
+                {/* Checkbox to send to end + hide signature toggle */}
                 <div className="px-3 pt-2 flex items-center gap-2">
                   <button
                     className="h-5 w-5 rounded border border-primary flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0"
@@ -2781,9 +2828,30 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     <Check className="h-3 w-3 text-primary" />
                   </button>
                   <h3 className="font-medium truncate text-sm flex-1">{video.clientName}</h3>
+                  {video.pages.length > 1 && (
+                    <button
+                      className="h-5 w-5 rounded flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+                      title={hideSignatureCards.has(video.cardId) ? "Mostrar assinatura" : "Ocultar assinatura"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHideSignatureCards((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(video.cardId)) next.delete(video.cardId);
+                          else next.add(video.cardId);
+                          return next;
+                        });
+                      }}
+                    >
+                      {hideSignatureCards.has(video.cardId) ? (
+                        <EyeOff className="h-3 w-3 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </button>
+                  )}
                 </div>
 
-                {/* Video Preview with page cycling */}
+                {/* Video Preview with pages side by side */}
                 <CardCoverPreview
                   video={video}
                   motionEffect={motionEffect}
@@ -2799,6 +2867,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    imageClipShape={getImageClipShape(template.contentElements as CanvasElement[])}
                    templateWidth={template.width}
                    templateHeight={template.height}
+                   hideSignature={hideSignatureCards.has(video.cardId)}
+                   onDropVideo={(pageIdx, file) => {
+                     const url = URL.createObjectURL(file);
+                     setClientVideos((prev) =>
+                       prev.map((v, i) => {
+                         if (i !== index) return v;
+                         const urls = [...(v.previewVideoUrls || [])];
+                         while (urls.length <= pageIdx) urls.push(null);
+                         urls[pageIdx] = url;
+                         return { ...v, previewVideoUrls: urls };
+                       })
+                     );
+                     toast({ title: `Vídeo aplicado na página ${pageIdx + 1}` });
+                   }}
                    onClick={async () => {
                      setSelectedVideo(video);
                      setCurrentPreviewPage(0);
