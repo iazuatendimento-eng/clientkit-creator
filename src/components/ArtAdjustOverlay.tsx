@@ -495,37 +495,20 @@ export function ArtAdjustOverlay({
           return;
         }
 
-        const baseW = els.textEl?.width || 1;
         const baseH = els.textEl?.height || 1;
         const h = s.handle as Handle;
-        const isVerticalHandle = h === "n" || h === "s";
+
+        // All handles (side, corner) change font size based on vertical delta
+        // Width stays fixed - font size increase causes more line wrapping
+        const signedDy = handleSignY(h) * dy;
+        // For horizontal-only handles, use dx mapped to height change
         const isHorizontalHandle = h === "e" || h === "w";
-
-        const isCorner = !isVerticalHandle && !isHorizontalHandle;
-
-        if (isHorizontalHandle) {
-          const signedDx = handleSignX(h) * dx;
-          const newW = clamp(s.start.textW + signedDx, baseW * 0.5, baseW * 2);
-          const newScale = clamp((newW / baseW) * 100, 50, 200);
-          setTextFontSize(newScale);
-          if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
-        } else if (isVerticalHandle) {
-          const signedDy = handleSignY(h) * dy;
-          const newH = clamp(s.start.textW + signedDy, baseH * 0.5, baseH * 2);
-          const newScale = clamp((newH / baseH) * 100, 50, 200);
-          setTextFontSize(newScale);
-          if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
-        } else {
-          // Corner: proportional
-          const signedDx = handleSignX(h) * dx;
-          const signedDy = handleSignY(h) * dy;
-          const signedDelta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
-          const newW = clamp(s.start.textW + signedDelta, baseW * 0.5, baseW * 2);
-          const newScale = clamp((newW / baseW) * 100, 50, 200);
-          setTextFontSize(newScale);
-          if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -200, 200));
-          if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
-        }
+        const delta = isHorizontalHandle ? handleSignX(h) * dx : signedDy;
+        
+        const newH = clamp(s.start.textH + delta, baseH * 0.5, baseH * 3);
+        const newScale = clamp((newH / baseH) * 100, 50, 300);
+        setTextFontSize(newScale);
+        if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
         return;
       }
 
