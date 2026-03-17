@@ -214,6 +214,14 @@ const Index = () => {
     return matchesSearch && matchesTextFilter;
   });
 
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [searchQuery, showOnlyWithoutText]);
+
+  const visibleClients = filteredClients.slice(0, visibleCount);
+  const hasMoreClients = visibleCount < filteredClients.length;
+
   const [loadError, setLoadError] = useState(false);
 
   const loadClients = async (retryCount = 0) => {
