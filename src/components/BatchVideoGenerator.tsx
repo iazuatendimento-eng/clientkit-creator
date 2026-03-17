@@ -807,7 +807,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   useEffect(() => {
     // Load teams list
     supabase.from("teams").select("id, name").order("name").then(({ data }) => {
-      if (data) setTeams(data);
+      if (data) setTeams(data.filter(t => /^T\d{4}/.test(t.name.trim())));
     });
   }, []);
 
