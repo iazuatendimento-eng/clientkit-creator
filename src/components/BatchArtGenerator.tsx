@@ -2117,61 +2117,79 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       let sentCount = 0;
       const uploadedPaths: string[] = []; // track for cleanup
 
-      for (const [clientId, arts] of byClient) {
-        const clientRow = clientsData?.find((c) => c.id === clientId);
-        if (!clientRow) continue;
+      // Process clients in parallel (3 at a time)
+      const clientEntries = [...byClient.entries()];
+      const CONCURRENCY = 3;
 
-        const emails = [clientRow.email, clientRow.email_2, clientRow.email_3].filter(
-          (e): e is string => !!e && e.includes("@")
+      for (let i = 0; i < clientEntries.length; i += CONCURRENCY) {
+        const batch = clientEntries.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.allSettled(
+          batch.map(async ([clientId, arts]) => {
+            const clientRow = clientsData?.find((c) => c.id === clientId);
+            if (!clientRow) return false;
+
+            const emails = [clientRow.email, clientRow.email_2, clientRow.email_3].filter(
+              (e): e is string => !!e && e.includes("@")
+            );
+            if (emails.length === 0) {
+              toast({ title: `${arts[0].clientName}: sem e-mail cadastrado`, variant: "destructive" });
+              return false;
+            }
+
+            // Upload each art image to temp storage and collect URLs
+            const mediaUrls: string[] = [];
+            const localPaths: string[] = [];
+            await Promise.all(
+              arts.map(async (art) => {
+                const response = await fetch(art.imageUrl!);
+                const blob = await response.blob();
+                const fileName = `temp_email_${art.cardId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
+                const path = `artes/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                  .from("card-uploads")
+                  .upload(path, blob, { contentType: "image/png" });
+
+                if (uploadError) {
+                  console.error("Upload error:", uploadError);
+                  return;
+                }
+
+                localPaths.push(path);
+                const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+                mediaUrls.push(urlData.publicUrl);
+              })
+            );
+
+            uploadedPaths.push(...localPaths);
+
+            if (mediaUrls.length === 0) return false;
+
+            // Send email
+            const { error } = await supabase.functions.invoke("send-media-email", {
+              body: {
+                emails,
+                subject: emailSubject.trim() || `Arte - ${arts[0].company || arts[0].clientName}`,
+                mediaUrls,
+                mediaUrl: mediaUrls[0],
+                mediaType: "art",
+                clientName: arts[0].company || arts[0].clientName,
+                cardText: arts.map(a => a.cardText || a.cardTitle).filter(Boolean).join("\n\n"),
+                caption: undefined,
+              },
+            });
+
+            if (error) {
+              console.error("Email error:", error);
+              toast({ title: `Erro ao enviar e-mail para ${arts[0].clientName}`, variant: "destructive" });
+              return false;
+            }
+            return true;
+          })
         );
-        if (emails.length === 0) {
-          toast({ title: `${arts[0].clientName}: sem e-mail cadastrado`, variant: "destructive" });
-          continue;
-        }
 
-        // Upload each art image to temp storage and collect URLs
-        const mediaUrls: string[] = [];
-        for (const art of arts) {
-          const response = await fetch(art.imageUrl!);
-          const blob = await response.blob();
-          const fileName = `temp_email_${art.cardId}_${Date.now()}.png`;
-          const path = `artes/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from("card-uploads")
-            .upload(path, blob, { contentType: "image/png" });
-
-          if (uploadError) {
-            console.error("Upload error:", uploadError);
-            continue;
-          }
-
-          uploadedPaths.push(path);
-          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
-          mediaUrls.push(urlData.publicUrl);
-        }
-
-        if (mediaUrls.length === 0) continue;
-
-        // Send email
-        const { data, error } = await supabase.functions.invoke("send-media-email", {
-          body: {
-            emails,
-            subject: emailSubject.trim() || `Arte - ${arts[0].company || arts[0].clientName}`,
-            mediaUrls,
-            mediaUrl: mediaUrls[0],
-            mediaType: "art",
-            clientName: arts[0].company || arts[0].clientName,
-            cardText: arts.map(a => a.cardText || a.cardTitle).filter(Boolean).join("\n\n"),
-            caption: undefined,
-          },
-        });
-
-        if (error) {
-          console.error("Email error:", error);
-          toast({ title: `Erro ao enviar e-mail para ${arts[0].clientName}`, variant: "destructive" });
-        } else {
-          sentCount++;
+        for (const r of batchResults) {
+          if (r.status === "fulfilled" && r.value) sentCount++;
         }
       }
 
