@@ -327,26 +327,26 @@ export async function generatePageImage(
 
   for (let elIdx = 0; elIdx < elements.length; elIdx++) {
     const el = elements[elIdx];
-    const isAnimated = el.animated !== false;
 
     // Shape filter
     if (shapeFilter === "before-image" && imageElIndex >= 0 && elIdx >= imageElIndex) continue;
     if (shapeFilter === "after-image" && imageElIndex >= 0 && elIdx <= imageElIndex) continue;
-    if (excludeLogo && (el.type === "logo" || el.type === "mascot") && isAnimated) continue;
-    if (excludeText && ["text", "contact"].includes(el.type) && isAnimated) continue;
+    if (excludeLogo && (el.type === "logo" || el.type === "mascot")) continue;
+    if (excludeText && ["text", "contact"].includes(el.type)) continue;
     if (!transparentBackground && el.gradient?.fadeMode) continue;
 
     // Text-only overlay
     if (transparentBackground && !excludeText) {
       if (!["text", "contact"].includes(el.type)) continue;
-      if (!isAnimated) continue;
     }
 
     // Frame-only overlay
     if (transparentBackground && excludeText) {
       if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
-      const hasTrueAnimation = el.animationType && el.animationType !== "none";
-      if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
+      if (shapeFilter === "before-image") {
+        const hasTrueAnimation = el.animationType && el.animationType !== "none";
+        if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
+      }
       if (el.type === "image") {
         if (el.borderWidth && el.borderWidth > 0) {
           ctx.save(); applyElementStyles(el);
