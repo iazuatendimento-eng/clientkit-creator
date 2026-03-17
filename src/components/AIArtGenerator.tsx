@@ -745,7 +745,7 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
                           color: textEl.color,
                           transform: `translate(-50%, -50%) rotate(${textEl.rotation}deg)`,
                           zIndex: 20,
-                          fontWeight: 'bold',
+                          fontWeight: 'normal',
                           textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
                           whiteSpace: 'nowrap',
                         }}
