@@ -989,7 +989,6 @@ export function ArtGeneratorModal({
                   </Button>
                 </div>
               )}
-              )}
             </div>
           )}
         </DialogContent>
