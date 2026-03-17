@@ -286,7 +286,8 @@ export function ArtAdjustOverlay({
     const logoH = els.logoEl ? els.logoEl.height * (logoScaleY / 100) : 0;
     const contactW = els.contactEl ? els.contactEl.width * (contactScaleX / 100) : 0;
     const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
-    const textW = els.textEl ? els.textEl.width * (textFontSize / 100) : 0;
+    const textW = els.textEl ? els.textEl.width : 0;
+    const textH = els.textEl ? els.textEl.height * (textFontSize / 100) : 0;
 
     const photoR = getRect("photo");
     const photoW = photoR ? photoR.w : 0;
