@@ -255,7 +255,7 @@ export function VideoAdjustOverlay({
       const baseFontSize = els.textEl.fontSize || 48;
       const lineHeight = baseFontSize * 1.3;
       const maxWidth = els.textEl.width;
-      const fontWeight = (els.textEl as any).fontWeight || "bold";
+      const fontWeight = (els.textEl as any).fontWeight || "normal";
       const fontFamily = (els.textEl as any).fontFamily || "sans-serif";
 
       let estimatedLines = 1;
@@ -811,7 +811,7 @@ export function VideoAdjustOverlay({
                   fontFamily: fontFamily || "sans-serif",
                   color: textColor || "#ffffff",
                   fontSize: `${((els.textEl.fontSize || 48) * (textScale / 100)) / (template.height / 100)}cqh`,
-                  fontWeight: (els.textEl as any).fontWeight || "bold",
+                  fontWeight: (els.textEl as any).fontWeight || "normal",
                 }}
               >
                 {pageText}

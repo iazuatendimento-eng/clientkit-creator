@@ -160,7 +160,7 @@ export function TemplatePreviewModal({
             alignItems: "center",
             backgroundColor: "transparent",
             background: undefined,
-            fontWeight: "bold",
+            fontWeight: "normal",
             overflow: "hidden",
             wordBreak: "break-word",
           }}
