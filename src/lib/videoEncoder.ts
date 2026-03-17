@@ -1535,10 +1535,10 @@ export async function encodeVideoSimple(
           ctx.restore();
         }
 
-        const frameOverlay = frameOverlayImages[pageIdx];
-        if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
         if (applyMotionToCanvas) ctx.restore();
 
+        const frameOverlay = frameOverlayImages[pageIdx];
+        if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
         const overlay = overlayImages[pageIdx];
         if (overlay) drawOverlay(overlay, pageProgress);
         const logoOverlay = logoOverlayImages[pageIdx];
