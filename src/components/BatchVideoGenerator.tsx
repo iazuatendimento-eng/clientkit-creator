@@ -535,22 +535,28 @@ const CardCoverPreview = memo(({
     );
   };
 
+  // When pages haven't loaded yet, show single loading panel with correct aspect ratio
+  if (totalPages === 0) {
+    return (
+      <div
+        className="bg-muted relative group cursor-pointer overflow-hidden"
+        style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
+        onClick={onClick}
+      >
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="bg-muted relative group cursor-pointer overflow-hidden"
       onClick={onClick}
     >
-      <div className={`flex ${totalPages > 1 ? "gap-0.5" : ""}`}>
-        {totalPages > 0
-          ? Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))
-          : (
-            <div className="flex-1" style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}>
-              <div className="w-full h-full flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            </div>
-          )
-        }
+      <div className="flex gap-0.5">
+        {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
       </div>
 
       {/* Status overlay */}
