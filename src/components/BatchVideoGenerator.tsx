@@ -2716,16 +2716,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={onBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar ao Editor
+            Voltar
           </Button>
           <div>
             <h1 className="text-lg font-semibold flex items-center gap-2">
               <Film className="h-5 w-5" />
-              Geração em Lote de Vídeos
+              Lote de Vídeos
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {template.name} • {template.pageDuration}s/página
-            </p>
           </div>
         </div>
 
