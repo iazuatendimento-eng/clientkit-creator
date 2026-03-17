@@ -203,7 +203,9 @@ export function ArtAdjustOverlay({
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textFontSize / 100;
-      const w = els.textEl.width * scale;
+      // Width stays fixed at original element width so text wraps to more lines
+      const w = els.textEl.width;
+      // Height grows with font size to accommodate extra lines from wrapping
       const h = els.textEl.height * scale;
       const rawX = els.textEl.x + textX;
       const rawY = els.textEl.y + textY;
