@@ -2074,40 +2074,42 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
                   </div>
                 )}
 
-                {selectedEl.type === "text" && (
+                {(selectedEl.type === "text" || selectedEl.type === "contact") && (
                   <>
-                    <div>
-                      <Label className="text-xs">Texto</Label>
-                      <Input
-                        value={selectedEl.text || ""}
-                        onChange={(e) => updateSelectedElement({ text: e.target.value })}
-                        className="h-8"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Tamanho da Fonte</Label>
-                      <Slider
-                        value={[selectedEl.fontSize || 48]}
-                        onValueChange={(v) => updateSelectedElement({ fontSize: v[0] })}
-                        min={12}
-                        max={200}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Alinhamento</Label>
-                      <Select
-                        value={selectedEl.textAlign || "left"}
-                        onValueChange={(v) => updateSelectedElement({ textAlign: v as "left" | "center" | "right" })}
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="left">Esquerda</SelectItem>
-                          <SelectItem value="center">Centralizado</SelectItem>
-                          <SelectItem value="right">Direita</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    {selectedEl.type === "text" && (
+                      <div>
+                        <Label className="text-xs">Texto</Label>
+                        <Input
+                          value={selectedEl.text || ""}
+                          onChange={(e) => updateSelectedElement({ text: e.target.value })}
+                          className="h-8"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <Label className="text-xs">Tamanho da Fonte</Label>
+                        <Slider
+                          value={[selectedEl.fontSize || 48]}
+                          onValueChange={(v) => updateSelectedElement({ fontSize: v[0] })}
+                          min={12}
+                          max={200}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Alinhamento</Label>
+                        <div className="flex border rounded overflow-hidden">
+                          {(["left", "center", "right"] as const).map((align) => (
+                            <button
+                              key={align}
+                              className={`px-2 py-1 text-xs ${(selectedEl.textAlign || "left") === align ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
+                              onClick={() => updateSelectedElement({ textAlign: align })}
+                            >
+                              {align === "left" ? "⬛◻◻" : align === "center" ? "◻⬛◻" : "◻◻⬛"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <Label className="text-xs">Altura da Linha: {(selectedEl.lineHeight || 1.3).toFixed(1)}x</Label>
