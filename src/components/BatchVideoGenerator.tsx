@@ -1858,10 +1858,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       );
       preImageOverlayPages.push(preImageOverlay);
 
-      // Frame-only overlay (shapes AFTER image element, above video)
+      // Frame overlay (all decorative shapes above video)
       const frameOverlay = await generatePageImage(
         template.contentElements, "", video.brandKit, false, undefined,
-        video.adjustments, textAdj, imageAdj, true, true, true, "after-image"
+        video.adjustments, textAdj, imageAdj, true, true, true, "all"
       );
       frameOverlayPages.push(frameOverlay);
 
