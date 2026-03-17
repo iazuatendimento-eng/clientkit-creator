@@ -2874,14 +2874,19 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       const allPgs = video.pages.length;
                       const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
                       const curPage = cardPageMap[video.cardId] ?? 0;
-                      const nextPage = curPage < totalPgs - 1 ? curPage + 1 : 0;
 
-                      setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
-                      setClientVideos((prev) => {
-                        const item = prev[index];
-                        const rest = prev.filter((_, i) => i !== index);
-                        return [...rest, item];
-                      });
+                      if (curPage < totalPgs - 1) {
+                        // Not last page: just advance to next page, stay in place
+                        setCardPageMap((prev) => ({ ...prev, [video.cardId]: curPage + 1 }));
+                      } else {
+                        // Last page: reset to page 0 and send to end
+                        setCardPageMap((prev) => ({ ...prev, [video.cardId]: 0 }));
+                        setClientVideos((prev) => {
+                          const item = prev[index];
+                          const rest = prev.filter((_, i) => i !== index);
+                          return [...rest, item];
+                        });
+                      }
                     }}
                   >
                     <Check className="h-3 w-3 text-primary" />
