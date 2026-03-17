@@ -2923,7 +2923,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    templateWidth={template.width}
                    templateHeight={template.height}
                    hideSignature={hideSignature}
-                   displayPage={cardPageMap[video.cardId] || 0}
+                   displayPage={cardPageMap[video.cardId] ?? 0}
                    onDropVideo={(pageIdx, file) => {
                      const url = URL.createObjectURL(file);
                      setClientVideos((prev) =>
