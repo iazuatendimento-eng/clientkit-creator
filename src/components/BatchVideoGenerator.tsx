@@ -1263,18 +1263,29 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       // FadeMode gradient shapes render ONLY on frame overlay (transparent), not on base page.
       // This ensures the fade reveals the video behind it, matching the intended compositing.
       if (!transparentBackground && el.gradient?.fadeMode) continue;
+      // On base page (non-transparent), skip ALL shapes after the image element.
+      // They must render on the frame overlay (z-3) to appear above the video (z-2).
+      if (!transparentBackground && imageElIndex >= 0 && elIdx > imageElIndex && 
+          !["text", "contact", "logo", "mascot", "image"].includes(el.type)) continue;
       // For text-only overlay (transparent + !excludeText): render ALL text/contact (animated or not)
       if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
       }
-      // For frame-only overlay: render only truly animated shapes, fadeMode gradients, and image borders
+      // For frame-only overlay: render shapes that must appear ABOVE the video layer.
+      // When shapeFilter is "after-image", ALL shapes after the image element must render here
+      // because the video sits at z-[2] and would cover them if they were only on the base page (z-0).
       if (transparentBackground && excludeText) {
         // Skip non-visual elements
         if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
-        // Only render elements that are TRULY animated (have explicit animationType) or have fadeMode gradient
-        // Elements without animationType are static shapes that belong on the base layer
-        const hasTrueAnimation = el.animationType && el.animationType !== "none";
-        if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
+        // When filtering for after-image shapes, render ALL of them (static or animated)
+        // because they must appear above the video layer
+        if (shapeFilter === "after-image") {
+          // Allow all shapes through — they belong above the video
+        } else {
+          // For other overlays, only render animated shapes and fadeMode gradients
+          const hasTrueAnimation = el.animationType && el.animationType !== "none";
+          if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
+        }
         
         // For image elements, draw just the border
         if (el.type === "image") {
