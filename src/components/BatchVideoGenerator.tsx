@@ -2884,10 +2884,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                          return { ...v, previewVideoUrls: urls };
                        })
                      );
-                     const allPgs = video.pages.length;
-                     const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
-                     const curPage = cardPageMap[video.cardId] || 0;
-                     setCardPageMap((prev) => ({ ...prev, [video.cardId]: curPage < totalPgs - 1 ? curPage + 1 : 0 }));
+                      const allPgs = video.pages.length;
+                      const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
+                      const nextPage = pageIdx < totalPgs - 1 ? pageIdx + 1 : 0;
+                      setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
                      setClientVideos((prev) => {
                        const idx = prev.findIndex((v) => v.cardId === video.cardId);
                        if (idx === -1) return prev;
