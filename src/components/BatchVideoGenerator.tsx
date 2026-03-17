@@ -468,8 +468,8 @@ const CardCoverPreview = memo(({
 
   // Debug: log video state on mount and changes
   useEffect(() => {
-    console.log(`[CardCover] ${video.clientName} page=${currentPage}: hasVideo=${hasVideo}, url=${activeVideoUrl?.substring(0, 80) || 'NONE'}, previewVideoUrls=`, video.previewVideoUrls, 'imageRect=', imageRect);
-  }, [hasVideo, activeVideoUrl, currentPage, video.clientName]);
+    console.log(`[CardCover] ${video.clientName} page=${safeCurrentPage} (raw=${currentPage}): hasVideo=${hasVideo}, url=${activeVideoUrl?.substring(0, 80) || 'NONE'}, previewVideoUrls=`, video.previewVideoUrls, 'imageRect=', imageRect);
+  }, [hasVideo, activeVideoUrl, safeCurrentPage, currentPage, video.clientName, imageRect, video.previewVideoUrls]);
 
   return (
     <div
