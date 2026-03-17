@@ -608,12 +608,13 @@ const CardCoverPreview = memo(({
   return (
     <div
       className="bg-muted relative group cursor-pointer overflow-hidden"
+      style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
       onClick={onClick}
     >
       {isCarousel ? (
-        <div className="flex flex-col">
+        <div className="flex flex-col h-full">
           {/* Thumbnail strip */}
-          <div className="flex gap-0.5 p-0.5">
+          <div className="flex gap-0.5 p-0.5 shrink-0">
             {Array.from({ length: totalPages }, (_, i) => {
               const isActive = i === currentPage;
               return (
@@ -636,11 +637,13 @@ const CardCoverPreview = memo(({
               );
             })}
           </div>
-          {/* Large active page */}
-          {renderSinglePage(currentPage)}
+          {/* Large active page fills remaining space */}
+          <div className="relative flex-1 min-h-0">
+            {renderSinglePage(currentPage)}
+          </div>
         </div>
       ) : (
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 h-full">
           {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
         </div>
       )}
