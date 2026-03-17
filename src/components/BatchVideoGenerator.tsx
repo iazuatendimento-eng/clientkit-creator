@@ -563,6 +563,18 @@ const CardCoverPreview = memo(({
         {pgLogo && pgLogo !== "" && (
           <img src={pgLogo} alt="" className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`} draggable={false} />
         )}
+
+        {/* Drag-over indicator */}
+        {isDragOver && (
+          <div className="absolute inset-0 z-[8] bg-primary/20 border-2 border-dashed border-primary flex items-center justify-center pointer-events-none">
+            <Film className="h-8 w-8 text-primary" />
+          </div>
+        )}
+
+        {/* Page label */}
+        <div className="absolute top-1 left-1 bg-black/50 px-1.5 py-0.5 rounded text-[9px] text-white/70 z-[6] pointer-events-none">
+          {pageIdx + 1}
+        </div>
       </div>
     );
   };
