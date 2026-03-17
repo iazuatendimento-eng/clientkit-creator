@@ -2861,28 +2861,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         </div>
 
         <div className="flex items-center gap-4">
-          <Select
-            value={teamFilter || "all"}
-            onValueChange={(value) => {
-              const newFilter = value === "all" ? undefined : value;
-              setTeamFilter(newFilter);
-              void loadTaggedCards(newFilter);
-            }}
-            disabled={!!initialBatch}
-          >
-            <SelectTrigger className="w-[160px] h-9">
-              <SelectValue placeholder="Todas equipes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas equipes</SelectItem>
-              {teams.map((team) => (
-                <SelectItem key={team.id} value={team.name}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Card type filter */}
           <div className="flex gap-1">
             <Button
