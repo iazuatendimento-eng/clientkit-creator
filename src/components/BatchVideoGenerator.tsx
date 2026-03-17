@@ -597,44 +597,14 @@ const CardCoverPreview = memo(({
     );
   }
 
-  // Clamp currentPage
-  const safeCurrentPage = Math.min(currentPage, totalPages - 1);
-
   return (
     <div
       className="bg-muted relative group cursor-pointer overflow-hidden"
       onClick={onClick}
     >
-      {/* Single page view */}
-      {renderSinglePage(safeCurrentPage)}
-
-      {/* Page navigation arrows */}
-      {totalPages > 1 && (
-        <>
-          <button
-            className="absolute left-1 top-1/2 -translate-y-1/2 z-[9] bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 transition-colors"
-            onClick={(e) => { e.stopPropagation(); setCurrentPage((p) => (p - 1 + totalPages) % totalPages); }}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            className="absolute right-1 top-1/2 -translate-y-1/2 z-[9] bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 transition-colors"
-            onClick={(e) => { e.stopPropagation(); setCurrentPage((p) => (p + 1) % totalPages); }}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          {/* Page dots */}
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-[9] flex gap-1">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === safeCurrentPage ? "bg-white" : "bg-white/40"}`}
-                onClick={(e) => { e.stopPropagation(); setCurrentPage(i); }}
-              />
-            ))}
-          </div>
-        </>
-      )}
+      <div className="flex gap-0.5">
+        {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
+      </div>
 
       {/* Status overlay */}
       {video.status !== "pending" && (
