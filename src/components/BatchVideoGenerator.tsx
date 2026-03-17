@@ -2634,6 +2634,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
         // Send email
         setGenerationStatus(`Enviando e-mail • ${videos[0].clientName}`);
+        const videoCoverUrls = videos
+          .map((v) => v.pages?.[0])
+          .filter((url): url is string => typeof url === "string" && url.length > 0);
+
         const { error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails,
@@ -2644,6 +2648,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             clientName: videos[0].company || videos[0].clientName,
             cardText: videos.map(v => v.cardText || v.cardTitle).filter(Boolean).join("\n\n"),
             caption: undefined,
+            videoCoverUrl: videoCoverUrls[0],
+            videoCoverUrls,
           },
         });
 
