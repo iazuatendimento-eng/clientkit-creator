@@ -139,14 +139,7 @@ export async function loadImage(url: string, retries = 2): Promise<HTMLImageElem
     } catch { /* retry */ }
   }
 
-  // Strategy 3: no crossOrigin (tainted canvas)
-  const img = await new Promise<HTMLImageElement | null>((resolve) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => resolve(null);
-    el.src = url;
-  });
-  if (img) { imageCache.set(cacheKey, img); return img; }
+  // Strategy 3 intentionally disabled: no-CORS load taints canvas and can drop overlays.
   return null;
 }
 
