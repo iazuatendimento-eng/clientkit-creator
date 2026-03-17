@@ -1780,10 +1780,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       return "";
     }
 
-    // If both logo and mascot are non-animated, skip overlay
+    // Always render logo/mascot overlay when elements exist.
+    // Base pages exclude logo/mascot, so skipping static items would hide them behind/under video.
     const logoAnimated = logoEl ? logoEl.animated !== false : false;
     const mascotAnimated = mascotEl ? mascotEl.animated !== false : false;
-    if (!logoAnimated && !mascotAnimated) return "";
 
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
