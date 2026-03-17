@@ -650,7 +650,7 @@ const CardCoverPreview = memo(({
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
-        <span>{currentPage + 1} / {totalPages}</span>
+        <span>{totalPages > 0 ? `${currentPage + 1} / ${totalPages}` : "..."}</span>
         <button
           className="hover:text-primary transition-colors p-0.5"
           onClick={(e) => {
