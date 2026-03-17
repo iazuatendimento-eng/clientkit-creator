@@ -638,8 +638,10 @@ const CardCoverPreview = memo(({
             })}
           </div>
           {/* Large active page fills remaining space */}
-          <div className="relative flex-1 min-h-0">
-            {renderSinglePage(currentPage)}
+          <div className="relative flex-1 min-h-0 overflow-hidden">
+            <div className="absolute inset-0">
+              {renderSinglePage(currentPage)}
+            </div>
           </div>
         </div>
       ) : (
