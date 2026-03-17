@@ -2852,7 +2852,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   >
                     <Check className="h-3 w-3 text-primary" />
                   </button>
-                  <h3 className="font-medium truncate text-sm flex-1">{video.clientName}</h3>
+                  <h3 className="font-medium truncate text-sm flex-1">{video.clientName} <span className="text-muted-foreground">({(cardPageMap[video.cardId] || 0) + 1}/{Math.max(1, hideSignature && video.pages.length > 1 ? video.pages.length - 1 : video.pages.length)})</span></h3>
                 </div>
 
                 {/* Video Preview with pages side by side */}
