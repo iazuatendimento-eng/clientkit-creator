@@ -10,13 +10,32 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
   try {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
     if (!RESEND_API_KEY) {
       throw new Error('RESEND_API_KEY não configurada');
     }
 
-    const { emails, subject, mediaUrl, mediaUrls, mediaType, clientName, cardText, caption } = await req.json();
+    const {
+      emails,
+      subject,
+      mediaUrl,
+      mediaUrls,
+      mediaType,
+      clientName,
+      cardText,
+      caption,
+      videoCoverUrl,
+      videoCoverUrls,
+    } = await req.json();
 
     if (!emails || emails.length === 0) {
       throw new Error('Nenhum e-mail fornecido');
@@ -32,6 +51,13 @@ serve(async (req) => {
 
     const isVideo = mediaType === 'video';
     const mediaLabel = isVideo ? 'Vídeo' : 'Arte';
+    const safeClientName = escapeHtml(clientName || 'Cliente');
+
+    const validVideoCoverUrls: string[] = (
+      Array.isArray(videoCoverUrls) && videoCoverUrls.length > 0
+        ? videoCoverUrls
+        : (videoCoverUrl ? [videoCoverUrl] : [])
+    ).filter((url: unknown): url is string => typeof url === 'string' && url.trim().length > 0);
 
     // Build text/caption section if provided
     let textSection = '';
@@ -39,7 +65,7 @@ serve(async (req) => {
       textSection += `
         <div style="background-color: #f8f9fa; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
           <p style="color: #333; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">📝 Texto:</p>
-          <p style="color: #555; margin: 0; white-space: pre-wrap; font-size: 14px;">${cardText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+          <p style="color: #555; margin: 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(cardText)}</p>
         </div>
       `;
     }
@@ -47,15 +73,15 @@ serve(async (req) => {
       textSection += `
         <div style="background-color: #f0f4ff; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
           <p style="color: #333; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">💬 Legenda:</p>
-          <p style="color: #555; margin: 0; white-space: pre-wrap; font-size: 14px;">${caption.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+          <p style="color: #555; margin: 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(caption)}</p>
         </div>
       `;
     }
 
     // Build attachments - support multiple URLs for carousel
     const allUrls: string[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
-    const extension = isVideo ? "mp4" : "png";
-    const baseName = clientName.replace(/[^a-zA-Z0-9]/g, '_');
+    const extension = isVideo ? 'mp4' : 'png';
+    const baseName = (clientName || 'cliente').replace(/[^a-zA-Z0-9]/g, '_');
     const attachments = allUrls.map((url: string, i: number) => ({
       filename: allUrls.length > 1 ? `${baseName}_p${i + 1}.${extension}` : `${baseName}.${extension}`,
       path: url,
@@ -65,21 +91,36 @@ serve(async (req) => {
 
     let mediaSection = '';
     if (isVideo) {
-      // Videos: attachment only, no link (files are temporary)
+      const coverPreviewHtml = validVideoCoverUrls.length > 0
+        ? validVideoCoverUrls.map((url: string, i: number) => `
+            <div style="text-align: center; margin: 12px 0;">
+              <img src="${url}" alt="Capa do vídeo ${safeClientName}${validVideoCoverUrls.length > 1 ? ` ${i + 1}` : ''}" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+            </div>
+          `).join('')
+        : `
+            <p style="color: #888; text-align: center; font-size: 13px; margin: 8px 0 16px 0;">
+              Prévia da capa não disponível neste envio.
+            </p>
+          `;
+
       mediaSection = `
-        <div style="text-align: center; margin: 20px 0;">
-          <div style="background-color: #f0f4ff; border-radius: 12px; padding: 24px; display: inline-block;">
-            <p style="font-size: 32px; margin: 0 0 8px 0;">🎬</p>
-            <p style="color: #333; font-weight: bold; margin: 0 0 4px 0;">Vídeo em anexo</p>
-            <p style="color: #888; font-size: 13px; margin: 0;">Baixe o arquivo MP4 anexado a este e-mail para assistir.</p>
+        <div style="margin: 20px 0;">
+          ${coverPreviewHtml}
+          <div style="text-align: center; margin-top: 12px;">
+            <div style="background-color: #f0f4ff; border-radius: 12px; padding: 24px; display: inline-block;">
+              <p style="font-size: 32px; margin: 0 0 8px 0;">🎬</p>
+              <p style="color: #333; font-weight: bold; margin: 0 0 4px 0;">Vídeo em anexo</p>
+              <p style="color: #888; font-size: 13px; margin: 0;">Baixe o arquivo MP4 anexado a este e-mail para assistir.</p>
+            </div>
           </div>
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 8px;">${count > 1 ? `Os ${count} vídeos também foram enviados` : 'O vídeo também foi enviado'} em anexo.</p>
         </div>
       `;
     } else {
       // For images: show inline previews
       const imagePreviewsHtml = allUrls.map((url: string) => `
         <div style="text-align: center; margin: 12px 0;">
-          <img src="${url}" alt="Arte - ${clientName}" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+          <img src="${url}" alt="Arte - ${safeClientName}" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
         </div>
       `).join('');
       mediaSection = `
@@ -92,8 +133,8 @@ serve(async (req) => {
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333;">📬 ${mediaLabel} - ${clientName}</h2>
-        <p style="color: #555;">Olá! Segue ${isVideo ? 'o vídeo' : 'a arte'} gerada para <strong>${clientName}</strong>.</p>
+        <h2 style="color: #333;">📬 ${mediaLabel} - ${safeClientName}</h2>
+        <p style="color: #555;">Olá! Segue ${isVideo ? 'o vídeo' : 'a arte'} gerada para <strong>${safeClientName}</strong>.</p>
         ${textSection}
         ${mediaSection}
         <p style="color: #999; font-size: 12px; margin-top: 30px;">Enviado via iazu</p>

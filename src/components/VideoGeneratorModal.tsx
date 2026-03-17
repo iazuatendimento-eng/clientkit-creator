@@ -238,7 +238,7 @@ export function VideoGeneratorModal({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailProgress, setEmailProgress] = useState(0);
 
-  const handleSendEmail = async (videoUrl: string) => {
+  const handleSendEmail = async (videoUrl: string, videoCoverUrl?: string) => {
     if (!clientId) return;
     setIsSendingEmail(true);
     try {
@@ -248,7 +248,16 @@ export function VideoGeneratorModal({
       if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); setIsSendingEmail(false); return; }
 
       const { data, error } = await supabase.functions.invoke("send-media-email", {
-        body: { emails, subject: `Vídeo - ${clientName}`, mediaUrl: videoUrl, mediaType: "video", clientName, cardText: cardText || cardTitle, caption: undefined },
+        body: {
+          emails,
+          subject: `Vídeo - ${clientName}`,
+          mediaUrl: videoUrl,
+          mediaType: "video",
+          clientName,
+          cardText: cardText || cardTitle,
+          caption: undefined,
+          videoCoverUrl,
+        },
       });
       if (error) throw error;
       toast.success(data?.message || "E-mail(s) enviado(s)!");
@@ -322,7 +331,7 @@ export function VideoGeneratorModal({
         .eq("id", cardId);
 
       // Send email
-      await handleSendEmail(urlData.publicUrl);
+      await handleSendEmail(urlData.publicUrl, videoPages.pages[0]);
       setExportedBlob(finalBlob);
       onExported?.();
     } catch (err: any) {

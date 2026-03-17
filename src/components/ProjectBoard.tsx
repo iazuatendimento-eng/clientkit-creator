@@ -341,7 +341,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
     window.open(url, '_blank');
   };
 
-  const handleSendEmail = async (mediaUrl: string, mediaType: "art" | "video") => {
+  const handleSendEmail = async (mediaUrl: string, mediaType: "art" | "video", videoCoverUrl?: string) => {
     if (!clientId) return;
     setIsSendingEmail(true);
     try {
@@ -362,6 +362,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           mediaType,
           clientName: brief.clientName,
           cardText: brief.description || brief.title,
+          videoCoverUrl: mediaType === "video" ? (videoCoverUrl || brief.coverImage || undefined) : undefined,
         },
       });
       if (error) throw error;
@@ -407,6 +408,13 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
         return;
       }
 
+      const videoCoverUrls = mediaType === "video"
+        ? finalArtworks
+            .filter((item) => !item.fileType.startsWith("video"))
+            .map((item) => item.url)
+            .filter(Boolean)
+        : [];
+
       const { data, error } = await supabase.functions.invoke("send-media-email", {
         body: {
           emails,
@@ -415,6 +423,8 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
           mediaType,
           clientName: brief.clientName,
           cardText: brief.description || brief.title,
+          videoCoverUrl: mediaType === "video" ? (videoCoverUrls[0] || brief.coverImage || undefined) : undefined,
+          videoCoverUrls: mediaType === "video" ? videoCoverUrls : undefined,
         },
       });
       if (error) throw error;
