@@ -2609,29 +2609,42 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           videoIdx++;
           setGenerationStatus(`Gerando MP4 (${videoIdx}/${approvedVideos.length}) • ${video.clientName}`);
 
-          const videoBlob = await encodeVideoToMP4(video.pages, {
-            width: template.width,
-            height: template.height,
-            pageDuration: template.pageDuration,
-            fps: 24,
-            motionEffect,
-            transitionEffect,
-            textAnimation,
-            logoAnimation,
-            textAnimDuration: textAnimDuration / (template.pageDuration || 3),
-            backgroundVideoUrls: video.previewVideoUrls || undefined,
-            frameOverlayPages: video.frameOverlayPages || undefined,
-            overlayPages: video.overlayPages || undefined,
-            logoOverlayPages: video.logoOverlayPages || undefined,
-            imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
-            imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
-            pageImageAdjustments: video.pageImageAdjustments,
-            audioUrl: (() => {
-              const sel = video.selectedAudio || 1;
-              return sel === 2 ? template.audioUrl2 : template.audioUrl1;
-            })(),
-            onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
-          });
+          let videoBlob: Blob;
+          try {
+            const encodingPromise = encodeVideoToMP4(video.pages, {
+              width: template.width,
+              height: template.height,
+              pageDuration: template.pageDuration,
+              fps: 24,
+              motionEffect,
+              transitionEffect,
+              textAnimation,
+              logoAnimation,
+              textAnimDuration: textAnimDuration / (template.pageDuration || 3),
+              backgroundVideoUrls: video.previewVideoUrls || undefined,
+              frameOverlayPages: video.frameOverlayPages || undefined,
+              overlayPages: video.overlayPages || undefined,
+              logoOverlayPages: video.logoOverlayPages || undefined,
+              imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
+              imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
+              pageImageAdjustments: video.pageImageAdjustments,
+              audioUrl: (() => {
+                const sel = video.selectedAudio || 1;
+                return sel === 2 ? template.audioUrl2 : template.audioUrl1;
+              })(),
+              onProgress: (p) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
+            });
+
+            // Timeout de 3 minutos por vídeo para evitar travar
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Timeout: encoding took too long")), 180_000)
+            );
+            videoBlob = await Promise.race([encodingPromise, timeoutPromise]);
+          } catch (encodeErr: any) {
+            console.error(`Encoding failed for ${video.clientName}:`, encodeErr);
+            toast({ title: `Erro ao gerar vídeo de ${video.clientName}`, description: encodeErr?.message || "Timeout", variant: "destructive" });
+            continue;
+          }
 
           const isActualMP4 = videoBlob.type === "video/mp4";
           const fileExt = isActualMP4 ? "mp4" : "webm";
