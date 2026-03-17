@@ -658,30 +658,143 @@ export async function generateAllVideoPages(
   const preImageOverlayPages: string[] = [];
   const logoOverlayPages: string[] = [];
 
+  const buildPageSet = async (
+    elements: CanvasElement[],
+    text: string,
+    isSignature: boolean,
+    bgImage: string | undefined,
+    textAdj: PageTextAdjustment,
+    imageAdj: PageImageAdjustment
+  ) => {
+    const hasTextLayer = elements.some((el) => el.type === "text" || el.type === "contact");
+    const hasLogoLayer = elements.some((el) => el.type === "logo" || el.type === "mascot");
+
+    let basePage = await generatePageImage(
+      tw,
+      th,
+      bgColor,
+      elements,
+      text,
+      brandKit,
+      isSignature,
+      bgImage,
+      adjustments,
+      textAdj,
+      imageAdj,
+      false,
+      true,
+      true
+    );
+
+    const textOverlay = await generatePageImage(
+      tw,
+      th,
+      bgColor,
+      elements,
+      text,
+      brandKit,
+      isSignature,
+      undefined,
+      adjustments,
+      textAdj,
+      imageAdj,
+      true,
+      true,
+      false
+    );
+
+    const preImageOverlay = await generatePageImage(
+      tw,
+      th,
+      bgColor,
+      elements,
+      "",
+      brandKit,
+      isSignature,
+      undefined,
+      adjustments,
+      textAdj,
+      imageAdj,
+      true,
+      true,
+      true,
+      "before-image"
+    );
+
+    const frameOverlay = await generatePageImage(
+      tw,
+      th,
+      bgColor,
+      elements,
+      "",
+      brandKit,
+      isSignature,
+      undefined,
+      adjustments,
+      textAdj,
+      imageAdj,
+      true,
+      true,
+      true,
+      "all"
+    );
+
+    const logoOverlay = await generateLogoOverlay(tw, th, elements, brandKit, isSignature, adjustments);
+
+    const needsTextFallback = hasTextLayer && !textOverlay;
+    const needsLogoFallback = hasLogoLayer && !logoOverlay;
+
+    if (needsTextFallback || needsLogoFallback) {
+      basePage = await generatePageImage(
+        tw,
+        th,
+        bgColor,
+        elements,
+        text,
+        brandKit,
+        isSignature,
+        bgImage,
+        adjustments,
+        textAdj,
+        imageAdj,
+        false,
+        !needsLogoFallback,
+        !needsTextFallback
+      );
+    }
+
+    return { basePage, textOverlay, preImageOverlay, frameOverlay, logoOverlay };
+  };
+
   for (let i = 0; i < pageTexts.length; i++) {
     const text = pageTexts[i];
     const bgImage = searchedImages[i] || undefined;
     const textAdj = pageTextAdjustments?.[i] || defaultPageTextAdjustment;
     const imageAdj = pageImageAdjustments?.[i] || defaultPageImageAdjustment;
 
-    // Base page
-    pages.push(await generatePageImage(tw, th, bgColor, template.contentElements, text, brandKit, false, bgImage, adjustments, textAdj, imageAdj, false, true, true));
-    // Text overlay
-    overlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, text, brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, false));
-    // Pre-image overlay
-    preImageOverlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, "", brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, true, "before-image"));
-    // Frame overlay
-    frameOverlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, "", brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, true, "all"));
-    // Logo overlay
-    logoOverlayPages.push(await generateLogoOverlay(tw, th, template.contentElements, brandKit, false, adjustments));
+    const result = await buildPageSet(template.contentElements, text, false, bgImage, textAdj, imageAdj);
+
+    pages.push(result.basePage);
+    overlayPages.push(result.textOverlay);
+    preImageOverlayPages.push(result.preImageOverlay);
+    frameOverlayPages.push(result.frameOverlay);
+    logoOverlayPages.push(result.logoOverlay);
   }
 
-  // Signature page
-  pages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, false, true, true));
-  overlayPages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, false));
-  preImageOverlayPages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "before-image"));
-  frameOverlayPages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "all"));
-  logoOverlayPages.push(await generateLogoOverlay(tw, th, template.signatureElements, brandKit, true, adjustments));
+  const signatureResult = await buildPageSet(
+    template.signatureElements,
+    "",
+    true,
+    undefined,
+    defaultPageTextAdjustment,
+    defaultPageImageAdjustment
+  );
+
+  pages.push(signatureResult.basePage);
+  overlayPages.push(signatureResult.textOverlay);
+  preImageOverlayPages.push(signatureResult.preImageOverlay);
+  frameOverlayPages.push(signatureResult.frameOverlay);
+  logoOverlayPages.push(signatureResult.logoOverlay);
 
   return { pages, overlayPages, frameOverlayPages, preImageOverlayPages, logoOverlayPages };
 }
