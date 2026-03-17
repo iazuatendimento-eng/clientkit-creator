@@ -290,6 +290,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [customImageUrl, setCustomImageUrl] = useState("");
   // Team filter is now fixed based on initial selection - no runtime switching
   const teamFilter = initialTeamFilter;
+  // Resolved team for saving: if no explicit filter, infer from first client's team
+  const resolvedTeamRef = useRef<string | null>(initialTeamFilter || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Element override states
