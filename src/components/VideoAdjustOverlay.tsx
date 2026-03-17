@@ -379,7 +379,7 @@ export function VideoAdjustOverlay({
     const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
     const mascotW = els.mascotEl ? els.mascotEl.width * (mascotScaleX / 100) : 0;
     const mascotH = els.mascotEl ? els.mascotEl.height * (mascotScaleY / 100) : 0;
-    const textW = els.textEl ? els.textEl.width * (textScale / 100) : 0;
+    const textW = els.textEl ? els.textEl.width : 0;
     const textH = els.textEl ? els.textEl.height * (textScale / 100) : 0;
     const currentImageScale = imageScale ?? 100;
     const imgElW = els.imageEl?.width || template.width;
