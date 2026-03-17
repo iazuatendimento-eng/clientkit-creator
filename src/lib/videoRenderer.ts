@@ -139,14 +139,7 @@ export async function loadImage(url: string, retries = 2): Promise<HTMLImageElem
     } catch { /* retry */ }
   }
 
-  // Strategy 3: no crossOrigin (tainted canvas)
-  const img = await new Promise<HTMLImageElement | null>((resolve) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => resolve(null);
-    el.src = url;
-  });
-  if (img) { imageCache.set(cacheKey, img); return img; }
+  // Strategy 3 intentionally disabled: no-CORS load taints canvas and can drop overlays.
   return null;
 }
 
@@ -334,26 +327,26 @@ export async function generatePageImage(
 
   for (let elIdx = 0; elIdx < elements.length; elIdx++) {
     const el = elements[elIdx];
-    const isAnimated = el.animated !== false;
 
     // Shape filter
     if (shapeFilter === "before-image" && imageElIndex >= 0 && elIdx >= imageElIndex) continue;
     if (shapeFilter === "after-image" && imageElIndex >= 0 && elIdx <= imageElIndex) continue;
-    if (excludeLogo && (el.type === "logo" || el.type === "mascot") && isAnimated) continue;
-    if (excludeText && ["text", "contact"].includes(el.type) && isAnimated) continue;
+    if (excludeLogo && (el.type === "logo" || el.type === "mascot")) continue;
+    if (excludeText && ["text", "contact"].includes(el.type)) continue;
     if (!transparentBackground && el.gradient?.fadeMode) continue;
 
     // Text-only overlay
     if (transparentBackground && !excludeText) {
       if (!["text", "contact"].includes(el.type)) continue;
-      if (!isAnimated) continue;
     }
 
     // Frame-only overlay
     if (transparentBackground && excludeText) {
       if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
-      const hasTrueAnimation = el.animationType && el.animationType !== "none";
-      if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
+      if (shapeFilter === "before-image") {
+        const hasTrueAnimation = el.animationType && el.animationType !== "none";
+        if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
+      }
       if (el.type === "image") {
         if (el.borderWidth && el.borderWidth > 0) {
           ctx.save(); applyElementStyles(el);
@@ -595,16 +588,13 @@ export async function generateLogoOverlay(
   const logoEl = elements.find(e => e.type === "logo");
   const mascotEl = elements.find(e => e.type === "mascot");
   if (!logoEl && !mascotEl) return "";
-  const logoAnimated = logoEl ? logoEl.animated !== false : false;
-  const mascotAnimated = mascotEl ? mascotEl.animated !== false : false;
-  if (!logoAnimated && !mascotAnimated) return "";
-
   const canvas = document.createElement("canvas");
   canvas.width = templateWidth;
   canvas.height = templateHeight;
   const ctx = canvas.getContext("2d")!;
 
-  if (logoEl && logoAnimated) {
+  // Always render logo/mascot overlay when element exists.
+  if (logoEl) {
     const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
     if (logoUrl) {
       const img = await loadImage(logoUrl);
@@ -618,7 +608,7 @@ export async function generateLogoOverlay(
     }
   }
 
-  if (mascotEl && mascotAnimated) {
+  if (mascotEl) {
     const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
     if (mascotUrl) {
       const img = await loadImage(mascotUrl);
