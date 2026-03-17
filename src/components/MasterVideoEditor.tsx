@@ -2711,7 +2711,6 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
               variant="outline"
               className="flex-1"
               onClick={() => {
-                // Play all animated elements on canvas
                 startAnimation("__all__");
               }}
             >
@@ -2719,6 +2718,14 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
               Play Geral
             </Button>
           </div>
+          <Button
+            variant="gradient"
+            className="w-full"
+            onClick={handleGenerateBatch}
+          >
+            <Film className="mr-1 h-4 w-4" />
+            Gerar Lote
+          </Button>
         </div>
       </div>
 
