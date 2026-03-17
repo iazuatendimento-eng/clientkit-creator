@@ -1943,36 +1943,53 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setClientArts([...updatedArts]);
   }, [commitOverridesToArt, regenerateFromRefs, generateArtForClient]);
 
-  // Refresh brand kit from database and regenerate art
+  // Refresh brand kit AND card text from database and regenerate art
   const refreshBrandKitAndRegenerate = async (index: number) => {
     const art = clientArts[index];
     try {
-      // Fetch fresh client data from database
-      const { data: clientData, error } = await supabase
-        .from("client_data")
-        .select("brand_kit")
-        .eq("id", art.clientId)
-        .single();
+      // Fetch fresh client data and card text in parallel
+      const [clientRes, cardRes] = await Promise.all([
+        supabase
+          .from("client_data")
+          .select("brand_kit")
+          .eq("id", art.clientId)
+          .single(),
+        supabase
+          .from("project_briefs")
+          .select("title, description")
+          .eq("id", art.cardId)
+          .single(),
+      ]);
 
-      if (error || !clientData) {
+      if (clientRes.error || !clientRes.data) {
         toast({ title: "Erro ao buscar dados do cliente", variant: "destructive" });
         return;
       }
 
-      // Update the brand kit in state
+      // Build updated art with fresh brand kit and card text
       const updatedArts = [...clientArts];
-      updatedArts[index] = { ...updatedArts[index], brandKit: clientData.brand_kit, imageUrl: null };
+      const freshArt: Partial<typeof art> = {
+        brandKit: clientRes.data.brand_kit,
+        imageUrl: null,
+      };
+
+      if (cardRes.data) {
+        freshArt.cardTitle = cardRes.data.title || art.cardTitle;
+        freshArt.cardText = cardRes.data.title || cardRes.data.description || art.cardText;
+      }
+
+      updatedArts[index] = { ...updatedArts[index], ...freshArt };
       setClientArts(updatedArts);
 
-      // Regenerate art with new brand kit
+      // Regenerate art with new data
       const newImageUrl = await generateArtForClient({ ...updatedArts[index] });
       updatedArts[index] = { ...updatedArts[index], imageUrl: newImageUrl };
       setClientArts([...updatedArts]);
 
-      toast({ title: "Kit de marca atualizado!", description: `Cores de ${art.clientName} recarregadas.` });
+      toast({ title: "Dados atualizados!", description: `Kit de marca e texto de ${art.clientName} recarregados.` });
     } catch (error) {
-      console.error("Error refreshing brand kit:", error);
-      toast({ title: "Erro ao atualizar kit de marca", variant: "destructive" });
+      console.error("Error refreshing:", error);
+      toast({ title: "Erro ao atualizar dados", variant: "destructive" });
     }
   };
 
