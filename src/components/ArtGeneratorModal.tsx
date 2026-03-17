@@ -609,7 +609,7 @@ export function ArtGeneratorModal({
       if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); return; }
 
       const { data, error } = await supabase.functions.invoke("send-media-email", {
-        body: { emails, subject: `Arte - ${clientName}`, mediaUrls: uploadedUrls, mediaUrl: uploadedUrls[0], mediaType: "art", clientName, cardText: cardText || cardTitle, caption: undefined },
+        body: { emails, subject: emailSubject.trim() || `Arte - ${clientName}`, mediaUrls: uploadedUrls, mediaUrl: uploadedUrls[0], mediaType: "art", clientName, cardText: cardText || cardTitle, caption: undefined },
       });
       if (error) throw error;
       toast.success(data?.message || "E-mail(s) enviado(s)!");
