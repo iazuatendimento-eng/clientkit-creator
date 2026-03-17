@@ -83,7 +83,7 @@ function renderMiniPreview(
     } else if (el.type === "text") {
       ctx.fillStyle = color;
       const fs = Math.max(((el.fontSize || 24) * scale), 4);
-      ctx.font = `${el.fontWeight || "bold"} ${fs}px sans-serif`;
+      ctx.font = `${el.fontWeight || "normal"} ${fs}px sans-serif`;
       ctx.textAlign = (el.textAlign as CanvasTextAlign) || "left";
       const tx = el.textAlign === "center" ? ex + ew / 2 : el.textAlign === "right" ? ex + ew : ex;
       ctx.fillText(el.content || el.text || "Texto", tx, ey + fs, ew);
