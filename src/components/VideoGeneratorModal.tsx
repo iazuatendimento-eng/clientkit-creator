@@ -883,15 +883,23 @@ export function VideoGeneratorModal({
                     Baixar Vídeo
                   </Button>
                   {clientId && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleExportAndEmail(true)}
-                      disabled={isSendingEmail}
-                      className="gap-2 w-full border-primary/30 hover:border-primary/60"
-                    >
-                      {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                      {isSendingEmail && emailProgress > 0 ? `Enviando... ${Math.round(emailProgress * 100)}%` : "📧 Enviar por E-mail"}
-                    </Button>
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Título do e-mail (obrigatório)"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        className={`h-9 text-sm ${!emailSubject.trim() ? 'border-destructive' : ''}`}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => handleExportAndEmail(true)}
+                        disabled={isSendingEmail || !emailSubject.trim()}
+                        className="gap-2 w-full border-primary/30 hover:border-primary/60"
+                      >
+                        {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                        {isSendingEmail && emailProgress > 0 ? `Enviando... ${Math.round(emailProgress * 100)}%` : "📧 Enviar por E-mail"}
+                      </Button>
+                    </div>
                   )}
                 </>
               )}

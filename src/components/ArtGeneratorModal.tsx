@@ -971,15 +971,24 @@ export function ArtGeneratorModal({
               </div>
               {/* Send email button */}
               {clientId && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleSendEmail}
-                  disabled={isSendingEmail}
-                >
-                  {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-                  {isSendingEmail ? "Enviando..." : "Enviar por E-mail"}
-                </Button>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Título do e-mail (obrigatório)"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    className={`h-9 text-sm ${!emailSubject.trim() ? 'border-destructive' : ''}`}
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleSendEmail}
+                    disabled={isSendingEmail || !emailSubject.trim()}
+                  >
+                    {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                    {isSendingEmail ? "Enviando..." : "Enviar por E-mail"}
+                  </Button>
+                </div>
+              )}
               )}
             </div>
           )}
