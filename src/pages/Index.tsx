@@ -72,6 +72,41 @@ interface Client {
   briefing?: string;
 }
 
+// Searchable client picker for Alteração dialog
+const QuickCreateClientPicker = ({ clients, onSelect }: { clients: Client[]; onSelect: (id: string) => void }) => {
+  const [search, setSearch] = useState("");
+  const filtered = clients.filter(c => {
+    const label = (c.company || c.name).toLowerCase();
+    return label.includes(search.toLowerCase());
+  });
+  return (
+    <div className="space-y-3 pt-2">
+      <p className="text-sm text-muted-foreground">Selecione o cliente:</p>
+      <Input
+        placeholder="Buscar cliente..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        autoFocus
+      />
+      <div className="max-h-60 overflow-y-auto border rounded-md">
+        {filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground p-3 text-center">Nenhum cliente encontrado</p>
+        ) : (
+          filtered.map(c => (
+            <button
+              key={c.id}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={() => onSelect(c.id)}
+            >
+              {c.company || c.name}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Index = () => {
   const [currentView, setCurrentView] = useState<"dashboard" | "client-editor" | "client-dashboard">("dashboard");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -1124,19 +1159,10 @@ const Index = () => {
             <DialogTitle>Alteração</DialogTitle>
           </DialogHeader>
           {!quickCreateClientId ? (
-            <div className="space-y-3 pt-2">
-              <p className="text-sm text-muted-foreground">Selecione o cliente:</p>
-              <Select value={quickCreateClientId} onValueChange={setQuickCreateClientId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha um cliente..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {clients.filter(c => c.active).map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <QuickCreateClientPicker
+              clients={clients.filter(c => c.active)}
+              onSelect={setQuickCreateClientId}
+            />
           ) : (
             <QuickCreate
               clientId={quickCreateClientId}
