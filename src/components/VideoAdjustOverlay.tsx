@@ -811,7 +811,7 @@ export function VideoAdjustOverlay({
                   fontFamily: fontFamily || "sans-serif",
                   color: textColor || "#ffffff",
                   fontSize: `${((els.textEl.fontSize || 48) * (textScale / 100)) / (template.height / 100)}cqh`,
-                  fontWeight: (els.textEl as any).fontWeight || "bold",
+                  fontWeight: (els.textEl as any).fontWeight || "normal",
                 }}
               >
                 {pageText}
