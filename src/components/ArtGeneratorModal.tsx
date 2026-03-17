@@ -584,6 +584,7 @@ export function ArtGeneratorModal({
   const [searchPage, setSearchPage] = useState(1);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
 
   const handleSendEmail = async () => {
     if (!clientId) return;
