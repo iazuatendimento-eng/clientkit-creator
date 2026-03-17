@@ -154,6 +154,23 @@ const loadGoogleFont = async (fontFamily: string): Promise<void> => {
   try { await document.fonts.load(`16px "${fontFamily}"`); } catch { /* ok */ }
 };
 
+const normalizeBrandKit = (raw: any) => {
+  const kit = raw && typeof raw === "object" ? { ...raw } : {};
+  const source = Array.isArray(kit.colors)
+    ? kit.colors.filter((c: unknown) => typeof c === "string" && c.trim().length > 0)
+    : [];
+
+  const bg = source[0] || "#ffffff";
+  const text = source[1] || "#000000";
+  const accessory1 = source[2] || bg;
+  const accessory2 = source[3] || text;
+
+  return {
+    ...kit,
+    colors: [bg, text, accessory1, accessory2],
+  };
+};
+
 // ── Render art with overrides ─────────────────────────────────────────────────
 
 async function renderArt(
