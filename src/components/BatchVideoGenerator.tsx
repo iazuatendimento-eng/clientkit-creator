@@ -2614,11 +2614,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           const reducedWidth = Math.max(480, Math.round(template.width * 0.67));
           const reducedHeight = Math.max(854, Math.round(template.height * 0.67));
 
+          // Adaptive FPS for long videos: keeps quality on short clips and speeds up long exports.
+          const estimatedDurationSec = Math.max(1, video.pages.length * (template.pageDuration || 3));
+          const adaptiveFps = estimatedDurationSec >= 40 ? 12 : estimatedDurationSec >= 24 ? 15 : estimatedDurationSec >= 16 ? 18 : 24;
+
           const baseOptions = {
             width: template.width,
             height: template.height,
             pageDuration: template.pageDuration,
-            fps: 24,
+            fps: adaptiveFps,
             motionEffect,
             transitionEffect,
             textAnimation,
@@ -2643,13 +2647,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             timeoutMs: number;
             overrides: Partial<typeof baseOptions>;
           }> = [
-            { label: "qualidade original", timeoutMs: 300_000, overrides: {} },
-            { label: "retry original", timeoutMs: 300_000, overrides: {} },
-            { label: "resolução reduzida", timeoutMs: 240_000, overrides: { width: reducedWidth, height: reducedHeight } },
+            { label: `qualidade original (${adaptiveFps}fps)`, timeoutMs: 240_000, overrides: {} },
+            { label: "resolução reduzida", timeoutMs: 180_000, overrides: { width: reducedWidth, height: reducedHeight, fps: Math.min(adaptiveFps, 15) } },
             {
               label: "resolução reduzida sem vídeo de fundo",
-              timeoutMs: 240_000,
-              overrides: { width: reducedWidth, height: reducedHeight, backgroundVideoUrls: undefined },
+              timeoutMs: 180_000,
+              overrides: { width: reducedWidth, height: reducedHeight, fps: Math.min(adaptiveFps, 15), backgroundVideoUrls: undefined },
             },
           ];
 

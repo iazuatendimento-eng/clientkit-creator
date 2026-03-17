@@ -370,6 +370,12 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     );
     onProgress?.(0.6);
 
+    if (!audioUrl) {
+      const patched = await patchMP4Brand(nativeMp4);
+      onProgress?.(1);
+      return patched;
+    }
+
     try {
       const ff = await loadFFmpeg();
       onProgress?.(0.7);
