@@ -643,26 +643,36 @@ const CardCoverPreview = memo(({
       {/* Page indicator with navigation arrows */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 px-1.5 py-1 rounded text-xs text-white z-10 flex items-center gap-1.5">
         <button
-          className="hover:text-primary transition-colors p-0.5"
+          className="hover:text-primary transition-colors p-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!canPaginate}
           onClick={(e) => {
             e.stopPropagation();
+            if (!canPaginate) return;
             setIsTransitioning(true);
             setTimeout(() => {
-              setCurrentPage((p) => (p - 1 + totalPages) % totalPages);
+              setCurrentPage((p) => {
+                const base = Number.isFinite(p) ? p : 0;
+                return (base - 1 + totalPages) % totalPages;
+              });
               setTimeout(() => setIsTransitioning(false), 100);
             }, 100);
           }}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
-        <span>{totalPages > 0 ? `${currentPage + 1} / ${totalPages}` : "..."}</span>
+        <span>{totalPages > 0 ? `${safeCurrentPage + 1} / ${totalPages}` : "..."}</span>
         <button
-          className="hover:text-primary transition-colors p-0.5"
+          className="hover:text-primary transition-colors p-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!canPaginate}
           onClick={(e) => {
             e.stopPropagation();
+            if (!canPaginate) return;
             setIsTransitioning(true);
             setTimeout(() => {
-              setCurrentPage((p) => (p + 1) % totalPages);
+              setCurrentPage((p) => {
+                const base = Number.isFinite(p) ? p : 0;
+                return (base + 1) % totalPages;
+              });
               setTimeout(() => setIsTransitioning(false), 100);
             }, 100);
           }}
