@@ -329,11 +329,19 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
                     await ff.writeFile(audioFileName, await fetchFile(audioBlob));
                     hasAudio = true;
                     console.log(`[VideoEncoder] Audio loaded: ${audioBlob.size} bytes (${audioExt})`);
+                  } else {
+                    console.error("[VideoEncoder] Audio blob is empty (0 bytes)!");
                   }
+                } else {
+                  console.error(`[VideoEncoder] Audio fetch failed: ${audioResponse.status} ${audioResponse.statusText}`);
                 }
               } catch (audioErr) {
-                console.warn("[VideoEncoder] Failed to fetch audio:", audioErr);
+                console.error("[VideoEncoder] Failed to fetch audio:", audioErr);
               }
+            }
+
+            if (audioUrl && !hasAudio) {
+              console.error("[VideoEncoder] ⚠️ Audio was requested but could NOT be loaded! Video will be silent.");
             }
 
             const ffmpegArgs = hasAudio && audioFileName
@@ -351,15 +359,16 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             mp4Blob = await patchMP4Brand(mp4Blob);
 
             if (await isValidMP4(mp4Blob)) {
-              console.log("[VideoEncoder] Remuxed MP4 size:", mp4Blob.size);
+              console.log("[VideoEncoder] Remuxed MP4 size:", mp4Blob.size, hasAudio ? "(WITH audio)" : "(NO audio)");
               onProgress?.(1);
               return mp4Blob;
             }
           } catch (err) {
-            console.warn("[VideoEncoder] FFmpeg remux failed, using raw WebCodecs output:", err);
+            console.error("[VideoEncoder] FFmpeg remux FAILED, using raw WebCodecs output (NO AUDIO):", err);
           }
 
-          // If FFmpeg failed, return raw WebCodecs output
+          // If FFmpeg failed, return raw WebCodecs output (WITHOUT audio)
+          console.warn("[VideoEncoder] Returning video WITHOUT audio (FFmpeg failed or unavailable)");
           const patched = await patchMP4Brand(rawBlob);
           onProgress?.(1);
           return patched;
@@ -414,6 +423,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       let audioFileName: string | null = null;
       if (audioUrl) {
         try {
+          console.log("[VideoEncoder/MR] Fetching audio:", audioUrl.substring(0, 80));
           const audioResponse = await fetch(audioUrl);
           if (audioResponse.ok) {
             const audioBlob = await audioResponse.blob();
@@ -422,12 +432,19 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
               audioFileName = `audio.${audioExt}`;
               await ff.writeFile(audioFileName, await fetchFile(audioBlob));
               hasAudio = true;
-              console.log(`[VideoEncoder] Audio loaded: ${audioBlob.size} bytes (${audioExt})`);
+              console.log(`[VideoEncoder/MR] Audio loaded: ${audioBlob.size} bytes (${audioExt})`);
+            } else {
+              console.error("[VideoEncoder/MR] Audio blob is empty!");
             }
+          } else {
+            console.error(`[VideoEncoder/MR] Audio fetch failed: ${audioResponse.status}`);
           }
         } catch (audioErr) {
-          console.warn("[VideoEncoder] Failed to fetch audio:", audioErr);
+          console.error("[VideoEncoder/MR] Failed to fetch audio:", audioErr);
         }
+      }
+      if (audioUrl && !hasAudio) {
+        console.error("[VideoEncoder/MR] ⚠️ Audio requested but NOT loaded! Video will be silent.");
       }
 
       const ffmpegArgs = hasAudio && audioFileName
