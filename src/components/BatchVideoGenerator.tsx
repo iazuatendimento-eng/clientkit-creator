@@ -447,8 +447,10 @@ const CardCoverPreview = memo(({
     const pgPreImage = video.preImageOverlayPages?.[pageIdx];
     const pgLogo = video.logoOverlayPages?.[pageIdx];
     const isDragOver = dragOverPage === pageIdx;
+    const isCurrentPage = pageIdx === currentPage;
 
     const handleDragOver = (e: React.DragEvent) => {
+      if (!isCurrentPage) return;
       e.preventDefault();
       e.stopPropagation();
       if (e.dataTransfer.types.includes("Files")) {
@@ -461,6 +463,7 @@ const CardCoverPreview = memo(({
       setDragOverPage(null);
     };
     const handleDrop = (e: React.DragEvent) => {
+      if (!isCurrentPage) return;
       e.preventDefault();
       e.stopPropagation();
       setDragOverPage(null);
@@ -473,7 +476,7 @@ const CardCoverPreview = memo(({
     return (
       <div
         key={`page-${video.cardId}-${pageIdx}`}
-        className={`relative overflow-hidden flex-1 rounded border ${isDragOver ? "border-primary ring-2 ring-primary/40" : "border-border/50"}`}
+        className={`relative overflow-hidden flex-1 rounded border transition-all ${isCurrentPage ? "border-primary ring-2 ring-primary/30" : "border-border/50 opacity-70"} ${isDragOver ? "ring-2 ring-primary/40" : ""}`}
         style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
