@@ -3002,10 +3002,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                      setCurrentPreviewPage(0);
                      setIsPlayingPreview(true);
 
-                     // Art history loads overlays lazily only when opening a card
-                     const needsOverlayBuild =
-                       initialBatch?.type === "art" &&
-                       (!video.overlayPages?.length || !video.frameOverlayPages?.length || !video.logoOverlayPages?.length);
+                      // Rebuild overlays lazily whenever this card is missing any layer
+                      const needsOverlayBuild =
+                        (!video.overlayPages?.length || !video.frameOverlayPages?.length || !video.logoOverlayPages?.length);
 
                      if (needsOverlayBuild) {
                        try {
