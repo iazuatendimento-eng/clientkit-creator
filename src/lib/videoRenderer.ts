@@ -218,7 +218,8 @@ export async function generatePageImage(
   transparentBackground = false,
   excludeLogo = false,
   excludeText = false,
-  shapeFilter: "all" | "before-image" | "after-image" = "all"
+  shapeFilter: "all" | "before-image" | "after-image" = "all",
+  renderAllNonImage = false
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = templateWidth;
@@ -331,34 +332,71 @@ export async function generatePageImage(
     // Shape filter
     if (shapeFilter === "before-image" && imageElIndex >= 0 && elIdx >= imageElIndex) continue;
     if (shapeFilter === "after-image" && imageElIndex >= 0 && elIdx <= imageElIndex) continue;
-    if (excludeLogo && (el.type === "logo" || el.type === "mascot")) continue;
-    if (excludeText && ["text", "contact"].includes(el.type)) continue;
     if (!transparentBackground && el.gradient?.fadeMode) continue;
 
-    // Text-only overlay
-    if (transparentBackground && !excludeText) {
-      if (!["text", "contact"].includes(el.type)) continue;
-    }
-
-    // Frame-only overlay
-    if (transparentBackground && excludeText) {
-      if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
-      if (shapeFilter === "before-image") {
-        const hasTrueAnimation = el.animationType && el.animationType !== "none";
-        if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
-      }
+    if (transparentBackground && renderAllNonImage) {
       if (el.type === "image") {
         if (el.borderWidth && el.borderWidth > 0) {
-          ctx.save(); applyElementStyles(el);
-          if (el.rotation) { const cx = el.x + el.width / 2; const cy = el.y + el.height / 2; ctx.translate(cx, cy); ctx.rotate((el.rotation * Math.PI) / 180); ctx.translate(-cx, -cy); }
-          ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth;
-          ctx.beginPath(); drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height); ctx.stroke(); ctx.restore();
+          ctx.save();
+          applyElementStyles(el);
+          if (el.rotation) {
+            const cx = el.x + el.width / 2;
+            const cy = el.y + el.height / 2;
+            ctx.translate(cx, cy);
+            ctx.rotate((el.rotation * Math.PI) / 180);
+            ctx.translate(-cx, -cy);
+          }
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = getBorderColor(el);
+          ctx.lineWidth = el.borderWidth;
+          ctx.beginPath();
+          drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height);
+          ctx.stroke();
+          ctx.restore();
         }
         continue;
       }
-    }
+    } else {
+      if (excludeLogo && (el.type === "logo" || el.type === "mascot")) continue;
+      if (excludeText && ["text", "contact"].includes(el.type)) continue;
 
-    if (transparentBackground && !excludeText && !["text", "contact"].includes(el.type)) continue;
+      // Text-only overlay
+      if (transparentBackground && !excludeText) {
+        if (!["text", "contact"].includes(el.type)) continue;
+      }
+
+      // Frame-only overlay
+      if (transparentBackground && excludeText) {
+        if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
+        if (shapeFilter === "before-image") {
+          const hasTrueAnimation = el.animationType && el.animationType !== "none";
+          if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
+        }
+        if (el.type === "image") {
+          if (el.borderWidth && el.borderWidth > 0) {
+            ctx.save();
+            applyElementStyles(el);
+            if (el.rotation) {
+              const cx = el.x + el.width / 2;
+              const cy = el.y + el.height / 2;
+              ctx.translate(cx, cy);
+              ctx.rotate((el.rotation * Math.PI) / 180);
+              ctx.translate(-cx, -cy);
+            }
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = getBorderColor(el);
+            ctx.lineWidth = el.borderWidth;
+            ctx.beginPath();
+            drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height);
+            ctx.stroke();
+            ctx.restore();
+          }
+          continue;
+        }
+      }
+
+      if (transparentBackground && !excludeText && !["text", "contact"].includes(el.type)) continue;
+    }
 
     // Draw background image at the image element's z-position
     if (el.type === "image" && !transparentBackground && backgroundImage) {
@@ -569,6 +607,17 @@ export async function generatePageImage(
   }
 
   try {
+    if (transparentBackground) {
+      const px = ctx.getImageData(0, 0, w, h).data;
+      let hasVisiblePixel = false;
+      for (let i = 3; i < px.length; i += 4) {
+        if (px[i] !== 0) {
+          hasVisiblePixel = true;
+          break;
+        }
+      }
+      if (!hasVisiblePixel) return "";
+    }
     return canvas.toDataURL("image/png");
   } catch {
     return "";
@@ -668,6 +717,11 @@ export async function generateAllVideoPages(
   ) => {
     const hasTextLayer = elements.some((el) => el.type === "text" || el.type === "contact");
     const hasLogoLayer = elements.some((el) => el.type === "logo" || el.type === "mascot");
+    const hasFrameLayer = elements.some(
+      (el) =>
+        (!["image", "text", "contact", "logo", "mascot"].includes(el.type)) ||
+        (el.type === "image" && (el.borderWidth ?? 0) > 0)
+    );
 
     let basePage = await generatePageImage(
       tw,
@@ -686,7 +740,7 @@ export async function generateAllVideoPages(
       true
     );
 
-    const textOverlay = await generatePageImage(
+    let textOverlay = await generatePageImage(
       tw,
       th,
       bgColor,
@@ -721,7 +775,7 @@ export async function generateAllVideoPages(
       "before-image"
     );
 
-    const frameOverlay = await generatePageImage(
+    let frameOverlay = await generatePageImage(
       tw,
       th,
       bgColor,
@@ -739,7 +793,7 @@ export async function generateAllVideoPages(
       "all"
     );
 
-    const logoOverlay = await generateLogoOverlay(tw, th, elements, brandKit, isSignature, adjustments);
+    let logoOverlay = await generateLogoOverlay(tw, th, elements, brandKit, isSignature, adjustments);
 
     const needsTextFallback = hasTextLayer && !textOverlay;
     const needsLogoFallback = hasLogoLayer && !logoOverlay;
@@ -761,6 +815,38 @@ export async function generateAllVideoPages(
         !needsLogoFallback,
         !needsTextFallback
       );
+    }
+
+    const missingAnyTopLayer =
+      (hasTextLayer && !textOverlay) ||
+      (hasFrameLayer && !frameOverlay) ||
+      (hasLogoLayer && !logoOverlay);
+
+    if (missingAnyTopLayer) {
+      const combinedTopOverlay = await generatePageImage(
+        tw,
+        th,
+        bgColor,
+        elements,
+        text,
+        brandKit,
+        isSignature,
+        undefined,
+        adjustments,
+        textAdj,
+        imageAdj,
+        true,
+        false,
+        false,
+        "all",
+        true
+      );
+
+      if (combinedTopOverlay) {
+        textOverlay = combinedTopOverlay;
+        frameOverlay = "";
+        logoOverlay = "";
+      }
     }
 
     return { basePage, textOverlay, preImageOverlay, frameOverlay, logoOverlay };
