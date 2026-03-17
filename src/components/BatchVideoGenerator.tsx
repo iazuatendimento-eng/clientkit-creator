@@ -45,6 +45,8 @@ import {
   MessageSquareWarning,
   GripVertical,
   Mail,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
