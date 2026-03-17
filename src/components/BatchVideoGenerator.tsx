@@ -400,6 +400,8 @@ const CardCoverPreview = memo(({
   imageClipShape,
   templateWidth,
   templateHeight,
+  hideSignature,
+  onDropVideo,
 }: {
   video: ClientVideo;
   motionEffect: MotionEffect;
@@ -416,9 +418,13 @@ const CardCoverPreview = memo(({
   imageClipShape?: string;
   templateWidth?: number;
   templateHeight?: number;
+  hideSignature?: boolean;
+  onDropVideo?: (pageIdx: number, file: File) => void;
 }) => {
   const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
-  const totalPages = video.pages.length;
+  const allPages = video.pages.length;
+  const totalPages = hideSignature && allPages > 1 ? allPages - 1 : allPages;
+  const [dragOverPage, setDragOverPage] = useState<number | null>(null);
 
   // Reset video failed state when video URLs change
   useEffect(() => {
