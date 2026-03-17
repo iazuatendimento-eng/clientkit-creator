@@ -1810,8 +1810,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
     }
 
-    // Draw mascot if present and animated
-    if (mascotEl && mascotAnimated) {
+    // Draw mascot if present (animated or static)
+    if (mascotEl) {
       const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
       if (mascotUrl) {
         const img = await loadImage(mascotUrl);
