@@ -749,9 +749,9 @@ const Index = () => {
 
       {/* Header */}
       <div className="border-b bg-background/80 backdrop-blur-sm px-6 py-4">
-        <div className="container mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <h2 className="text-3xl font-bold gradient-text">Seus Clientes</h2>
-          <div className="flex flex-wrap gap-1.5 items-center">
+        <div className="container mx-auto flex items-center gap-4">
+          <h2 className="text-3xl font-bold gradient-text whitespace-nowrap">Seus Clientes</h2>
+          <div className="flex flex-nowrap gap-1.5 items-center flex-1 justify-end">
             <Dialog>
               <DialogTrigger asChild>
                 <Button size="sm" variant="outline" className="px-2">
