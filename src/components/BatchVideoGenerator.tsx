@@ -447,10 +447,12 @@ const CardCoverPreview = memo(({
     const pgPreImage = video.preImageOverlayPages?.[pageIdx];
     const pgLogo = video.logoOverlayPages?.[pageIdx];
     const isDragOver = dragOverPage === pageIdx;
+    const isCurrentPage = pageIdx === currentPage;
 
     const handleDragOver = (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (!isCurrentPage) return;
       if (e.dataTransfer.types.includes("Files")) {
         setDragOverPage(pageIdx);
       }
@@ -463,6 +465,7 @@ const CardCoverPreview = memo(({
     const handleDrop = (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (!isCurrentPage) return;
       setDragOverPage(null);
       const file = e.dataTransfer.files?.[0];
       if (file && file.type.startsWith("video/") && onDropVideo) {
@@ -473,7 +476,7 @@ const CardCoverPreview = memo(({
     return (
       <div
         key={`page-${video.cardId}-${pageIdx}`}
-        className={`relative overflow-hidden flex-1 rounded border ${isDragOver ? "border-primary ring-2 ring-primary/40" : "border-border/50"}`}
+        className={`relative overflow-hidden flex-1 rounded border transition-all ${isCurrentPage ? "border-primary ring-2 ring-primary/30" : "border-border/50 opacity-70"} ${isDragOver ? "ring-2 ring-primary/40" : ""}`}
         style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -570,15 +573,15 @@ const CardCoverPreview = memo(({
         )}
 
         {/* Drag-over indicator */}
-        {isDragOver && (
+        {isDragOver && isCurrentPage && (
           <div className="absolute inset-0 z-[8] bg-primary/20 border-2 border-dashed border-primary flex items-center justify-center pointer-events-none">
             <Film className="h-8 w-8 text-primary" />
           </div>
         )}
 
         {/* Page label */}
-        <div className="absolute top-1 left-1 bg-black/50 px-1.5 py-0.5 rounded text-[9px] text-white/70 z-[6] pointer-events-none">
-          {pageIdx + 1}
+        <div className="absolute top-1 left-1 bg-background/80 px-1.5 py-0.5 rounded text-[9px] text-foreground z-[6] pointer-events-none border border-border/60">
+          {pageIdx + 1}{isCurrentPage ? " • ativa" : ""}
         </div>
       </div>
     );
@@ -2831,34 +2834,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                 <div className="px-3 pt-2 flex items-center gap-2">
                   <button
                     className="h-5 w-5 rounded border border-primary flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0"
-                    title="Próxima página / Enviar para o final"
+                    title="Concluir página ativa e enviar para o final"
                     onClick={(e) => {
                       e.stopPropagation();
                       const allPgs = video.pages.length;
                       const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
                       const curPage = cardPageMap[video.cardId] || 0;
-                      if (curPage < totalPgs - 1) {
-                        // Advance to next page and send to end
-                        setCardPageMap((prev) => ({ ...prev, [video.cardId]: curPage + 1 }));
-                        setClientVideos((prev) => {
-                          const item = prev[index];
-                          const rest = prev.filter((_, i) => i !== index);
-                          return [...rest, item];
-                        });
-                      } else {
-                        // Last page: reset to page 0 and send to end
-                        setCardPageMap((prev) => ({ ...prev, [video.cardId]: 0 }));
-                        setClientVideos((prev) => {
-                          const item = prev[index];
-                          const rest = prev.filter((_, i) => i !== index);
-                          return [...rest, item];
-                        });
-                      }
+                      const nextPage = curPage < totalPgs - 1 ? curPage + 1 : 0;
+
+                      setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
+                      setClientVideos((prev) => {
+                        const item = prev[index];
+                        const rest = prev.filter((_, i) => i !== index);
+                        return [...rest, item];
+                      });
                     }}
                   >
                     <Check className="h-3 w-3 text-primary" />
                   </button>
-                  <h3 className="font-medium truncate text-sm flex-1">{video.clientName}</h3>
+                  <h3 className="font-medium truncate text-sm flex-1">{video.clientName} <span className="text-muted-foreground">({(cardPageMap[video.cardId] || 0) + 1}/{Math.max(1, hideSignature && video.pages.length > 1 ? video.pages.length - 1 : video.pages.length)})</span></h3>
                 </div>
 
                 {/* Video Preview with pages side by side */}
@@ -2890,10 +2884,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                          return { ...v, previewVideoUrls: urls };
                        })
                      );
-                     const allPgs = video.pages.length;
-                     const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
-                     const curPage = cardPageMap[video.cardId] || 0;
-                     setCardPageMap((prev) => ({ ...prev, [video.cardId]: curPage < totalPgs - 1 ? curPage + 1 : 0 }));
+                      const allPgs = video.pages.length;
+                      const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
+                      const nextPage = pageIdx < totalPgs - 1 ? pageIdx + 1 : 0;
+                      setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
                      setClientVideos((prev) => {
                        const idx = prev.findIndex((v) => v.cardId === video.cardId);
                        if (idx === -1) return prev;
