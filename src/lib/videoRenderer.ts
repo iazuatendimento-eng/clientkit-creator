@@ -717,6 +717,11 @@ export async function generateAllVideoPages(
   ) => {
     const hasTextLayer = elements.some((el) => el.type === "text" || el.type === "contact");
     const hasLogoLayer = elements.some((el) => el.type === "logo" || el.type === "mascot");
+    const hasFrameLayer = elements.some(
+      (el) =>
+        (!["image", "text", "contact", "logo", "mascot"].includes(el.type)) ||
+        (el.type === "image" && (el.borderWidth ?? 0) > 0)
+    );
 
     let basePage = await generatePageImage(
       tw,
@@ -735,7 +740,7 @@ export async function generateAllVideoPages(
       true
     );
 
-    const textOverlay = await generatePageImage(
+    let textOverlay = await generatePageImage(
       tw,
       th,
       bgColor,
@@ -770,7 +775,7 @@ export async function generateAllVideoPages(
       "before-image"
     );
 
-    const frameOverlay = await generatePageImage(
+    let frameOverlay = await generatePageImage(
       tw,
       th,
       bgColor,
@@ -788,7 +793,7 @@ export async function generateAllVideoPages(
       "all"
     );
 
-    const logoOverlay = await generateLogoOverlay(tw, th, elements, brandKit, isSignature, adjustments);
+    let logoOverlay = await generateLogoOverlay(tw, th, elements, brandKit, isSignature, adjustments);
 
     const needsTextFallback = hasTextLayer && !textOverlay;
     const needsLogoFallback = hasLogoLayer && !logoOverlay;
@@ -810,6 +815,38 @@ export async function generateAllVideoPages(
         !needsLogoFallback,
         !needsTextFallback
       );
+    }
+
+    const missingAnyTopLayer =
+      (hasTextLayer && !textOverlay) ||
+      (hasFrameLayer && !frameOverlay) ||
+      (hasLogoLayer && !logoOverlay);
+
+    if (missingAnyTopLayer) {
+      const combinedTopOverlay = await generatePageImage(
+        tw,
+        th,
+        bgColor,
+        elements,
+        text,
+        brandKit,
+        isSignature,
+        undefined,
+        adjustments,
+        textAdj,
+        imageAdj,
+        true,
+        false,
+        false,
+        "all",
+        true
+      );
+
+      if (combinedTopOverlay) {
+        textOverlay = combinedTopOverlay;
+        frameOverlay = "";
+        logoOverlay = "";
+      }
     }
 
     return { basePage, textOverlay, preImageOverlay, frameOverlay, logoOverlay };
