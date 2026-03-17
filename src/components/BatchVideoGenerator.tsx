@@ -432,7 +432,7 @@ const CardCoverPreview = memo(({
   }, [video.previewVideoUrls]);
 
   const renderSinglePage = (pageIdx: number) => {
-    const isSignature = pageIdx === totalPages - 1 && totalPages > 1;
+    const isSignature = pageIdx === allPages - 1 && allPages > 1;
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
     const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
@@ -441,12 +441,38 @@ const CardCoverPreview = memo(({
     const pgFrame = video.frameOverlayPages?.[pageIdx];
     const pgPreImage = video.preImageOverlayPages?.[pageIdx];
     const pgLogo = video.logoOverlayPages?.[pageIdx];
+    const isDragOver = dragOverPage === pageIdx;
+
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer.types.includes("Files")) {
+        setDragOverPage(pageIdx);
+      }
+    };
+    const handleDragLeave = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverPage(null);
+    };
+    const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverPage(null);
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith("video/") && onDropVideo) {
+        onDropVideo(pageIdx, file);
+      }
+    };
 
     return (
       <div
         key={`page-${video.cardId}-${pageIdx}`}
-        className="relative overflow-hidden flex-1"
+        className={`relative overflow-hidden flex-1 rounded border ${isDragOver ? "border-primary ring-2 ring-primary/40" : "border-border/50"}`}
         style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         {video.pages[pageIdx] ? (
           <img
