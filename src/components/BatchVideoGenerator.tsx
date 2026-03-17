@@ -642,6 +642,9 @@ const CardCoverPreview = memo(({
             {renderSinglePage(currentPage)}
           </div>
         </div>
+      ) : totalPages === 1 ? (
+        // Single post: render directly without flex wrapper for proper alignment
+        renderSinglePage(0)
       ) : (
         <div className="flex gap-0.5 h-full">
           {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
