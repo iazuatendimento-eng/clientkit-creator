@@ -602,14 +602,48 @@ const CardCoverPreview = memo(({
     );
   }
 
+  // For multi-page (carousel), show thumbnails row + large active page
+  const isCarousel = totalPages > 2;
+
   return (
     <div
       className="bg-muted relative group cursor-pointer overflow-hidden"
       onClick={onClick}
     >
-      <div className="flex gap-0.5">
-        {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
-      </div>
+      {isCarousel ? (
+        <div className="flex flex-col">
+          {/* Thumbnail strip */}
+          <div className="flex gap-0.5 p-0.5">
+            {Array.from({ length: totalPages }, (_, i) => {
+              const isActive = i === currentPage;
+              return (
+                <div
+                  key={`thumb-${video.cardId}-${i}`}
+                  className={`relative overflow-hidden rounded flex-1 border transition-all cursor-pointer ${isActive ? "border-primary ring-1 ring-primary/40" : "border-border/40 opacity-60"}`}
+                  style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
+                >
+                  {video.pages[i] ? (
+                    <img src={video.pages[i]} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className={`absolute top-0 left-0 px-1 py-px text-[7px] z-[6] pointer-events-none ${isActive ? "bg-primary text-primary-foreground" : "bg-background/70 text-foreground/70"}`}>
+                    {i + 1}{isActive ? " •" : ""}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Large active page */}
+          {renderSinglePage(currentPage)}
+        </div>
+      ) : (
+        <div className="flex gap-0.5">
+          {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
+        </div>
+      )}
 
       {/* Status overlay */}
       {video.status !== "pending" && (
