@@ -436,7 +436,7 @@ const CardCoverPreview = memo(({
     setVideoFailed({});
   }, [video.previewVideoUrls]);
 
-  const renderSinglePage = (pageIdx: number) => {
+  const renderSinglePage = (pageIdx: number, skipAspectRatio = false) => {
     const isSignature = pageIdx === allPages - 1 && allPages > 1;
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
@@ -477,7 +477,7 @@ const CardCoverPreview = memo(({
       <div
         key={`page-${video.cardId}-${pageIdx}`}
         className={`relative overflow-hidden flex-1 rounded border transition-all ${isCurrentPage ? "border-primary ring-2 ring-primary/30" : "border-border/50 opacity-70"} ${isDragOver ? "ring-2 ring-primary/40" : ""}`}
-        style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
+        style={skipAspectRatio ? { height: '100%' } : { aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -640,7 +640,7 @@ const CardCoverPreview = memo(({
           {/* Large active page fills remaining space */}
           <div className="relative flex-1 min-h-0 overflow-hidden">
             <div className="absolute inset-0">
-              {renderSinglePage(currentPage)}
+              {renderSinglePage(currentPage, true)}
             </div>
           </div>
         </div>
