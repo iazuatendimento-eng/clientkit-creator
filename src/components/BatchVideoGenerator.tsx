@@ -2556,7 +2556,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             pageImageAdjustments: video.pageImageAdjustments,
             audioUrl: (() => {
               const sel = video.selectedAudio || 1;
-              return sel === 2 ? template.audioUrl2 : template.audioUrl1;
+              const preferred = sel === 2 ? template.audioUrl2 : template.audioUrl1;
+              const fallback = sel === 2 ? template.audioUrl1 : template.audioUrl2;
+              return preferred || fallback || undefined;
             })(),
             onProgress: (p: number) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
           };
