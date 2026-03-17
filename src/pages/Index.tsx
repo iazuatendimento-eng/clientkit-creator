@@ -818,7 +818,7 @@ const Index = () => {
               <DialogTrigger asChild>
                 <Button size="sm" variant="outline">
                   <Layers className="mr-1 h-4 w-4" />
-                  Gerar Lote
+                  Gerar
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-xs">
