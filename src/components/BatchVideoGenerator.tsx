@@ -1969,7 +1969,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     preImageOverlayPages.push(sigPreImgOverlay2);
     const sigFrameOverlay2 = await generatePageImage(
       template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "after-image"
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "all"
     );
     frameOverlayPages.push(sigFrameOverlay2);
     const sigLogoOverlay2 = await generateLogoOverlay(
