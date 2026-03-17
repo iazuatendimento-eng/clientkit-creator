@@ -125,6 +125,7 @@ const Index = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateClientId, setQuickCreateClientId] = useState<string>("");
+  const [quickCreateBrandKit, setQuickCreateBrandKit] = useState<any>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -1155,7 +1156,7 @@ const Index = () => {
       </AlertDialog>
 
       {/* Quick Create / Alteração Dialog */}
-      <Dialog open={isQuickCreateOpen} onOpenChange={(open) => { setIsQuickCreateOpen(open); if (!open) setQuickCreateClientId(""); }}>
+      <Dialog open={isQuickCreateOpen} onOpenChange={(open) => { setIsQuickCreateOpen(open); if (!open) { setQuickCreateClientId(""); setQuickCreateBrandKit(null); } }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Alteração</DialogTitle>
@@ -1163,13 +1164,23 @@ const Index = () => {
           {!quickCreateClientId ? (
             <QuickCreateClientPicker
               clients={clients.filter(c => c.active)}
-              onSelect={setQuickCreateClientId}
+              onSelect={async (id) => {
+                setQuickCreateClientId(id);
+                try {
+                  const fullClient = await getClientWithBrandKit(id);
+                  if (fullClient?.brand_kit) {
+                    setQuickCreateBrandKit(fullClient.brand_kit);
+                  }
+                } catch (e) {
+                  console.error("Error loading brand kit for QuickCreate:", e);
+                }
+              }}
             />
           ) : (
             <QuickCreate
               clientId={quickCreateClientId}
               clientName={clients.find(c => c.id === quickCreateClientId)?.company || clients.find(c => c.id === quickCreateClientId)?.name || ""}
-              brandKit={clients.find(c => c.id === quickCreateClientId)?.brand_kit}
+              brandKit={quickCreateBrandKit}
             />
           )}
         </DialogContent>
