@@ -2861,16 +2861,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    hideSignature={hideSignature}
                    onDropVideo={(pageIdx, file) => {
                      const url = URL.createObjectURL(file);
-                     setClientVideos((prev) =>
-                       prev.map((v, i) => {
+                     setClientVideos((prev) => {
+                       const updated = prev.map((v, i) => {
                          if (i !== index) return v;
                          const urls = [...(v.previewVideoUrls || [])];
                          while (urls.length <= pageIdx) urls.push(null);
                          urls[pageIdx] = url;
                          return { ...v, previewVideoUrls: urls };
-                       })
-                     );
-                     toast({ title: `Vídeo aplicado na página ${pageIdx + 1}` });
+                       });
+                       // Move this card to the end of the list
+                       const card = updated[index];
+                       const rest = updated.filter((_, i) => i !== index);
+                       return [...rest, card];
+                     });
+                     toast({ title: `Vídeo aplicado na página ${pageIdx + 1} — card enviado ao final` });
                    }}
                    onClick={async () => {
                      setSelectedVideo(video);
