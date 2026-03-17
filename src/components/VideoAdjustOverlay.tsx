@@ -806,12 +806,13 @@ export function VideoAdjustOverlay({
           <Box part="text" label="Texto" tone="muted">
             {pageText && (
               <p
-                className="text-left w-full leading-tight break-words"
+                className="w-full leading-tight break-words"
                 style={{
                   fontFamily: fontFamily || "sans-serif",
                   color: textColor || "#ffffff",
                   fontSize: `${((els.textEl.fontSize || 48) * (textScale / 100)) / (template.height / 100)}cqh`,
                   fontWeight: (els.textEl as any).fontWeight || "normal",
+                  textAlign: (els.textEl as any).textAlign || "left",
                 }}
               >
                 {pageText}
