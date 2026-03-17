@@ -607,6 +607,17 @@ export async function generatePageImage(
   }
 
   try {
+    if (transparentBackground) {
+      const px = ctx.getImageData(0, 0, w, h).data;
+      let hasVisiblePixel = false;
+      for (let i = 3; i < px.length; i += 4) {
+        if (px[i] !== 0) {
+          hasVisiblePixel = true;
+          break;
+        }
+      }
+      if (!hasVisiblePixel) return "";
+    }
     return canvas.toDataURL("image/png");
   } catch {
     return "";
