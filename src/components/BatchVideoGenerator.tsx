@@ -1254,17 +1254,18 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         // Only render shapes AFTER the image element (skip image itself and everything before)
         if (elIdx <= imageElIndex) continue;
       }
-      // Skip logo/mascot if excludeLogo is set AND element is animated (non-animated logos/mascots stay on base)
-      if (excludeLogo && (el.type === "logo" || el.type === "mascot") && isAnimated) continue;
-      // Skip text/contact if excludeText is set AND element is animated (non-animated text stays on base)
-      if (excludeText && ["text", "contact"].includes(el.type) && isAnimated) continue;
+      // In video mode, text/logo/mascot/contact must ALWAYS be on overlay layers (above video at z-2)
+      // so they are never hidden behind the background video, regardless of animation status.
+      // Skip logo/mascot from base page — they always go to the logo overlay layer (z-5)
+      if (excludeLogo && (el.type === "logo" || el.type === "mascot")) continue;
+      // Skip text/contact from base page — they always go to the text overlay layer (z-4)
+      if (excludeText && ["text", "contact"].includes(el.type)) continue;
       // FadeMode gradient shapes render ONLY on frame overlay (transparent), not on base page.
       // This ensures the fade reveals the video behind it, matching the intended compositing.
       if (!transparentBackground && el.gradient?.fadeMode) continue;
-      // For text-only overlay (transparent + !excludeText): only render animated text/contact
+      // For text-only overlay (transparent + !excludeText): render ALL text/contact (animated or not)
       if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
-        if (!isAnimated) continue; // Non-animated text stays on base, not on animated overlay
       }
       // For frame-only overlay: render only truly animated shapes, fadeMode gradients, and image borders
       if (transparentBackground && excludeText) {
