@@ -249,10 +249,11 @@ export function VideoAdjustOverlay({
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textScale / 100;
-      const elW = els.textEl.width * scale;
+      // Width stays fixed at original element width so text wraps to more lines
+      const w = els.textEl.width;
 
       // Use canvas to measure actual text width for accurate line wrapping
-      const baseFontSize = els.textEl.fontSize || 48;
+      const baseFontSize = (els.textEl.fontSize || 48) * scale;
       const lineHeight = baseFontSize * 1.3;
       const maxWidth = els.textEl.width;
       const fontWeight = (els.textEl as any).fontWeight || "normal";
@@ -264,7 +265,7 @@ export function VideoAdjustOverlay({
           const measureCanvas = document.createElement("canvas");
           const ctx = measureCanvas.getContext("2d");
           if (ctx) {
-            ctx.font = `${fontWeight} ${baseFontSize}px ${fontFamily}`;
+            ctx.font = `${fontWeight} ${Math.round(baseFontSize)}px ${fontFamily}`;
             const words = pageText.split(" ");
             let lineWidth = 0;
             for (const word of words) {
@@ -279,7 +280,6 @@ export function VideoAdjustOverlay({
             }
           }
         } catch {
-          // fallback: rough estimate
           const avgCharWidth = baseFontSize * 0.6;
           const words = pageText.split(" ");
           let lineWidth = 0;
@@ -295,12 +295,12 @@ export function VideoAdjustOverlay({
         }
       }
 
-      const estimatedH = Math.max(estimatedLines * lineHeight * scale, els.textEl.height * scale);
+      const estimatedH = Math.max(estimatedLines * lineHeight, els.textEl.height * scale);
 
       return {
         x: els.textEl.x + textX,
         y: els.textEl.y + textY,
-        w: elW,
+        w,
         h: estimatedH,
       };
     }
@@ -379,7 +379,7 @@ export function VideoAdjustOverlay({
     const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
     const mascotW = els.mascotEl ? els.mascotEl.width * (mascotScaleX / 100) : 0;
     const mascotH = els.mascotEl ? els.mascotEl.height * (mascotScaleY / 100) : 0;
-    const textW = els.textEl ? els.textEl.width * (textScale / 100) : 0;
+    const textW = els.textEl ? els.textEl.width : 0;
     const textH = els.textEl ? els.textEl.height * (textScale / 100) : 0;
     const currentImageScale = imageScale ?? 100;
     const imgElW = els.imageEl?.width || template.width;
@@ -564,20 +564,18 @@ export function VideoAdjustOverlay({
           return;
         }
 
-        // Text uses uniform scale (font size scaling)
-        const baseW = els.textEl?.width || 1;
+        // Text resize: width stays fixed, font size changes via height
+        const baseH = els.textEl?.height || 1;
         const h = s.handle as Handle;
 
-        // Use the larger of dx or dy for uniform scaling
-        const signedDx = handleSignX(h) * dx;
         const signedDy = handleSignY(h) * dy;
-        const delta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        const isHorizontalHandle = h === "e" || h === "w";
+        const delta = isHorizontalHandle ? handleSignX(h) * dx : signedDy;
         
-        const newW = clamp(s.start.textW + delta, baseW * 0.25, baseW * 3);
-        const newScale = clamp((newW / baseW) * 100, 25, 300);
+        const newH = clamp(s.start.textH + delta, baseH * 0.25, baseH * 3);
+        const newScale = clamp((newH / baseH) * 100, 25, 300);
         setTextScale(newScale);
         
-        if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -500, 500));
         if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -500, 500));
         return;
       }
