@@ -316,24 +316,28 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             await ff.writeFile("input.mp4", await fetchFile(rawBlob));
 
             let hasAudio = false;
+            let audioFileName: string | null = null;
             if (audioUrl) {
               try {
                 console.log("[VideoEncoder] Fetching audio:", audioUrl.substring(0, 80));
                 const audioResponse = await fetch(audioUrl);
                 if (audioResponse.ok) {
                   const audioBlob = await audioResponse.blob();
-                  const audioExt = audioUrl.includes(".wav") ? "wav" : audioUrl.includes(".ogg") ? "ogg" : audioUrl.includes(".m4a") ? "m4a" : "mp3";
-                  await ff.writeFile(`audio.${audioExt}`, await fetchFile(audioBlob));
-                  hasAudio = true;
+                  if (audioBlob.size > 0) {
+                    const audioExt = inferAudioExt(audioUrl, audioBlob.type);
+                    audioFileName = `audio.${audioExt}`;
+                    await ff.writeFile(audioFileName, await fetchFile(audioBlob));
+                    hasAudio = true;
+                    console.log(`[VideoEncoder] Audio loaded: ${audioBlob.size} bytes (${audioExt})`);
+                  }
                 }
               } catch (audioErr) {
                 console.warn("[VideoEncoder] Failed to fetch audio:", audioErr);
               }
             }
 
-            const audioExt = audioUrl?.includes(".wav") ? "wav" : audioUrl?.includes(".ogg") ? "ogg" : audioUrl?.includes(".m4a") ? "m4a" : "mp3";
-            const ffmpegArgs = hasAudio
-              ? ["-i", "input.mp4", "-i", `audio.${audioExt}`, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]
+            const ffmpegArgs = hasAudio && audioFileName
+              ? ["-i", "input.mp4", "-stream_loop", "-1", "-i", audioFileName, "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]
               : ["-i", "input.mp4", "-c:v", "copy", "-c:a", "copy", "-movflags", "+faststart", "-f", "mp4", "output.mp4"];
 
             await withTimeout(ff.exec(ffmpegArgs), 180_000, hasAudio ? "muxar vídeo + áudio" : "remux faststart");
@@ -343,7 +347,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
             await ff.deleteFile("input.mp4").catch(() => {});
             await ff.deleteFile("output.mp4").catch(() => {});
-            if (hasAudio) await ff.deleteFile(`audio.${audioExt}`).catch(() => {});
+            if (hasAudio && audioFileName) await ff.deleteFile(audioFileName).catch(() => {});
             mp4Blob = await patchMP4Brand(mp4Blob);
 
             if (await isValidMP4(mp4Blob)) {
