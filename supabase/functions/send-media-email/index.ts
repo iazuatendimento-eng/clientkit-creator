@@ -65,22 +65,14 @@ serve(async (req) => {
 
     let mediaSection = '';
     if (isVideo) {
-      // For videos: show a clickable link since email clients don't support inline video
-      const videoLinksHtml = allUrls.map((url: string, i: number) => {
-        const label = allUrls.length > 1 ? `Assistir Vídeo ${i + 1}` : 'Assistir Vídeo';
-        return `
-          <div style="text-align: center; margin: 16px 0;">
-            <a href="${url}" target="_blank" style="display: inline-block; background-color: #4F46E5; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 16px;">
-              ▶ ${label}
-            </a>
-            <p style="color: #888; font-size: 12px; margin-top: 8px;">Clique para abrir o vídeo no navegador</p>
-          </div>
-        `;
-      }).join('');
+      // Videos: attachment only, no link (files are temporary)
       mediaSection = `
-        <div style="margin: 20px 0;">
-          ${videoLinksHtml}
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">O vídeo também está em anexo neste e-mail.</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <div style="background-color: #f0f4ff; border-radius: 12px; padding: 24px; display: inline-block;">
+            <p style="font-size: 32px; margin: 0 0 8px 0;">🎬</p>
+            <p style="color: #333; font-weight: bold; margin: 0 0 4px 0;">Vídeo em anexo</p>
+            <p style="color: #888; font-size: 13px; margin: 0;">Baixe o arquivo MP4 anexado a este e-mail para assistir.</p>
+          </div>
         </div>
       `;
     } else {
