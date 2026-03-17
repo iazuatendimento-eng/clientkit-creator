@@ -946,7 +946,12 @@ const Index = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - Client List */}
-        <div className="w-80 border-r bg-card/50 overflow-y-auto">
+        <div className="w-80 border-r bg-card/50 overflow-y-auto" onScroll={(e) => {
+          const el = e.currentTarget;
+          if (hasMoreClients && el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
+            setVisibleCount(prev => prev + 50);
+          }
+        }}>
           <div className="p-4 space-y-2">
             {/* Search and Filters */}
             <div className="space-y-2 mb-4">
