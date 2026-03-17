@@ -2530,7 +2530,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               const sel = video.selectedAudio || 1;
               const preferred = sel === 2 ? template.audioUrl2 : template.audioUrl1;
               const fallback = sel === 2 ? template.audioUrl1 : template.audioUrl2;
-              return preferred || fallback || undefined;
+              const resolved = preferred || fallback || undefined;
+              console.log(`[BatchVideo] Audio for ${video.clientName}: sel=${sel}, url=${resolved ? resolved.substring(0, 80) + '...' : 'NONE'}, audioUrl1=${template.audioUrl1 ? 'YES' : 'NO'}, audioUrl2=${template.audioUrl2 ? 'YES' : 'NO'}`);
+              return resolved;
             })(),
             onProgress: (p: number) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
           };
