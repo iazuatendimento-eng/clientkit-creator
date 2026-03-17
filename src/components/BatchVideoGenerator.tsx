@@ -417,86 +417,46 @@ const CardCoverPreview = memo(({
   templateWidth?: number;
   templateHeight?: number;
 }) => {
-  const [currentPage, setCurrentPage] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
   const totalPages = video.pages.length;
-  const canPaginate = totalPages > 1;
-  const safeCurrentPage = Number.isFinite(currentPage) && currentPage >= 0 && currentPage < totalPages ? currentPage : 0;
-
-  useEffect(() => {
-    if (totalPages <= 1) return;
-    const interval = window.setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentPage((p) => {
-          const base = Number.isFinite(p) ? p : 0;
-          return (base + 1) % totalPages;
-        });
-        setTimeout(() => setIsTransitioning(false), 300);
-      }, 300);
-    }, pageDuration * 1000);
-    return () => window.clearInterval(interval);
-  }, [totalPages, pageDuration]);
-
-  useEffect(() => {
-    if (totalPages === 0) {
-      if (currentPage !== 0) setCurrentPage(0);
-      return;
-    }
-    if (!Number.isFinite(currentPage) || currentPage < 0 || currentPage >= totalPages) {
-      setCurrentPage(0);
-    }
-  }, [currentPage, totalPages]);
 
   // Reset video failed state when video URLs change
   useEffect(() => {
     setVideoFailed({});
   }, [video.previewVideoUrls]);
 
-  const isSignaturePage = safeCurrentPage === totalPages - 1 && totalPages > 1;
-  const currentVideoUrl = video.previewVideoUrls?.[safeCurrentPage] || null;
-  const fallbackVideoUrl = !isSignaturePage ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
-  const activeVideoUrl = currentVideoUrl || fallbackVideoUrl;
-  const hasVideo = !!activeVideoUrl && !videoFailed[safeCurrentPage];
-  const overlayPage = video.overlayPages?.[safeCurrentPage];
-  const frameOverlay = video.frameOverlayPages?.[safeCurrentPage];
-  const preImageOverlay = video.preImageOverlayPages?.[safeCurrentPage];
-  const logoOverlay = video.logoOverlayPages?.[safeCurrentPage];
+  const renderSinglePage = (pageIdx: number) => {
+    const isSignature = pageIdx === totalPages - 1 && totalPages > 1;
+    const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
+    const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
+    const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
+    const pgHasVideo = !!pgActiveUrl && !videoFailed[pageIdx];
+    const pgOverlay = video.overlayPages?.[pageIdx];
+    const pgFrame = video.frameOverlayPages?.[pageIdx];
+    const pgPreImage = video.preImageOverlayPages?.[pageIdx];
+    const pgLogo = video.logoOverlayPages?.[pageIdx];
 
-  const transitionClass = isTransitioning ? "opacity-0" : "opacity-100";
-
-  // Debug: log video state on mount and changes
-  useEffect(() => {
-    console.log(`[CardCover] ${video.clientName} page=${safeCurrentPage} (raw=${currentPage}): hasVideo=${hasVideo}, url=${activeVideoUrl?.substring(0, 80) || 'NONE'}, previewVideoUrls=`, video.previewVideoUrls, 'imageRect=', imageRect);
-  }, [hasVideo, activeVideoUrl, safeCurrentPage, currentPage, video.clientName, imageRect, video.previewVideoUrls]);
-
-  return (
-    <div
-      className="bg-muted relative group cursor-pointer overflow-hidden"
-      style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
-      onClick={onClick}
-    >
-      <div className={`absolute inset-0 overflow-hidden transition-opacity duration-300 ease-out ${transitionClass} ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}>
-        {/* Layer 0: Always render static page as base (z-0) */}
-        {video.pages[safeCurrentPage] ? (
+    return (
+      <div
+        key={`page-${video.cardId}-${pageIdx}`}
+        className="relative overflow-hidden flex-1"
+        style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
+      >
+        {video.pages[pageIdx] ? (
           <img
-            key={`card-base-${video.cardId}-${safeCurrentPage}`}
-            src={video.pages[safeCurrentPage]}
+            src={video.pages[pageIdx]}
             alt={video.clientName}
             className="absolute inset-0 w-full h-full object-contain z-0"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center z-0">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {/* Layer 0.5: Pre-image overlay (shapes before image element, animated, below video) */}
-        {preImageOverlay && preImageOverlay !== "" && (
+        {pgPreImage && pgPreImage !== "" && (
           <img
-            key={`pre-img-${video.cardId}-${safeCurrentPage}-${shapeAnimation}`}
-            src={preImageOverlay}
+            src={pgPreImage}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
             style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined}
@@ -504,9 +464,8 @@ const CardCoverPreview = memo(({
           />
         )}
 
-        {/* Layer 1: Video playing IN the image frame (z-[2]) */}
-        {hasVideo && imageRect && (() => {
-          const adj = video.pageImageAdjustments?.[safeCurrentPage];
+        {pgHasVideo && imageRect && (() => {
+          const adj = video.pageImageAdjustments?.[pageIdx];
           const videoTransform: React.CSSProperties = {};
           if (adj && imageElSize && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
             const scale = adj.imageScale / 100;
@@ -515,170 +474,83 @@ const CardCoverPreview = memo(({
             videoTransform.transform = `scale(${scale}) translate(${xPct}%, ${yPct}%)`;
             videoTransform.transformOrigin = 'center center';
           }
-
-          // Compute clip-path in CARD-relative coordinates (0-100%)
-          // This avoids issues with containers extending beyond card boundaries
           const shape = imageClipShape || "rect";
           const cx = imageRect.left + imageRect.width / 2;
           const cy = imageRect.top + imageRect.height / 2;
           const rx = imageRect.width / 2;
           const ry = imageRect.height / 2;
-
           let cardClipPath: string | undefined;
-          if (shape === "circle") {
-            cardClipPath = `ellipse(${rx}% ${ry}% at ${cx}% ${cy}%)`;
-          } else if (shape === "triangle") {
-            const x1 = imageRect.left + imageRect.width / 2;
-            const y1 = imageRect.top;
-            const x2 = imageRect.left + imageRect.width;
-            const y2 = imageRect.top + imageRect.height;
-            const x3 = imageRect.left;
-            const y3 = imageRect.top + imageRect.height;
+          if (shape === "circle") cardClipPath = `ellipse(${rx}% ${ry}% at ${cx}% ${cy}%)`;
+          else if (shape === "triangle") {
+            const x1 = imageRect.left + imageRect.width / 2, y1 = imageRect.top;
+            const x2 = imageRect.left + imageRect.width, y2 = imageRect.top + imageRect.height;
+            const x3 = imageRect.left, y3 = imageRect.top + imageRect.height;
             cardClipPath = `polygon(${x1}% ${y1}%, ${x2}% ${y2}%, ${x3}% ${y3}%)`;
           } else if (shape === "diamond") {
             cardClipPath = `polygon(${cx}% ${imageRect.top}%, ${imageRect.left + imageRect.width}% ${cy}%, ${cx}% ${imageRect.top + imageRect.height}%, ${imageRect.left}% ${cy}%)`;
           }
-          // For "rect" and others, use overflow-hidden on the positioned container
-
           if (cardClipPath) {
-            // Full-card container with clip-path in card-relative coords
-            // NO overflow-hidden here — clip-path handles clipping; overflow-hidden would
-            // cut off video parts positioned with negative offsets before clip-path applies
             return (
-              <div
-                className="absolute inset-0 z-[2]"
-                style={{ clipPath: cardClipPath }}
-              >
+              <div className="absolute inset-0 z-[2]" style={{ clipPath: cardClipPath }}>
                 <video
-                  key={`card-vid-${video.cardId}-${activeVideoUrl}`}
-                  src={activeVideoUrl!}
+                  src={pgActiveUrl!}
                   className="absolute object-cover"
                   style={{
                     left: `${imageRect.left}%`, top: `${imageRect.top}%`,
                     width: `${imageRect.width}%`, height: `${imageRect.height}%`,
                     ...videoTransform,
                   }}
-                  muted
-                  loop
-                  autoPlay
-                  playsInline
-                  onError={() => {
-                    console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
-                    setVideoFailed(prev => ({ ...prev, [safeCurrentPage]: true }));
-                  }}
-                  onLoadedData={() => {
-                    console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
-                  }}
+                  muted loop autoPlay playsInline
+                  onError={() => setVideoFailed(prev => ({ ...prev, [pageIdx]: true }))}
                 />
               </div>
             );
           }
-
-          // Fallback for rect: positioned container with overflow-hidden
           return (
-            <div
-              className="absolute overflow-hidden z-[2]"
-              style={{
-                left: `${imageRect.left}%`, top: `${imageRect.top}%`,
-                width: `${imageRect.width}%`, height: `${imageRect.height}%`,
-              }}
-            >
+            <div className="absolute overflow-hidden z-[2]" style={{
+              left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+              width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+            }}>
               <video
-                key={`card-vid-${video.cardId}-${activeVideoUrl}`}
-                src={activeVideoUrl!}
+                src={pgActiveUrl!}
                 className="w-full h-full object-cover"
                 style={videoTransform}
-                muted
-                loop
-                autoPlay
-                playsInline
-                onError={() => {
-                  console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
-                  setVideoFailed(prev => ({ ...prev, [safeCurrentPage]: true }));
-                }}
-                onLoadedData={() => {
-                  console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
-                }}
+                muted loop autoPlay playsInline
+                onError={() => setVideoFailed(prev => ({ ...prev, [pageIdx]: true }))}
               />
             </div>
           );
         })()}
 
-        {/* Layer 3: Frame overlay (shapes AFTER image, with animation) - z-[3] */}
-        {frameOverlay && frameOverlay !== "" && (
-          <img
-            key={`frame-${video.cardId}-${safeCurrentPage}-${shapeAnimation}`}
-            src={frameOverlay}
-            alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
-            style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined}
-            draggable={false}
-          />
+        {pgFrame && pgFrame !== "" && (
+          <img src={pgFrame} alt="" className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`} style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined} draggable={false} />
         )}
-
-        {/* Layer 4: Text overlay (animated) - z-[4] */}
-        {overlayPage && overlayPage !== "" && (
-          <img
-            key={`overlay-${video.cardId}-${safeCurrentPage}-${textAnimation}`}
-            src={overlayPage}
-            alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
-            style={{ animationDuration: `${textAnimDuration}s` }}
-            draggable={false}
-          />
+        {pgOverlay && pgOverlay !== "" && (
+          <img src={pgOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`} style={{ animationDuration: `${textAnimDuration}s` }} draggable={false} />
         )}
-
-        {/* Layer 5: Logo overlay (animated) - z-[5] */}
-        {logoOverlay && logoOverlay !== "" && (
-          <img
-            key={`logo-${video.cardId}-${safeCurrentPage}-${logoAnimation}`}
-            src={logoOverlay}
-            alt=""
-            className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
-            draggable={false}
-          />
+        {pgLogo && pgLogo !== "" && (
+          <img src={pgLogo} alt="" className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`} draggable={false} />
         )}
       </div>
+    );
+  };
 
-      {/* Page indicator with navigation arrows */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 px-1.5 py-1 rounded text-xs text-white z-10 flex items-center gap-1.5">
-        <button
-          className="hover:text-primary transition-colors p-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!canPaginate}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!canPaginate) return;
-            setIsTransitioning(true);
-            setTimeout(() => {
-              setCurrentPage((p) => {
-                const base = Number.isFinite(p) ? p : 0;
-                return (base - 1 + totalPages) % totalPages;
-              });
-              setTimeout(() => setIsTransitioning(false), 100);
-            }, 100);
-          }}
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </button>
-        <span>{totalPages > 0 ? `${safeCurrentPage + 1} / ${totalPages}` : "..."}</span>
-        <button
-          className="hover:text-primary transition-colors p-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!canPaginate}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!canPaginate) return;
-            setIsTransitioning(true);
-            setTimeout(() => {
-              setCurrentPage((p) => {
-                const base = Number.isFinite(p) ? p : 0;
-                return (base + 1) % totalPages;
-              });
-              setTimeout(() => setIsTransitioning(false), 100);
-            }, 100);
-          }}
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
+  return (
+    <div
+      className="bg-muted relative group cursor-pointer overflow-hidden"
+      onClick={onClick}
+    >
+      <div className={`flex ${totalPages > 1 ? "gap-0.5" : ""}`}>
+        {totalPages > 0
+          ? Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))
+          : (
+            <div className="flex-1" style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}>
+              <div className="w-full h-full flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            </div>
+          )
+        }
       </div>
 
       {/* Status overlay */}
