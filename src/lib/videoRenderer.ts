@@ -588,16 +588,13 @@ export async function generateLogoOverlay(
   const logoEl = elements.find(e => e.type === "logo");
   const mascotEl = elements.find(e => e.type === "mascot");
   if (!logoEl && !mascotEl) return "";
-  const logoAnimated = logoEl ? logoEl.animated !== false : false;
-  const mascotAnimated = mascotEl ? mascotEl.animated !== false : false;
-  if (!logoAnimated && !mascotAnimated) return "";
-
   const canvas = document.createElement("canvas");
   canvas.width = templateWidth;
   canvas.height = templateHeight;
   const ctx = canvas.getContext("2d")!;
 
-  if (logoEl && logoAnimated) {
+  // Always render logo/mascot overlay when element exists.
+  if (logoEl) {
     const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
     if (logoUrl) {
       const img = await loadImage(logoUrl);
@@ -611,7 +608,7 @@ export async function generateLogoOverlay(
     }
   }
 
-  if (mascotEl && mascotAnimated) {
+  if (mascotEl) {
     const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
     if (mascotUrl) {
       const img = await loadImage(mascotUrl);

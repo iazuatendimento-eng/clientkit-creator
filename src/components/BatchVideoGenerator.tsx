@@ -316,19 +316,8 @@ const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | n
     } catch (e) { /* retry */ }
   }
   
-  // Strategy 3: Image without crossOrigin (canvas tainted but visible)
-  const img = await new Promise<HTMLImageElement | null>((resolve) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => resolve(null);
-    el.src = url;
-  });
-  if (img) {
-    imageCache.set(cacheKey, img);
-    console.warn(`[loadImage] ⚠️ no-CORS (tainted): ${url.substring(0, 80)}`);
-    return img;
-  }
-  
+  // Strategy 3 intentionally disabled: no-CORS load taints canvas and can drop overlays.
+  console.warn(`[loadImage] blocked to avoid tainted canvas: ${url.substring(0, 80)}`);
   console.error(`[loadImage] ❌ ALL failed: ${url.substring(0, 80)}`);
   return null;
 };
