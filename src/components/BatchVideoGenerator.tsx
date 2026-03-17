@@ -1780,10 +1780,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       return "";
     }
 
-    // If both logo and mascot are non-animated, skip overlay
-    const logoAnimated = logoEl ? logoEl.animated !== false : false;
-    const mascotAnimated = mascotEl ? mascotEl.animated !== false : false;
-    if (!logoAnimated && !mascotAnimated) return "";
+    // Always render logo/mascot overlay when elements exist.
+    // Base pages exclude logo/mascot, so static items must also be drawn in this overlay.
 
     const canvas = document.createElement("canvas");
     canvas.width = template.width || 1080;
@@ -1791,8 +1789,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     const ctx = canvas.getContext("2d")!;
     // transparent background
 
-    // Draw logo if present and animated
-    if (logoEl && logoAnimated) {
+    // Draw logo if present (animated or static)
+    if (logoEl) {
       const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
       if (logoUrl) {
         const img = await loadImage(logoUrl);
@@ -1810,8 +1808,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       }
     }
 
-    // Draw mascot if present and animated
-    if (mascotEl && mascotAnimated) {
+    // Draw mascot if present (animated or static)
+    if (mascotEl) {
       const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
       if (mascotUrl) {
         const img = await loadImage(mascotUrl);
@@ -3002,10 +3000,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                      setCurrentPreviewPage(0);
                      setIsPlayingPreview(true);
 
-                     // Art history loads overlays lazily only when opening a card
-                     const needsOverlayBuild =
-                       initialBatch?.type === "art" &&
-                       (!video.overlayPages?.length || !video.frameOverlayPages?.length || !video.logoOverlayPages?.length);
+                      // Rebuild overlays lazily whenever this card is missing any layer
+                      const needsOverlayBuild =
+                        (!video.overlayPages?.length || !video.frameOverlayPages?.length || !video.logoOverlayPages?.length);
 
                      if (needsOverlayBuild) {
                        try {
