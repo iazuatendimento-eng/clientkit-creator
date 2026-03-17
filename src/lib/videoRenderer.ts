@@ -218,7 +218,8 @@ export async function generatePageImage(
   transparentBackground = false,
   excludeLogo = false,
   excludeText = false,
-  shapeFilter: "all" | "before-image" | "after-image" = "all"
+  shapeFilter: "all" | "before-image" | "after-image" = "all",
+  renderAllNonImage = false
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = templateWidth;
