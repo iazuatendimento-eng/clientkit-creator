@@ -2883,22 +2883,30 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    templateWidth={template.width}
                    templateHeight={template.height}
                    hideSignature={hideSignature}
+                   displayPage={cardPageMap[video.cardId] || 0}
                    onDropVideo={(pageIdx, file) => {
                      const url = URL.createObjectURL(file);
-                     setClientVideos((prev) => {
-                       const updated = prev.map((v, i) => {
+                     setClientVideos((prev) =>
+                       prev.map((v, i) => {
                          if (i !== index) return v;
                          const urls = [...(v.previewVideoUrls || [])];
                          while (urls.length <= pageIdx) urls.push(null);
                          urls[pageIdx] = url;
                          return { ...v, previewVideoUrls: urls };
-                       });
-                       // Move this card to the end of the list
-                       const card = updated[index];
-                       const rest = updated.filter((_, i) => i !== index);
-                       return [...rest, card];
+                       })
+                     );
+                     const allPgs = video.pages.length;
+                     const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
+                     const curPage = cardPageMap[video.cardId] || 0;
+                     setCardPageMap((prev) => ({ ...prev, [video.cardId]: curPage < totalPgs - 1 ? curPage + 1 : 0 }));
+                     setClientVideos((prev) => {
+                       const idx = prev.findIndex((v) => v.cardId === video.cardId);
+                       if (idx === -1) return prev;
+                       const item = prev[idx];
+                       const rest = prev.filter((_, i) => i !== idx);
+                       return [...rest, item];
                      });
-                     toast({ title: `Vídeo aplicado na página ${pageIdx + 1} — card enviado ao final` });
+                     toast({ title: `Vídeo na pág. ${pageIdx + 1} — próxima página` });
                    }}
                    onClick={async () => {
                      setSelectedVideo(video);
