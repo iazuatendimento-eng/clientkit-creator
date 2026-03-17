@@ -255,7 +255,7 @@ export function VideoAdjustOverlay({
       const baseFontSize = els.textEl.fontSize || 48;
       const lineHeight = baseFontSize * 1.3;
       const maxWidth = els.textEl.width;
-      const fontWeight = (els.textEl as any).fontWeight || "bold";
+      const fontWeight = (els.textEl as any).fontWeight || "normal";
       const fontFamily = (els.textEl as any).fontFamily || "sans-serif";
 
       let estimatedLines = 1;
