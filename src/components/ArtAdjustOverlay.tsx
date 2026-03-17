@@ -331,6 +331,7 @@ export function ArtAdjustOverlay({
         contactW,
         contactH,
         textW,
+        textH,
         shapeRect,
       },
     };
