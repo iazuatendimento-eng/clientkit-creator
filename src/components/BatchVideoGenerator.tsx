@@ -2865,7 +2865,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   return (
                   <SortableVideoCard key={`${video.cardId}-${index}`} id={`${video.cardId}-${index}`} status={video.status}>
                 {/* Checkbox to send to end + hide signature toggle */}
-                <div className="px-3 pt-2 flex items-center gap-2">
+                <div className="px-3 pt-2 flex items-center gap-2 h-8">
                   <button
                     className="h-5 w-5 rounded border border-primary flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0"
                     title="Concluir página ativa e enviar para o final"
@@ -2873,7 +2873,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       e.stopPropagation();
                       const allPgs = video.pages.length;
                       const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
-                      const curPage = cardPageMap[video.cardId] || 0;
+                      const curPage = cardPageMap[video.cardId] ?? 0;
                       const nextPage = curPage < totalPgs - 1 ? curPage + 1 : 0;
 
                       setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
@@ -2886,13 +2886,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   >
                     <Check className="h-3 w-3 text-primary" />
                   </button>
-                  <h3 className="font-medium truncate text-sm flex-1">{video.clientName} <span className="text-muted-foreground">({(cardPageMap[video.cardId] || 0) + 1}/{Math.max(1, hideSignature && video.pages.length > 1 ? video.pages.length - 1 : video.pages.length)})</span></h3>
+                  <h3 className="font-medium truncate text-sm flex-1">{video.clientName} <span className="text-muted-foreground">({(cardPageMap[video.cardId] ?? 0) + 1}/{Math.max(1, hideSignature && video.pages.length > 1 ? video.pages.length - 1 : video.pages.length)})</span></h3>
                   <button
-                    className="shrink-0 p-1 rounded hover:bg-muted transition-colors"
+                    className="h-5 w-5 shrink-0 rounded hover:bg-muted transition-colors flex items-center justify-center"
                     title="Copiar texto da página ativa"
                     onClick={(e) => {
                       e.stopPropagation();
-                      const curPage = cardPageMap[video.cardId] || 0;
+                      const curPage = cardPageMap[video.cardId] ?? 0;
                       const pageText = video.pageTexts?.[curPage] || video.cardTitle || "";
                       const parts = [
                         pageText,
@@ -2923,7 +2923,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    templateWidth={template.width}
                    templateHeight={template.height}
                    hideSignature={hideSignature}
-                   displayPage={cardPageMap[video.cardId] || 0}
+                   displayPage={cardPageMap[video.cardId] ?? 0}
                    onDropVideo={(pageIdx, file) => {
                      const url = URL.createObjectURL(file);
                      setClientVideos((prev) =>
