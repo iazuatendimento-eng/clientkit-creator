@@ -2730,6 +2730,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         title: "Rascunho salvo!",
         description: `${videosWithPages.length} vídeos salvos no histórico.`,
       });
+
+      // Close the screen after saving
+      onBack();
     } catch (error) {
       console.error("Error saving draft:", error);
       toast({
