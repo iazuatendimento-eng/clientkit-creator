@@ -237,6 +237,7 @@ export function VideoGeneratorModal({
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<"1" | "2" | "none">("1");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailProgress, setEmailProgress] = useState(0);
+  const [emailSubject, setEmailSubject] = useState("");
 
   const handleSendEmail = async (videoUrl: string, videoCoverUrl?: string) => {
     if (!clientId) return;
