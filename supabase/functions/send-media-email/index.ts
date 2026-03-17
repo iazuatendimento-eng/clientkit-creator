@@ -62,11 +62,41 @@ serve(async (req) => {
     }));
 
     const count = allUrls.length;
-    const mediaSection = `
-      <div style="text-align: center; margin: 30px 0;">
-        <p style="color: #555;">${isVideo ? 'O vídeo' : count > 1 ? `As ${count} artes foram enviadas` : 'A arte foi enviada'} em anexo neste e-mail.</p>
-      </div>
-    `;
+
+    let mediaSection = '';
+    if (isVideo) {
+      // For videos: show a clickable link since email clients don't support inline video
+      const videoLinksHtml = allUrls.map((url: string, i: number) => {
+        const label = allUrls.length > 1 ? `Assistir Vídeo ${i + 1}` : 'Assistir Vídeo';
+        return `
+          <div style="text-align: center; margin: 16px 0;">
+            <a href="${url}" target="_blank" style="display: inline-block; background-color: #4F46E5; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+              ▶ ${label}
+            </a>
+            <p style="color: #888; font-size: 12px; margin-top: 8px;">Clique para abrir o vídeo no navegador</p>
+          </div>
+        `;
+      }).join('');
+      mediaSection = `
+        <div style="margin: 20px 0;">
+          ${videoLinksHtml}
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">O vídeo também está em anexo neste e-mail.</p>
+        </div>
+      `;
+    } else {
+      // For images: show inline previews
+      const imagePreviewsHtml = allUrls.map((url: string) => `
+        <div style="text-align: center; margin: 12px 0;">
+          <img src="${url}" alt="Arte - ${clientName}" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+        </div>
+      `).join('');
+      mediaSection = `
+        <div style="margin: 20px 0;">
+          ${imagePreviewsHtml}
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 8px;">${count > 1 ? `As ${count} artes também foram enviadas` : 'A arte também foi enviada'} em anexo.</p>
+        </div>
+      `;
+    }
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
