@@ -1263,6 +1263,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       // FadeMode gradient shapes render ONLY on frame overlay (transparent), not on base page.
       // This ensures the fade reveals the video behind it, matching the intended compositing.
       if (!transparentBackground && el.gradient?.fadeMode) continue;
+      // On base page (non-transparent), skip ALL shapes after the image element.
+      // They must render on the frame overlay (z-3) to appear above the video (z-2).
+      if (!transparentBackground && imageElIndex >= 0 && elIdx > imageElIndex && 
+          !["text", "contact", "logo", "mascot", "image"].includes(el.type)) continue;
       // For text-only overlay (transparent + !excludeText): render ALL text/contact (animated or not)
       if (transparentBackground && !excludeText) {
         if (!["text", "contact"].includes(el.type)) continue;
