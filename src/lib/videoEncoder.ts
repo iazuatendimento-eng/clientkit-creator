@@ -277,8 +277,14 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         );
         console.log("[VideoEncoder] WebCodecs SUCCESS!", attempt.label, "blob size:", rawBlob.size);
 
-        // On desktop, remux through FFmpeg to add audio + faststart
+        // Desktop: only run FFmpeg when we actually need to mux audio.
         if (!isMobileDevice) {
+          if (!audioUrl) {
+            const patched = await patchMP4Brand(rawBlob);
+            onProgress?.(1);
+            return patched;
+          }
+
           try {
             const ff = await loadFFmpeg();
             onProgress?.(0.7);
