@@ -2213,9 +2213,25 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         )}
         
         <div className="flex items-center gap-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Badge variant="outline">{pendingCount} pendentes</Badge>
             <Badge className="bg-green-500">{approvedCount} aprovadas</Badge>
+            {pendingCount > 0 && clientArts.some((a) => a.imageUrl) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                onClick={() => {
+                  const updated = clientArts.map((a) =>
+                    a.status === "pending" && a.imageUrl ? { ...a, status: "approved" as const } : a
+                  );
+                  setClientArts(updated);
+                }}
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Aprovar Todas
+              </Button>
+            )}
           </div>
           
           {/* Email subject input */}
