@@ -671,7 +671,7 @@ export async function generateAllVideoPages(
     // Pre-image overlay
     preImageOverlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, "", brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, true, "before-image"));
     // Frame overlay
-    frameOverlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, "", brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, true, "after-image"));
+    frameOverlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, "", brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, true, "all"));
     // Logo overlay
     logoOverlayPages.push(await generateLogoOverlay(tw, th, template.contentElements, brandKit, false, adjustments));
   }
@@ -680,7 +680,7 @@ export async function generateAllVideoPages(
   pages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, false, true, true));
   overlayPages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, false));
   preImageOverlayPages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "before-image"));
-  frameOverlayPages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "after-image"));
+  frameOverlayPages.push(await generatePageImage(tw, th, bgColor, template.signatureElements, "", brandKit, true, undefined, adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "all"));
   logoOverlayPages.push(await generateLogoOverlay(tw, th, template.signatureElements, brandKit, true, adjustments));
 
   return { pages, overlayPages, frameOverlayPages, preImageOverlayPages, logoOverlayPages };
