@@ -1791,8 +1791,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     const ctx = canvas.getContext("2d")!;
     // transparent background
 
-    // Draw logo if present and animated
-    if (logoEl && logoAnimated) {
+    // Draw logo if present (animated or static)
+    if (logoEl) {
       const logoUrl = brandKit?.pngs?.[0] || brandKit?.logo;
       if (logoUrl) {
         const img = await loadImage(logoUrl);
