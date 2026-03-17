@@ -126,6 +126,7 @@ const Index = () => {
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateClientId, setQuickCreateClientId] = useState<string>("");
   const [quickCreateBrandKit, setQuickCreateBrandKit] = useState<any>(null);
+  const [visibleCount, setVisibleCount] = useState(50);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -212,6 +213,14 @@ const Index = () => {
     
     return matchesSearch && matchesTextFilter;
   });
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [searchQuery, showOnlyWithoutText]);
+
+  const visibleClients = filteredClients.slice(0, visibleCount);
+  const hasMoreClients = visibleCount < filteredClients.length;
 
   const [loadError, setLoadError] = useState(false);
 
@@ -937,7 +946,12 @@ const Index = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - Client List */}
-        <div className="w-80 border-r bg-card/50 overflow-y-auto">
+        <div className="w-80 border-r bg-card/50 overflow-y-auto" onScroll={(e) => {
+          const el = e.currentTarget;
+          if (hasMoreClients && el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
+            setVisibleCount(prev => prev + 50);
+          }
+        }}>
           <div className="p-4 space-y-2">
             {/* Search and Filters */}
             <div className="space-y-2 mb-4">
@@ -964,8 +978,9 @@ const Index = () => {
             <p className="text-sm text-muted-foreground px-3 mb-2">
               {filteredClients.length} de {clients.length} clientes
             </p>
-            {filteredClients.length > 0 ? (
-              filteredClients.map((client) => (
+            {visibleClients.length > 0 ? (
+              <>
+              {visibleClients.map((client) => (
                 <button
                   key={client.id}
                   onClick={async () => {
@@ -1060,7 +1075,13 @@ const Index = () => {
                     </div>
                   </div>
                 </button>
-              ))
+              ))}
+              {hasMoreClients && (
+                <div className="text-center py-3">
+                  <p className="text-xs text-muted-foreground">Rolando para carregar mais...</p>
+                </div>
+              )}
+              </>
             ) : (
               <div className="text-center p-8">
                 <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
