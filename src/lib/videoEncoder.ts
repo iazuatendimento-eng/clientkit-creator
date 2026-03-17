@@ -1089,7 +1089,8 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         if (videoRatio > destRatio) { sw = vh * destRatio; sx = (vw - sw) / 2; }
         else { sh = vw / destRatio; sy = (vh - sh) / 2; }
 
-        if (motionEffect !== "none") {
+        const applyMotionToCanvas = motionEffect !== "none";
+        if (applyMotionToCanvas) {
           const motion = getMotionTransform(motionEffect, pageProgress);
           ctx.save();
           ctx.translate(width / 2, height / 2);
@@ -1097,6 +1098,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
           ctx.scale(motion.scale, motion.scale);
           ctx.translate(-width / 2 + (motion.translateX * width) / 100, -height / 2 + (motion.translateY * height) / 100);
         }
+
         ctx.drawImage(img, 0, 0, width, height);
         const adj = pageImageAdjustments?.[pageIdx];
         const clipShape = imageClipShape || "rect";
@@ -1111,8 +1113,9 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
           ctx.save(); applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
           ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh); ctx.restore();
         }
+
+        if (applyMotionToCanvas) ctx.restore();
         const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
-        if (motionEffect !== "none") ctx.restore();
         const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
         const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
       } catch {
