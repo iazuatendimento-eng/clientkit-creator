@@ -853,17 +853,19 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       
       const clientIds = [...new Set(batchItems.map(item => item.clientId))];
 
-      // Only fetch image_type and particularity_type (lightweight)
+      // Fetch image_type, particularity_type AND brand_kit to restore assets stripped during save
       const { data: clientsData } = await supabase
         .from("client_data")
-        .select("id, image_type, particularity_type")
+        .select("id, image_type, particularity_type, brand_kit")
         .in("id", clientIds);
 
       const imageTypeMap: Record<string, string> = {};
       const particularityMap: Record<string, string> = {};
+      const freshBrandKitMap: Record<string, any> = {};
       clientsData?.forEach(c => { 
         if (c.image_type) imageTypeMap[c.id] = c.image_type;
         if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
+        if (c.brand_kit) freshBrandKitMap[c.id] = c.brand_kit;
       });
 
       const videos: ClientVideo[] = batchItems.map((item) => {
@@ -878,6 +880,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         // Restore saved pages (file URLs) from the batch items
         const savedPages = (item.files || []).map((url: string) => url);
 
+        // Merge saved brand kit with fresh data from client_data to restore
+        // logo/contact/mascot/pngs that were stripped (base64/blob) during save
+        const savedBk = item.brandKit || {};
+        const freshBk = freshBrandKitMap[item.clientId] || {};
+        const mergedBrandKit = {
+          ...savedBk,
+          logo: savedBk.logo || freshBk.logo || "",
+          contactInfo: savedBk.contactInfo || freshBk.contactInfo || "",
+          mascot: savedBk.mascot || freshBk.mascot || "",
+          pngs: Array.isArray(savedBk.pngs)
+            ? savedBk.pngs.map((p: string, i: number) => p || (Array.isArray(freshBk.pngs) ? freshBk.pngs[i] : "") || "")
+            : freshBk.pngs || [],
+        };
+
         return {
           clientId: item.clientId,
           clientName: item.clientName,
@@ -885,7 +901,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           cardId: item.cardId,
           cardTitle: item.cardTitle,
           cardText: savedText,
-          brandKit: item.brandKit,
+          brandKit: mergedBrandKit,
           pages: savedPages,
           videoUrl: null,
           status: savedPages.length > 0 ? ("approved" as const) : ("pending" as const),
