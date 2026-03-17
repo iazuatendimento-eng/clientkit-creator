@@ -2747,6 +2747,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             </Button>
           </div>
 
+          {/* Global hide signature toggle */}
+          <Button
+            variant={hideSignature ? "default" : "outline"}
+            size="sm"
+            onClick={() => setHideSignature((v) => !v)}
+            title={hideSignature ? "Mostrar assinatura" : "Ocultar assinatura"}
+          >
+            {hideSignature ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+            Assinatura
+          </Button>
+
           <div className="flex gap-2">
             <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500">
               Pendentes: {pendingCount}
