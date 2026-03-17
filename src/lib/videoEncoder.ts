@@ -89,6 +89,24 @@ function pickSupportedMimeType(candidates: string[]): string | null {
   return null;
 }
 
+function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "ogg" | "m4a" {
+  const normalizedUrl = audioUrl.toLowerCase().split("?")[0].split("#")[0];
+  const normalizedMime = (mimeType || "").toLowerCase();
+
+  if (normalizedUrl.endsWith(".wav") || normalizedMime.includes("wav")) return "wav";
+  if (normalizedUrl.endsWith(".ogg") || normalizedMime.includes("ogg")) return "ogg";
+  if (
+    normalizedUrl.endsWith(".m4a") ||
+    normalizedUrl.endsWith(".aac") ||
+    normalizedUrl.endsWith(".mp4") ||
+    normalizedMime.includes("mp4") ||
+    normalizedMime.includes("aac") ||
+    normalizedMime.includes("m4a")
+  ) return "m4a";
+
+  return "mp3";
+}
+
 // Generate MP4 (best effort: native MediaRecorder MP4 when available, otherwise WebM->FFmpeg)
 // Check if blob is actually MP4 by verifying ftyp box header
 async function isValidMP4(blob: Blob): Promise<boolean> {
