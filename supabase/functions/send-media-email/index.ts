@@ -141,31 +141,36 @@ serve(async (req) => {
       </div>
     `;
 
-    const results = [];
-    for (const email of validEmails) {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'iazu <noreply@contato.iazu.com.br>',
-          to: [email],
-          subject: subject || `${mediaLabel} - ${clientName}`,
-          html: htmlBody,
-          attachments,
-        }),
-      });
+    const results = await Promise.all(
+      validEmails.map(async (email: string) => {
+        try {
+          const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${RESEND_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'iazu <noreply@contato.iazu.com.br>',
+              to: [email],
+              subject: subject || `${mediaLabel} - ${clientName}`,
+              html: htmlBody,
+              attachments,
+            }),
+          });
 
-      const data = await res.json();
-      if (!res.ok) {
-        console.error(`Erro ao enviar para ${email}:`, data);
-        results.push({ email, success: false, error: data });
-      } else {
-        results.push({ email, success: true, id: data.id });
-      }
-    }
+          const data = await res.json();
+          if (!res.ok) {
+            console.error(`Erro ao enviar para ${email}:`, data);
+            return { email, success: false, error: data };
+          }
+          return { email, success: true, id: data.id };
+        } catch (err) {
+          console.error(`Erro ao enviar para ${email}:`, err);
+          return { email, success: false, error: String(err) };
+        }
+      })
+    );
 
     const allSuccess = results.every(r => r.success);
     const successCount = results.filter(r => r.success).length;
