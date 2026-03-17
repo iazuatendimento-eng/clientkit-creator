@@ -479,10 +479,10 @@ const CardCoverPreview = memo(({
     >
       <div className={`absolute inset-0 overflow-hidden transition-opacity duration-300 ease-out ${transitionClass} ${motionEffect !== "none" ? `card-animate-${motionEffect}` : ""}`}>
         {/* Layer 0: Always render static page as base (z-0) */}
-        {video.pages[currentPage] ? (
+        {video.pages[safeCurrentPage] ? (
           <img
-            key={`card-base-${video.cardId}-${currentPage}`}
-            src={video.pages[currentPage]}
+            key={`card-base-${video.cardId}-${safeCurrentPage}`}
+            src={video.pages[safeCurrentPage]}
             alt={video.clientName}
             className="absolute inset-0 w-full h-full object-contain z-0"
           />
@@ -495,7 +495,7 @@ const CardCoverPreview = memo(({
         {/* Layer 0.5: Pre-image overlay (shapes before image element, animated, below video) */}
         {preImageOverlay && preImageOverlay !== "" && (
           <img
-            key={`pre-img-${video.cardId}-${currentPage}-${shapeAnimation}`}
+            key={`pre-img-${video.cardId}-${safeCurrentPage}-${shapeAnimation}`}
             src={preImageOverlay}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
@@ -506,7 +506,7 @@ const CardCoverPreview = memo(({
 
         {/* Layer 1: Video playing IN the image frame (z-[2]) */}
         {hasVideo && imageRect && (() => {
-          const adj = video.pageImageAdjustments?.[currentPage];
+          const adj = video.pageImageAdjustments?.[safeCurrentPage];
           const videoTransform: React.CSSProperties = {};
           if (adj && imageElSize && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
             const scale = adj.imageScale / 100;
@@ -564,7 +564,7 @@ const CardCoverPreview = memo(({
                   playsInline
                   onError={() => {
                     console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
-                    setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+                    setVideoFailed(prev => ({ ...prev, [safeCurrentPage]: true }));
                   }}
                   onLoadedData={() => {
                     console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
@@ -594,7 +594,7 @@ const CardCoverPreview = memo(({
                 playsInline
                 onError={() => {
                   console.error(`[CardCover] ❌ Video FAILED: ${activeVideoUrl?.substring(0, 80)}`);
-                  setVideoFailed(prev => ({ ...prev, [currentPage]: true }));
+                  setVideoFailed(prev => ({ ...prev, [safeCurrentPage]: true }));
                 }}
                 onLoadedData={() => {
                   console.log(`[CardCover] ✅ Video loaded OK: ${video.clientName}`);
@@ -607,7 +607,7 @@ const CardCoverPreview = memo(({
         {/* Layer 3: Frame overlay (shapes AFTER image, with animation) - z-[3] */}
         {frameOverlay && frameOverlay !== "" && (
           <img
-            key={`frame-${video.cardId}-${currentPage}-${shapeAnimation}`}
+            key={`frame-${video.cardId}-${safeCurrentPage}-${shapeAnimation}`}
             src={frameOverlay}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
@@ -619,7 +619,7 @@ const CardCoverPreview = memo(({
         {/* Layer 4: Text overlay (animated) - z-[4] */}
         {overlayPage && overlayPage !== "" && (
           <img
-            key={`overlay-${video.cardId}-${currentPage}-${textAnimation}`}
+            key={`overlay-${video.cardId}-${safeCurrentPage}-${textAnimation}`}
             src={overlayPage}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`}
@@ -631,7 +631,7 @@ const CardCoverPreview = memo(({
         {/* Layer 5: Logo overlay (animated) - z-[5] */}
         {logoOverlay && logoOverlay !== "" && (
           <img
-            key={`logo-${video.cardId}-${currentPage}-${logoAnimation}`}
+            key={`logo-${video.cardId}-${safeCurrentPage}-${logoAnimation}`}
             src={logoOverlay}
             alt=""
             className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`}
