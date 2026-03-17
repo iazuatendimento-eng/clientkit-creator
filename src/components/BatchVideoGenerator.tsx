@@ -2802,13 +2802,45 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             Assinatura
           </Button>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500">
               Pendentes: {pendingCount}
             </Badge>
             <Badge variant="outline" className="bg-green-500/20 text-green-500">
               Aprovados: {approvedCount}
             </Badge>
+            {pendingCount > 0 && clientVideos.some((v) => v.pages.length > 0) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                onClick={() => {
+                  const updated = clientVideos.map((v) =>
+                    v.status === "pending" && v.pages.length > 0 ? { ...v, status: "approved" as const } : v
+                  );
+                  setClientVideos(updated);
+                }}
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Aprovar Todos
+              </Button>
+            )}
+            {approvedCount > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-destructive text-destructive hover:bg-destructive/10"
+                onClick={() => {
+                  const updated = clientVideos.map((v) =>
+                    v.status === "approved" ? { ...v, status: "pending" as const } : v
+                  );
+                  setClientVideos(updated);
+                }}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Desaprovar Todos
+              </Button>
+            )}
           </div>
           
           {/* Email subject input */}
