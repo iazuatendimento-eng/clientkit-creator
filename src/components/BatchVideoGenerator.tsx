@@ -673,7 +673,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [videoSearchPage, setVideoSearchPage] = useState(1);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
-  const [hideSignatureCards, setHideSignatureCards] = useState<Set<string>>(new Set());
+  const [hideSignature, setHideSignature] = useState(false);
   // Extract animation settings from template elements
   const getTemplateTextAnimation = (): TextAnimation => {
     const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
@@ -2747,6 +2747,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             </Button>
           </div>
 
+          {/* Global hide signature toggle */}
+          <Button
+            variant={hideSignature ? "default" : "outline"}
+            size="sm"
+            onClick={() => setHideSignature((v) => !v)}
+            title={hideSignature ? "Mostrar assinatura" : "Ocultar assinatura"}
+          >
+            {hideSignature ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+            Assinatura
+          </Button>
+
           <div className="flex gap-2">
             <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500">
               Pendentes: {pendingCount}
@@ -2828,27 +2839,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     <Check className="h-3 w-3 text-primary" />
                   </button>
                   <h3 className="font-medium truncate text-sm flex-1">{video.clientName}</h3>
-                  {video.pages.length > 1 && (
-                    <button
-                      className="h-5 w-5 rounded flex items-center justify-center hover:bg-muted transition-colors shrink-0"
-                      title={hideSignatureCards.has(video.cardId) ? "Mostrar assinatura" : "Ocultar assinatura"}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setHideSignatureCards((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(video.cardId)) next.delete(video.cardId);
-                          else next.add(video.cardId);
-                          return next;
-                        });
-                      }}
-                    >
-                      {hideSignatureCards.has(video.cardId) ? (
-                        <EyeOff className="h-3 w-3 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-3 w-3 text-muted-foreground" />
-                      )}
-                    </button>
-                  )}
                 </div>
 
                 {/* Video Preview with pages side by side */}
@@ -2867,7 +2857,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    imageClipShape={getImageClipShape(template.contentElements as CanvasElement[])}
                    templateWidth={template.width}
                    templateHeight={template.height}
-                   hideSignature={hideSignatureCards.has(video.cardId)}
+                   hideSignature={hideSignature}
                    onDropVideo={(pageIdx, file) => {
                      const url = URL.createObjectURL(file);
                      setClientVideos((prev) =>
