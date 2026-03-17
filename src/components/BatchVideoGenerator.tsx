@@ -2888,7 +2888,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           
           <Button
             onClick={handleSendEmails}
-            disabled={approvedCount === 0 || isSendingEmails}
+            disabled={approvedCount === 0 || isSendingEmails || !emailSubject.trim()}
             className="bg-gradient-primary"
           >
             {isSendingEmails ? (

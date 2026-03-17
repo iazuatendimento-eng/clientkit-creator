@@ -2299,7 +2299,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           ) : (
             <Button
               onClick={handleSendEmails}
-              disabled={approvedCount === 0 || isSendingEmails}
+              disabled={approvedCount === 0 || isSendingEmails || !emailSubject.trim()}
               className="bg-gradient-primary"
             >
               {isSendingEmails ? (
