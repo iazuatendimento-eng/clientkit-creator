@@ -1592,7 +1592,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             noteRead: art.noteRead,
           }));
           const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
-          const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
+          let effectiveTeam = initialTeamFilter || null;
+          if (!effectiveTeam && batchItems.length > 0) {
+            const { data: cd } = await supabase.from("client_data").select("team").eq("id", batchItems[0].clientId).single();
+            if (cd?.team) effectiveTeam = cd.team;
+          }
+          const snapshotWithTeam = { ...template, teamFilter: effectiveTeam, hasUnresolvedNotes };
           const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
           if (savedId) setCurrentBatchId(savedId);
           console.log("Auto-saved batch draft after generation:", savedId);
@@ -2033,7 +2038,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       }));
 
       const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
-      const snapshotWithTeam = { ...template, teamFilter: initialTeamFilter || null, hasUnresolvedNotes };
+      let effectiveTeam = initialTeamFilter || null;
+      if (!effectiveTeam && batchItems.length > 0) {
+        const { data: cd } = await supabase.from("client_data").select("team").eq("id", batchItems[0].clientId).single();
+        if (cd?.team) effectiveTeam = cd.team;
+      }
+      const snapshotWithTeam = { ...template, teamFilter: effectiveTeam, hasUnresolvedNotes };
       const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
       if (savedId) setCurrentBatchId(savedId);
 
