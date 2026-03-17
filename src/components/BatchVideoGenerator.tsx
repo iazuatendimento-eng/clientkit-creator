@@ -682,6 +682,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
   const [hideSignature, setHideSignature] = useState(false);
+  // Track which page each card is currently displaying (by cardId)
+  const [cardPageMap, setCardPageMap] = useState<Record<string, number>>({});
   // Extract animation settings from template elements
   const getTemplateTextAnimation = (): TextAnimation => {
     const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
