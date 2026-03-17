@@ -2689,7 +2689,26 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
 
         {/* Generate Button */}
         <div className="p-4 border-t space-y-2">
-          
+          <div className="space-y-1">
+            <Label className="text-xs">Equipe do lote</Label>
+            <Select
+              value={selectedTeamFilter || "all"}
+              onValueChange={(value) => setSelectedTeamFilter(value === "all" ? undefined : value)}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Todas equipes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas equipes</SelectItem>
+                {availableTeams.map((team) => (
+                  <SelectItem key={team.id} value={team.name}>
+                    {team.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex gap-2">
             <Button
               variant="outline"
