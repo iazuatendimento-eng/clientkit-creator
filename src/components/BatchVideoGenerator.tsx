@@ -450,9 +450,9 @@ const CardCoverPreview = memo(({
     const isCurrentPage = pageIdx === currentPage;
 
     const handleDragOver = (e: React.DragEvent) => {
-      if (!isCurrentPage) return;
       e.preventDefault();
       e.stopPropagation();
+      if (!isCurrentPage) return;
       if (e.dataTransfer.types.includes("Files")) {
         setDragOverPage(pageIdx);
       }
@@ -463,9 +463,9 @@ const CardCoverPreview = memo(({
       setDragOverPage(null);
     };
     const handleDrop = (e: React.DragEvent) => {
-      if (!isCurrentPage) return;
       e.preventDefault();
       e.stopPropagation();
+      if (!isCurrentPage) return;
       setDragOverPage(null);
       const file = e.dataTransfer.files?.[0];
       if (file && file.type.startsWith("video/") && onDropVideo) {
