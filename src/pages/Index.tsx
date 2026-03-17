@@ -1076,6 +1076,12 @@ const Index = () => {
                   </div>
                 </button>
               ))
+              {hasMoreClients && (
+                <div className="text-center py-3">
+                  <p className="text-xs text-muted-foreground">Rolando para carregar mais...</p>
+                </div>
+              )}
+              </>
             ) : (
               <div className="text-center p-8">
                 <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
