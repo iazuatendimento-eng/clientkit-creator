@@ -951,6 +951,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         });
       }
 
+      videos.sort((a, b) => a.company.localeCompare(b.company, "pt-BR", { numeric: true }));
       setClientVideos(videos);
 
       const isArtBatch = batch.type === "art";
