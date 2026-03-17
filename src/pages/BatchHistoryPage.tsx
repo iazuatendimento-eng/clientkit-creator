@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { BatchHistory } from "@/components/BatchHistory";
 import { BatchVideoGenerator } from "@/components/BatchVideoGenerator";
+import { BatchArtGenerator } from "@/components/BatchArtGenerator";
 import { BatchGeneration } from "@/lib/batchHistory";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -37,7 +38,6 @@ const BatchHistoryPage = () => {
       }
     }
 
-    // Art templates use 'elements', video templates use 'contentElements'/'signatureElements'
     const isArt = batch.type === "art";
     const contentElements = isArt
       ? (snap.elements || snap.contentElements || snap.content_elements || [])
@@ -51,6 +51,8 @@ const BatchHistoryPage = () => {
       name: snap.name || "Template",
       contentElements,
       signatureElements,
+      // For art templates, also set 'elements' so BatchArtGenerator can use it
+      ...(isArt ? { elements: snap.elements || contentElements } : {}),
       width: snap.width || 1080,
       height: snap.height || (isArt ? 1350 : 1920),
       backgroundColor: snap.backgroundColor || snap.background_color || "#ffffff",
@@ -79,6 +81,17 @@ const BatchHistoryPage = () => {
   };
 
   if (view === "edit" && selectedBatch && resolvedTemplate) {
+    if (selectedBatch.type === "art") {
+      return (
+        <BatchArtGenerator
+          template={resolvedTemplate}
+          initialBatch={selectedBatch}
+          initialTeamFilter={resolvedTemplate.teamFilter}
+          onBack={handleBack}
+          onComplete={handleSaved}
+        />
+      );
+    }
     return (
       <BatchVideoGenerator
         template={resolvedTemplate}
