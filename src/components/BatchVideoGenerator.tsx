@@ -2811,7 +2811,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   const index = clientVideos.indexOf(video);
                   return (
                   <SortableVideoCard key={`${video.cardId}-${index}`} id={`${video.cardId}-${index}`} status={video.status}>
-                {/* Checkbox to send to end */}
+                {/* Checkbox to send to end + hide signature toggle */}
                 <div className="px-3 pt-2 flex items-center gap-2">
                   <button
                     className="h-5 w-5 rounded border border-primary flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0"
@@ -2828,9 +2828,30 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     <Check className="h-3 w-3 text-primary" />
                   </button>
                   <h3 className="font-medium truncate text-sm flex-1">{video.clientName}</h3>
+                  {video.pages.length > 1 && (
+                    <button
+                      className="h-5 w-5 rounded flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+                      title={hideSignatureCards.has(video.cardId) ? "Mostrar assinatura" : "Ocultar assinatura"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHideSignatureCards((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(video.cardId)) next.delete(video.cardId);
+                          else next.add(video.cardId);
+                          return next;
+                        });
+                      }}
+                    >
+                      {hideSignatureCards.has(video.cardId) ? (
+                        <EyeOff className="h-3 w-3 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </button>
+                  )}
                 </div>
 
-                {/* Video Preview with page cycling */}
+                {/* Video Preview with pages side by side */}
                 <CardCoverPreview
                   video={video}
                   motionEffect={motionEffect}
@@ -2846,6 +2867,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    imageClipShape={getImageClipShape(template.contentElements as CanvasElement[])}
                    templateWidth={template.width}
                    templateHeight={template.height}
+                   hideSignature={hideSignatureCards.has(video.cardId)}
+                   onDropVideo={(pageIdx, file) => {
+                     const url = URL.createObjectURL(file);
+                     setClientVideos((prev) =>
+                       prev.map((v, i) => {
+                         if (i !== index) return v;
+                         const urls = [...(v.previewVideoUrls || [])];
+                         while (urls.length <= pageIdx) urls.push(null);
+                         urls[pageIdx] = url;
+                         return { ...v, previewVideoUrls: urls };
+                       })
+                     );
+                     toast({ title: `Vídeo aplicado na página ${pageIdx + 1}` });
+                   }}
                    onClick={async () => {
                      setSelectedVideo(video);
                      setCurrentPreviewPage(0);
