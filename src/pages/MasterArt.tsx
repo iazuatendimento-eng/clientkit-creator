@@ -54,6 +54,7 @@ const MasterArt = () => {
       backgroundColor: snap.backgroundColor || snap.background_color || "#ffffff",
     };
     setTemplate(batchTemplate);
+    setTeamFilter(snap.teamFilter || undefined);
     setEditingBatch(batch);
     setView("batch");
   };
