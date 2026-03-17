@@ -1818,160 +1818,60 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     return canvas.toDataURL("image/png");
   };
 
-  const generateVideoForClient = async (video: ClientVideo, searchedImages: string[], videoUrls?: (string | null)[]): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[] }> => {
-    const pages: string[] = [];
-    const overlayPages: string[] = [];
-    const preImageOverlayPages: string[] = [];
-    const frameOverlayPages: string[] = [];
-    const logoOverlayPages: string[] = [];
+  const generateVideoForClient = async (
+    video: ClientVideo,
+    searchedImages: string[],
+    _videoUrls?: (string | null)[]
+  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[] }> => {
+    const normalizedSearchedImages = video.pageTexts.map((_, idx) => searchedImages[idx] || "");
 
-    for (let i = 0; i < video.pageTexts.length; i++) {
-      const text = video.pageTexts[i];
-      const bgImage = searchedImages[i] || undefined;
-      const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
-      const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
-
-      // Base page: exclude text and logo since they come from animated overlay layers
-      const pageImage = await generatePageImage(
-        template.contentElements, text, video.brandKit, false, bgImage,
-        video.adjustments, textAdj, imageAdj, false, true, true
-      );
-      pages.push(pageImage);
-
-      // Text-only overlay (animated)
-      const overlayImage = await generatePageImage(
-        template.contentElements, text, video.brandKit, false, undefined,
-        video.adjustments, textAdj, imageAdj, true, true, false
-      );
-      overlayPages.push(overlayImage);
-
-      // Pre-image overlay (shapes BEFORE image element, below video)
-      const preImageOverlay = await generatePageImage(
-        template.contentElements, "", video.brandKit, false, undefined,
-        video.adjustments, textAdj, imageAdj, true, true, true, "before-image"
-      );
-      preImageOverlayPages.push(preImageOverlay);
-
-      // Frame overlay (all decorative shapes above video)
-      const frameOverlay = await generatePageImage(
-        template.contentElements, "", video.brandKit, false, undefined,
-        video.adjustments, textAdj, imageAdj, true, true, true, "all"
-      );
-      frameOverlayPages.push(frameOverlay);
-
-      const logoOverlay = await generateLogoOverlay(
-        template.contentElements, video.brandKit, false, video.adjustments
-      );
-      logoOverlayPages.push(logoOverlay);
-    }
-
-    // Signature base: exclude logo since it comes from the logo overlay layer
-    const signaturePage = await generatePageImage(
-      template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, false, true, true
+    return generateAllVideoPages(
+      {
+        id: template.id,
+        name: template.name,
+        contentElements: template.contentElements as any,
+        signatureElements: template.signatureElements as any,
+        width: template.width,
+        height: template.height,
+        backgroundColor: template.backgroundColor,
+        pageDuration: template.pageDuration,
+        audioUrl1: template.audioUrl1,
+        audioUrl2: template.audioUrl2,
+      },
+      video.pageTexts,
+      video.brandKit,
+      normalizedSearchedImages,
+      video.adjustments,
+      video.pageTextAdjustments,
+      video.pageImageAdjustments
     );
-    pages.push(signaturePage);
-    // Text overlay for signature page (contact info, etc.)
-    const sigTextOverlay = await generatePageImage(
-      template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, false
-    );
-    overlayPages.push(sigTextOverlay);
-    // Pre-image overlay for signature (usually empty since sig pages rarely have image elements)
-    const sigPreImgOverlay = await generatePageImage(
-      template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "before-image"
-    );
-    preImageOverlayPages.push(sigPreImgOverlay);
-    // Frame overlay for signature
-    const sigFrameOverlay = await generatePageImage(
-      template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "all"
-    );
-    frameOverlayPages.push(sigFrameOverlay);
-    // Generate logo overlay for signature page using signatureElements
-    const sigLogoOverlay = await generateLogoOverlay(
-      template.signatureElements, video.brandKit, true, video.adjustments
-    );
-    logoOverlayPages.push(sigLogoOverlay);
-
-    return { pages, overlayPages, frameOverlayPages, preImageOverlayPages, logoOverlayPages };
   };
 
-  const regenerateSingleVideo = async (video: ClientVideo): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[] }> => {
-    const pages: string[] = [];
-    const overlayPages: string[] = [];
-    const frameOverlayPages: string[] = [];
-    const preImageOverlayPages: string[] = [];
-    const logoOverlayPages: string[] = [];
+  const regenerateSingleVideo = async (
+    video: ClientVideo
+  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[] }> => {
+    const normalizedSearchedImages = video.pageTexts.map((_, idx) => video.searchedImages?.[idx] || "");
 
-    for (let i = 0; i < video.pageTexts.length; i++) {
-      const text = video.pageTexts[i];
-      const bgImage = video.searchedImages?.[i] || undefined;
-      const textAdj = video.pageTextAdjustments[i] || defaultPageTextAdjustment;
-      const imageAdj = video.pageImageAdjustments[i] || defaultPageImageAdjustment;
-
-      // Base page: exclude text and logo since they come from animated overlay layers
-      const pageImage = await generatePageImage(
-        template.contentElements, text, video.brandKit, false, bgImage,
-        video.adjustments, textAdj, imageAdj, false, true, true
-      );
-      pages.push(pageImage);
-
-      // Text-only overlay
-      const overlayImage = await generatePageImage(
-        template.contentElements, text, video.brandKit, false, undefined,
-        video.adjustments, textAdj, imageAdj, true, true, false
-      );
-      overlayPages.push(overlayImage);
-
-      // Pre-image overlay (shapes BEFORE image element)
-      const preImgOverlay = await generatePageImage(
-        template.contentElements, "", video.brandKit, false, undefined,
-        video.adjustments, textAdj, imageAdj, true, true, true, "before-image"
-      );
-      preImageOverlayPages.push(preImgOverlay);
-
-      // Frame overlay (all decorative shapes above video)
-      const frameOverlay = await generatePageImage(
-        template.contentElements, "", video.brandKit, false, undefined,
-        video.adjustments, textAdj, imageAdj, true, true, true, "all"
-      );
-      frameOverlayPages.push(frameOverlay);
-
-      const logoOverlay = await generateLogoOverlay(
-        template.contentElements, video.brandKit, false, video.adjustments
-      );
-      logoOverlayPages.push(logoOverlay);
-    }
-
-    // Signature page
-    const signaturePage = await generatePageImage(
-      template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, false, true, true
+    return generateAllVideoPages(
+      {
+        id: template.id,
+        name: template.name,
+        contentElements: template.contentElements as any,
+        signatureElements: template.signatureElements as any,
+        width: template.width,
+        height: template.height,
+        backgroundColor: template.backgroundColor,
+        pageDuration: template.pageDuration,
+        audioUrl1: template.audioUrl1,
+        audioUrl2: template.audioUrl2,
+      },
+      video.pageTexts,
+      video.brandKit,
+      normalizedSearchedImages,
+      video.adjustments,
+      video.pageTextAdjustments,
+      video.pageImageAdjustments
     );
-    pages.push(signaturePage);
-    const sigTextOverlay2 = await generatePageImage(
-      template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, false
-    );
-    overlayPages.push(sigTextOverlay2);
-    const sigPreImgOverlay2 = await generatePageImage(
-      template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "before-image"
-    );
-    preImageOverlayPages.push(sigPreImgOverlay2);
-    const sigFrameOverlay2 = await generatePageImage(
-      template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "all"
-    );
-    frameOverlayPages.push(sigFrameOverlay2);
-    const sigLogoOverlay2 = await generateLogoOverlay(
-      template.signatureElements, video.brandKit, true, video.adjustments
-    );
-    logoOverlayPages.push(sigLogoOverlay2);
-
-    return { pages, overlayPages, frameOverlayPages, preImageOverlayPages, logoOverlayPages };
   };
 
   const updateAdjustmentLocal = useCallback((key: keyof ElementAdjustments, value: number) => {
