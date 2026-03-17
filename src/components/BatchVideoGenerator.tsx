@@ -2758,7 +2758,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           <div>
             <h1 className="text-lg font-semibold flex items-center gap-2">
               <Film className="h-5 w-5" />
-              Lote de Vídeos
+              Vídeos
             </h1>
           </div>
         </div>
