@@ -332,34 +332,71 @@ export async function generatePageImage(
     // Shape filter
     if (shapeFilter === "before-image" && imageElIndex >= 0 && elIdx >= imageElIndex) continue;
     if (shapeFilter === "after-image" && imageElIndex >= 0 && elIdx <= imageElIndex) continue;
-    if (excludeLogo && (el.type === "logo" || el.type === "mascot")) continue;
-    if (excludeText && ["text", "contact"].includes(el.type)) continue;
     if (!transparentBackground && el.gradient?.fadeMode) continue;
 
-    // Text-only overlay
-    if (transparentBackground && !excludeText) {
-      if (!["text", "contact"].includes(el.type)) continue;
-    }
-
-    // Frame-only overlay
-    if (transparentBackground && excludeText) {
-      if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
-      if (shapeFilter === "before-image") {
-        const hasTrueAnimation = el.animationType && el.animationType !== "none";
-        if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
-      }
+    if (transparentBackground && renderAllNonImage) {
       if (el.type === "image") {
         if (el.borderWidth && el.borderWidth > 0) {
-          ctx.save(); applyElementStyles(el);
-          if (el.rotation) { const cx = el.x + el.width / 2; const cy = el.y + el.height / 2; ctx.translate(cx, cy); ctx.rotate((el.rotation * Math.PI) / 180); ctx.translate(-cx, -cy); }
-          ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth;
-          ctx.beginPath(); drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height); ctx.stroke(); ctx.restore();
+          ctx.save();
+          applyElementStyles(el);
+          if (el.rotation) {
+            const cx = el.x + el.width / 2;
+            const cy = el.y + el.height / 2;
+            ctx.translate(cx, cy);
+            ctx.rotate((el.rotation * Math.PI) / 180);
+            ctx.translate(-cx, -cy);
+          }
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = getBorderColor(el);
+          ctx.lineWidth = el.borderWidth;
+          ctx.beginPath();
+          drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height);
+          ctx.stroke();
+          ctx.restore();
         }
         continue;
       }
-    }
+    } else {
+      if (excludeLogo && (el.type === "logo" || el.type === "mascot")) continue;
+      if (excludeText && ["text", "contact"].includes(el.type)) continue;
 
-    if (transparentBackground && !excludeText && !["text", "contact"].includes(el.type)) continue;
+      // Text-only overlay
+      if (transparentBackground && !excludeText) {
+        if (!["text", "contact"].includes(el.type)) continue;
+      }
+
+      // Frame-only overlay
+      if (transparentBackground && excludeText) {
+        if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
+        if (shapeFilter === "before-image") {
+          const hasTrueAnimation = el.animationType && el.animationType !== "none";
+          if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
+        }
+        if (el.type === "image") {
+          if (el.borderWidth && el.borderWidth > 0) {
+            ctx.save();
+            applyElementStyles(el);
+            if (el.rotation) {
+              const cx = el.x + el.width / 2;
+              const cy = el.y + el.height / 2;
+              ctx.translate(cx, cy);
+              ctx.rotate((el.rotation * Math.PI) / 180);
+              ctx.translate(-cx, -cy);
+            }
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = getBorderColor(el);
+            ctx.lineWidth = el.borderWidth;
+            ctx.beginPath();
+            drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height);
+            ctx.stroke();
+            ctx.restore();
+          }
+          continue;
+        }
+      }
+
+      if (transparentBackground && !excludeText && !["text", "contact"].includes(el.type)) continue;
+    }
 
     // Draw background image at the image element's z-position
     if (el.type === "image" && !transparentBackground && backgroundImage) {
