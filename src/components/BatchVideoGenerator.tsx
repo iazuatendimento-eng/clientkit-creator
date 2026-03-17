@@ -2505,6 +2505,28 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const uploadedPaths: string[] = [];
       let videoIdx = 0;
 
+      // Pre-compute email-optimized resolution (720p max, keeps aspect ratio)
+      const emailScale = Math.min(720 / template.width, 1280 / template.height, 1);
+      const emailWidth = Math.round(template.width * emailScale / 2) * 2;
+      const emailHeight = Math.round(template.height * emailScale / 2) * 2;
+
+      // Pipeline: track pending upload promise to overlap with next encode
+      let pendingUpload: Promise<{ path: string; publicUrl: string } | null> | null = null;
+
+      const uploadVideoBlob = async (blob: Blob, cardId: string): Promise<{ path: string; publicUrl: string }> => {
+        const isActualMP4 = blob.type === "video/mp4";
+        const fileExt = isActualMP4 ? "mp4" : "webm";
+        const contentType = isActualMP4 ? "video/mp4" : "video/webm";
+        const fileName = `temp_email_${cardId}_${Date.now()}.${fileExt}`;
+        const path = `videos/${fileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("card-uploads")
+          .upload(path, blob, { contentType });
+        if (uploadError) throw new Error(`Erro ao subir vídeo: ${uploadError.message}`);
+        const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+        return { path, publicUrl: urlData.publicUrl };
+      };
+
       for (const [clientId, videos] of byClient) {
         const clientRow = clientsData?.find((c) => c.id === clientId);
         if (!clientRow) continue;
@@ -2521,18 +2543,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         for (const video of videos) {
           videoIdx++;
 
-          const reducedWidth = Math.max(480, Math.round(template.width * 0.67));
-          const reducedHeight = Math.max(854, Math.round(template.height * 0.67));
-
-          // Adaptive FPS for long videos: keeps quality on short clips and speeds up long exports.
+          // Adaptive FPS: lower for long videos
           const estimatedDurationSec = Math.max(1, video.pages.length * (template.pageDuration || 3));
           const adaptiveFps = estimatedDurationSec >= 40 ? 12 : estimatedDurationSec >= 24 ? 15 : estimatedDurationSec >= 16 ? 18 : 24;
+          // For email: use lower FPS to speed up encoding
+          const emailFps = Math.min(adaptiveFps, 18);
+
+          const audioUrl = (() => {
+            const sel = video.selectedAudio || 1;
+            const preferred = sel === 2 ? template.audioUrl2 : template.audioUrl1;
+            const fallback = sel === 2 ? template.audioUrl1 : template.audioUrl2;
+            return preferred || fallback || undefined;
+          })();
 
           const baseOptions = {
-            width: template.width,
-            height: template.height,
+            width: emailWidth,
+            height: emailHeight,
             pageDuration: template.pageDuration,
-            fps: adaptiveFps,
+            fps: emailFps,
             motionEffect,
             transitionEffect,
             textAnimation,
@@ -2545,14 +2573,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
             imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
             pageImageAdjustments: video.pageImageAdjustments,
-            audioUrl: (() => {
-              const sel = video.selectedAudio || 1;
-              const preferred = sel === 2 ? template.audioUrl2 : template.audioUrl1;
-              const fallback = sel === 2 ? template.audioUrl1 : template.audioUrl2;
-              const resolved = preferred || fallback || undefined;
-              console.log(`[BatchVideo] Audio for ${video.clientName}: sel=${sel}, url=${resolved ? resolved.substring(0, 80) + '...' : 'NONE'}, audioUrl1=${template.audioUrl1 ? 'YES' : 'NO'}, audioUrl2=${template.audioUrl2 ? 'YES' : 'NO'}`);
-              return resolved;
-            })(),
+            audioUrl,
             onProgress: (p: number) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
           };
 
@@ -2561,12 +2582,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             timeoutMs: number;
             overrides: Partial<typeof baseOptions>;
           }> = [
-            { label: `qualidade original (${adaptiveFps}fps)`, timeoutMs: 240_000, overrides: {} },
-            { label: "resolução reduzida", timeoutMs: 180_000, overrides: { width: reducedWidth, height: reducedHeight, fps: Math.min(adaptiveFps, 15) } },
+            { label: `email-otimizado (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 180_000, overrides: {} },
             {
-              label: "resolução reduzida sem vídeo de fundo",
-              timeoutMs: 180_000,
-              overrides: { width: reducedWidth, height: reducedHeight, fps: Math.min(adaptiveFps, 15), backgroundVideoUrls: undefined },
+              label: "mínimo sem vídeo de fundo",
+              timeoutMs: 120_000,
+              overrides: { fps: 12, backgroundVideoUrls: undefined },
             },
           ];
 
@@ -2576,7 +2596,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           for (let attemptIndex = 0; attemptIndex < encodeAttempts.length; attemptIndex++) {
             const attempt = encodeAttempts[attemptIndex];
             setGenerationStatus(
-              `Gerando MP4 (${videoIdx}/${approvedVideos.length}) • ${video.clientName} • ${attemptIndex + 1}/${encodeAttempts.length}`
+              `Gerando MP4 (${videoIdx}/${approvedVideos.length}) • ${video.clientName} • ${attempt.label}`
             );
 
             try {
@@ -2585,7 +2605,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                 ...attempt.overrides,
               });
               const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error(`Timeout na tentativa (${attempt.label})`)), attempt.timeoutMs)
+                setTimeout(() => reject(new Error(`Timeout (${attempt.label})`)), attempt.timeoutMs)
               );
               videoBlob = await Promise.race([encodingPromise, timeoutPromise]);
               break;
@@ -2603,26 +2623,40 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             );
           }
 
-          const isActualMP4 = videoBlob.type === "video/mp4";
-          const fileExt = isActualMP4 ? "mp4" : "webm";
-          const contentType = isActualMP4 ? "video/mp4" : "video/webm";
-          const fileName = `temp_email_${video.cardId}_${Date.now()}.${fileExt}`;
-          const path = `videos/${fileName}`;
-
-          setGenerationStatus(`Enviando (${videoIdx}/${approvedVideos.length}) • ${video.clientName}`);
-
-          const { error: uploadError } = await supabase.storage
-            .from("card-uploads")
-            .upload(path, videoBlob, { contentType });
-
-          if (uploadError) {
-            console.error("Upload error:", uploadError);
-            throw new Error(`Erro ao subir vídeo de ${video.clientName}: ${uploadError.message}`);
+          // Wait for any pending upload from previous iteration
+          if (pendingUpload) {
+            const prev = await pendingUpload;
+            pendingUpload = null;
+            if (prev) {
+              uploadedPaths.push(prev.path);
+              mediaUrls.push(prev.publicUrl);
+            }
           }
 
-          uploadedPaths.push(path);
-          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
-          mediaUrls.push(urlData.publicUrl);
+          // Start uploading this video in the background (will overlap with next encode)
+          setGenerationStatus(`Enviando (${videoIdx}/${approvedVideos.length}) • ${video.clientName}`);
+          const currentBlob = videoBlob;
+          const currentCardId = video.cardId;
+          
+          // If this is the last video for this client, wait for upload inline
+          const isLastForClient = video === videos[videos.length - 1];
+          if (isLastForClient) {
+            const result = await uploadVideoBlob(currentBlob, currentCardId);
+            uploadedPaths.push(result.path);
+            mediaUrls.push(result.publicUrl);
+          } else {
+            pendingUpload = uploadVideoBlob(currentBlob, currentCardId);
+          }
+        }
+
+        // Wait for any trailing upload
+        if (pendingUpload) {
+          const prev = await pendingUpload;
+          pendingUpload = null;
+          if (prev) {
+            uploadedPaths.push(prev.path);
+            mediaUrls.push(prev.publicUrl);
+          }
         }
 
         // Send email
