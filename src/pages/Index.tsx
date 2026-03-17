@@ -125,6 +125,7 @@ const Index = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateClientId, setQuickCreateClientId] = useState<string>("");
+  const [quickCreateBrandKit, setQuickCreateBrandKit] = useState<any>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
