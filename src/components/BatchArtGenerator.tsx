@@ -2232,6 +2232,22 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 Aprovar Todas
               </Button>
             )}
+            {approvedCount > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-muted-foreground text-muted-foreground hover:bg-muted"
+                onClick={() => {
+                  const updated = clientArts.map((a) =>
+                    a.status === "approved" ? { ...a, status: "pending" as const } : a
+                  );
+                  setClientArts(updated);
+                }}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Desaprovar Todas
+              </Button>
+            )}
           </div>
           
           {/* Email subject input */}

@@ -421,8 +421,17 @@ export function ArtCardWithOverlay({
         )}
 
         {art.status === "approved" && (
-          <div className="mt-3 text-center">
+          <div className="mt-3 flex items-center justify-center gap-2">
             <Badge className="bg-green-500">Aprovada</Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => onArtUpdate(index, { status: "pending" })}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Desaprovar
+            </Button>
           </div>
         )}
         {art.status === "rejected" && (
