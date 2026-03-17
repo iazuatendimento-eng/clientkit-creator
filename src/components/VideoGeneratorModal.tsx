@@ -237,6 +237,7 @@ export function VideoGeneratorModal({
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<"1" | "2" | "none">("1");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailProgress, setEmailProgress] = useState(0);
+  const [emailSubject, setEmailSubject] = useState("");
 
   const handleSendEmail = async (videoUrl: string, videoCoverUrl?: string) => {
     if (!clientId) return;
@@ -250,7 +251,7 @@ export function VideoGeneratorModal({
       const { data, error } = await supabase.functions.invoke("send-media-email", {
         body: {
           emails,
-          subject: `Vídeo - ${clientName}`,
+          subject: emailSubject.trim() || `Vídeo - ${clientName}`,
           mediaUrl: videoUrl,
           mediaType: "video",
           clientName,
@@ -845,25 +846,33 @@ export function VideoGeneratorModal({
                     </Button>
                   </div>
                   {clientId && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => handleExportAndEmail(false)}
-                        disabled={isSendingEmail}
-                        className="gap-2 flex-1 border-primary/30 hover:border-primary/60"
-                      >
-                        {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                        {isSendingEmail && emailProgress > 0 ? `Enviando... ${Math.round(emailProgress * 100)}%` : "📧 Com Áudio"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => handleExportAndEmail(true)}
-                        disabled={isSendingEmail}
-                        className="gap-2 flex-1 border-primary/30 hover:border-primary/60"
-                      >
-                        {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                        📧 Sem Áudio
-                      </Button>
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Título do e-mail (obrigatório)"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        className={`h-9 text-sm ${!emailSubject.trim() ? 'border-destructive' : ''}`}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => handleExportAndEmail(false)}
+                          disabled={isSendingEmail || !emailSubject.trim()}
+                          className="gap-2 flex-1 border-primary/30 hover:border-primary/60"
+                        >
+                          {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                          {isSendingEmail && emailProgress > 0 ? `Enviando... ${Math.round(emailProgress * 100)}%` : "📧 Com Áudio"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleExportAndEmail(true)}
+                          disabled={isSendingEmail || !emailSubject.trim()}
+                          className="gap-2 flex-1 border-primary/30 hover:border-primary/60"
+                        >
+                          {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                          📧 Sem Áudio
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </>
@@ -874,15 +883,23 @@ export function VideoGeneratorModal({
                     Baixar Vídeo
                   </Button>
                   {clientId && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleExportAndEmail(true)}
-                      disabled={isSendingEmail}
-                      className="gap-2 w-full border-primary/30 hover:border-primary/60"
-                    >
-                      {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                      {isSendingEmail && emailProgress > 0 ? `Enviando... ${Math.round(emailProgress * 100)}%` : "📧 Enviar por E-mail"}
-                    </Button>
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Título do e-mail (obrigatório)"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        className={`h-9 text-sm ${!emailSubject.trim() ? 'border-destructive' : ''}`}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => handleExportAndEmail(true)}
+                        disabled={isSendingEmail || !emailSubject.trim()}
+                        className="gap-2 w-full border-primary/30 hover:border-primary/60"
+                      >
+                        {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                        {isSendingEmail && emailProgress > 0 ? `Enviando... ${Math.round(emailProgress * 100)}%` : "📧 Enviar por E-mail"}
+                      </Button>
+                    </div>
                   )}
                 </>
               )}

@@ -584,6 +584,7 @@ export function ArtGeneratorModal({
   const [searchPage, setSearchPage] = useState(1);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
 
   const handleSendEmail = async () => {
     if (!clientId) return;
@@ -608,7 +609,7 @@ export function ArtGeneratorModal({
       if (emails.length === 0) { toast.error("Nenhum e-mail cadastrado"); return; }
 
       const { data, error } = await supabase.functions.invoke("send-media-email", {
-        body: { emails, subject: `Arte - ${clientName}`, mediaUrls: uploadedUrls, mediaUrl: uploadedUrls[0], mediaType: "art", clientName, cardText: cardText || cardTitle, caption: undefined },
+        body: { emails, subject: emailSubject.trim() || `Arte - ${clientName}`, mediaUrls: uploadedUrls, mediaUrl: uploadedUrls[0], mediaType: "art", clientName, cardText: cardText || cardTitle, caption: undefined },
       });
       if (error) throw error;
       toast.success(data?.message || "E-mail(s) enviado(s)!");
@@ -970,15 +971,23 @@ export function ArtGeneratorModal({
               </div>
               {/* Send email button */}
               {clientId && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleSendEmail}
-                  disabled={isSendingEmail}
-                >
-                  {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-                  {isSendingEmail ? "Enviando..." : "Enviar por E-mail"}
-                </Button>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Título do e-mail (obrigatório)"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    className={`h-9 text-sm ${!emailSubject.trim() ? 'border-destructive' : ''}`}
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleSendEmail}
+                    disabled={isSendingEmail || !emailSubject.trim()}
+                  >
+                    {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                    {isSendingEmail ? "Enviando..." : "Enviar por E-mail"}
+                  </Button>
+                </div>
               )}
             </div>
           )}
