@@ -773,7 +773,9 @@ const Index = () => {
                   const t = c.team || "Sem equipe";
                   teamCounts.set(t, (teamCounts.get(t) || 0) + 1);
                 });
-                return Array.from(teamCounts.entries()).map(([team, count]) => (
+                return Array.from(teamCounts.entries())
+                  .sort((a, b) => a[0].localeCompare(b[0], "pt-BR", { numeric: true }))
+                  .map(([team, count]) => (
                   <span key={team}>{team}: {count}</span>
                 ));
               })()}
