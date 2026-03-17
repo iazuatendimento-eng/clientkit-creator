@@ -1892,7 +1892,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     // Frame overlay for signature
     const sigFrameOverlay = await generatePageImage(
       template.signatureElements, "", video.brandKit, true, undefined,
-      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "after-image"
+      video.adjustments, defaultPageTextAdjustment, defaultPageImageAdjustment, true, true, true, "all"
     );
     frameOverlayPages.push(sigFrameOverlay);
     // Generate logo overlay for signature page using signatureElements
