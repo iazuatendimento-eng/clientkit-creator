@@ -564,20 +564,18 @@ export function VideoAdjustOverlay({
           return;
         }
 
-        // Text uses uniform scale (font size scaling)
-        const baseW = els.textEl?.width || 1;
+        // Text resize: width stays fixed, font size changes via height
+        const baseH = els.textEl?.height || 1;
         const h = s.handle as Handle;
 
-        // Use the larger of dx or dy for uniform scaling
-        const signedDx = handleSignX(h) * dx;
         const signedDy = handleSignY(h) * dy;
-        const delta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        const isHorizontalHandle = h === "e" || h === "w";
+        const delta = isHorizontalHandle ? handleSignX(h) * dx : signedDy;
         
-        const newW = clamp(s.start.textW + delta, baseW * 0.25, baseW * 3);
-        const newScale = clamp((newW / baseW) * 100, 25, 300);
+        const newH = clamp(s.start.textH + delta, baseH * 0.25, baseH * 3);
+        const newScale = clamp((newH / baseH) * 100, 25, 300);
         setTextScale(newScale);
         
-        if (handleHasW(h)) setTextX(clamp(s.start.textX + dx, -500, 500));
         if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -500, 500));
         return;
       }
