@@ -95,6 +95,7 @@ const BatchHistoryPage = () => {
     return (
       <BatchVideoGenerator
         template={resolvedTemplate}
+        initialTeamFilter={resolvedTemplate.teamFilter}
         initialBatch={selectedBatch}
         onBack={handleBack}
         onComplete={handleSaved}
