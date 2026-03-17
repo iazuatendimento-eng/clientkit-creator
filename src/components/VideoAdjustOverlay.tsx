@@ -249,10 +249,11 @@ export function VideoAdjustOverlay({
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textScale / 100;
-      const elW = els.textEl.width * scale;
+      // Width stays fixed at original element width so text wraps to more lines
+      const w = els.textEl.width;
 
       // Use canvas to measure actual text width for accurate line wrapping
-      const baseFontSize = els.textEl.fontSize || 48;
+      const baseFontSize = (els.textEl.fontSize || 48) * scale;
       const lineHeight = baseFontSize * 1.3;
       const maxWidth = els.textEl.width;
       const fontWeight = (els.textEl as any).fontWeight || "normal";
@@ -264,7 +265,7 @@ export function VideoAdjustOverlay({
           const measureCanvas = document.createElement("canvas");
           const ctx = measureCanvas.getContext("2d");
           if (ctx) {
-            ctx.font = `${fontWeight} ${baseFontSize}px ${fontFamily}`;
+            ctx.font = `${fontWeight} ${Math.round(baseFontSize)}px ${fontFamily}`;
             const words = pageText.split(" ");
             let lineWidth = 0;
             for (const word of words) {
@@ -279,7 +280,6 @@ export function VideoAdjustOverlay({
             }
           }
         } catch {
-          // fallback: rough estimate
           const avgCharWidth = baseFontSize * 0.6;
           const words = pageText.split(" ");
           let lineWidth = 0;
@@ -295,12 +295,12 @@ export function VideoAdjustOverlay({
         }
       }
 
-      const estimatedH = Math.max(estimatedLines * lineHeight * scale, els.textEl.height * scale);
+      const estimatedH = Math.max(estimatedLines * lineHeight, els.textEl.height * scale);
 
       return {
         x: els.textEl.x + textX,
         y: els.textEl.y + textY,
-        w: elW,
+        w,
         h: estimatedH,
       };
     }
