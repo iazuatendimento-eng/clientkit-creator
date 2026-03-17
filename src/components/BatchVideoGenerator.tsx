@@ -427,6 +427,7 @@ const CardCoverPreview = memo(({
   const allPages = video.pages.length;
   const totalPages = hideSignature && allPages > 1 ? allPages - 1 : allPages;
   const [dragOverPage, setDragOverPage] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
 
   // Reset video failed state when video URLs change
   useEffect(() => {
