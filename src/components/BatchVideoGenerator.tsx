@@ -608,12 +608,13 @@ const CardCoverPreview = memo(({
   return (
     <div
       className="bg-muted relative group cursor-pointer overflow-hidden"
+      style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
       onClick={onClick}
     >
       {isCarousel ? (
-        <div className="flex flex-col">
+        <div className="flex flex-col h-full">
           {/* Thumbnail strip */}
-          <div className="flex gap-0.5 p-0.5">
+          <div className="flex gap-0.5 p-0.5 shrink-0">
             {Array.from({ length: totalPages }, (_, i) => {
               const isActive = i === currentPage;
               return (
@@ -636,11 +637,13 @@ const CardCoverPreview = memo(({
               );
             })}
           </div>
-          {/* Large active page */}
-          {renderSinglePage(currentPage)}
+          {/* Large active page fills remaining space */}
+          <div className="relative flex-1 min-h-0">
+            {renderSinglePage(currentPage)}
+          </div>
         </div>
       ) : (
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 h-full">
           {Array.from({ length: totalPages }, (_, i) => renderSinglePage(i))}
         </div>
       )}
@@ -2884,6 +2887,21 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     <Check className="h-3 w-3 text-primary" />
                   </button>
                   <h3 className="font-medium truncate text-sm flex-1">{video.clientName} <span className="text-muted-foreground">({(cardPageMap[video.cardId] || 0) + 1}/{Math.max(1, hideSignature && video.pages.length > 1 ? video.pages.length - 1 : video.pages.length)})</span></h3>
+                  <button
+                    className="shrink-0 p-1 rounded hover:bg-muted transition-colors"
+                    title="Copiar texto do card"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const parts = [
+                        video.cardTitle,
+                        video.imageType,
+                      ].filter(Boolean).join("\n");
+                      navigator.clipboard.writeText(parts);
+                      toast({ title: "Texto copiado!" });
+                    }}
+                  >
+                    <ClipboardCopy className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
                 </div>
 
                 {/* Video Preview with pages side by side */}
@@ -2970,28 +2988,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
                 {/* Info */}
                 <div className="p-3 space-y-1 flex-1 overflow-y-auto min-h-0">
-                  <div className="flex items-start justify-between gap-1">
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground truncate">{video.company}</p>
-                      {video.team && (
-                        <p className="text-xs text-primary/70 truncate">{video.team}</p>
-                      )}
-                    </div>
-                    <button
-                      className="shrink-0 p-1 rounded hover:bg-muted transition-colors"
-                      title="Copiar texto do card"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const parts = [
-                          video.cardTitle,
-                          video.imageType,
-                        ].filter(Boolean).join("\n");
-                        navigator.clipboard.writeText(parts);
-                        toast({ title: "Texto copiado!" });
-                      }}
-                    >
-                      <ClipboardCopy className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground truncate">{video.company}</p>
+                    {video.team && (
+                      <p className="text-xs text-primary/70 truncate">{video.team}</p>
+                    )}
                   </div>
 
                   <p className="text-xs whitespace-pre-wrap break-words">{video.cardTitle}</p>
