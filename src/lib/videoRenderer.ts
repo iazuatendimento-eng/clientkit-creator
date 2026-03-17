@@ -671,7 +671,7 @@ export async function generateAllVideoPages(
     // Pre-image overlay
     preImageOverlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, "", brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, true, "before-image"));
     // Frame overlay
-    frameOverlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, "", brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, true, "after-image"));
+    frameOverlayPages.push(await generatePageImage(tw, th, bgColor, template.contentElements, "", brandKit, false, undefined, adjustments, textAdj, imageAdj, true, true, true, "all"));
     // Logo overlay
     logoOverlayPages.push(await generateLogoOverlay(tw, th, template.contentElements, brandKit, false, adjustments));
   }
