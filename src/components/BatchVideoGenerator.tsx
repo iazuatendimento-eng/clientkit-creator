@@ -2862,62 +2862,90 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsBulkExporting(true);
     let successCount = 0;
 
-    for (let i = 0; i < videosWithPages.length; i++) {
-      const video = videosWithPages[i];
-      setBulkExportProgress(`${i + 1}/${videosWithPages.length} • ${video.clientName}`);
+    try {
+      for (let i = 0; i < videosWithPages.length; i++) {
+        const video = videosWithPages[i];
+        setBulkExportProgress(`${i + 1}/${videosWithPages.length} • ${video.clientName}`);
 
-      try {
-        const audioUrl = (() => {
-          const sel = video.selectedAudio || 1;
-          const preferred = sel === 2 ? template.audioUrl2 : template.audioUrl1;
-          const fallback = sel === 2 ? template.audioUrl1 : template.audioUrl2;
-          return preferred || fallback || undefined;
-        })();
+        try {
+          // Regera as páginas antes de exportar para garantir assinatura no fim.
+          const rebuilt = await regenerateSingleVideo(video);
+          const exportVideo: ClientVideo = {
+            ...video,
+            pages: rebuilt.pages,
+            overlayPages: rebuilt.overlayPages,
+            frameOverlayPages: rebuilt.frameOverlayPages,
+            preImageOverlayPages: rebuilt.preImageOverlayPages,
+            logoOverlayPages: rebuilt.logoOverlayPages,
+          };
 
-        const videoBlob = await encodeVideoToMP4(video.pages, {
-          width: template.width,
-          height: template.height,
-          pageDuration: template.pageDuration,
-          fps: 24,
-          motionEffect,
-          transitionEffect,
-          textAnimation,
-          logoAnimation,
-          textAnimDuration: textAnimDuration / (template.pageDuration || 3),
-          backgroundVideoUrls: video.previewVideoUrls || undefined,
-          frameOverlayPages: video.frameOverlayPages || undefined,
-          overlayPages: video.overlayPages || undefined,
-          logoOverlayPages: video.logoOverlayPages || undefined,
-          imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
-          imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
-          pageImageAdjustments: video.pageImageAdjustments,
-          audioUrl,
-          requireEmailSafePreview: true,
-          onProgress: () => {},
-        });
+          setClientVideos((prev) =>
+            prev.map((v) =>
+              v.cardId === video.cardId
+                ? {
+                    ...v,
+                    pages: rebuilt.pages,
+                    overlayPages: rebuilt.overlayPages,
+                    frameOverlayPages: rebuilt.frameOverlayPages,
+                    preImageOverlayPages: rebuilt.preImageOverlayPages,
+                    logoOverlayPages: rebuilt.logoOverlayPages,
+                  }
+                : v
+            )
+          );
 
-        const url = URL.createObjectURL(videoBlob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `video_${video.clientName}_${Date.now()}.mp4`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        successCount++;
-        await new Promise(r => setTimeout(r, 500));
-      } catch (error) {
-        console.error(`Erro ao regerar vídeo de ${video.clientName}:`, error);
+          const audioUrl = (() => {
+            const sel = exportVideo.selectedAudio || 1;
+            const preferred = sel === 2 ? template.audioUrl2 : template.audioUrl1;
+            const fallback = sel === 2 ? template.audioUrl1 : template.audioUrl2;
+            return preferred || fallback || undefined;
+          })();
+
+          const videoBlob = await encodeVideoToMP4(exportVideo.pages, {
+            width: template.width,
+            height: template.height,
+            pageDuration: template.pageDuration,
+            fps: 24,
+            motionEffect,
+            transitionEffect,
+            textAnimation,
+            logoAnimation,
+            textAnimDuration: textAnimDuration / (template.pageDuration || 3),
+            backgroundVideoUrls: exportVideo.previewVideoUrls || undefined,
+            frameOverlayPages: exportVideo.frameOverlayPages || undefined,
+            overlayPages: exportVideo.overlayPages || undefined,
+            logoOverlayPages: exportVideo.logoOverlayPages || undefined,
+            imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
+            imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
+            pageImageAdjustments: exportVideo.pageImageAdjustments,
+            audioUrl,
+            requireEmailSafePreview: true,
+            onProgress: () => {},
+          });
+
+          const url = URL.createObjectURL(videoBlob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `video_${video.clientName}_${Date.now()}.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          successCount++;
+          await new Promise((r) => setTimeout(r, 500));
+        } catch (error) {
+          console.error(`Erro ao regerar vídeo de ${video.clientName}:`, error);
+        }
       }
+
+      toast({
+        title: `${successCount}/${videosWithPages.length} vídeos regerados`,
+        description: "Downloads iniciados com a página de assinatura corrigida.",
+      });
+    } finally {
+      setIsBulkExporting(false);
+      setBulkExportProgress("");
     }
-
-    toast({
-      title: `${successCount}/${videosWithPages.length} vídeos regerados`,
-      description: "Downloads iniciados com a página de assinatura corrigida.",
-    });
-
-    setIsBulkExporting(false);
-    setBulkExportProgress("");
   };
 
 
