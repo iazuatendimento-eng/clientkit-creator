@@ -122,8 +122,9 @@ function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "og
   return "mp3";
 }
 
-const FFMPEG_MUX_TIMEOUT_MS = 420_000;
-const FFMPEG_TRANSCODE_TIMEOUT_MS = 480_000;
+const FFMPEG_MUX_TIMEOUT_MS = 180_000;
+const FFMPEG_TRANSCODE_TIMEOUT_MS = 240_000;
+const AUDIO_FETCH_TIMEOUT_MS = 25_000;
 
 // Generate MP4 (best effort: native MediaRecorder MP4 when available, otherwise WebM->FFmpeg)
 // Check if blob is actually MP4 by verifying ftyp box header
@@ -178,12 +179,20 @@ async function transcodeToTrueMp4(params: {
     await ff.writeFile(inputFileName, await fetchFile(inputBlob));
 
     if (audioUrl) {
-      const audioResponse = await fetch(audioUrl);
+      const audioResponse = await withTimeout(
+        fetch(audioUrl, { cache: "no-store" }),
+        AUDIO_FETCH_TIMEOUT_MS,
+        "baixar trilha de áudio"
+      );
       if (!audioResponse.ok) {
         throw new Error(`Falha ao baixar trilha de áudio (${audioResponse.status})`);
       }
 
-      const audioBlob = await audioResponse.blob();
+      const audioBlob = await withTimeout(
+        audioResponse.blob(),
+        AUDIO_FETCH_TIMEOUT_MS,
+        "processar trilha de áudio"
+      );
       if (!audioBlob.size) {
         throw new Error("A trilha de áudio está vazia");
       }
@@ -371,6 +380,11 @@ function isFfmpegLoadFailure(err: unknown): boolean {
   return (
     message.includes("timeout: carregar conversor mp4") ||
     message.includes("timeout: baixar núcleo do conversor mp4") ||
+    message.includes("timeout: gerar mp4 com áudio") ||
+    message.includes("timeout: gerar mp4 compatível") ||
+    message.includes("timeout: baixar trilha de áudio") ||
+    message.includes("timeout: processar trilha de áudio") ||
+    message.includes("falha ao baixar trilha de áudio") ||
     message.includes("ffmpeg failed to load") ||
     message.includes("failed to load")
   );
