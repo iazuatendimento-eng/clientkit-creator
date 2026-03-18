@@ -2376,17 +2376,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     if (!file) return;
 
     if (file.type.startsWith("video/")) {
-      // For video files, extract a frame as thumbnail and store video URL for preview
-      const videoUrl = URL.createObjectURL(file);
+      // For video files, extract a frame as thumbnail and upload to storage
+      const blobUrl = URL.createObjectURL(file);
       const videoEl = document.createElement("video");
       videoEl.crossOrigin = "anonymous";
       videoEl.muted = true;
       videoEl.preload = "auto";
-      videoEl.src = videoUrl;
+      videoEl.src = blobUrl;
       videoEl.onloadeddata = () => {
-        videoEl.currentTime = 0.5; // seek to 0.5s for a good frame
+        videoEl.currentTime = 0.5;
       };
-      videoEl.onseeked = () => {
+      videoEl.onseeked = async () => {
         const canvas = document.createElement("canvas");
         canvas.width = videoEl.videoWidth;
         canvas.height = videoEl.videoHeight;
@@ -2394,8 +2394,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         if (ctx) {
           ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
           const thumbnail = canvas.toDataURL("image/jpeg", 0.85);
-          // Store thumbnail as background and video URL for preview playback
-          applyCustomImage(thumbnail, videoUrl);
+          // Upload video to storage for persistence
+          try {
+            const ext = file.name.split(".").pop() || "mp4";
+            const cardId = selectedVideoRef.current?.cardId || "unknown";
+            const fileName = `custom_${cardId}_${Date.now()}.${ext}`;
+            const path = `videos/${fileName}`;
+            const { error: upErr } = await supabase.storage
+              .from("card-uploads")
+              .upload(path, file, { contentType: file.type });
+            if (upErr) throw upErr;
+            const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+            applyCustomImage(thumbnail, urlData.publicUrl);
+          } catch (err) {
+            console.error("Erro ao salvar vídeo customizado:", err);
+            // Fallback to blob URL (won't persist but at least works in session)
+            applyCustomImage(thumbnail, blobUrl);
+            toast({ title: "Vídeo não foi salvo permanentemente", variant: "destructive" });
+          }
         }
       };
       return;
