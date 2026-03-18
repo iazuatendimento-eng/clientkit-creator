@@ -16,47 +16,73 @@ const BatchHistoryPage = () => {
   const handleEditBatch = async (batch: BatchGeneration) => {
     setSelectedBatch(batch);
 
-    const snap = batch.template_snapshot as any;
-    let audioUrl1 = snap.audioUrl1 || snap.audio_url_1 || undefined;
-    let audioUrl2 = snap.audioUrl2 || snap.audio_url_2 || undefined;
+    const snap = (batch.template_snapshot || {}) as any;
+    const isArt = batch.type === "art";
 
-    // If no audio in snapshot, try to load from the master video template
-    if (!audioUrl1 && !audioUrl2 && snap.id) {
+    const pickArray = (...candidates: any[]): any[] => {
+      for (const candidate of candidates) {
+        if (Array.isArray(candidate)) return candidate;
+      }
+      return [];
+    };
+
+    let masterSnap: any = null;
+
+    // Video batches antigos podem não ter assinatura no snapshot.
+    // Hidratamos do template mestre quando necessário.
+    if (!isArt && snap.id) {
       try {
         const { data } = await supabase
           .from("master_video_templates")
-          .select("*")
+          .select("id, name, content_elements, signature_elements, width, height, background_color, page_duration, audio_url_1, audio_url_2")
           .eq("id", snap.id)
           .maybeSingle();
-        if (data) {
-          const masterSnap = data as any;
-          audioUrl1 = masterSnap.audio_url_1 || masterSnap.audioUrl1 || undefined;
-          audioUrl2 = masterSnap.audio_url_2 || masterSnap.audioUrl2 || undefined;
-        }
+
+        if (data) masterSnap = data;
       } catch (e) {
-        console.error("Failed to load master template audio:", e);
+        console.error("Failed to load master template fallback:", e);
       }
     }
 
-    const isArt = batch.type === "art";
-    const contentElements = isArt
-      ? (snap.elements || snap.contentElements || snap.content_elements || [])
-      : (snap.contentElements || snap.content_elements || []);
+    const snapContent = isArt
+      ? pickArray(snap.elements, snap.contentElements, snap.content_elements)
+      : pickArray(snap.contentElements, snap.content_elements, snap.elements);
+    const snapSignature = isArt
+      ? pickArray(snap.elements, snap.signatureElements, snap.signature_elements)
+      : pickArray(snap.signatureElements, snap.signature_elements);
+
+    const masterContent = pickArray(masterSnap?.content_elements, masterSnap?.contentElements);
+    const masterSignature = pickArray(masterSnap?.signature_elements, masterSnap?.signatureElements);
+
+    const contentElements = snapContent.length > 0 ? snapContent : masterContent;
     const signatureElements = isArt
-      ? (snap.elements || snap.signatureElements || snap.signature_elements || [])
-      : (snap.signatureElements || snap.signature_elements || []);
+      ? pickArray(snap.elements, snap.signatureElements, snap.signature_elements, contentElements)
+      : (snapSignature.length > 0 ? snapSignature : masterSignature);
+
+    const audioUrl1 =
+      snap.audioUrl1 ||
+      snap.audio_url_1 ||
+      masterSnap?.audio_url_1 ||
+      masterSnap?.audioUrl1 ||
+      undefined;
+    const audioUrl2 =
+      snap.audioUrl2 ||
+      snap.audio_url_2 ||
+      masterSnap?.audio_url_2 ||
+      masterSnap?.audioUrl2 ||
+      undefined;
 
     setResolvedTemplate({
-      id: snap.id || batch.id,
-      name: snap.name || "Template",
+      id: snap.id || masterSnap?.id || batch.id,
+      name: snap.name || masterSnap?.name || "Template",
       contentElements,
       signatureElements,
       // For art templates, also set 'elements' so BatchArtGenerator can use it
       ...(isArt ? { elements: snap.elements || contentElements } : {}),
-      width: snap.width || 1080,
-      height: snap.height || (isArt ? 1350 : 1920),
-      backgroundColor: snap.backgroundColor || snap.background_color || "#ffffff",
-      pageDuration: snap.pageDuration || snap.page_duration || 3,
+      width: snap.width || masterSnap?.width || 1080,
+      height: snap.height || masterSnap?.height || (isArt ? 1350 : 1920),
+      backgroundColor: snap.backgroundColor || snap.background_color || masterSnap?.background_color || "#ffffff",
+      pageDuration: snap.pageDuration || snap.page_duration || masterSnap?.page_duration || 3,
       audioUrl1,
       audioUrl2,
       teamFilter: snap.teamFilter || undefined,
