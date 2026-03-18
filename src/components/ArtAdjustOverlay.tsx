@@ -741,7 +741,7 @@ export function ArtAdjustOverlay({
         <img
           src={previewUrl}
           alt="Prévia da arte gerada"
-          className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
+          className="absolute inset-0 h-full w-full object-contain pointer-events-none select-none"
           draggable={false}
         />
       ) : (
