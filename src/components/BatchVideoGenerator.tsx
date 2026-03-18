@@ -2860,10 +2860,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             <ArrowLeft className="mr-1 h-4 w-4" />
             Voltar
           </Button>
-          <h1 className="text-sm font-semibold flex items-center gap-1 shrink-0">
-            <Film className="h-4 w-4" />
-            Vídeos
-          </h1>
 
           {/* Card type filter */}
           <div className="flex gap-0.5 shrink-0">
@@ -2924,12 +2920,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             className={`w-32 h-7 text-xs shrink-0 ${!emailSubject.trim() ? 'border-destructive' : ''}`}
           />
 
-          {clientVideos.some((v) => v.pages.length > 0) && (
-            <Button variant="outline" size="sm" className="text-xs px-2 h-7 shrink-0" onClick={handleSaveDraft}>
-              <Save className="mr-1 h-3 w-3" />
-              Rascunho
-            </Button>
-          )}
+          <Button variant="outline" size="sm" className="text-xs px-2 h-7 shrink-0" onClick={handleSaveDraft}>
+            <Save className="mr-1 h-3 w-3" />
+            Rascunho
+          </Button>
 
           <Button
             size="sm"
