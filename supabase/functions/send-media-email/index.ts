@@ -126,26 +126,12 @@ serve(async (req) => {
       return { url, filename };
     });
 
-    // Build download URLs via edge function proxy
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-    const downloadLinks: { url: string; name: string }[] = attachmentEntries.map((entry) => {
-      const proxyUrl = `${SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(entry.url)}&name=${encodeURIComponent(entry.filename)}`;
-      return { url: proxyUrl, name: entry.filename };
-    });
-
     const attachments = attachmentEntries.map((entry) => ({
       filename: entry.filename,
       path: entry.url,
     }));
 
     const count = allUrls.length;
-
-    // Build download buttons HTML
-    const downloadButtonsHtml = downloadLinks.map((link, i: number) => `
-      <a href="${link.url}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 4px;" target="_blank">
-        ⬇️ Baixar ${isVideo ? 'Vídeo' : 'Arte'}${downloadLinks.length > 1 ? ` ${i + 1}` : ''}
-      </a>
-    `).join('');
 
     let mediaSection = '';
     if (isVideo) {
@@ -166,10 +152,7 @@ serve(async (req) => {
       mediaSection = `
         <div style="margin: 20px 0;">
           ${videoPlayersHtml}
-          <div style="text-align: center; margin-top: 16px;">
-            ${downloadButtonsHtml}
-          </div>
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `Os ${count} vídeos também foram enviados` : 'O vídeo também foi enviado'} em anexo.</p>
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `Os ${count} vídeos foram enviados` : 'O vídeo foi enviado'} em anexo. Baixe o arquivo diretamente.</p>
         </div>
       `;
     } else {
@@ -182,17 +165,14 @@ serve(async (req) => {
       mediaSection = `
         <div style="margin: 20px 0;">
           ${imagePreviewsHtml}
-          <div style="text-align: center; margin-top: 16px;">
-            ${downloadButtonsHtml}
-          </div>
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `As ${count} artes também foram enviadas` : 'A arte também foi enviada'} em anexo.</p>
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `As ${count} artes foram enviadas` : 'A arte foi enviada'} em anexo. Baixe o arquivo diretamente.</p>
         </div>
       `;
     }
 
     const attachmentNotice = isVideo
-      ? `🎬 Tentamos exibir o vídeo direto no e-mail. Se o seu provedor não reproduzir, use o botão de download do <strong>arquivo .MP4</strong>.`
-      : `🎨 A arte também está anexada. Se necessário, use o botão de download do <strong>arquivo .PNG</strong>.`;
+      ? `🎬 O vídeo está em anexo. Baixe o <strong>arquivo .MP4</strong> diretamente no seu e-mail.`
+      : `🎨 A arte está em anexo. Baixe o <strong>arquivo .PNG</strong> diretamente no seu e-mail.`;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
