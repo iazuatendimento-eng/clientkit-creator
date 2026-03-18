@@ -82,12 +82,28 @@ serve(async (req) => {
     const allUrls: string[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
     const extension = isVideo ? 'mp4' : 'png';
     const baseName = (clientName || 'cliente').replace(/[^a-zA-Z0-9]/g, '_');
+
+    // Build download URLs via edge function proxy
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+    const downloadLinks: { url: string; name: string }[] = allUrls.map((url: string, i: number) => {
+      const fileName = allUrls.length > 1 ? `${baseName}_p${i + 1}.${extension}` : `${baseName}.${extension}`;
+      const proxyUrl = `${SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(fileName)}`;
+      return { url: proxyUrl, name: fileName };
+    });
+
     const attachments = allUrls.map((url: string, i: number) => ({
       filename: allUrls.length > 1 ? `${baseName}_p${i + 1}.${extension}` : `${baseName}.${extension}`,
       path: url,
     }));
 
     const count = allUrls.length;
+
+    // Build download buttons HTML
+    const downloadButtonsHtml = downloadLinks.map((link, i: number) => `
+      <a href="${link.url}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 4px;" target="_blank">
+        ⬇️ Baixar ${isVideo ? 'Vídeo' : 'Arte'}${downloadLinks.length > 1 ? ` ${i + 1}` : ''}
+      </a>
+    `).join('');
 
     let mediaSection = '';
     if (isVideo) {
@@ -106,14 +122,10 @@ serve(async (req) => {
       mediaSection = `
         <div style="margin: 20px 0;">
           ${coverPreviewHtml}
-          <div style="text-align: center; margin-top: 12px;">
-            <div style="background-color: #f0f4ff; border-radius: 12px; padding: 24px; display: inline-block;">
-              <p style="font-size: 32px; margin: 0 0 8px 0;">🎬</p>
-              <p style="color: #333; font-weight: bold; margin: 0 0 4px 0;">Vídeo em anexo</p>
-              <p style="color: #888; font-size: 13px; margin: 0;">Baixe o arquivo MP4 anexado a este e-mail para assistir.</p>
-            </div>
+          <div style="text-align: center; margin-top: 16px;">
+            ${downloadButtonsHtml}
           </div>
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 8px;">${count > 1 ? `Os ${count} vídeos também foram enviados` : 'O vídeo também foi enviado'} em anexo.</p>
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `Os ${count} vídeos também foram enviados` : 'O vídeo também foi enviado'} em anexo.</p>
         </div>
       `;
     } else {
@@ -126,7 +138,10 @@ serve(async (req) => {
       mediaSection = `
         <div style="margin: 20px 0;">
           ${imagePreviewsHtml}
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 8px;">${count > 1 ? `As ${count} artes também foram enviadas` : 'A arte também foi enviada'} em anexo.</p>
+          <div style="text-align: center; margin-top: 16px;">
+            ${downloadButtonsHtml}
+          </div>
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `As ${count} artes também foram enviadas` : 'A arte também foi enviada'} em anexo.</p>
         </div>
       `;
     }
