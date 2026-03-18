@@ -236,6 +236,7 @@ async function transcodeToTrueMp4(params: {
   inputBlob: Blob;
   inputFileName: string;
   audioUrl?: string;
+  videoDurationSec?: number;
 }): Promise<Blob> {
   const { inputBlob, inputFileName, audioUrl } = params;
   const ff = await loadFFmpeg();
