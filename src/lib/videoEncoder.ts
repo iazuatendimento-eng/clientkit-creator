@@ -1,7 +1,5 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import coreJsUrl from "@ffmpeg/core/dist/esm/ffmpeg-core.js?url";
-import coreWasmUrl from "@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url";
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
@@ -63,11 +61,6 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
   const FFMPEG_COOLDOWN_MS = 30_000;
   const FFMPEG_SOURCES: Array<{ label: string; core: string; wasm: string }> = [
     {
-      label: "local-bundle",
-      core: coreJsUrl,
-      wasm: coreWasmUrl,
-    },
-    {
       label: "jsdelivr",
       core: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js",
       wasm: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm",
@@ -76,6 +69,11 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
       label: "unpkg",
       core: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js",
       wasm: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm",
+    },
+    {
+      label: "cdnjs",
+      core: "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.10/esm/ffmpeg-core.js",
+      wasm: "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.10/esm/ffmpeg-core.wasm",
     },
   ];
 
