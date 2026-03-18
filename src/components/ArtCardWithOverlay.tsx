@@ -192,6 +192,33 @@ export function ArtCardWithOverlay({
     };
   }, []);
 
+  // Drag-and-drop image onto card
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleFileDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleFileDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/") && onDropImage) {
+      onDropImage(index, file);
+    }
+  }, [index, onDropImage]);
+
   const handleDragEnd = useCallback(async () => {
     // Read from refs to get the absolute latest values (pointerup fires before React re-renders)
     const v = latestRef.current;
@@ -255,10 +282,14 @@ export function ArtCardWithOverlay({
   return (
     <div
       className={cn(
-        "border rounded-lg overflow-hidden bg-card",
+        "border rounded-lg overflow-hidden bg-card transition-all",
         art.status === "approved" && "ring-2 ring-green-500",
         art.status === "rejected" && "ring-2 ring-destructive opacity-50",
+        isDragOver && "ring-2 ring-primary ring-offset-2",
       )}
+      onDragOver={handleFileDragOver}
+      onDragLeave={handleFileDragLeave}
+      onDrop={handleFileDrop}
     >
       {/* Art Preview with always-on overlay */}
       <div className="relative bg-muted">
