@@ -865,16 +865,24 @@ function applyTransition(
 function seekVideoToTime(video: HTMLVideoElement, time: number): Promise<void> {
   return new Promise<void>((resolve) => {
     if (Math.abs(video.currentTime - time) < 0.05) {
-      // Already close enough
       resolve();
       return;
     }
-    const onSeeked = () => {
-      video.removeEventListener("seeked", onSeeked);
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      video.removeEventListener("seeked", done);
       resolve();
     };
-    video.addEventListener("seeked", onSeeked);
-    video.currentTime = time;
+    // Timeout to prevent hanging forever if seeked never fires
+    setTimeout(done, 2000);
+    video.addEventListener("seeked", done);
+    try {
+      video.currentTime = time;
+    } catch {
+      done();
+    }
   });
 }
 
