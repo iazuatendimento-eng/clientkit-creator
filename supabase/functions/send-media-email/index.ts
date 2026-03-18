@@ -152,10 +152,7 @@ serve(async (req) => {
       mediaSection = `
         <div style="margin: 20px 0;">
           ${videoPlayersHtml}
-          <div style="text-align: center; margin-top: 16px;">
-            ${downloadButtonsHtml}
-          </div>
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `Os ${count} vídeos também foram enviados` : 'O vídeo também foi enviado'} em anexo.</p>
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `Os ${count} vídeos foram enviados` : 'O vídeo foi enviado'} em anexo. Baixe o arquivo diretamente.</p>
         </div>
       `;
     } else {
@@ -168,10 +165,7 @@ serve(async (req) => {
       mediaSection = `
         <div style="margin: 20px 0;">
           ${imagePreviewsHtml}
-          <div style="text-align: center; margin-top: 16px;">
-            ${downloadButtonsHtml}
-          </div>
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `As ${count} artes também foram enviadas` : 'A arte também foi enviada'} em anexo.</p>
+          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `As ${count} artes foram enviadas` : 'A arte foi enviada'} em anexo. Baixe o arquivo diretamente.</p>
         </div>
       `;
     }
