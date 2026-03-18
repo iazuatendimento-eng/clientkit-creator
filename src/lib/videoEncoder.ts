@@ -311,111 +311,12 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           }
 
           try {
-            const ff = await loadFFmpeg();
+            const ff = await withTimeout(loadFFmpeg(), 25_000, "inicializar conversor MP4");
             onProgress?.(0.7);
             await ff.writeFile("input.mp4", await fetchFile(rawBlob));
-
-            let hasAudio = false;
-            let audioFileName: string | null = null;
-            if (audioUrl) {
-              try {
-                console.log("[VideoEncoder] Fetching audio:", audioUrl.substring(0, 80));
-                const audioResponse = await fetch(audioUrl);
-                if (audioResponse.ok) {
-                  const audioBlob = await audioResponse.blob();
-                  if (audioBlob.size > 0) {
-                    const audioExt = inferAudioExt(audioUrl, audioBlob.type);
-                    audioFileName = `audio.${audioExt}`;
-                    await ff.writeFile(audioFileName, await fetchFile(audioBlob));
-                    hasAudio = true;
-                    console.log(`[VideoEncoder] Audio loaded: ${audioBlob.size} bytes (${audioExt})`);
-                  } else {
-                    console.error("[VideoEncoder] Audio blob is empty (0 bytes)!");
-                  }
-                } else {
-                  console.error(`[VideoEncoder] Audio fetch failed: ${audioResponse.status} ${audioResponse.statusText}`);
-                }
-              } catch (audioErr) {
-                console.error("[VideoEncoder] Failed to fetch audio:", audioErr);
-              }
-            }
-
-            if (audioUrl && !hasAudio) {
-              console.error("[VideoEncoder] ⚠️ Audio was requested but could NOT be loaded! Video will be silent.");
-            }
-
-            const ffmpegArgs = hasAudio && audioFileName
-              ? ["-i", "input.mp4", "-stream_loop", "-1", "-i", audioFileName, "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]
-              : ["-i", "input.mp4", "-c:v", "copy", "-c:a", "copy", "-movflags", "+faststart", "-f", "mp4", "output.mp4"];
-
-            await withTimeout(ff.exec(ffmpegArgs), 180_000, hasAudio ? "muxar vídeo + áudio" : "remux faststart");
-            onProgress?.(0.9);
-
-            const mp4Data = await ff.readFile("output.mp4");
-            let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
-            await ff.deleteFile("input.mp4").catch(() => {});
-            await ff.deleteFile("output.mp4").catch(() => {});
-            if (hasAudio && audioFileName) await ff.deleteFile(audioFileName).catch(() => {});
-            mp4Blob = await patchMP4Brand(mp4Blob);
-
-            if (await isValidMP4(mp4Blob)) {
-              console.log("[VideoEncoder] Remuxed MP4 size:", mp4Blob.size, hasAudio ? "(WITH audio)" : "(NO audio)");
-              onProgress?.(1);
-              return mp4Blob;
-            }
-          } catch (err) {
-            console.error("[VideoEncoder] FFmpeg remux FAILED, using raw WebCodecs output (NO AUDIO):", err);
-          }
-
-          // If FFmpeg failed, return raw WebCodecs output (WITHOUT audio)
-          console.warn("[VideoEncoder] Returning video WITHOUT audio (FFmpeg failed or unavailable)");
-          const patched = await patchMP4Brand(rawBlob);
-          onProgress?.(1);
-          return patched;
-        }
-
-        // Mobile: return directly (no FFmpeg needed)
-        onProgress?.(1);
-        return rawBlob;
-      } catch (wcErr) {
-        console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
-        if (attempt === attempts[attempts.length - 1]) {
-          // On mobile, no fallback — throw error
-          if (isMobileDevice) {
-            throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
-          }
-          // On desktop, fall through to MediaRecorder fallback
-          console.log("[VideoEncoder] All WebCodecs attempts failed, trying MediaRecorder fallback...");
-        }
-        onProgress?.(0.05);
-      }
-    }
-  }
-
-  // ====== DESKTOP FALLBACK: MediaRecorder (only if WebCodecs unavailable/failed) ======
-  const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
-  const webmMime = pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
-  const recordMime = mp4Mime || webmMime || "video/webm";
-
-  console.log("[VideoEncoder] MediaRecorder fallback, MIME:", recordMime);
-  onProgress?.(0.1);
-
-  if (mp4Mime) {
-    const nativeMp4 = await withTimeout(
-      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
-      240_000,
-      "gerar MP4"
-    );
-    onProgress?.(0.6);
-
-    if (!audioUrl) {
-      const patched = await patchMP4Brand(nativeMp4);
-      onProgress?.(1);
-      return patched;
-    }
-
+...
     try {
-      const ff = await loadFFmpeg();
+      const ff = await withTimeout(loadFFmpeg(), 25_000, "inicializar conversor MP4");
       onProgress?.(0.7);
       await ff.writeFile("input.mp4", await fetchFile(nativeMp4));
 
