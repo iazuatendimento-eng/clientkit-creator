@@ -1791,9 +1791,24 @@ export async function encodeVideoSimple(
       }, 20_000);
     }
 
+    const cleanupRecorderResources = () => {
+      bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
+      outputStream.getTracks().forEach((track) => track.stop());
+      try {
+        audioSourceNode?.stop();
+      } catch {
+        // ignore double-stop
+      }
+      audioSourceNode?.disconnect();
+      audioDestination?.stream.getTracks().forEach((track) => track.stop());
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+      }
+    };
+
     mediaRecorder.onstop = () => {
       if (stallTimer) window.clearTimeout(stallTimer);
-      bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
+      cleanupRecorderResources();
       const result = new Blob(chunks, { type: outType });
       console.log("[VideoEncoder] Stopped. chunks:", chunks.length, "size:", result.size, "dataEvents:", dataEventCount);
       resolve(result);
@@ -1801,6 +1816,7 @@ export async function encodeVideoSimple(
     mediaRecorder.onerror = (e) => {
       console.error("[VideoEncoder] MediaRecorder error:", e);
       if (stallTimer) window.clearTimeout(stallTimer);
+      cleanupRecorderResources();
       reject(e);
     };
 
