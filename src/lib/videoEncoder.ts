@@ -44,9 +44,9 @@ let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
 let ffmpegLoadStartedAt = 0;
 let ffmpegUnavailableUntil = 0;
 
-const FFMPEG_MAX_RETRIES = 1;
-const FFMPEG_FETCH_TIMEOUT_MS = 12_000;
-const FFMPEG_LOAD_TIMEOUT_MS = 18_000;
+const FFMPEG_MAX_RETRIES = 2;
+const FFMPEG_FETCH_TIMEOUT_MS = 20_000;
+const FFMPEG_LOAD_TIMEOUT_MS = 30_000;
 const FFMPEG_RETRY_DELAY_MS = 500;
 const FFMPEG_COOLDOWN_MS = 90_000;
 const FFMPEG_STALE_PROMISE_MS = 25_000;
