@@ -757,6 +757,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [textAnimDuration, setTextAnimDuration] = useState(getTemplateTextAnimDuration);
   const [shapeAnimation, setShapeAnimation] = useState<string>(getTemplateShapeAnimation);
   const [shapeAnimDuration, setShapeAnimDuration] = useState(getTemplateShapeAnimDuration);
+  const [isBulkExporting, setIsBulkExporting] = useState(false);
+  const [bulkExportProgress, setBulkExportProgress] = useState("");
 
   // Keep emailSubject ref in sync
   useEffect(() => { emailSubjectRef.current = emailSubject; }, [emailSubject]);
