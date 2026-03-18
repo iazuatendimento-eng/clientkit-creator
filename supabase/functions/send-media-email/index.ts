@@ -171,8 +171,8 @@ serve(async (req) => {
     }
 
     const attachmentNotice = isVideo
-      ? `🎬 Tentamos exibir o vídeo direto no e-mail. Se o seu provedor não reproduzir, use o botão de download do <strong>arquivo .MP4</strong>.`
-      : `🎨 A arte também está anexada. Se necessário, use o botão de download do <strong>arquivo .PNG</strong>.`;
+      ? `🎬 O vídeo está em anexo. Baixe o <strong>arquivo .MP4</strong> diretamente no seu e-mail.`
+      : `🎨 A arte está em anexo. Baixe o <strong>arquivo .PNG</strong> diretamente no seu e-mail.`;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
