@@ -474,10 +474,9 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       onProgress?.(1);
       return mp4WithAudio;
     } catch (transcodeErr) {
-      if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(nativeMp4))) {
-        console.warn("[VideoEncoder] FFmpeg indisponível no fallback, enviando MP4 nativo sem mux de áudio.");
-        onProgress?.(1);
-        return nativeMp4;
+      if (isFfmpegLoadFailure(transcodeErr)) {
+        console.error("[VideoEncoder] FFmpeg indisponível para mux de áudio (MediaRecorder).", transcodeErr);
+        throw new Error("Não foi possível finalizar o vídeo com áudio nesta tentativa. Tente novamente em alguns instantes.");
       }
       throw transcodeErr;
     }
