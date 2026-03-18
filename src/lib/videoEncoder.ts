@@ -118,6 +118,10 @@ function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "og
   return "mp3";
 }
 
+const FFMPEG_BOOT_TIMEOUT_MS = 180_000;
+const FFMPEG_MUX_TIMEOUT_MS = 420_000;
+const FFMPEG_TRANSCODE_TIMEOUT_MS = 480_000;
+
 // Generate MP4 (best effort: native MediaRecorder MP4 when available, otherwise WebM->FFmpeg)
 // Check if blob is actually MP4 by verifying ftyp box header
 async function isValidMP4(blob: Blob): Promise<boolean> {
@@ -137,23 +141,91 @@ async function patchMP4Brand(blob: Blob): Promise<Blob> {
   try {
     const buffer = await blob.arrayBuffer();
     const view = new Uint8Array(buffer);
-    
+
     const ftyp = String.fromCharCode(view[4], view[5], view[6], view[7]);
     if (ftyp !== "ftyp") return blob;
-    
+
     const currentBrand = String.fromCharCode(view[8], view[9], view[10], view[11]);
     console.log("[VideoEncoder] Current major brand:", currentBrand);
-    
+
     if (currentBrand === "isom") return blob;
-    
+
     // Patch major brand to "isom" (bytes 8-11)
     view[8] = 105; view[9] = 115; view[10] = 111; view[11] = 109;
-    
+
     console.log("[VideoEncoder] Patched brand from", currentBrand, "to isom");
     return new Blob([view], { type: "video/mp4" });
   } catch (err) {
     console.error("[VideoEncoder] Failed to patch brand:", err);
     return blob;
+  }
+}
+
+async function transcodeToTrueMp4(params: {
+  inputBlob: Blob;
+  inputFileName: string;
+  audioUrl?: string;
+}): Promise<Blob> {
+  const { inputBlob, inputFileName, audioUrl } = params;
+  const ff = await withTimeout(loadFFmpeg(), FFMPEG_BOOT_TIMEOUT_MS, "inicializar conversor MP4");
+
+  let audioFileName: string | null = null;
+
+  try {
+    await ff.writeFile(inputFileName, await fetchFile(inputBlob));
+
+    if (audioUrl) {
+      const audioResponse = await fetch(audioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Falha ao baixar trilha de áudio (${audioResponse.status})`);
+      }
+
+      const audioBlob = await audioResponse.blob();
+      if (!audioBlob.size) {
+        throw new Error("A trilha de áudio está vazia");
+      }
+
+      const audioExt = inferAudioExt(audioUrl, audioBlob.type);
+      audioFileName = `audio.${audioExt}`;
+      await ff.writeFile(audioFileName, await fetchFile(audioBlob));
+    }
+
+    const ffmpegArgs = audioFileName
+      ? [
+          "-i", inputFileName,
+          "-stream_loop", "-1", "-i", audioFileName,
+          "-map", "0:v:0", "-map", "1:a:0",
+          "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+          "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
+          "-shortest", "-movflags", "+faststart", "-f", "mp4", "-y", "output.mp4",
+        ]
+      : [
+          "-i", inputFileName,
+          "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+          "-an", "-movflags", "+faststart", "-f", "mp4", "-y", "output.mp4",
+        ];
+
+    await withTimeout(
+      ff.exec(ffmpegArgs),
+      audioFileName ? FFMPEG_MUX_TIMEOUT_MS : FFMPEG_TRANSCODE_TIMEOUT_MS,
+      audioFileName ? "gerar MP4 com áudio" : "gerar MP4 compatível"
+    );
+
+    const mp4Data = await ff.readFile("output.mp4");
+    let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
+    mp4Blob = await patchMP4Brand(mp4Blob);
+
+    if (!(await isValidMP4(mp4Blob))) {
+      throw new Error("Arquivo final inválido: ftyp ausente");
+    }
+
+    return mp4Blob;
+  } finally {
+    await ff.deleteFile(inputFileName).catch(() => {});
+    await ff.deleteFile("output.mp4").catch(() => {});
+    if (audioFileName) {
+      await ff.deleteFile(audioFileName).catch(() => {});
+    }
   }
 }
 
