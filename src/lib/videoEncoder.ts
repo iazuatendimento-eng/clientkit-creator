@@ -572,35 +572,27 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     );
     onProgress?.(0.6);
 
-    if (!requireEmailSafePreview && !audioUrl) {
-      onProgress?.(1);
-      return nativeMp4;
-    }
-
+    // Always transcode native MP4 through FFmpeg to guarantee H.264 Baseline
+    // (some browsers produce HEVC via MediaRecorder which isn't universally playable)
     onProgress?.(0.72);
     try {
-      const mp4WithAudio = await transcodeToTrueMp4({
+      const mp4H264 = await transcodeToTrueMp4({
         inputBlob: nativeMp4,
         inputFileName: "input.mp4",
         audioUrl,
       });
       onProgress?.(1);
-      return mp4WithAudio;
+      return mp4H264;
     } catch (transcodeErr) {
       if (isFfmpegLoadFailure(transcodeErr)) {
-        if (audioUrl) {
-          if (await isValidMP4(nativeMp4)) {
-            console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo com áudio embutido.", transcodeErr);
-            onProgress?.(1);
-            return nativeMp4;
-          }
-          throw new Error("Não foi possível gerar MP4 com áudio do template.");
-        }
-
+        // FFmpeg unavailable — fall back to native MP4 only if valid
         if (await isValidMP4(nativeMp4)) {
-          console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
+          console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo (pode ser HEVC).", transcodeErr);
           onProgress?.(1);
           return nativeMp4;
+        }
+        if (audioUrl) {
+          throw new Error("Não foi possível gerar MP4 com áudio do template.");
         }
       }
       throw transcodeErr;
