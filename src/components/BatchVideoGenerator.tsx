@@ -2862,10 +2862,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           </Button>
 
           {/* Card type filter */}
-          <div className="flex gap-0.5 shrink-0">
-            <Button variant={cardTypeFilter === "all" ? "default" : "outline"} size="sm" className="text-xs px-2 h-7" onClick={() => setCardTypeFilter("all")}>Todos</Button>
-            <Button variant={cardTypeFilter === "post" ? "default" : "outline"} size="sm" className="text-xs px-2 h-7" onClick={() => setCardTypeFilter("post")}>Post</Button>
-            <Button variant={cardTypeFilter === "carousel" ? "default" : "outline"} size="sm" className="text-xs px-2 h-7" onClick={() => setCardTypeFilter("carousel")}>Carrossel</Button>
+          <div className="flex gap-1 shrink-0">
+            <Button variant={cardTypeFilter === "all" ? "default" : "outline"} size="sm" className="text-xs px-3 h-7" onClick={() => setCardTypeFilter("all")}>Todos</Button>
+            <Button variant={cardTypeFilter === "post" ? "default" : "outline"} size="sm" className="text-xs px-3 h-7" onClick={() => setCardTypeFilter("post")}>Post</Button>
+            <Button variant={cardTypeFilter === "carousel" ? "default" : "outline"} size="sm" className="text-xs px-3 h-7" onClick={() => setCardTypeFilter("carousel")}>Carrossel</Button>
           </div>
 
           <Button variant={hideSignature ? "default" : "outline"} size="sm" className="text-xs px-2 h-7 shrink-0" onClick={() => setHideSignature((v) => !v)} title={hideSignature ? "Mostrar assinatura" : "Ocultar assinatura"}>
