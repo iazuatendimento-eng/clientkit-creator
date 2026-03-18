@@ -45,11 +45,11 @@ let ffmpegLoadStartedAt = 0;
 let ffmpegUnavailableUntil = 0;
 
 const FFMPEG_MAX_RETRIES = 1;
-const FFMPEG_FETCH_TIMEOUT_MS = 40_000;
-const FFMPEG_LOAD_TIMEOUT_MS = 60_000;
-const FFMPEG_RETRY_DELAY_MS = 900;
+const FFMPEG_FETCH_TIMEOUT_MS = 12_000;
+const FFMPEG_LOAD_TIMEOUT_MS = 18_000;
+const FFMPEG_RETRY_DELAY_MS = 500;
 const FFMPEG_COOLDOWN_MS = 90_000;
-const FFMPEG_STALE_PROMISE_MS = 75_000;
+const FFMPEG_STALE_PROMISE_MS = 25_000;
 
 const FFMPEG_SOURCES: FFmpegSource[] = [
   {
@@ -82,13 +82,23 @@ export async function loadFFmpeg(onStatus?: FFmpegLoadStatusHandler): Promise<FF
 
   if (ffmpegLoadPromise) {
     const age = Date.now() - ffmpegLoadStartedAt;
-    if (age < FFMPEG_STALE_PROMISE_MS) {
-      return ffmpegLoadPromise;
-    }
+    const remainingWindowMs = Math.max(8_000, FFMPEG_STALE_PROMISE_MS - age);
 
-    console.warn(`[FFmpeg] Load antigo preso (${Math.round(age / 1000)}s). Reiniciando carregamento.`);
-    ffmpegLoadPromise = null;
-    ffmpegLoadStartedAt = 0;
+    try {
+      return await withTimeout(
+        ffmpegLoadPromise,
+        remainingWindowMs,
+        "aguardar carregamento em andamento do conversor MP4"
+      );
+    } catch (pendingErr) {
+      console.warn(
+        `[FFmpeg] Carregamento em andamento travou (${Math.round(age / 1000)}s). Reiniciando.`,
+        pendingErr
+      );
+      ffmpegLoadPromise = null;
+      ffmpegLoadStartedAt = 0;
+      ffmpeg = null;
+    }
   }
 
   const now = Date.now();

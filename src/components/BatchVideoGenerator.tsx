@@ -2505,8 +2505,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     console.log("[SendEmails] Subject captured:", JSON.stringify(capturedSubject));
 
     try {
-      setGenerationStatus("Preparando conversor MP4...");
-      await loadFFmpeg((status) => setGenerationStatus(status));
+      setGenerationStatus("Validando clientes e preparando envio...");
+
+      // Warmup em background: não bloqueia o envio para evitar tela travada
+      void loadFFmpeg().catch((warmupErr) => {
+        console.warn("[SendEmails] Warmup do conversor MP4 falhou, seguindo com fallback:", warmupErr);
+      });
 
       // Resolve each video's client from the card in DB (source of truth) to avoid stale/mismatched clientId in memory
       const approvedCardIds = [...new Set(approvedVideos.map((v) => v.cardId).filter(Boolean))];
