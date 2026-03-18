@@ -2640,6 +2640,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
             pageImageAdjustments: video.pageImageAdjustments,
             audioUrl,
+            requireEmailSafePreview: true,
             onProgress: (p: number) => {
               setGenerationStatus(`Gerando MP4 (${clientIdx + 1}/${byClient.size}) • ${clientLabel} • ${Math.round(p * 100)}%`);
             },
