@@ -585,14 +585,16 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       return mp4H264;
     } catch (transcodeErr) {
       if (isFfmpegLoadFailure(transcodeErr)) {
-        // FFmpeg unavailable — fall back to native MP4 only if valid
+        // Em fluxo de e-mail/preview seguro, nunca retornar MP4 nativo (pode vir HEVC)
+        if (requireEmailSafePreview || audioUrl) {
+          throw new Error("Não foi possível gerar MP4 compatível para envio. Tente novamente em Chrome/Edge com conexão estável.");
+        }
+
+        // Fora do fluxo de e-mail, mantém fallback best-effort
         if (await isValidMP4(nativeMp4)) {
-          console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo (pode ser HEVC).", transcodeErr);
+          console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo (fallback).", transcodeErr);
           onProgress?.(1);
           return nativeMp4;
-        }
-        if (audioUrl) {
-          throw new Error("Não foi possível gerar MP4 com áudio do template.");
         }
       }
       throw transcodeErr;

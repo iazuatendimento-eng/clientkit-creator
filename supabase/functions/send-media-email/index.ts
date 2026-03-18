@@ -95,7 +95,15 @@ serve(async (req) => {
     }
 
     // Build attachments - support multiple URLs for carousel
-    const allUrls: string[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
+    const rawUrls: unknown[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
+    const allUrls: string[] = rawUrls
+      .map((url) => sanitizeHttpUrl(url))
+      .filter((url): url is string => !!url);
+
+    if (allUrls.length === 0) {
+      throw new Error('Nenhuma URL de mídia válida encontrada');
+    }
+
     const baseName = (clientName || 'cliente').replace(/[^a-zA-Z0-9]/g, '_');
 
     const inferExtensionFromUrl = (url: string, fallback: string): string => {
@@ -141,29 +149,23 @@ serve(async (req) => {
 
     let mediaSection = '';
     if (isVideo) {
-      const coverPreviewHtml = validVideoCoverUrls.length > 0
-        ? validVideoCoverUrls.map((url: string, i: number) => {
-            const dlLink = downloadLinks[i] || downloadLinks[0];
-            return `
-            <div style="text-align: center; margin: 12px 0;">
-              <a href="${dlLink.url}" target="_blank" style="display: inline-block; position: relative; text-decoration: none;">
-                <img src="${url}" alt="Capa do vídeo ${safeClientName}${validVideoCoverUrls.length > 1 ? ` ${i + 1}` : ''}" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; background-color: rgba(0,0,0,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                  <div style="width: 0; height: 0; border-style: solid; border-width: 12px 0 12px 22px; border-color: transparent transparent transparent #ffffff; margin-left: 4px;"></div>
-                </div>
-              </a>
-            </div>
-          `;
-          }).join('')
-        : `
-            <p style="color: #888; text-align: center; font-size: 13px; margin: 8px 0 16px 0;">
-              Prévia da capa não disponível neste envio.
-            </p>
-          `;
+      const videoPlayersHtml = allUrls.map((url: string, i: number) => {
+        const poster = validVideoCoverUrls[i] || validVideoCoverUrls[0] || '';
+        const posterAttr = poster ? ` poster="${poster}"` : '';
+
+        return `
+          <div style="text-align: center; margin: 12px 0;">
+            <video controls playsinline preload="metadata"${posterAttr} style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb; background: #000;">
+              <source src="${url}" type="video/mp4" />
+              Seu provedor de e-mail não suporta reprodução inline de vídeo.
+            </video>
+          </div>
+        `;
+      }).join('');
 
       mediaSection = `
         <div style="margin: 20px 0;">
-          ${coverPreviewHtml}
+          ${videoPlayersHtml}
           <div style="text-align: center; margin-top: 16px;">
             ${downloadButtonsHtml}
           </div>

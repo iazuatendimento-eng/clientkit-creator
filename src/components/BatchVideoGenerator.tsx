@@ -2663,7 +2663,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               overrides: {
                 fps: 10,
                 backgroundVideoUrls: undefined,
-                requireEmailSafePreview: false,
+                requireEmailSafePreview: true,
               },
             },
           ];
