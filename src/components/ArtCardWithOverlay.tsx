@@ -13,6 +13,7 @@ import {
   MessageSquareWarning,
   Scissors,
   Eraser,
+  ArrowDownToLine,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
