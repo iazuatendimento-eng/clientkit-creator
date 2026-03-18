@@ -587,6 +587,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             const mp4Safe = await transcodeToTrueMp4({
               inputBlob: rawBlob,
               inputFileName: "input.mp4",
+              videoDurationSec,
             });
             onProgress?.(1);
             return mp4Safe;
