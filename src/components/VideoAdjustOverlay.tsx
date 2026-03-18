@@ -829,12 +829,12 @@ export function VideoAdjustOverlay({
         )}
         {els.contactEl && (
           <Box part="contact" label="Contato" tone="accent">
-            {contactUrl && <img src={contactUrl} alt="Contato" className="w-full h-full object-contain" draggable={false} />}
+            {contactUrl && <img src={contactUrl} alt="Contato" className="w-full h-full object-fill" draggable={false} />}
           </Box>
         )}
         {els.mascotEl && (
           <Box part="mascot" label="Mascote" tone="secondary">
-            {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-contain" draggable={false} />}
+            {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-fill" draggable={false} />}
           </Box>
         )}
       </div>
