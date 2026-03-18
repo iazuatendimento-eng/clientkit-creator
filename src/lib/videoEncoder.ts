@@ -1,5 +1,5 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile } from "@ffmpeg/util";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
@@ -113,12 +113,19 @@ export async function loadFFmpeg(onStatus?: FFmpegLoadStatusHandler): Promise<FF
 
         try {
           const instance = new FFmpeg();
+
+          // Convert all URLs to blob URLs to avoid cross-origin Worker restrictions
+          const [coreURL, wasmURL] = await withTimeout(
+            Promise.all([
+              toBlobURL(source.core, "text/javascript"),
+              toBlobURL(source.wasm, "application/wasm"),
+            ]),
+            FFMPEG_LOAD_TIMEOUT_MS,
+            `baixar núcleo MP4 (${sourceLabel})`
+          );
+
           await withTimeout(
-            instance.load({
-              classWorkerURL: source.classWorker,
-              coreURL: source.core,
-              wasmURL: source.wasm,
-            } as any),
+            instance.load({ coreURL, wasmURL }),
             FFMPEG_LOAD_TIMEOUT_MS,
             `carregar conversor MP4 (${sourceLabel})`
           );
