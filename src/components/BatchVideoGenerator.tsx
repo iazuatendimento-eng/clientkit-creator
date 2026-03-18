@@ -207,6 +207,37 @@ const defaultAdjustments: ElementAdjustments = {
   textY: 0,
 };
 
+const getCleanAssetUrl = (...candidates: unknown[]): string => {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+  return "";
+};
+
+const mergeBrandKitAssets = (savedBrandKit: any, freshBrandKit: any) => {
+  const saved = savedBrandKit && typeof savedBrandKit === "object" ? savedBrandKit : {};
+  const fresh = freshBrandKit && typeof freshBrandKit === "object" ? freshBrandKit : {};
+
+  const savedPngs = Array.isArray(saved.pngs) ? saved.pngs : [];
+  const freshPngs = Array.isArray(fresh.pngs) ? fresh.pngs : [];
+
+  // Fresh assets first (current client data), then fallback to saved batch snapshot.
+  const logo = getCleanAssetUrl(freshPngs[0], fresh.logo, savedPngs[0], saved.logo);
+  const contactInfo = getCleanAssetUrl(freshPngs[1], fresh.contactInfo, savedPngs[1], saved.contactInfo);
+  const mascot = getCleanAssetUrl(freshPngs[2], fresh.mascot, savedPngs[2], saved.mascot);
+
+  return {
+    ...saved,
+    ...fresh,
+    logo,
+    contactInfo,
+    mascot,
+    pngs: [logo, contactInfo, mascot],
+  };
+};
+
 interface ClientVideo {
   clientId: string;
   clientName: string;
@@ -887,15 +918,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         // logo/contact/mascot/pngs that were stripped (base64/blob) during save
         const savedBk = item.brandKit || {};
         const freshBk = freshBrandKitMap[item.clientId] || {};
-        const mergedBrandKit = {
-          ...savedBk,
-          logo: savedBk.logo || freshBk.logo || "",
-          contactInfo: savedBk.contactInfo || freshBk.contactInfo || "",
-          mascot: savedBk.mascot || freshBk.mascot || "",
-          pngs: Array.isArray(savedBk.pngs)
-            ? savedBk.pngs.map((p: string, i: number) => p || (Array.isArray(freshBk.pngs) ? freshBk.pngs[i] : "") || "")
-            : freshBk.pngs || [],
-        };
+        const mergedBrandKit = mergeBrandKitAssets(savedBk, freshBk);
 
         return {
           clientId: item.clientId,
@@ -2870,15 +2893,51 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     let successCount = 0;
 
     try {
+      // Hidratar brand kit atual do cliente para garantir logo/contato na assinatura
+      const uniqueClientIds = [...new Set(videosWithPages.map((v) => v.clientId).filter(Boolean))];
+      const freshBrandKitMap: Record<string, any> = {};
+
+      if (uniqueClientIds.length > 0) {
+        const { data: freshClients, error: freshClientsError } = await supabase
+          .from("client_data")
+          .select("id, brand_kit")
+          .in("id", uniqueClientIds);
+
+        if (freshClientsError) {
+          console.warn("Não foi possível carregar brand kits atualizados para regeração:", freshClientsError);
+        } else {
+          freshClients?.forEach((client) => {
+            if (client.brand_kit) {
+              freshBrandKitMap[client.id] = client.brand_kit;
+            }
+          });
+        }
+      }
+
       for (let i = 0; i < videosWithPages.length; i++) {
         const video = videosWithPages[i];
         setBulkExportProgress(`${i + 1}/${videosWithPages.length} • ${video.clientName}`);
 
         try {
-          // Regera as páginas para garantir assinatura no fim
-          const rebuilt = await regenerateSingleVideo(video);
-          const exportVideo: ClientVideo = {
+          const hydratedBrandKit = mergeBrandKitAssets(video.brandKit, freshBrandKitMap[video.clientId]);
+
+          // Preload explícito para evitar assinatura sem assets
+          const brandAssetUrls = [
+            hydratedBrandKit?.pngs?.[0] || hydratedBrandKit?.logo,
+            hydratedBrandKit?.pngs?.[1] || hydratedBrandKit?.contactInfo,
+            hydratedBrandKit?.pngs?.[2] || hydratedBrandKit?.mascot,
+          ].filter((url): url is string => typeof url === "string" && url.length > 0);
+          await Promise.all(brandAssetUrls.map((url) => loadImage(url, 3)));
+
+          const videoForRegen: ClientVideo = {
             ...video,
+            brandKit: hydratedBrandKit,
+          };
+
+          // Regera as páginas para garantir assinatura no fim + assets hidratados
+          const rebuilt = await regenerateSingleVideo(videoForRegen);
+          const exportVideo: ClientVideo = {
+            ...videoForRegen,
             pages: rebuilt.pages,
             overlayPages: rebuilt.overlayPages,
             frameOverlayPages: rebuilt.frameOverlayPages,
@@ -2891,6 +2950,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               v.cardId === video.cardId
                 ? {
                     ...v,
+                    brandKit: hydratedBrandKit,
                     pages: rebuilt.pages,
                     overlayPages: rebuilt.overlayPages,
                     frameOverlayPages: rebuilt.frameOverlayPages,
@@ -2946,7 +3006,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           setClientVideos((prev) =>
             prev.map((v) =>
               v.cardId === video.cardId
-                ? { ...v, exportedVideoUrl: newPublicUrl }
+                ? { ...v, brandKit: hydratedBrandKit, exportedVideoUrl: newPublicUrl }
                 : v
             )
           );
