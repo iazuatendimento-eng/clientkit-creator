@@ -406,7 +406,7 @@ function isFfmpegLoadFailure(err: unknown): boolean {
 }
 
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
-  const { onProgress, audioUrl } = options;
+  const { onProgress, audioUrl, requireEmailSafePreview = false } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   console.log("[VideoEncoder] Starting encode. mobile:", isMobileDevice, "webcodecs:", hasWebCodecs());
