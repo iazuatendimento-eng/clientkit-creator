@@ -82,6 +82,15 @@ serve(async (req) => {
     const allUrls: string[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
     const extension = isVideo ? 'mp4' : 'png';
     const baseName = (clientName || 'cliente').replace(/[^a-zA-Z0-9]/g, '_');
+
+    // Build download URLs via edge function proxy
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+    const downloadLinks: { url: string; name: string }[] = allUrls.map((url: string, i: number) => {
+      const fileName = allUrls.length > 1 ? `${baseName}_p${i + 1}.${extension}` : `${baseName}.${extension}`;
+      const proxyUrl = `${SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(fileName)}`;
+      return { url: proxyUrl, name: fileName };
+    });
+
     const attachments = allUrls.map((url: string, i: number) => ({
       filename: allUrls.length > 1 ? `${baseName}_p${i + 1}.${extension}` : `${baseName}.${extension}`,
       path: url,
