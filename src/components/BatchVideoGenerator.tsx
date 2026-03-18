@@ -2860,10 +2860,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             <ArrowLeft className="mr-1 h-4 w-4" />
             Voltar
           </Button>
-          <h1 className="text-sm font-semibold flex items-center gap-1 shrink-0">
-            <Film className="h-4 w-4" />
-            Vídeos
-          </h1>
 
           {/* Card type filter */}
           <div className="flex gap-0.5 shrink-0">
