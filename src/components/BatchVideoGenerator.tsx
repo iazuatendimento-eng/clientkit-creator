@@ -2893,15 +2893,51 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     let successCount = 0;
 
     try {
+      // Hidratar brand kit atual do cliente para garantir logo/contato na assinatura
+      const uniqueClientIds = [...new Set(videosWithPages.map((v) => v.clientId).filter(Boolean))];
+      const freshBrandKitMap: Record<string, any> = {};
+
+      if (uniqueClientIds.length > 0) {
+        const { data: freshClients, error: freshClientsError } = await supabase
+          .from("client_data")
+          .select("id, brand_kit")
+          .in("id", uniqueClientIds);
+
+        if (freshClientsError) {
+          console.warn("Não foi possível carregar brand kits atualizados para regeração:", freshClientsError);
+        } else {
+          freshClients?.forEach((client) => {
+            if (client.brand_kit) {
+              freshBrandKitMap[client.id] = client.brand_kit;
+            }
+          });
+        }
+      }
+
       for (let i = 0; i < videosWithPages.length; i++) {
         const video = videosWithPages[i];
         setBulkExportProgress(`${i + 1}/${videosWithPages.length} • ${video.clientName}`);
 
         try {
-          // Regera as páginas para garantir assinatura no fim
-          const rebuilt = await regenerateSingleVideo(video);
-          const exportVideo: ClientVideo = {
+          const hydratedBrandKit = mergeBrandKitAssets(video.brandKit, freshBrandKitMap[video.clientId]);
+
+          // Preload explícito para evitar assinatura sem assets
+          const brandAssetUrls = [
+            hydratedBrandKit?.pngs?.[0] || hydratedBrandKit?.logo,
+            hydratedBrandKit?.pngs?.[1] || hydratedBrandKit?.contactInfo,
+            hydratedBrandKit?.pngs?.[2] || hydratedBrandKit?.mascot,
+          ].filter((url): url is string => typeof url === "string" && url.length > 0);
+          await Promise.all(brandAssetUrls.map((url) => loadImage(url, 3)));
+
+          const videoForRegen: ClientVideo = {
             ...video,
+            brandKit: hydratedBrandKit,
+          };
+
+          // Regera as páginas para garantir assinatura no fim + assets hidratados
+          const rebuilt = await regenerateSingleVideo(videoForRegen);
+          const exportVideo: ClientVideo = {
+            ...videoForRegen,
             pages: rebuilt.pages,
             overlayPages: rebuilt.overlayPages,
             frameOverlayPages: rebuilt.frameOverlayPages,
@@ -2914,6 +2950,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               v.cardId === video.cardId
                 ? {
                     ...v,
+                    brandKit: hydratedBrandKit,
                     pages: rebuilt.pages,
                     overlayPages: rebuilt.overlayPages,
                     frameOverlayPages: rebuilt.frameOverlayPages,
@@ -2969,7 +3006,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           setClientVideos((prev) =>
             prev.map((v) =>
               v.cardId === video.cardId
-                ? { ...v, exportedVideoUrl: newPublicUrl }
+                ? { ...v, brandKit: hydratedBrandKit, exportedVideoUrl: newPublicUrl }
                 : v
             )
           );
