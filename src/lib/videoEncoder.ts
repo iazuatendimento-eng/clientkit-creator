@@ -126,7 +126,6 @@ function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "og
   return "mp3";
 }
 
-const FFMPEG_BOOT_TIMEOUT_MS = 180_000;
 const FFMPEG_MUX_TIMEOUT_MS = 420_000;
 const FFMPEG_TRANSCODE_TIMEOUT_MS = 480_000;
 
