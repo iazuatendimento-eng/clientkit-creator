@@ -14,6 +14,7 @@ import {
   type PageImageAdjustment,
 } from "@/lib/videoRenderer";
 import { searchVideos } from "@/lib/imageSearch";
+import { translateToEnglishLocal } from "@/lib/localTranslate";
 
 export interface PreloadedVideoData {
   template: VideoTemplateData;
