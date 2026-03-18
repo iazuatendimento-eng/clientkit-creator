@@ -2855,135 +2855,100 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="border-b bg-card px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+      <div className="border-b bg-card px-4 py-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+          <Button variant="outline" size="sm" onClick={onBack} className="shrink-0">
+            <ArrowLeft className="mr-1 h-4 w-4" />
             Voltar
           </Button>
-          <div>
-            <h1 className="text-lg font-semibold flex items-center gap-2">
-              <Film className="h-5 w-5" />
-              Vídeos
-            </h1>
-          </div>
-        </div>
+          <h1 className="text-sm font-semibold flex items-center gap-1 shrink-0">
+            <Film className="h-4 w-4" />
+            Vídeos
+          </h1>
 
-        <div className="flex items-center gap-4">
           {/* Card type filter */}
-          <div className="flex gap-1">
-            <Button
-              variant={cardTypeFilter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCardTypeFilter("all")}
-            >
-              Todos
-            </Button>
-            <Button
-              variant={cardTypeFilter === "post" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCardTypeFilter("post")}
-            >
-              Post
-            </Button>
-            <Button
-              variant={cardTypeFilter === "carousel" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCardTypeFilter("carousel")}
-            >
-              Carrossel
-            </Button>
+          <div className="flex gap-0.5 shrink-0">
+            <Button variant={cardTypeFilter === "all" ? "default" : "outline"} size="sm" className="text-xs px-2 h-7" onClick={() => setCardTypeFilter("all")}>Todos</Button>
+            <Button variant={cardTypeFilter === "post" ? "default" : "outline"} size="sm" className="text-xs px-2 h-7" onClick={() => setCardTypeFilter("post")}>Post</Button>
+            <Button variant={cardTypeFilter === "carousel" ? "default" : "outline"} size="sm" className="text-xs px-2 h-7" onClick={() => setCardTypeFilter("carousel")}>Carrossel</Button>
           </div>
 
-          {/* Global hide signature toggle */}
-          <Button
-            variant={hideSignature ? "default" : "outline"}
-            size="sm"
-            onClick={() => setHideSignature((v) => !v)}
-            title={hideSignature ? "Mostrar assinatura" : "Ocultar assinatura"}
-          >
-            {hideSignature ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+          <Button variant={hideSignature ? "default" : "outline"} size="sm" className="text-xs px-2 h-7 shrink-0" onClick={() => setHideSignature((v) => !v)} title={hideSignature ? "Mostrar assinatura" : "Ocultar assinatura"}>
+            {hideSignature ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
             Assinatura
           </Button>
 
-          <div className="flex gap-2 items-center">
-            <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500">
-              Pendentes: {pendingCount}
-            </Badge>
-            <Badge variant="outline" className="bg-green-500/20 text-green-500">
-              Aprovados: {approvedCount}
-            </Badge>
-            {pendingCount > 0 && clientVideos.some((v) => v.pages.length > 0) && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                onClick={() => {
-                  const updated = clientVideos.map((v) =>
-                    v.status === "pending" && v.pages.length > 0 ? { ...v, status: "approved" as const } : v
-                  );
-                  setClientVideos(updated);
-                }}
-              >
-                <Check className="h-3 w-3 mr-1" />
-                Aprovar Todos
-              </Button>
-            )}
-            {approvedCount > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs border-destructive text-destructive hover:bg-destructive/10"
-                onClick={() => {
-                  const updated = clientVideos.map((v) =>
-                    v.status === "approved" ? { ...v, status: "pending" as const } : v
-                  );
-                  setClientVideos(updated);
-                }}
-              >
-                <X className="h-3 w-3 mr-1" />
-                Desaprovar Todos
-              </Button>
-            )}
-          </div>
-          
-          {/* Email subject input */}
-          <Input
-            placeholder="Título do e-mail (obrigatório)"
-            value={emailSubject}
-            onChange={(e) => setEmailSubject(e.target.value)}
-            className={`w-56 h-9 text-sm ${!emailSubject.trim() ? 'border-destructive' : ''}`}
-          />
+          <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 text-xs shrink-0">
+            {pendingCount}P
+          </Badge>
+          <Badge variant="outline" className="bg-green-500/20 text-green-500 text-xs shrink-0">
+            {approvedCount}A
+          </Badge>
 
-          {/* Save Draft button */}
-          {clientVideos.some((v) => v.pages.length > 0) && (
+          {pendingCount > 0 && clientVideos.some((v) => v.pages.length > 0) && (
             <Button
+              size="sm"
               variant="outline"
-              onClick={handleSaveDraft}
+              className="text-xs px-2 h-7 border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950 shrink-0"
+              onClick={() => {
+                const updated = clientVideos.map((v) =>
+                  v.status === "pending" && v.pages.length > 0 ? { ...v, status: "approved" as const } : v
+                );
+                setClientVideos(updated);
+              }}
             >
-              <Save className="mr-2 h-4 w-4" />
-              Salvar Rascunho
+              <Check className="h-3 w-3 mr-1" />
+              Aprovar
             </Button>
           )}
-          
+          {approvedCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs px-2 h-7 border-destructive text-destructive hover:bg-destructive/10 shrink-0"
+              onClick={() => {
+                const updated = clientVideos.map((v) =>
+                  v.status === "approved" ? { ...v, status: "pending" as const } : v
+                );
+                setClientVideos(updated);
+              }}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Desaprovar
+            </Button>
+          )}
+
+          <Input
+            placeholder="Título e-mail"
+            value={emailSubject}
+            onChange={(e) => setEmailSubject(e.target.value)}
+            className={`w-32 h-7 text-xs shrink-0 ${!emailSubject.trim() ? 'border-destructive' : ''}`}
+          />
+
+          {clientVideos.some((v) => v.pages.length > 0) && (
+            <Button variant="outline" size="sm" className="text-xs px-2 h-7 shrink-0" onClick={handleSaveDraft}>
+              <Save className="mr-1 h-3 w-3" />
+              Rascunho
+            </Button>
+          )}
+
           <Button
+            size="sm"
+            className="text-xs px-3 h-7 bg-gradient-primary shrink-0"
             onClick={handleSendEmails}
             disabled={approvedCount === 0 || isSendingEmails || !emailSubject.trim()}
-            className="bg-gradient-primary"
           >
             {isSendingEmails ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                 Enviando...
               </>
             ) : (
               <>
-                <Mail className="mr-2 h-4 w-4" />
-                Enviar {approvedCount} por E-mail
+                <Mail className="mr-1 h-3 w-3" />
+                Enviar {approvedCount}
               </>
             )}
           </Button>
-        </div>
       </div>
 
 
