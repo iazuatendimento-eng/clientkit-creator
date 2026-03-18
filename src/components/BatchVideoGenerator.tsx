@@ -2504,15 +2504,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       let sentCount = 0;
       const uploadedPaths: string[] = [];
-      let videoIdx = 0;
 
-      // Pre-compute email-optimized resolution (720p max, keeps aspect ratio)
-      const emailScale = Math.min(720 / template.width, 1280 / template.height, 1);
+      // Pre-compute email-optimized resolution (480p max for speed, still looks good on mobile)
+      const emailScale = Math.min(480 / template.width, 854 / template.height, 1);
       const emailWidth = Math.round(template.width * emailScale / 2) * 2;
       const emailHeight = Math.round(template.height * emailScale / 2) * 2;
-
-      // Pipeline: track pending upload promise to overlap with next encode
-      let pendingUpload: Promise<{ path: string; publicUrl: string } | null> | null = null;
 
       const uploadVideoBlob = async (blob: Blob, cardId: string): Promise<{ path: string; publicUrl: string }> => {
         const isActualMP4 = blob.type === "video/mp4";
@@ -2528,9 +2524,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         return { path, publicUrl: urlData.publicUrl };
       };
 
-      for (const [clientId, videos] of byClient) {
+      // Process a single client: encode all videos, upload, send email
+      const processClient = async (clientId: string, videos: typeof approvedVideos, clientIdx: number) => {
         const clientRow = clientsData?.find((c) => c.id === clientId);
-        if (!clientRow) continue;
+        if (!clientRow) return;
 
         const emails = [clientRow.email, clientRow.email_2, clientRow.email_3].filter(
           (e): e is string => !!e && e.includes("@")
@@ -2539,16 +2536,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           throw new Error(`${videos[0].clientName}: sem e-mail cadastrado`);
         }
 
-        // Encode and upload each video
         const mediaUrls: string[] = [];
-        for (const video of videos) {
-          videoIdx++;
+        const clientPaths: string[] = [];
 
-          // Adaptive FPS: lower for long videos
+        for (let vi = 0; vi < videos.length; vi++) {
+          const video = videos[vi];
+
+          // Adaptive FPS: lower for long videos, capped at 15 for email
           const estimatedDurationSec = Math.max(1, video.pages.length * (template.pageDuration || 3));
-          const adaptiveFps = estimatedDurationSec >= 40 ? 12 : estimatedDurationSec >= 24 ? 15 : estimatedDurationSec >= 16 ? 18 : 24;
-          // For email: use lower FPS to speed up encoding
-          const emailFps = Math.min(adaptiveFps, 18);
+          const adaptiveFps = estimatedDurationSec >= 40 ? 10 : estimatedDurationSec >= 24 ? 12 : 15;
+          const emailFps = Math.min(adaptiveFps, 15);
 
           const audioUrl = (() => {
             const sel = video.selectedAudio || 1;
@@ -2568,14 +2565,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             logoAnimation,
             textAnimDuration: textAnimDuration / (template.pageDuration || 3),
             backgroundVideoUrls: video.previewVideoUrls || undefined,
-            frameOverlayPages: video.frameOverlayPages || undefined,
+            // Skip heavy overlays for email to speed up rendering
+            frameOverlayPages: undefined as string[] | undefined,
             overlayPages: video.overlayPages || undefined,
-            logoOverlayPages: video.logoOverlayPages || undefined,
+            logoOverlayPages: undefined as string[] | undefined,
             imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
             imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
             pageImageAdjustments: video.pageImageAdjustments,
             audioUrl,
-            onProgress: (p: number) => console.log(`Progresso ${video.clientName}: ${Math.round(p * 100)}%`),
+            onProgress: (p: number) => {
+              setGenerationStatus(`Gerando MP4 (${clientIdx + 1}/${byClient.size}) • ${video.clientName} • ${Math.round(p * 100)}%`);
+            },
           };
 
           const encodeAttempts: Array<{
@@ -2583,11 +2583,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             timeoutMs: number;
             overrides: Partial<typeof baseOptions>;
           }> = [
-            { label: `email-otimizado (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 180_000, overrides: {} },
+            { label: `email (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 120_000, overrides: {} },
             {
-              label: "mínimo sem vídeo de fundo",
-              timeoutMs: 120_000,
-              overrides: { fps: 12, backgroundVideoUrls: undefined },
+              label: "mínimo sem vídeo",
+              timeoutMs: 90_000,
+              overrides: { fps: 10, backgroundVideoUrls: undefined },
             },
           ];
 
@@ -2597,7 +2597,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           for (let attemptIndex = 0; attemptIndex < encodeAttempts.length; attemptIndex++) {
             const attempt = encodeAttempts[attemptIndex];
             setGenerationStatus(
-              `Gerando MP4 (${videoIdx}/${approvedVideos.length}) • ${video.clientName} • ${attempt.label}`
+              `Gerando MP4 (${clientIdx + 1}/${byClient.size}) • ${video.clientName} • ${attempt.label}`
             );
 
             try {
@@ -2624,40 +2624,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             );
           }
 
-          // Wait for any pending upload from previous iteration
-          if (pendingUpload) {
-            const prev = await pendingUpload;
-            pendingUpload = null;
-            if (prev) {
-              uploadedPaths.push(prev.path);
-              mediaUrls.push(prev.publicUrl);
-            }
-          }
-
-          // Start uploading this video in the background (will overlap with next encode)
-          setGenerationStatus(`Enviando (${videoIdx}/${approvedVideos.length}) • ${video.clientName}`);
-          const currentBlob = videoBlob;
-          const currentCardId = video.cardId;
-          
-          // If this is the last video for this client, wait for upload inline
-          const isLastForClient = video === videos[videos.length - 1];
-          if (isLastForClient) {
-            const result = await uploadVideoBlob(currentBlob, currentCardId);
-            uploadedPaths.push(result.path);
-            mediaUrls.push(result.publicUrl);
-          } else {
-            pendingUpload = uploadVideoBlob(currentBlob, currentCardId);
-          }
-        }
-
-        // Wait for any trailing upload
-        if (pendingUpload) {
-          const prev = await pendingUpload;
-          pendingUpload = null;
-          if (prev) {
-            uploadedPaths.push(prev.path);
-            mediaUrls.push(prev.publicUrl);
-          }
+          // Upload immediately
+          setGenerationStatus(`Enviando (${clientIdx + 1}/${byClient.size}) • ${video.clientName}`);
+          const result = await uploadVideoBlob(videoBlob, video.cardId);
+          clientPaths.push(result.path);
+          mediaUrls.push(result.publicUrl);
         }
 
         // Send email
@@ -2686,7 +2657,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           throw new Error(`Erro ao enviar e-mail para ${videos[0].clientName}: ${error.message}`);
         }
 
+        uploadedPaths.push(...clientPaths);
         sentCount++;
+      };
+
+      // Process clients with limited concurrency (2 at a time)
+      const clientEntries = [...byClient.entries()];
+      const CONCURRENCY = 2;
+      for (let i = 0; i < clientEntries.length; i += CONCURRENCY) {
+        const batch = clientEntries.slice(i, i + CONCURRENCY);
+        await Promise.all(
+          batch.map(([clientId, videos], batchIdx) =>
+            processClient(clientId, videos, i + batchIdx)
+          )
+        );
       }
 
       // Clean up temp files from storage
