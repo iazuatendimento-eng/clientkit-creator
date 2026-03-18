@@ -26,6 +26,7 @@ export interface VideoEncoderOptions {
   pageImageAdjustments?: { imageX: number; imageY: number; imageScale: number }[]; // Per-page image position/scale adjustments
   imageClipShape?: string; // Geometric clip shape for image placeholder (circle, triangle, diamond, etc.)
   audioUrl?: string; // URL of background audio to mix into the video
+  requireEmailSafePreview?: boolean; // Force FFmpeg compatibility pass (H.264 baseline + AAC) for email preview clients
   onProgress?: (progress: number) => void;
 }
 
