@@ -436,7 +436,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           "gerar vídeo (WebCodecs)"
         );
 
-        if (!audioUrl) {
+        if (!requireEmailSafePreview && !audioUrl) {
           onProgress?.(1);
           return rawBlob;
         }
