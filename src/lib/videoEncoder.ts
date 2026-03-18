@@ -1297,13 +1297,38 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     }
   };
 
-  // Set up mp4-muxer + VideoEncoder
-  console.log("[WebCodecs] Setting up muxer + encoder...");
-  const muxer = new Muxer({
+  // Decode audio if provided (in parallel with video setup)
+  let audioData: { left: Float32Array; right: Float32Array; numberOfChannels: number } | null = null;
+  let canMuxAudio = false;
+  const totalDurationSec = (framesPerPage * images.length) / fps;
+
+  if (audioUrl) {
+    try {
+      canMuxAudio = await checkAudioEncoderAAC();
+      if (canMuxAudio) {
+        console.log("[WebCodecs] AAC AudioEncoder supported, decoding audio...");
+        audioData = await decodeAudioForMuxing(audioUrl, totalDurationSec, 44100);
+        console.log("[WebCodecs] Audio decoded:", audioData.left.length, "samples for", totalDurationSec.toFixed(1), "s");
+      } else {
+        console.warn("[WebCodecs] AudioEncoder AAC not supported, video will need FFmpeg for audio");
+      }
+    } catch (audioErr) {
+      console.warn("[WebCodecs] Failed to decode audio, continuing without:", audioErr);
+      audioData = null;
+    }
+  }
+
+  // Set up mp4-muxer + VideoEncoder (with optional audio track)
+  console.log("[WebCodecs] Setting up muxer + encoder...", audioData ? "(with AAC audio)" : "(video only)");
+  const muxerConfig: any = {
     target: new ArrayBufferTarget(),
     video: { codec: "avc", width, height },
     fastStart: "in-memory",
-  });
+  };
+  if (audioData) {
+    muxerConfig.audio = { codec: "aac", numberOfChannels: 2, sampleRate: 44100 };
+  }
+  const muxer = new Muxer(muxerConfig);
 
   let encoderError: Error | null = null;
   let chunksReceived = 0;
@@ -1327,6 +1352,23 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     throw configErr;
   }
   console.log("[WebCodecs] Encoder configured, state:", encoder.state);
+
+  // Set up AudioEncoder if we have audio data
+  let audioEncoder: AudioEncoder | null = null;
+  let audioChunksReceived = 0;
+  if (audioData) {
+    audioEncoder = new AudioEncoder({
+      output: (chunk, meta) => { muxer.addAudioChunk(chunk, meta ?? undefined); audioChunksReceived++; },
+      error: (e) => console.error("[WebCodecs] Audio encoder error:", e),
+    });
+    audioEncoder.configure({
+      codec: "mp4a.40.2",
+      numberOfChannels: 2,
+      sampleRate: 44100,
+      bitrate: 128000,
+    });
+    console.log("[WebCodecs] AudioEncoder configured for AAC");
+  }
 
   const frameDurationMicros = Math.round(1_000_000 / fps);
 
@@ -1380,10 +1422,49 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     }
   }
 
+  // Encode audio chunks AFTER video frames (audio is non-realtime, just feed the samples)
+  if (audioEncoder && audioData) {
+    console.log("[WebCodecs] Encoding audio chunks...");
+    const CHUNK_SIZE = 1024; // samples per chunk
+    const totalSamples = audioData.left.length;
+    for (let offset = 0; offset < totalSamples; offset += CHUNK_SIZE) {
+      const remaining = Math.min(CHUNK_SIZE, totalSamples - offset);
+      // Interleave L/R into planar Float32 for AudioData
+      const interleaved = new Float32Array(remaining * 2);
+      for (let s = 0; s < remaining; s++) {
+        interleaved[s] = audioData.left[offset + s];
+        interleaved[remaining + s] = audioData.right[offset + s];
+      }
+      const audioDataObj = new AudioData({
+        format: "f32-planar",
+        sampleRate: 44100,
+        numberOfFrames: remaining,
+        numberOfChannels: 2,
+        timestamp: Math.round((offset / 44100) * 1_000_000),
+        data: interleaved,
+      });
+      audioEncoder.encode(audioDataObj);
+      audioDataObj.close();
+
+      // Yield periodically
+      if (offset % (CHUNK_SIZE * 50) === 0) {
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+    console.log("[WebCodecs] Audio encoding done, flushing...");
+    try {
+      await audioEncoder.flush();
+      console.log("[WebCodecs] Audio flush done. Audio chunks:", audioChunksReceived);
+    } catch (audioFlushErr) {
+      console.warn("[WebCodecs] Audio flush failed:", audioFlushErr);
+    }
+    try { audioEncoder.close(); } catch {}
+  }
+
   // Cleanup videos
   bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
 
-  console.log("[WebCodecs] Frame loop done. Chunks so far:", chunksReceived, "encoder state:", encoder.state);
+  console.log("[WebCodecs] Frame loop done. Video chunks:", chunksReceived, "Audio chunks:", audioChunksReceived, "encoder state:", encoder.state);
 
   if (encoderError) {
     console.error("[WebCodecs] Encoder had error during loop:", encoderError);
@@ -1392,9 +1473,9 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   }
 
   try {
-    console.log("[WebCodecs] Flushing encoder...");
+    console.log("[WebCodecs] Flushing video encoder...");
     await encoder.flush();
-    console.log("[WebCodecs] Flush done. Total chunks:", chunksReceived);
+    console.log("[WebCodecs] Flush done. Total video chunks:", chunksReceived);
   } catch (flushErr) {
     console.error("[WebCodecs] Flush FAILED:", flushErr);
     // Still try to finalize with what we have
@@ -1415,11 +1496,14 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
   const buffer = (muxer.target as ArrayBufferTarget).buffer!;
   const blob = new Blob([buffer], { type: "video/mp4" });
-  console.log("[WebCodecs] Done! size:", blob.size, "chunks:", chunksReceived);
+  console.log("[WebCodecs] Done! size:", blob.size, "video chunks:", chunksReceived, "audio chunks:", audioChunksReceived);
   
   if (blob.size < 1000) {
     throw new Error("Vídeo gerado muito pequeno (" + blob.size + " bytes). Possível falha de encoding.");
   }
+
+  // Flag whether audio was muxed so caller knows
+  (blob as any).__hasAudio = audioChunksReceived > 0;
   
   return blob;
 }
