@@ -637,9 +637,9 @@ const CardCoverPreview = memo(({
               );
             })}
           </div>
-          {/* Large active page fills remaining space */}
-          <div className="relative flex-1 min-h-0 overflow-hidden">
-            <div className="absolute inset-0">
+          {/* Large active page fills remaining space, maintaining aspect ratio */}
+          <div className="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center">
+            <div className="relative h-full" style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}`, maxWidth: '100%' }}>
               {renderSinglePage(currentPage, true)}
             </div>
           </div>
