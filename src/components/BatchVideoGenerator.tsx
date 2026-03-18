@@ -2622,12 +2622,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             return preferred || fallback || undefined;
           })();
 
-          if (!audioUrl) {
-            throw new Error(
-              `${clientLabel}: este template não tem trilha de áudio configurada. Adicione Áudio 1 ou Áudio 2 para enviar o vídeo com som.`
-            );
-          }
-
           const baseOptions = {
             width: emailWidth,
             height: emailHeight,
