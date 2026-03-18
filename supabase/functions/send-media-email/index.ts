@@ -173,12 +173,8 @@ serve(async (req) => {
     }
 
     const attachmentNotice = isVideo
-      ? (count > 1
-          ? `📎 <strong>${count} vídeos em anexo</strong> — baixe os arquivos MP4 diretamente deste e-mail ou clique nos botões abaixo.`
-          : '📎 <strong>Vídeo em anexo</strong> — baixe o arquivo MP4 diretamente deste e-mail ou clique no botão abaixo.')
-      : (count > 1
-          ? `📎 <strong>${count} artes em anexo</strong> — baixe as imagens diretamente deste e-mail ou clique nos botões abaixo.`
-          : '📎 <strong>Arte em anexo</strong> — baixe a imagem diretamente deste e-mail ou clique no botão abaixo.');
+      ? `🎬 Baixar o <strong>VÍDEO</strong> arquivo MP4 do anexo — ele <strong>NÃO</strong> dá player aqui... <span style="color:#dc2626;font-weight:bold;">⚠️ ATENÇÃO!!!</span> é preciso fazer o <strong>DOWNLOAD/BAIXAR O ARQUIVO .MP4</strong>`
+      : `🎨 Baixar a <strong>ARTE</strong> arquivo PNG do anexo — ele <strong>NÃO</strong> dá player aqui... <span style="color:#dc2626;font-weight:bold;">⚠️ ATENÇÃO!!!</span> é preciso fazer o <strong>DOWNLOAD/BAIXAR O ARQUIVO .PNG</strong>`;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
