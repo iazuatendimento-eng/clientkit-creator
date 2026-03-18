@@ -494,7 +494,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     );
     onProgress?.(0.6);
 
-    if (!audioUrl) {
+    if (!requireEmailSafePreview && !audioUrl) {
       onProgress?.(1);
       return nativeMp4;
     }
