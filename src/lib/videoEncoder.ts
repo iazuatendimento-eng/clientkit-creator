@@ -311,7 +311,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           }
 
           try {
-            const ff = await loadFFmpeg();
+            const ff = await withTimeout(loadFFmpeg(), 25_000, "inicializar conversor MP4");
             onProgress?.(0.7);
             await ff.writeFile("input.mp4", await fetchFile(rawBlob));
 
@@ -415,7 +415,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     }
 
     try {
-      const ff = await loadFFmpeg();
+      const ff = await withTimeout(loadFFmpeg(), 25_000, "inicializar conversor MP4");
       onProgress?.(0.7);
       await ff.writeFile("input.mp4", await fetchFile(nativeMp4));
 
@@ -481,7 +481,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
 
   try {
     onProgress?.(0.35);
-    const ff = await loadFFmpeg();
+    const ff = await withTimeout(loadFFmpeg(), 25_000, "inicializar conversor MP4");
     onProgress?.(0.55);
     await ff.writeFile("input.webm", await fetchFile(webmBlob));
 
