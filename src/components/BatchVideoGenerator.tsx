@@ -2852,6 +2852,74 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
+  const handleBulkRegenerate = async () => {
+    const videosWithPages = clientVideos.filter((v) => v.pages.length > 0);
+    if (videosWithPages.length === 0) {
+      toast({ title: "Nenhum vídeo para regerar", variant: "destructive" });
+      return;
+    }
+
+    setIsBulkExporting(true);
+    let successCount = 0;
+
+    for (let i = 0; i < videosWithPages.length; i++) {
+      const video = videosWithPages[i];
+      setBulkExportProgress(`${i + 1}/${videosWithPages.length} • ${video.clientName}`);
+
+      try {
+        const audioUrl = (() => {
+          const sel = video.selectedAudio || 1;
+          const preferred = sel === 2 ? template.audioUrl2 : template.audioUrl1;
+          const fallback = sel === 2 ? template.audioUrl1 : template.audioUrl2;
+          return preferred || fallback || undefined;
+        })();
+
+        const videoBlob = await encodeVideoToMP4(video.pages, {
+          width: template.width,
+          height: template.height,
+          pageDuration: template.pageDuration,
+          fps: 24,
+          motionEffect,
+          transitionEffect,
+          textAnimation,
+          logoAnimation,
+          textAnimDuration: textAnimDuration / (template.pageDuration || 3),
+          backgroundVideoUrls: video.previewVideoUrls || undefined,
+          frameOverlayPages: video.frameOverlayPages || undefined,
+          overlayPages: video.overlayPages || undefined,
+          logoOverlayPages: video.logoOverlayPages || undefined,
+          imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
+          imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
+          pageImageAdjustments: video.pageImageAdjustments,
+          audioUrl,
+          requireEmailSafePreview: true,
+          onProgress: () => {},
+        });
+
+        const url = URL.createObjectURL(videoBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `video_${video.clientName}_${Date.now()}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        successCount++;
+        await new Promise(r => setTimeout(r, 500));
+      } catch (error) {
+        console.error(`Erro ao regerar vídeo de ${video.clientName}:`, error);
+      }
+    }
+
+    toast({
+      title: `${successCount}/${videosWithPages.length} vídeos regerados`,
+      description: "Downloads iniciados com a página de assinatura corrigida.",
+    });
+
+    setIsBulkExporting(false);
+    setBulkExportProgress("");
+  };
+
 
   const approvedCount = clientVideos.filter((v) => v.status === "approved").length;
   const pendingCount = clientVideos.filter((v) => v.status === "pending").length;
