@@ -136,10 +136,10 @@ serve(async (req) => {
     const mediaWord = isVideo ? 'VÍDEO' : 'ARTE';
     const mediaWordLower = isVideo ? 'vídeo' : 'arte';
     const downloadInstruction = isVideo
-      ? `⚠️ <strong style="color: #d32f2f; font-size: 16px;">SEU VÍDEO ESTÁ EM ANEXO ABAIXO, PARA VER O VÍDEO NÃO DÊ PLAY, É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...</strong><br/><br/>
-         <strong style="color: #d32f2f; font-size: 15px;">⬇️ ATENÇÃO: BAIXAR / FAZER O DOWNLOAD MESMO DO ${fileType}</strong>`
-      : `⚠️ <strong style="color: #d32f2f; font-size: 16px;">SUA ARTE ESTÁ EM ANEXO ABAIXO, FAÇA O DOWNLOAD DO ARQUIVO PNG.</strong><br/><br/>
-         <strong style="color: #d32f2f; font-size: 15px;">⬇️ ATENÇÃO: BAIXAR / FAZER O DOWNLOAD MESMO DO ${fileType}</strong>`;
+      ? `<strong style="color: #d32f2f; font-size: 16px;">SEU VÍDEO ESTÁ EM ANEXO ABAIXO, PARA VER O VÍDEO NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...</strong><br/><br/>
+         <strong style="color: #d32f2f; font-size: 15px;">ATENÇÃO BAIXAR FAZER O DOWNLOAD MESMO DO MP4</strong>`
+      : `<strong style="color: #d32f2f; font-size: 16px;">SUA ARTE ESTÁ EM ANEXO ABAIXO, PARA VER A ARTE NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...</strong><br/><br/>
+         <strong style="color: #d32f2f; font-size: 15px;">ATENÇÃO BAIXAR FAZER O DOWNLOAD MESMO DO PNG</strong>`;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
