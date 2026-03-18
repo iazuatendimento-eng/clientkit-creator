@@ -237,6 +237,7 @@ interface ClientVideo {
   selectedAudio?: 1 | 2;
   note?: string;
   noteRead?: boolean;
+  exportedVideoUrl?: string; // URL do vídeo pré-encodado no storage (via Regerar Todos)
 }
 
 interface BatchVideoGeneratorProps {
