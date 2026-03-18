@@ -14,6 +14,7 @@ import {
   type PageImageAdjustment,
 } from "@/lib/videoRenderer";
 import { searchVideos } from "@/lib/imageSearch";
+import { translateToEnglishLocal } from "@/lib/localTranslate";
 
 export interface PreloadedVideoData {
   template: VideoTemplateData;
@@ -138,17 +139,11 @@ export function useVideoPregenerate(
         // Search bank videos only for uncovered pages
         if (pagesNeedingBankVideo.length > 0) {
           try {
-            // Build rich search context from client metadata + text
-            const contextParts = [clientImageType, clientNarrationType, clientBriefing, fullText].filter(Boolean);
-            const searchContext = contextParts.join(" ").split(" ").slice(0, 15).join(" ");
-            let translatedTerms = searchContext;
-            try {
-              const { data: transData } = await Promise.race([
-                supabase.functions.invoke("translate-text", { body: { text: searchContext } }),
-                new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000)),
-              ]);
-              if (transData?.translatedText) translatedTerms = transData.translatedText;
-            } catch { /* use original */ }
+            // Build search context from card text + client image_type, translate locally (no AI cost)
+            const contextParts = [fullText, clientImageType].filter(Boolean);
+            const searchContext = contextParts.join(" ");
+            const translatedTerms = translateToEnglishLocal(searchContext);
+            console.log(`[Video Search] Local translation: "${searchContext}" → "${translatedTerms}"`);
 
             let results = await searchVideos(translatedTerms, Math.max(pagesNeedingBankVideo.length, 3));
             if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
