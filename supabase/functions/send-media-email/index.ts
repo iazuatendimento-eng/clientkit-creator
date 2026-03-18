@@ -109,10 +109,10 @@ serve(async (req) => {
     if (isVideo) {
       const coverPreviewHtml = validVideoCoverUrls.length > 0
         ? validVideoCoverUrls.map((url: string, i: number) => {
-            const videoUrl = allUrls[i] || allUrls[0];
+            const dlLink = downloadLinks[i] || downloadLinks[0];
             return `
             <div style="text-align: center; margin: 12px 0;">
-              <a href="${videoUrl}" target="_blank" style="display: inline-block; position: relative; text-decoration: none;">
+              <a href="${dlLink.url}" target="_blank" style="display: inline-block; position: relative; text-decoration: none;">
                 <img src="${url}" alt="Capa do vídeo ${safeClientName}${validVideoCoverUrls.length > 1 ? ` ${i + 1}` : ''}" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
                 <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; background-color: rgba(0,0,0,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                   <div style="width: 0; height: 0; border-style: solid; border-width: 12px 0 12px 22px; border-color: transparent transparent transparent #ffffff; margin-left: 4px;"></div>
