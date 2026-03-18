@@ -824,7 +824,7 @@ export function VideoAdjustOverlay({
         {/* Logo, Contato, Mascote */}
         {els.logoEl && (
           <Box part="logo" label="Logo" tone="primary">
-            {logoUrl && <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" draggable={false} />}
+            {logoUrl && <img src={logoUrl} alt="Logo" className="w-full h-full object-fill" draggable={false} />}
           </Box>
         )}
         {els.contactEl && (
