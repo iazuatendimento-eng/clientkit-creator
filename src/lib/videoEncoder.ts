@@ -238,7 +238,7 @@ async function transcodeToTrueMp4(params: {
   audioUrl?: string;
   videoDurationSec?: number;
 }): Promise<Blob> {
-  const { inputBlob, inputFileName, audioUrl } = params;
+  const { inputBlob, inputFileName, audioUrl, videoDurationSec } = params;
   const ff = await loadFFmpeg();
 
   let audioFileName: string | null = null;
@@ -270,6 +270,12 @@ async function transcodeToTrueMp4(params: {
       await ff.writeFile(audioFileName, await fetchFile(audioBlob));
     }
 
+    // Use explicit duration (+1s buffer) instead of -shortest to prevent
+    // FFmpeg from truncating the last page (signature page).
+    const durationLimit = videoDurationSec
+      ? ["-t", String(Math.ceil(videoDurationSec) + 1)]
+      : [];
+
     // Gmail/Drive/Outlook need H.264 Baseline + AAC audio to show inline preview.
     // When no external audio is provided, generate a silent AAC track so the
     // container always has both video+audio streams — required for preview.
@@ -280,7 +286,8 @@ async function transcodeToTrueMp4(params: {
           "-map", "0:v:0", "-map", "1:a:0",
           "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
           "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2",
-          "-shortest", "-movflags", "+faststart", "-brand", "isom",
+          ...durationLimit, ...(durationLimit.length === 0 ? ["-shortest"] : []),
+          "-movflags", "+faststart", "-brand", "isom",
           "-f", "mp4", "-y", "output.mp4",
         ]
       : [
@@ -290,7 +297,8 @@ async function transcodeToTrueMp4(params: {
           "-map", "0:v:0", "-map", "1:a:0",
           "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
           "-c:a", "aac", "-b:a", "32k", "-ar", "44100", "-ac", "2",
-          "-shortest", "-movflags", "+faststart", "-brand", "isom",
+          ...durationLimit, ...(durationLimit.length === 0 ? ["-shortest"] : []),
+          "-movflags", "+faststart", "-brand", "isom",
           "-f", "mp4", "-y", "output.mp4",
         ];
 
