@@ -3048,10 +3048,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                          return { ...v, previewVideoUrls: urls };
                        })
                      );
-                     const allPgs = video.pages.length;
-                     const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
-                     const nextPage = pageIdx < totalPgs - 1 ? pageIdx + 1 : 0;
-                     setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
+                      // Keep preview on the same page where video was dropped
+                      setCardPageMap((prev) => ({ ...prev, [video.cardId]: pageIdx }));
                      setClientVideos((prev) => {
                        const idx = prev.findIndex((v) => v.cardId === video.cardId);
                        if (idx === -1) return prev;
