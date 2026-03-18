@@ -628,7 +628,6 @@ export const BatchHistoryEditor = ({
                 <Badge>{batch.type === "art" ? "Arte" : "Vídeo"}</Badge>
               </div>
             </div>
-            </div>
 
             {/* Preview */}
             <div className="flex gap-6">
