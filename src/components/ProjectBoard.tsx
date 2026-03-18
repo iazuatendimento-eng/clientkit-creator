@@ -25,7 +25,7 @@ import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { ArtGeneratorModal } from "@/components/ArtGeneratorModal";
 import { VideoSwapModal } from "@/components/VideoSwapModal";
 import { toast } from "sonner";
-import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder } from "@/lib/clientDatabase";
+import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder, createCardUpload } from "@/lib/clientDatabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
   DndContext,
@@ -168,6 +168,72 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   const [editText, setEditText] = useState(brief.title || "");
   const [savingText, setSavingText] = useState(false);
   const [usedDailyVideo, setUsedDailyVideo] = useState(false);
+  const [isFileDragOver, setIsFileDragOver] = useState(false);
+  const [isUploadingDrop, setIsUploadingDrop] = useState(false);
+
+  const handleFileDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFileDragOver(false);
+
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(f =>
+      f.type.startsWith("image/") || f.type.startsWith("video/")
+    );
+    if (droppedFiles.length === 0) return;
+
+    setIsUploadingDrop(true);
+    let uploadedCount = 0;
+
+    for (const file of droppedFiles) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${brief.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: storageError } = await supabase.storage
+          .from("card-uploads")
+          .upload(filePath, file, { contentType: file.type, upsert: false });
+
+        if (storageError) {
+          console.error("Storage upload error:", storageError);
+          continue;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("card-uploads")
+          .getPublicUrl(filePath);
+
+        await createCardUpload({
+          card_id: brief.id,
+          file_url: publicUrlData.publicUrl,
+          file_name: file.name,
+          file_type: file.type,
+          upload_type: "material",
+        });
+        uploadedCount++;
+      } catch (err) {
+        console.error("Drop upload error:", err);
+      }
+    }
+
+    setIsUploadingDrop(false);
+    if (uploadedCount > 0) {
+      toast.success(`${uploadedCount} arquivo(s) adicionado(s) aos materiais!`);
+    }
+  };
+
+  const handleFileDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsFileDragOver(true);
+    }
+  };
+
+  const handleFileDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFileDragOver(false);
+  };
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Pre-generate video in background so modal opens instantly
@@ -444,10 +510,24 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       ref={setNodeRef}
       style={style}
       id={`card-${brief.id}`}
-      className={`${isPublicView ? 'bg-card border-border/40 rounded-xl shadow-lg' : 'bg-gradient-card border-primary/20'} hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView && !isInactive ? 'cursor-move' : ''}`}
+      className={`${isPublicView ? 'bg-card border-border/40 rounded-xl shadow-lg' : 'bg-gradient-card border-primary/20'} hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView && !isInactive ? 'cursor-move' : ''} ${isFileDragOver ? 'ring-2 ring-primary border-primary bg-primary/5' : ''} ${isUploadingDrop ? 'opacity-70 pointer-events-none' : ''}`}
       {...(!isPublicView && !isInactive ? attributes : {})}
       {...(!isPublicView && !isInactive ? listeners : {})}
+      onDragOver={!isPublicView ? handleFileDragOver : undefined}
+      onDragLeave={!isPublicView ? handleFileDragLeave : undefined}
+      onDrop={!isPublicView ? handleFileDrop : undefined}
     >
+      {isFileDragOver && (
+        <div className="bg-primary/10 border-b border-primary/30 px-3 py-2 text-center text-xs font-medium text-primary">
+          Solte para adicionar aos materiais
+        </div>
+      )}
+      {isUploadingDrop && (
+        <div className="bg-muted/50 border-b border-border px-3 py-2 text-center text-xs font-medium text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Enviando...
+        </div>
+      )}
       {/* Cover media removed - text-only cards */}
 
       <CardHeader className={`${isPublicView ? 'p-3 pb-2' : 'pb-2'} overflow-hidden`}>
