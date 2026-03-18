@@ -30,7 +30,6 @@ export interface VideoEncoderOptions {
 }
 
 let ffmpeg: FFmpeg | null = null;
-let ffmpegLoading = false;
 let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
