@@ -801,8 +801,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     supabase.from("teams").select("id, name").order("name").then(({ data }) => {
       if (data) setTeams(data.filter(t => /^T\d{4}/.test(t.name.trim())));
     });
-    // Always pre-load FFmpeg in background (needed for audio muxing + faststart)
-    loadFFmpeg().catch((err) => console.warn("[BatchVideo] FFmpeg preload failed:", err));
   }, []);
 
   useEffect(() => {
