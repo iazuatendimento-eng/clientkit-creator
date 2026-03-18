@@ -454,6 +454,8 @@ function isFfmpegLoadFailure(err: unknown): boolean {
     message.includes("timeout: baixar trilha de áudio") ||
     message.includes("timeout: processar trilha de áudio") ||
     message.includes("falha ao baixar trilha de áudio") ||
+    message.includes("conversor mp4 temporariamente indisponível") ||
+    message.includes("tente novamente em") ||
     message.includes("ffmpeg failed to load") ||
     message.includes("failed to load")
   );
