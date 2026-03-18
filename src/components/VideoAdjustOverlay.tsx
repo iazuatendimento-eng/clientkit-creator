@@ -699,7 +699,10 @@ export function VideoAdjustOverlay({
       >
         {/* Content preview inside box */}
         {children && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden p-1">
+          <div className={cn(
+            "absolute inset-0 pointer-events-none overflow-hidden p-1",
+            part === "text" ? "flex items-start justify-start" : "flex items-center justify-center"
+          )}>
             {children}
           </div>
         )}
