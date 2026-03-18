@@ -478,7 +478,7 @@ function hasFourCC(bytes: Uint8Array, code: string): boolean {
   return false;
 }
 
-async function detectMp4VideoCodec(blob: Blob): Promise<Mp4VideoCodec> {
+export async function detectMp4VideoCodec(blob: Blob): Promise<Mp4VideoCodec> {
   if (!(await isValidMP4(blob))) return "unknown";
 
   try {

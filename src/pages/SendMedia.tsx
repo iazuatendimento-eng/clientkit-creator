@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from "xlsx";
+import { detectMp4VideoCodec } from "@/lib/videoEncoder";
 
 type MediaMode = "arte" | "video";
 
@@ -180,6 +181,20 @@ const SendMedia = () => {
     if (missing.length > 0) {
       toast.error(`Arquivos não encontrados: ${missing.map(m => m.fileName).join(", ")}`);
       return;
+    }
+
+    // Check HEVC codec for video files before sending
+    if (mode === "video") {
+      for (const row of csvRows) {
+        const file = findFile(row.fileName);
+        if (file) {
+          const codec = await detectMp4VideoCodec(new Blob([file], { type: file.type }));
+          if (codec === "hevc") {
+            toast.error(`Arquivo "${file.name}" está em HEVC (incompatível com Windows/Android). Converta para H.264 antes de enviar.`);
+            return;
+          }
+        }
+      }
     }
 
     setIsSending(true);
