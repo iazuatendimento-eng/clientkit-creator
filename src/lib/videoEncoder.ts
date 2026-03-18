@@ -54,45 +54,50 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
     throw new Error("FFmpeg failed to load after retries (cooldown ativo)");
   }
 
-  const MAX_RETRIES = 1;
-  const FFMPEG_FETCH_TIMEOUT_MS = 10_000;
-  const FFMPEG_LOAD_TIMEOUT_MS = 15_000;
+  const MAX_RETRIES = 2;
+  const FFMPEG_FETCH_TIMEOUT_MS = 20_000;
+  const FFMPEG_LOAD_TIMEOUT_MS = 30_000;
   const FFMPEG_COOLDOWN_MS = 120_000;
+  const FFMPEG_BASE_URLS = [
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
+    "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm",
+  ];
 
   ffmpegLoadPromise = (async () => {
     let lastErr: unknown = null;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      try {
-        const instance = new FFmpeg();
-        const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
+      for (const baseURL of FFMPEG_BASE_URLS) {
+        try {
+          const instance = new FFmpeg();
+          const [coreURL, wasmURL] = await withTimeout(
+            Promise.all([
+              toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+              toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+            ]),
+            FFMPEG_FETCH_TIMEOUT_MS,
+            "baixar núcleo do conversor MP4"
+          );
 
-        const [coreURL, wasmURL] = await withTimeout(
-          Promise.all([
-            toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-          ]),
-          FFMPEG_FETCH_TIMEOUT_MS,
-          "baixar núcleo do conversor MP4"
-        );
+          await withTimeout(
+            instance.load({ coreURL, wasmURL }),
+            FFMPEG_LOAD_TIMEOUT_MS,
+            "carregar conversor MP4"
+          );
 
-        await withTimeout(
-          instance.load({ coreURL, wasmURL }),
-          FFMPEG_LOAD_TIMEOUT_MS,
-          "carregar conversor MP4"
-        );
-
-        ffmpeg = instance;
-        ffmpegUnavailableUntil = 0;
-        console.log("[FFmpeg] Loaded successfully on attempt", attempt + 1);
-        return instance;
-      } catch (err) {
-        lastErr = err;
-        ffmpeg = null;
-        console.warn(`[FFmpeg] Load attempt ${attempt + 1}/${MAX_RETRIES} failed:`, err);
-        if (attempt < MAX_RETRIES - 1) {
-          await new Promise((r) => setTimeout(r, 800));
+          ffmpeg = instance;
+          ffmpegUnavailableUntil = 0;
+          console.log("[FFmpeg] Loaded successfully", { attempt: attempt + 1, baseURL });
+          return instance;
+        } catch (err) {
+          lastErr = err;
+          ffmpeg = null;
+          console.warn(`[FFmpeg] Load failed (attempt ${attempt + 1}/${MAX_RETRIES}) via ${baseURL}:`, err);
         }
+      }
+
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise((r) => setTimeout(r, 1000));
       }
     }
 
