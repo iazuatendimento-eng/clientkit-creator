@@ -579,10 +579,21 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       onProgress?.(1);
       return mp4WithAudio;
     } catch (transcodeErr) {
-      if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(nativeMp4))) {
-        console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
-        onProgress?.(1);
-        return nativeMp4;
+      if (isFfmpegLoadFailure(transcodeErr)) {
+        if (audioUrl) {
+          if (await isValidMP4(nativeMp4)) {
+            console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo com áudio embutido.", transcodeErr);
+            onProgress?.(1);
+            return nativeMp4;
+          }
+          throw new Error("Não foi possível gerar MP4 com áudio do template.");
+        }
+
+        if (await isValidMP4(nativeMp4)) {
+          console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
+          onProgress?.(1);
+          return nativeMp4;
+        }
       }
       throw transcodeErr;
     }
