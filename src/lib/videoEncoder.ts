@@ -30,7 +30,7 @@ export interface VideoEncoderOptions {
 }
 
 let ffmpeg: FFmpeg | null = null;
-let ffmpegLoading = false;
+let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timeoutId: number | undefined;
@@ -45,52 +45,56 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 export async function loadFFmpeg(): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
+  if (ffmpegLoadPromise) return ffmpegLoadPromise;
 
-  if (ffmpegLoading) {
-    while (ffmpegLoading) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (ffmpeg && ffmpeg.loaded) return ffmpeg;
-  }
+  const MAX_RETRIES = 2;
+  const FFMPEG_FETCH_TIMEOUT_MS = 30_000;
+  const FFMPEG_LOAD_TIMEOUT_MS = 45_000;
 
-  ffmpegLoading = true;
+  ffmpegLoadPromise = (async () => {
+    let lastErr: unknown = null;
 
-  const MAX_RETRIES = 3;
-  let lastErr: unknown = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const instance = new FFmpeg();
+        const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      ffmpeg = new FFmpeg();
+        const [coreURL, wasmURL] = await withTimeout(
+          Promise.all([
+            toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+          ]),
+          FFMPEG_FETCH_TIMEOUT_MS,
+          "baixar núcleo do conversor MP4"
+        );
 
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
+        await withTimeout(
+          instance.load({ coreURL, wasmURL }),
+          FFMPEG_LOAD_TIMEOUT_MS,
+          "carregar conversor MP4"
+        );
 
-      // Pre-fetch URLs in parallel first
-      const [coreURL, wasmURL] = await Promise.all([
-        toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-      ]);
-
-      await withTimeout(
-        ffmpeg.load({ coreURL, wasmURL }),
-        120_000,
-        "carregar conversor MP4"
-      );
-
-      console.log("[FFmpeg] Loaded successfully on attempt", attempt + 1);
-      ffmpegLoading = false;
-      return ffmpeg;
-    } catch (err) {
-      lastErr = err;
-      ffmpeg = null;
-      console.warn(`[FFmpeg] Load attempt ${attempt + 1}/${MAX_RETRIES} failed:`, err);
-      if (attempt < MAX_RETRIES - 1) {
-        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+        ffmpeg = instance;
+        console.log("[FFmpeg] Loaded successfully on attempt", attempt + 1);
+        return instance;
+      } catch (err) {
+        lastErr = err;
+        ffmpeg = null;
+        console.warn(`[FFmpeg] Load attempt ${attempt + 1}/${MAX_RETRIES} failed:`, err);
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        }
       }
     }
-  }
 
-  ffmpegLoading = false;
-  throw lastErr || new Error("FFmpeg failed to load after retries");
+    throw lastErr || new Error("FFmpeg failed to load after retries");
+  })();
+
+  try {
+    return await ffmpegLoadPromise;
+  } finally {
+    ffmpegLoadPromise = null;
+  }
 }
 
 function pickSupportedMimeType(candidates: string[]): string | null {
@@ -118,7 +122,6 @@ function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "og
   return "mp3";
 }
 
-const FFMPEG_BOOT_TIMEOUT_MS = 180_000;
 const FFMPEG_MUX_TIMEOUT_MS = 420_000;
 const FFMPEG_TRANSCODE_TIMEOUT_MS = 480_000;
 
@@ -167,7 +170,7 @@ async function transcodeToTrueMp4(params: {
   audioUrl?: string;
 }): Promise<Blob> {
   const { inputBlob, inputFileName, audioUrl } = params;
-  const ff = await withTimeout(loadFFmpeg(), FFMPEG_BOOT_TIMEOUT_MS, "inicializar conversor MP4");
+  const ff = await loadFFmpeg();
 
   let audioFileName: string | null = null;
 
@@ -363,6 +366,16 @@ export async function encodeWithWebCodecs(
   return blob;
 }
 
+function isFfmpegLoadFailure(err: unknown): boolean {
+  const message = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+  return (
+    message.includes("timeout: carregar conversor mp4") ||
+    message.includes("timeout: baixar núcleo do conversor mp4") ||
+    message.includes("ffmpeg failed to load") ||
+    message.includes("failed to load")
+  );
+}
+
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress, audioUrl } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -395,21 +408,29 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         );
 
         if (!audioUrl) {
-          const patched = await patchMP4Brand(rawBlob);
           onProgress?.(1);
-          return patched;
+          return rawBlob;
         }
 
         onProgress?.(0.72);
-        const mp4WithAudio = await transcodeToTrueMp4({
-          inputBlob: rawBlob,
-          inputFileName: "input.mp4",
-          audioUrl,
-        });
+        try {
+          const mp4WithAudio = await transcodeToTrueMp4({
+            inputBlob: rawBlob,
+            inputFileName: "input.mp4",
+            audioUrl,
+          });
 
-        console.log("[VideoEncoder] MP4 com áudio gerado (WebCodecs + FFmpeg), size:", mp4WithAudio.size);
-        onProgress?.(1);
-        return mp4WithAudio;
+          console.log("[VideoEncoder] MP4 com áudio gerado (WebCodecs + FFmpeg), size:", mp4WithAudio.size);
+          onProgress?.(1);
+          return mp4WithAudio;
+        } catch (transcodeErr) {
+          if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(rawBlob))) {
+            console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 H.264 sem mux de áudio para evitar travamento.");
+            onProgress?.(1);
+            return rawBlob;
+          }
+          throw transcodeErr;
+        }
       } catch (wcErr) {
         console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
         if (attempt === attempts[attempts.length - 1]) {
@@ -440,19 +461,27 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     onProgress?.(0.6);
 
     if (!audioUrl) {
-      const patched = await patchMP4Brand(nativeMp4);
       onProgress?.(1);
-      return patched;
+      return nativeMp4;
     }
 
     onProgress?.(0.72);
-    const mp4WithAudio = await transcodeToTrueMp4({
-      inputBlob: nativeMp4,
-      inputFileName: "input.mp4",
-      audioUrl,
-    });
-    onProgress?.(1);
-    return mp4WithAudio;
+    try {
+      const mp4WithAudio = await transcodeToTrueMp4({
+        inputBlob: nativeMp4,
+        inputFileName: "input.mp4",
+        audioUrl,
+      });
+      onProgress?.(1);
+      return mp4WithAudio;
+    } catch (transcodeErr) {
+      if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(nativeMp4))) {
+        console.warn("[VideoEncoder] FFmpeg indisponível no fallback, enviando MP4 nativo sem mux de áudio.");
+        onProgress?.(1);
+        return nativeMp4;
+      }
+      throw transcodeErr;
+    }
   }
 
   // No native MP4 -> WebM then convert to true MP4 (with optional audio)
