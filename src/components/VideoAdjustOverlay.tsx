@@ -701,7 +701,7 @@ export function VideoAdjustOverlay({
         {children && (
           <div className={cn(
             "absolute inset-0 pointer-events-none overflow-hidden",
-            part === "text" ? "flex items-start justify-start" : "flex items-center justify-center p-1"
+            part === "text" ? "flex items-start justify-start" : "flex items-center justify-center"
           )}>
             {children}
           </div>
@@ -824,17 +824,17 @@ export function VideoAdjustOverlay({
         {/* Logo, Contato, Mascote */}
         {els.logoEl && (
           <Box part="logo" label="Logo" tone="primary">
-            {logoUrl && <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" draggable={false} />}
+            {logoUrl && <img src={logoUrl} alt="Logo" className="w-full h-full object-fill" draggable={false} />}
           </Box>
         )}
         {els.contactEl && (
           <Box part="contact" label="Contato" tone="accent">
-            {contactUrl && <img src={contactUrl} alt="Contato" className="w-full h-full object-contain" draggable={false} />}
+            {contactUrl && <img src={contactUrl} alt="Contato" className="w-full h-full object-fill" draggable={false} />}
           </Box>
         )}
         {els.mascotEl && (
           <Box part="mascot" label="Mascote" tone="secondary">
-            {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-contain" draggable={false} />}
+            {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-fill" draggable={false} />}
           </Box>
         )}
       </div>
