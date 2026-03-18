@@ -31,6 +31,7 @@ export interface VideoEncoderOptions {
 
 let ffmpeg: FFmpeg | null = null;
 let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
+let ffmpegUnavailableUntil = 0;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timeoutId: number | undefined;
@@ -47,9 +48,15 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
   if (ffmpegLoadPromise) return ffmpegLoadPromise;
 
-  const MAX_RETRIES = 2;
-  const FFMPEG_FETCH_TIMEOUT_MS = 30_000;
-  const FFMPEG_LOAD_TIMEOUT_MS = 45_000;
+  const now = Date.now();
+  if (ffmpegUnavailableUntil > now) {
+    throw new Error("FFmpeg failed to load after retries (cooldown ativo)");
+  }
+
+  const MAX_RETRIES = 1;
+  const FFMPEG_FETCH_TIMEOUT_MS = 10_000;
+  const FFMPEG_LOAD_TIMEOUT_MS = 15_000;
+  const FFMPEG_COOLDOWN_MS = 120_000;
 
   ffmpegLoadPromise = (async () => {
     let lastErr: unknown = null;
@@ -75,6 +82,7 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
         );
 
         ffmpeg = instance;
+        ffmpegUnavailableUntil = 0;
         console.log("[FFmpeg] Loaded successfully on attempt", attempt + 1);
         return instance;
       } catch (err) {
@@ -82,11 +90,12 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
         ffmpeg = null;
         console.warn(`[FFmpeg] Load attempt ${attempt + 1}/${MAX_RETRIES} failed:`, err);
         if (attempt < MAX_RETRIES - 1) {
-          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+          await new Promise((r) => setTimeout(r, 800));
         }
       }
     }
 
+    ffmpegUnavailableUntil = Date.now() + FFMPEG_COOLDOWN_MS;
     throw lastErr || new Error("FFmpeg failed to load after retries");
   })();
 
