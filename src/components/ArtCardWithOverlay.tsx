@@ -13,6 +13,7 @@ import {
   MessageSquareWarning,
   Scissors,
   Eraser,
+  ArrowDownToLine,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
@@ -84,6 +85,8 @@ interface ArtCardWithOverlayProps {
   onOpenEraser: (art: ClientArt, index: number) => void;
   onSaveNote: (index: number, note: string) => Promise<void>;
   onResolveNote: (index: number) => Promise<void>;
+  onDropImage?: (index: number, file: File) => void;
+  onMoveToEnd?: (index: number) => void;
   isRemovingBg?: boolean;
   removeBgProgress?: string;
 }
@@ -102,6 +105,8 @@ export function ArtCardWithOverlay({
   onOpenEraser,
   onSaveNote,
   onResolveNote,
+  onDropImage,
+  onMoveToEnd,
   isRemovingBg,
   removeBgProgress,
 }: ArtCardWithOverlayProps) {
@@ -187,6 +192,33 @@ export function ArtCardWithOverlay({
     };
   }, []);
 
+  // Drag-and-drop image onto card
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleFileDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleFileDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/") && onDropImage) {
+      onDropImage(index, file);
+    }
+  }, [index, onDropImage]);
+
   const handleDragEnd = useCallback(async () => {
     // Read from refs to get the absolute latest values (pointerup fires before React re-renders)
     const v = latestRef.current;
@@ -250,10 +282,14 @@ export function ArtCardWithOverlay({
   return (
     <div
       className={cn(
-        "border rounded-lg overflow-hidden bg-card",
+        "border rounded-lg overflow-hidden bg-card transition-all",
         art.status === "approved" && "ring-2 ring-green-500",
         art.status === "rejected" && "ring-2 ring-destructive opacity-50",
+        isDragOver && "ring-2 ring-primary ring-offset-2",
       )}
+      onDragOver={handleFileDragOver}
+      onDragLeave={handleFileDragLeave}
+      onDrop={handleFileDrop}
     >
       {/* Art Preview with always-on overlay */}
       <div className="relative bg-muted">
@@ -321,6 +357,15 @@ export function ArtCardWithOverlay({
             {(art.pageIndex ?? 0) + 1}/{art.totalPages}
           </div>
         )}
+
+        {/* Drag-over overlay */}
+        {isDragOver && (
+          <div className="absolute inset-0 bg-primary/20 border-2 border-dashed border-primary rounded flex items-center justify-center z-20 pointer-events-none">
+            <div className="bg-background/90 px-3 py-2 rounded-lg text-sm font-medium text-primary">
+              Solte a imagem aqui
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Info & Actions */}
@@ -359,6 +404,11 @@ export function ArtCardWithOverlay({
                   <Eraser className="h-4 w-4" />
                 </Button>
               </>
+            )}
+            {onMoveToEnd && (
+              <Button size="sm" variant="outline" title="Mover para o final da fila" onClick={() => onMoveToEnd(index)}>
+                <ArrowDownToLine className="h-4 w-4" />
+              </Button>
             )}
             <Button size="sm" variant="destructive" onClick={() => onReject(index)}>
               <X className="h-4 w-4" />
