@@ -2618,6 +2618,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         for (let vi = 0; vi < videos.length; vi++) {
           const video = videos[vi];
 
+          // Se já tem URL regenerada (via "Regerar Todos"), pula a re-codificação
+          if (video.exportedVideoUrl) {
+            mediaUrls.push(video.exportedVideoUrl);
+            continue;
+          }
+
           // Adaptive FPS: lower for long videos
           const estimatedDurationSec = Math.max(1, video.pages.length * (template.pageDuration || 3));
           const adaptiveFps = estimatedDurationSec >= 40 ? 12 : estimatedDurationSec >= 24 ? 15 : estimatedDurationSec >= 16 ? 18 : 24;
