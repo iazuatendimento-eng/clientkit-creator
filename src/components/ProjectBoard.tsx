@@ -510,10 +510,24 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       ref={setNodeRef}
       style={style}
       id={`card-${brief.id}`}
-      className={`${isPublicView ? 'bg-card border-border/40 rounded-xl shadow-lg' : 'bg-gradient-card border-primary/20'} hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView && !isInactive ? 'cursor-move' : ''}`}
+      className={`${isPublicView ? 'bg-card border-border/40 rounded-xl shadow-lg' : 'bg-gradient-card border-primary/20'} hover:border-primary/40 transition-all duration-300 overflow-hidden ${!isPublicView && !isInactive ? 'cursor-move' : ''} ${isFileDragOver ? 'ring-2 ring-primary border-primary bg-primary/5' : ''} ${isUploadingDrop ? 'opacity-70 pointer-events-none' : ''}`}
       {...(!isPublicView && !isInactive ? attributes : {})}
       {...(!isPublicView && !isInactive ? listeners : {})}
+      onDragOver={!isPublicView ? handleFileDragOver : undefined}
+      onDragLeave={!isPublicView ? handleFileDragLeave : undefined}
+      onDrop={!isPublicView ? handleFileDrop : undefined}
     >
+      {isFileDragOver && (
+        <div className="bg-primary/10 border-b border-primary/30 px-3 py-2 text-center text-xs font-medium text-primary">
+          Solte para adicionar aos materiais
+        </div>
+      )}
+      {isUploadingDrop && (
+        <div className="bg-muted/50 border-b border-border px-3 py-2 text-center text-xs font-medium text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Enviando...
+        </div>
+      )}
       {/* Cover media removed - text-only cards */}
 
       <CardHeader className={`${isPublicView ? 'p-3 pb-2' : 'pb-2'} overflow-hidden`}>
