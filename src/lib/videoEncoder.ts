@@ -1,5 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import coreJsUrl from "@ffmpeg/core/dist/esm/ffmpeg-core.js?url";
+import coreWasmUrl from "@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url";
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
@@ -51,53 +53,67 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
 
   const now = Date.now();
   if (ffmpegUnavailableUntil > now) {
-    throw new Error("FFmpeg failed to load after retries (cooldown ativo)");
+    const cooldownSeconds = Math.ceil((ffmpegUnavailableUntil - now) / 1000);
+    console.warn(`[FFmpeg] Cooldown ativo (${cooldownSeconds}s), tentando novo carregamento para envio de e-mail.`);
   }
 
-  const MAX_RETRIES = 2;
-  const FFMPEG_FETCH_TIMEOUT_MS = 20_000;
-  const FFMPEG_LOAD_TIMEOUT_MS = 30_000;
-  const FFMPEG_COOLDOWN_MS = 120_000;
-  const FFMPEG_BASE_URLS = [
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
-    "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm",
+  const MAX_RETRIES = 3;
+  const FFMPEG_FETCH_TIMEOUT_MS = 45_000;
+  const FFMPEG_LOAD_TIMEOUT_MS = 45_000;
+  const FFMPEG_COOLDOWN_MS = 30_000;
+  const FFMPEG_SOURCES: Array<{ label: string; core: string; wasm: string }> = [
+    {
+      label: "local-bundle",
+      core: coreJsUrl,
+      wasm: coreWasmUrl,
+    },
+    {
+      label: "jsdelivr",
+      core: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js",
+      wasm: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm",
+    },
+    {
+      label: "unpkg",
+      core: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js",
+      wasm: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm",
+    },
   ];
 
   ffmpegLoadPromise = (async () => {
     let lastErr: unknown = null;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      for (const baseURL of FFMPEG_BASE_URLS) {
+      for (const source of FFMPEG_SOURCES) {
         try {
           const instance = new FFmpeg();
           const [coreURL, wasmURL] = await withTimeout(
             Promise.all([
-              toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-              toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+              toBlobURL(source.core, "text/javascript"),
+              toBlobURL(source.wasm, "application/wasm"),
             ]),
             FFMPEG_FETCH_TIMEOUT_MS,
-            "baixar núcleo do conversor MP4"
+            `baixar núcleo do conversor MP4 (${source.label})`
           );
 
           await withTimeout(
             instance.load({ coreURL, wasmURL }),
             FFMPEG_LOAD_TIMEOUT_MS,
-            "carregar conversor MP4"
+            `carregar conversor MP4 (${source.label})`
           );
 
           ffmpeg = instance;
           ffmpegUnavailableUntil = 0;
-          console.log("[FFmpeg] Loaded successfully", { attempt: attempt + 1, baseURL });
+          console.log("[FFmpeg] Loaded successfully", { attempt: attempt + 1, source: source.label });
           return instance;
         } catch (err) {
           lastErr = err;
           ffmpeg = null;
-          console.warn(`[FFmpeg] Load failed (attempt ${attempt + 1}/${MAX_RETRIES}) via ${baseURL}:`, err);
+          console.warn(`[FFmpeg] Load failed (attempt ${attempt + 1}/${MAX_RETRIES}) via ${source.label}:`, err);
         }
       }
 
       if (attempt < MAX_RETRIES - 1) {
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 1200));
       }
     }
 
@@ -137,9 +153,9 @@ function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "og
   return "mp3";
 }
 
-const FFMPEG_MUX_TIMEOUT_MS = 180_000;
-const FFMPEG_TRANSCODE_TIMEOUT_MS = 240_000;
-const AUDIO_FETCH_TIMEOUT_MS = 25_000;
+const FFMPEG_MUX_TIMEOUT_MS = 300_000;
+const FFMPEG_TRANSCODE_TIMEOUT_MS = 300_000;
+const AUDIO_FETCH_TIMEOUT_MS = 35_000;
 
 // Generate MP4 (best effort: native MediaRecorder MP4 when available, otherwise WebM->FFmpeg)
 // Check if blob is actually MP4 by verifying ftyp box header
