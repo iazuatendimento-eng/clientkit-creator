@@ -2503,9 +2503,36 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setGenerationStatus("Iniciando exportação e envio...");
 
     try {
-      // Group approved videos by clientId
-      const byClient = new Map<string, typeof approvedVideos>();
-      for (const video of approvedVideos) {
+      // Resolve each video's client from the card in DB (source of truth) to avoid stale/mismatched clientId in memory
+      const approvedCardIds = [...new Set(approvedVideos.map((v) => v.cardId).filter(Boolean))];
+      const { data: briefsData, error: briefsError } = await supabase
+        .from("project_briefs")
+        .select("id, client_id")
+        .in("id", approvedCardIds);
+
+      if (briefsError) {
+        throw new Error(`Erro ao validar cliente dos cards: ${briefsError.message}`);
+      }
+
+      const cardClientMap = new Map<string, string>(
+        (briefsData || [])
+          .filter((b) => !!b.id && !!b.client_id)
+          .map((b) => [b.id, b.client_id as string])
+      );
+
+      const normalizedApprovedVideos = approvedVideos.map((video) => ({
+        ...video,
+        clientId: cardClientMap.get(video.cardId) || video.clientId,
+      }));
+
+      const invalidClientVideos = normalizedApprovedVideos.filter((v) => !v.clientId);
+      if (invalidClientVideos.length > 0) {
+        throw new Error(`Existem vídeos sem cliente vinculado (${invalidClientVideos.length}).`);
+      }
+
+      // Group approved videos by validated clientId
+      const byClient = new Map<string, typeof normalizedApprovedVideos>();
+      for (const video of normalizedApprovedVideos) {
         const list = byClient.get(video.clientId) || [];
         list.push(video);
         byClient.set(video.clientId, list);
@@ -2513,10 +2540,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       // Fetch emails for all clients
       const clientIds = [...byClient.keys()];
-      const { data: clientsData } = await supabase
+      const { data: clientsData, error: clientsError } = await supabase
         .from("client_data")
-        .select("id, email, email_2, email_3")
+        .select("id, name, company, email, email_2, email_3")
         .in("id", clientIds);
+
+      if (clientsError) {
+        throw new Error(`Erro ao carregar e-mails dos clientes: ${clientsError.message}`);
+      }
 
       let sentCount = 0;
       const uploadedPaths: string[] = [];
@@ -2541,15 +2572,19 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       };
 
       // Process a single client: encode all videos, upload, send email
-      const processClient = async (clientId: string, videos: typeof approvedVideos, clientIdx: number) => {
+      const processClient = async (clientId: string, videos: typeof normalizedApprovedVideos, clientIdx: number) => {
         const clientRow = clientsData?.find((c) => c.id === clientId);
-        if (!clientRow) return;
+        if (!clientRow) {
+          throw new Error(`Cliente ${clientId} não encontrado para envio.`);
+        }
+
+        const clientLabel = clientRow.company || clientRow.name || videos[0].company || videos[0].clientName;
 
         const emails = [clientRow.email, clientRow.email_2, clientRow.email_3].filter(
           (e): e is string => !!e && e.includes("@")
         );
         if (emails.length === 0) {
-          throw new Error(`${videos[0].clientName}: sem e-mail cadastrado`);
+          throw new Error(`${clientLabel}: sem e-mail cadastrado`);
         }
 
         const mediaUrls: string[] = [];
@@ -2589,7 +2624,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             pageImageAdjustments: video.pageImageAdjustments,
             audioUrl,
             onProgress: (p: number) => {
-              setGenerationStatus(`Gerando MP4 (${clientIdx + 1}/${byClient.size}) • ${video.clientName} • ${Math.round(p * 100)}%`);
+              setGenerationStatus(`Gerando MP4 (${clientIdx + 1}/${byClient.size}) • ${clientLabel} • ${Math.round(p * 100)}%`);
             },
           };
 
@@ -2612,7 +2647,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           for (let attemptIndex = 0; attemptIndex < encodeAttempts.length; attemptIndex++) {
             const attempt = encodeAttempts[attemptIndex];
             setGenerationStatus(
-              `Gerando MP4 (${clientIdx + 1}/${byClient.size}) • ${video.clientName} • ${attempt.label}`
+              `Gerando MP4 (${clientIdx + 1}/${byClient.size}) • ${clientLabel} • ${attempt.label}`
             );
 
             try {
@@ -2627,27 +2662,27 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               break;
             } catch (encodeErr) {
               lastEncodeError = encodeErr;
-              console.error(`Tentativa ${attemptIndex + 1} falhou para ${video.clientName}:`, encodeErr);
+              console.error(`Tentativa ${attemptIndex + 1} falhou para ${clientLabel}:`, encodeErr);
             }
           }
 
           if (!videoBlob) {
             throw new Error(
-              `Falha ao gerar vídeo de ${video.clientName} após ${encodeAttempts.length} tentativas. ${
+              `Falha ao gerar vídeo de ${clientLabel} após ${encodeAttempts.length} tentativas. ${
                 lastEncodeError instanceof Error ? lastEncodeError.message : ""
               }`
             );
           }
 
           // Upload immediately
-          setGenerationStatus(`Enviando (${clientIdx + 1}/${byClient.size}) • ${video.clientName}`);
+          setGenerationStatus(`Enviando (${clientIdx + 1}/${byClient.size}) • ${clientLabel}`);
           const result = await uploadVideoBlob(videoBlob, video.cardId);
           clientPaths.push(result.path);
           mediaUrls.push(result.publicUrl);
         }
 
         // Send email
-        setGenerationStatus(`Enviando e-mail • ${videos[0].clientName}`);
+        setGenerationStatus(`Enviando e-mail • ${clientLabel}`);
         const videoCoverUrls = videos
           .map((v) => v.pages?.[0])
           .filter((url): url is string => typeof url === "string" && url.length > 0);
@@ -2655,11 +2690,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const { error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails,
-            subject: emailSubject.trim() || `Vídeo - ${videos[0].company || videos[0].clientName}`,
+            subject: emailSubject.trim() || `Vídeo - ${clientLabel}`,
             mediaUrls,
             mediaUrl: mediaUrls[0],
             mediaType: "video",
-            clientName: videos[0].company || videos[0].clientName,
+            clientName: clientLabel,
             cardText: videos.map(v => v.cardText || v.cardTitle).filter(Boolean).join("\n\n"),
             caption: undefined,
             videoCoverUrl: videoCoverUrls[0],
@@ -2669,16 +2704,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
         if (error) {
           console.error("Email error:", error);
-          throw new Error(`Erro ao enviar e-mail para ${videos[0].clientName}: ${error.message}`);
+          throw new Error(`Erro ao enviar e-mail para ${clientLabel}: ${error.message}`);
         }
 
         uploadedPaths.push(...clientPaths);
         sentCount++;
       };
 
-      // Process clients with limited concurrency (2 at a time)
+      // Deterministic processing to avoid cross-client contamination during encoding/send
       const clientEntries = [...byClient.entries()];
-      const CONCURRENCY = 2;
+      const CONCURRENCY = 1;
       for (let i = 0; i < clientEntries.length; i += CONCURRENCY) {
         const batch = clientEntries.slice(i, i + CONCURRENCY);
         await Promise.all(
