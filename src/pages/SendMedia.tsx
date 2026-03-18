@@ -183,6 +183,20 @@ const SendMedia = () => {
       return;
     }
 
+    // Check HEVC codec for video files before sending
+    if (mode === "video") {
+      for (const row of csvRows) {
+        const file = findFile(row.fileName);
+        if (file) {
+          const codec = await detectMp4VideoCodec(new Blob([file], { type: file.type }));
+          if (codec === "hevc") {
+            toast.error(`Arquivo "${file.name}" está em HEVC (incompatível com Windows/Android). Converta para H.264 antes de enviar.`);
+            return;
+          }
+        }
+      }
+    }
+
     setIsSending(true);
 
     // Group rows by email+clientName so carousel PNGs go in one email
