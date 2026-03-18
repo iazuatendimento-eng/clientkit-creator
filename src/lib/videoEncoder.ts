@@ -113,12 +113,19 @@ export async function loadFFmpeg(onStatus?: FFmpegLoadStatusHandler): Promise<FF
 
         try {
           const instance = new FFmpeg();
+
+          // Convert all URLs to blob URLs to avoid cross-origin Worker restrictions
+          const [coreURL, wasmURL] = await withTimeout(
+            Promise.all([
+              toBlobURL(source.core, "text/javascript"),
+              toBlobURL(source.wasm, "application/wasm"),
+            ]),
+            FFMPEG_LOAD_TIMEOUT_MS,
+            `baixar núcleo MP4 (${sourceLabel})`
+          );
+
           await withTimeout(
-            instance.load({
-              classWorkerURL: source.classWorker,
-              coreURL: source.core,
-              wasmURL: source.wasm,
-            } as any),
+            instance.load({ coreURL, wasmURL }),
             FFMPEG_LOAD_TIMEOUT_MS,
             `carregar conversor MP4 (${sourceLabel})`
           );
