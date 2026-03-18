@@ -605,7 +605,29 @@ export const BatchHistoryEditor = ({
                 <h2 className="text-xl font-semibold">{selectedItem.clientName}</h2>
                 <p className="text-sm text-muted-foreground">{selectedItem.company}</p>
               </div>
-              <Badge>{batch.type === "art" ? "Arte" : "Vídeo"}</Badge>
+              <div className="flex items-center gap-2">
+                {batch.type === "video" && (
+                  <Button
+                    variant="outline"
+                    onClick={handleBulkExportVideos}
+                    disabled={isBulkExporting || isExportingVideo}
+                  >
+                    {isBulkExporting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Regerando {bulkExportCurrent}/{bulkExportTotal} ({exportProgress}%)
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Regerar Todos ({items.length})
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Badge>{batch.type === "art" ? "Arte" : "Vídeo"}</Badge>
+              </div>
+            </div>
             </div>
 
             {/* Preview */}
