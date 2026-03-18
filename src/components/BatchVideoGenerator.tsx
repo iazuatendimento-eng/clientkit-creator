@@ -2521,8 +2521,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       let sentCount = 0;
       const uploadedPaths: string[] = [];
 
-      // Pre-compute email-optimized resolution (480p max for speed, still looks good on mobile)
-      const emailScale = Math.min(480 / template.width, 854 / template.height, 1);
+      // Pre-compute email resolution (720p max, keeps aspect ratio)
+      const emailScale = Math.min(720 / template.width, 1280 / template.height, 1);
       const emailWidth = Math.round(template.width * emailScale / 2) * 2;
       const emailHeight = Math.round(template.height * emailScale / 2) * 2;
 
@@ -2558,10 +2558,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         for (let vi = 0; vi < videos.length; vi++) {
           const video = videos[vi];
 
-          // Adaptive FPS: lower for long videos, capped at 15 for email
+          // Adaptive FPS: lower for long videos
           const estimatedDurationSec = Math.max(1, video.pages.length * (template.pageDuration || 3));
-          const adaptiveFps = estimatedDurationSec >= 40 ? 10 : estimatedDurationSec >= 24 ? 12 : 15;
-          const emailFps = Math.min(adaptiveFps, 15);
+          const adaptiveFps = estimatedDurationSec >= 40 ? 12 : estimatedDurationSec >= 24 ? 15 : estimatedDurationSec >= 16 ? 18 : 24;
+          const emailFps = Math.min(adaptiveFps, 18);
 
           const audioUrl = (() => {
             const sel = video.selectedAudio || 1;
@@ -2581,10 +2581,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             logoAnimation,
             textAnimDuration: textAnimDuration / (template.pageDuration || 3),
             backgroundVideoUrls: video.previewVideoUrls || undefined,
-            // Skip heavy overlays for email to speed up rendering
-            frameOverlayPages: undefined as string[] | undefined,
+            frameOverlayPages: video.frameOverlayPages || undefined,
             overlayPages: video.overlayPages || undefined,
-            logoOverlayPages: undefined as string[] | undefined,
+            logoOverlayPages: video.logoOverlayPages || undefined,
             imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
             imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
             pageImageAdjustments: video.pageImageAdjustments,
