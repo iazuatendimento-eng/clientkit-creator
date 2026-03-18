@@ -2656,11 +2656,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             timeoutMs: number;
             overrides: Partial<typeof baseOptions>;
           }> = [
-            { label: `email (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 420_000, overrides: {} },
+            { label: `email (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 150_000, overrides: {} },
             {
               label: "mínimo sem vídeo",
-              timeoutMs: 300_000,
-              overrides: { fps: 10, backgroundVideoUrls: undefined },
+              timeoutMs: 90_000,
+              overrides: { fps: 10, backgroundVideoUrls: undefined, requireEmailSafePreview: false },
             },
           ];
 

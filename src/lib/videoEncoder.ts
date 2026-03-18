@@ -189,9 +189,9 @@ function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "og
   return "mp3";
 }
 
-const FFMPEG_MUX_TIMEOUT_MS = 300_000;
-const FFMPEG_TRANSCODE_TIMEOUT_MS = 300_000;
-const AUDIO_FETCH_TIMEOUT_MS = 35_000;
+const FFMPEG_MUX_TIMEOUT_MS = 75_000;
+const FFMPEG_TRANSCODE_TIMEOUT_MS = 75_000;
+const AUDIO_FETCH_TIMEOUT_MS = 20_000;
 
 // Generate MP4 (best effort: native MediaRecorder MP4 when available, otherwise WebM->FFmpeg)
 // Check if blob is actually MP4 by verifying ftyp box header
@@ -447,6 +447,8 @@ function isFfmpegLoadFailure(err: unknown): boolean {
   return (
     message.includes("timeout: carregar conversor mp4") ||
     message.includes("timeout: baixar núcleo do conversor mp4") ||
+    message.includes("timeout: baixar núcleo mp4") ||
+    message.includes("timeout: aguardar carregamento em andamento do conversor mp4") ||
     message.includes("timeout: gerar mp4 com áudio") ||
     message.includes("timeout: gerar mp4 compatível") ||
     message.includes("timeout: baixar trilha de áudio") ||
@@ -505,15 +507,10 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           onProgress?.(1);
           return mp4WithAudio;
         } catch (transcodeErr) {
-          if (isFfmpegLoadFailure(transcodeErr)) {
-            if (requireEmailSafePreview) {
-              throw new Error("Não foi possível gerar MP4 compatível para preview de e-mail. Tente novamente.");
-            }
-            if (await isValidMP4(rawBlob)) {
-              console.warn("[VideoEncoder] FFmpeg indisponível, enviando MP4 sem áudio.");
-              onProgress?.(1);
-              return rawBlob;
-            }
+          if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(rawBlob))) {
+            console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
+            onProgress?.(1);
+            return rawBlob;
           }
           throw transcodeErr;
         }
@@ -561,15 +558,10 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       onProgress?.(1);
       return mp4WithAudio;
     } catch (transcodeErr) {
-      if (isFfmpegLoadFailure(transcodeErr)) {
-        if (requireEmailSafePreview) {
-          throw new Error("Não foi possível gerar MP4 compatível para preview de e-mail. Tente novamente.");
-        }
-        if (await isValidMP4(nativeMp4)) {
-          console.warn("[VideoEncoder] FFmpeg indisponível, enviando MP4 sem áudio.");
-          onProgress?.(1);
-          return nativeMp4;
-        }
+      if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(nativeMp4))) {
+        console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
+        onProgress?.(1);
+        return nativeMp4;
       }
       throw transcodeErr;
     }
