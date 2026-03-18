@@ -370,6 +370,16 @@ export async function encodeWithWebCodecs(
   return blob;
 }
 
+function isFfmpegLoadFailure(err: unknown): boolean {
+  const message = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+  return (
+    message.includes("timeout: carregar conversor mp4") ||
+    message.includes("timeout: baixar núcleo do conversor mp4") ||
+    message.includes("ffmpeg failed to load") ||
+    message.includes("failed to load")
+  );
+}
+
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress, audioUrl } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -402,21 +412,29 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         );
 
         if (!audioUrl) {
-          const patched = await patchMP4Brand(rawBlob);
           onProgress?.(1);
-          return patched;
+          return rawBlob;
         }
 
         onProgress?.(0.72);
-        const mp4WithAudio = await transcodeToTrueMp4({
-          inputBlob: rawBlob,
-          inputFileName: "input.mp4",
-          audioUrl,
-        });
+        try {
+          const mp4WithAudio = await transcodeToTrueMp4({
+            inputBlob: rawBlob,
+            inputFileName: "input.mp4",
+            audioUrl,
+          });
 
-        console.log("[VideoEncoder] MP4 com áudio gerado (WebCodecs + FFmpeg), size:", mp4WithAudio.size);
-        onProgress?.(1);
-        return mp4WithAudio;
+          console.log("[VideoEncoder] MP4 com áudio gerado (WebCodecs + FFmpeg), size:", mp4WithAudio.size);
+          onProgress?.(1);
+          return mp4WithAudio;
+        } catch (transcodeErr) {
+          if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(rawBlob))) {
+            console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 H.264 sem mux de áudio para evitar travamento.");
+            onProgress?.(1);
+            return rawBlob;
+          }
+          throw transcodeErr;
+        }
       } catch (wcErr) {
         console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
         if (attempt === attempts[attempts.length - 1]) {
@@ -447,19 +465,27 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     onProgress?.(0.6);
 
     if (!audioUrl) {
-      const patched = await patchMP4Brand(nativeMp4);
       onProgress?.(1);
-      return patched;
+      return nativeMp4;
     }
 
     onProgress?.(0.72);
-    const mp4WithAudio = await transcodeToTrueMp4({
-      inputBlob: nativeMp4,
-      inputFileName: "input.mp4",
-      audioUrl,
-    });
-    onProgress?.(1);
-    return mp4WithAudio;
+    try {
+      const mp4WithAudio = await transcodeToTrueMp4({
+        inputBlob: nativeMp4,
+        inputFileName: "input.mp4",
+        audioUrl,
+      });
+      onProgress?.(1);
+      return mp4WithAudio;
+    } catch (transcodeErr) {
+      if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(nativeMp4))) {
+        console.warn("[VideoEncoder] FFmpeg indisponível no fallback, enviando MP4 nativo sem mux de áudio.");
+        onProgress?.(1);
+        return nativeMp4;
+      }
+      throw transcodeErr;
+    }
   }
 
   // No native MP4 -> WebM then convert to true MP4 (with optional audio)
