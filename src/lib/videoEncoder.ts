@@ -31,6 +31,7 @@ export interface VideoEncoderOptions {
 
 let ffmpeg: FFmpeg | null = null;
 let ffmpegLoading = false;
+let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timeoutId: number | undefined;
@@ -45,52 +46,59 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 export async function loadFFmpeg(): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
-
-  if (ffmpegLoading) {
-    while (ffmpegLoading) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (ffmpeg && ffmpeg.loaded) return ffmpeg;
-  }
+  if (ffmpegLoadPromise) return ffmpegLoadPromise;
 
   ffmpegLoading = true;
 
-  const MAX_RETRIES = 3;
-  let lastErr: unknown = null;
+  const MAX_RETRIES = 2;
+  const FFMPEG_FETCH_TIMEOUT_MS = 30_000;
+  const FFMPEG_LOAD_TIMEOUT_MS = 45_000;
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      ffmpeg = new FFmpeg();
+  ffmpegLoadPromise = (async () => {
+    let lastErr: unknown = null;
 
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const instance = new FFmpeg();
+        const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
 
-      // Pre-fetch URLs in parallel first
-      const [coreURL, wasmURL] = await Promise.all([
-        toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-      ]);
+        const [coreURL, wasmURL] = await withTimeout(
+          Promise.all([
+            toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+          ]),
+          FFMPEG_FETCH_TIMEOUT_MS,
+          "baixar núcleo do conversor MP4"
+        );
 
-      await withTimeout(
-        ffmpeg.load({ coreURL, wasmURL }),
-        120_000,
-        "carregar conversor MP4"
-      );
+        await withTimeout(
+          instance.load({ coreURL, wasmURL }),
+          FFMPEG_LOAD_TIMEOUT_MS,
+          "carregar conversor MP4"
+        );
 
-      console.log("[FFmpeg] Loaded successfully on attempt", attempt + 1);
-      ffmpegLoading = false;
-      return ffmpeg;
-    } catch (err) {
-      lastErr = err;
-      ffmpeg = null;
-      console.warn(`[FFmpeg] Load attempt ${attempt + 1}/${MAX_RETRIES} failed:`, err);
-      if (attempt < MAX_RETRIES - 1) {
-        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+        ffmpeg = instance;
+        console.log("[FFmpeg] Loaded successfully on attempt", attempt + 1);
+        return instance;
+      } catch (err) {
+        lastErr = err;
+        ffmpeg = null;
+        console.warn(`[FFmpeg] Load attempt ${attempt + 1}/${MAX_RETRIES} failed:`, err);
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        }
       }
     }
-  }
 
-  ffmpegLoading = false;
-  throw lastErr || new Error("FFmpeg failed to load after retries");
+    throw lastErr || new Error("FFmpeg failed to load after retries");
+  })();
+
+  try {
+    return await ffmpegLoadPromise;
+  } finally {
+    ffmpegLoading = false;
+    ffmpegLoadPromise = null;
+  }
 }
 
 function pickSupportedMimeType(candidates: string[]): string | null {
