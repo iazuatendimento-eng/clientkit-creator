@@ -2132,12 +2132,10 @@ export async function reencodeForWhatsApp(
   const durationArgs = expectedDuration ? ["-t", String(expectedDuration)] : [];
   const strategies = stripAudio
     ? [
-        { name: "copy-noaudio", args: ["-c:v", "copy", "-an", ...durationArgs] },
         { name: "libx264-noaudio", args: ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-an", ...durationArgs] },
         { name: "mpeg4-noaudio", args: ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-an", ...durationArgs] },
       ]
     : [
-        { name: "copy", args: ["-c:v", "copy", "-c:a", "copy", ...durationArgs] },
         { name: "libx264", args: ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-an", ...durationArgs] },
         { name: "mpeg4", args: ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-an", ...durationArgs] },
       ];
