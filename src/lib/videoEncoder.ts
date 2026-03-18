@@ -93,7 +93,6 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
   try {
     return await ffmpegLoadPromise;
   } finally {
-    ffmpegLoading = false;
     ffmpegLoadPromise = null;
   }
 }
