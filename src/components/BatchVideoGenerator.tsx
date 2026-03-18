@@ -2696,7 +2696,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const { error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails,
-            subject: emailSubjectRef.current.trim() || `Vídeo - ${clientLabel}`,
+            subject: capturedSubject || `Vídeo - ${clientLabel}`,
             mediaUrls,
             mediaUrl: mediaUrls[0],
             mediaType: "video",
