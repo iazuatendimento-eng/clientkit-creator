@@ -2376,17 +2376,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     if (!file) return;
 
     if (file.type.startsWith("video/")) {
-      // For video files, extract a frame as thumbnail and store video URL for preview
-      const videoUrl = URL.createObjectURL(file);
+      // For video files, extract a frame as thumbnail and upload to storage
+      const blobUrl = URL.createObjectURL(file);
       const videoEl = document.createElement("video");
       videoEl.crossOrigin = "anonymous";
       videoEl.muted = true;
       videoEl.preload = "auto";
-      videoEl.src = videoUrl;
+      videoEl.src = blobUrl;
       videoEl.onloadeddata = () => {
-        videoEl.currentTime = 0.5; // seek to 0.5s for a good frame
+        videoEl.currentTime = 0.5;
       };
-      videoEl.onseeked = () => {
+      videoEl.onseeked = async () => {
         const canvas = document.createElement("canvas");
         canvas.width = videoEl.videoWidth;
         canvas.height = videoEl.videoHeight;
@@ -2394,8 +2394,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         if (ctx) {
           ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
           const thumbnail = canvas.toDataURL("image/jpeg", 0.85);
-          // Store thumbnail as background and video URL for preview playback
-          applyCustomImage(thumbnail, videoUrl);
+          // Upload video to storage for persistence
+          try {
+            const ext = file.name.split(".").pop() || "mp4";
+            const cardId = selectedVideoRef.current?.cardId || "unknown";
+            const fileName = `custom_${cardId}_${Date.now()}.${ext}`;
+            const path = `videos/${fileName}`;
+            const { error: upErr } = await supabase.storage
+              .from("card-uploads")
+              .upload(path, file, { contentType: file.type });
+            if (upErr) throw upErr;
+            const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+            applyCustomImage(thumbnail, urlData.publicUrl);
+          } catch (err) {
+            console.error("Erro ao salvar vídeo customizado:", err);
+            // Fallback to blob URL (won't persist but at least works in session)
+            applyCustomImage(thumbnail, blobUrl);
+            toast({ title: "Vídeo não foi salvo permanentemente", variant: "destructive" });
+          }
         }
       };
       return;
@@ -3004,29 +3020,58 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                    templateHeight={template.height}
                    hideSignature={hideSignature}
                    displayPage={cardPageMap[video.cardId] ?? 0}
-                   onDropVideo={(pageIdx, file) => {
-                     const url = URL.createObjectURL(file);
+                   onDropVideo={async (pageIdx, file) => {
+                     // Show immediate blob preview
+                     const blobUrl = URL.createObjectURL(file);
                      setClientVideos((prev) =>
                        prev.map((v, i) => {
                          if (i !== index) return v;
                          const urls = [...(v.previewVideoUrls || [])];
                          while (urls.length <= pageIdx) urls.push(null);
-                         urls[pageIdx] = url;
+                         urls[pageIdx] = blobUrl;
                          return { ...v, previewVideoUrls: urls };
                        })
                      );
-                      const allPgs = video.pages.length;
-                      const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
-                      const nextPage = pageIdx < totalPgs - 1 ? pageIdx + 1 : 0;
-                      setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
+                     const allPgs = video.pages.length;
+                     const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
+                     const nextPage = pageIdx < totalPgs - 1 ? pageIdx + 1 : 0;
+                     setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
                      setClientVideos((prev) => {
                        const idx = prev.findIndex((v) => v.cardId === video.cardId);
                        if (idx === -1) return prev;
                        const item = prev[idx];
-                       const rest = prev.filter((_, i) => i !== idx);
+                       const rest = prev.filter((_, ii) => ii !== idx);
                        return [...rest, item];
                      });
-                     toast({ title: `Vídeo na pág. ${pageIdx + 1} — próxima página` });
+                     toast({ title: `Vídeo na pág. ${pageIdx + 1} — enviando...` });
+
+                     // Upload to storage for persistence
+                     try {
+                       const ext = file.name.split(".").pop() || "mp4";
+                       const fileName = `drop_${video.cardId}_p${pageIdx}_${Date.now()}.${ext}`;
+                       const path = `videos/${fileName}`;
+                       const { error: upErr } = await supabase.storage
+                         .from("card-uploads")
+                         .upload(path, file, { contentType: file.type });
+                       if (upErr) throw upErr;
+                       const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
+                       const publicUrl = urlData.publicUrl;
+                       // Replace blob URL with persistent URL
+                       setClientVideos((prev) =>
+                         prev.map((v) => {
+                           if (v.cardId !== video.cardId) return v;
+                           const urls = [...(v.previewVideoUrls || [])];
+                           while (urls.length <= pageIdx) urls.push(null);
+                           urls[pageIdx] = publicUrl;
+                           return { ...v, previewVideoUrls: urls };
+                         })
+                       );
+                       URL.revokeObjectURL(blobUrl);
+                       toast({ title: `Vídeo salvo na pág. ${pageIdx + 1}` });
+                     } catch (err) {
+                       console.error("Erro ao salvar vídeo arrastado:", err);
+                       toast({ title: "Erro ao salvar vídeo", variant: "destructive" });
+                     }
                    }}
                    onClick={async () => {
                      setSelectedVideo(video);
