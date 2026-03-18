@@ -801,10 +801,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     supabase.from("teams").select("id, name").order("name").then(({ data }) => {
       if (data) setTeams(data.filter(t => /^T\d{4}/.test(t.name.trim())));
     });
-    // Pre-load FFmpeg in background if template has audio (avoids timeout during encoding)
-    if (template.audioUrl1 || template.audioUrl2) {
-      loadFFmpeg().catch((err) => console.warn("[BatchVideo] FFmpeg preload failed:", err));
-    }
+    // Always pre-load FFmpeg in background (needed for audio muxing + faststart)
+    loadFFmpeg().catch((err) => console.warn("[BatchVideo] FFmpeg preload failed:", err));
   }, []);
 
   useEffect(() => {
@@ -2639,10 +2637,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             timeoutMs: number;
             overrides: Partial<typeof baseOptions>;
           }> = [
-            { label: `email (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 120_000, overrides: {} },
+            { label: `email (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 240_000, overrides: {} },
             {
               label: "mínimo sem vídeo",
-              timeoutMs: 90_000,
+              timeoutMs: 180_000,
               overrides: { fps: 10, backgroundVideoUrls: undefined },
             },
           ];

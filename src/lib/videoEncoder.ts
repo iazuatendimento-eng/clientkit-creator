@@ -55,31 +55,42 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
 
   ffmpegLoading = true;
 
-  try {
-    ffmpeg = new FFmpeg();
+  const MAX_RETRIES = 3;
+  let lastErr: unknown = null;
 
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      ffmpeg = new FFmpeg();
 
-    // Pre-fetch URLs in parallel first
-    const [coreURL, wasmURL] = await Promise.all([
-      toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-      toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-    ]);
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
 
-    await withTimeout(
-      ffmpeg.load({ coreURL, wasmURL }),
-      180_000,
-      "carregar conversor MP4"
-    );
+      // Pre-fetch URLs in parallel first
+      const [coreURL, wasmURL] = await Promise.all([
+        toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      ]);
 
-    return ffmpeg;
-  } catch (err) {
-    // Reset so next call can retry
-    ffmpeg = null;
-    throw err;
-  } finally {
-    ffmpegLoading = false;
+      await withTimeout(
+        ffmpeg.load({ coreURL, wasmURL }),
+        120_000,
+        "carregar conversor MP4"
+      );
+
+      console.log("[FFmpeg] Loaded successfully on attempt", attempt + 1);
+      ffmpegLoading = false;
+      return ffmpeg;
+    } catch (err) {
+      lastErr = err;
+      ffmpeg = null;
+      console.warn(`[FFmpeg] Load attempt ${attempt + 1}/${MAX_RETRIES} failed:`, err);
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+      }
+    }
   }
+
+  ffmpegLoading = false;
+  throw lastErr || new Error("FFmpeg failed to load after retries");
 }
 
 function pickSupportedMimeType(candidates: string[]): string | null {
