@@ -907,7 +907,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
     } else {
-      drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, ctx.fillStyle as string);
+      drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, el.color || ctx.fillStyle as string);
     }
     ctx.restore();
   }, []);

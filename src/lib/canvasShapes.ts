@@ -93,17 +93,35 @@ export function drawNewShape(
     ctx.closePath();
     ctx.fill();
   } else if (type === "crescent") {
+    // Use a temporary canvas to avoid destination-out erasing other elements
     const cx = x + width / 2;
     const cy = y + height / 2;
     const r = Math.min(width, height) / 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.beginPath();
-    ctx.arc(cx + r * 0.35, cy - r * 0.1, r * 0.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = "source-over";
+    
+    const margin = 4;
+    const tmpW = width + margin * 2;
+    const tmpH = height + margin * 2;
+    const tmpCanvas = document.createElement("canvas");
+    tmpCanvas.width = tmpW;
+    tmpCanvas.height = tmpH;
+    const tmp = tmpCanvas.getContext("2d")!;
+    
+    // Draw the full circle on temp canvas (offset coords)
+    const localCx = tmpW / 2;
+    const localCy = tmpH / 2;
+    tmp.fillStyle = color;
+    tmp.beginPath();
+    tmp.arc(localCx, localCy, r, 0, Math.PI * 2);
+    tmp.fill();
+    
+    // Cut out the inner circle on temp canvas only
+    tmp.globalCompositeOperation = "destination-out";
+    tmp.beginPath();
+    tmp.arc(localCx + r * 0.35, localCy - r * 0.1, r * 0.8, 0, Math.PI * 2);
+    tmp.fill();
+    
+    // Composite the result onto the main canvas
+    ctx.drawImage(tmpCanvas, x - margin, y - margin);
   } else {
     return false; // Not a new shape
   }

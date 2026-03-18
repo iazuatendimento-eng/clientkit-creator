@@ -1180,7 +1180,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           else ctx.lineTo(px, py);
         }
         ctx.stroke();
-      } else if (drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, ctx.fillStyle as string)) {
+      } else if (drawNewShape(ctx, el.type, 
+          (art.elementOverrides?.shapes?.[el.id]?.x ?? el.x),
+          (art.elementOverrides?.shapes?.[el.id]?.y ?? el.y),
+          (art.elementOverrides?.shapes?.[el.id]?.width ?? el.width),
+          (art.elementOverrides?.shapes?.[el.id]?.height ?? el.height),
+          getElementColor(el, accessoryColor1) as string)) {
+        drawShapeBorder(el);
         // New shape drawn by helper
       } else if (el.type === "text") {
         // Text uses color 2 and client's font

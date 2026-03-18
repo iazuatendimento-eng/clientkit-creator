@@ -1641,7 +1641,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           else ctx.lineTo(px, py);
         }
         ctx.stroke();
-      } else if (drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, ctx.fillStyle as string)) {
+      } else if (drawNewShape(ctx, el.type, el.x, el.y, el.width, el.height, getElementColor(el, accessoryColor1) as string)) {
+        if (el.borderWidth && el.borderWidth > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth; ctx.stroke(); }
         // New shape drawn by helper
       } else if (el.type === "text") {
         ctx.fillStyle = textColor;
