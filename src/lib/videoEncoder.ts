@@ -189,9 +189,9 @@ function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "og
   return "mp3";
 }
 
-const FFMPEG_MUX_TIMEOUT_MS = 300_000;
-const FFMPEG_TRANSCODE_TIMEOUT_MS = 300_000;
-const AUDIO_FETCH_TIMEOUT_MS = 35_000;
+const FFMPEG_MUX_TIMEOUT_MS = 75_000;
+const FFMPEG_TRANSCODE_TIMEOUT_MS = 75_000;
+const AUDIO_FETCH_TIMEOUT_MS = 20_000;
 
 // Generate MP4 (best effort: native MediaRecorder MP4 when available, otherwise WebM->FFmpeg)
 // Check if blob is actually MP4 by verifying ftyp box header
