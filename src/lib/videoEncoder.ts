@@ -678,6 +678,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     inputBlob: webmBlob,
     inputFileName: "input.webm",
     audioUrl,
+    videoDurationSec,
   });
 
   onProgress?.(1);
