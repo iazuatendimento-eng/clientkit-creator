@@ -509,10 +509,29 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           onProgress?.(1);
           return mp4WithAudio;
         } catch (transcodeErr) {
-          if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(rawBlob))) {
-            console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
-            onProgress?.(1);
-            return rawBlob;
+          if (isFfmpegLoadFailure(transcodeErr)) {
+            if (audioUrl) {
+              const fallbackMp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
+              if (fallbackMp4Mime) {
+                console.warn("[VideoEncoder] FFmpeg indisponível, tentando fallback MP4 com áudio embutido.", transcodeErr);
+                const directMp4WithAudio = await withTimeout(
+                  encodeVideoSimple(pages, attempt.opts, { mimeType: fallbackMp4Mime, outputType: "video/mp4" }),
+                  300_000,
+                  "gerar MP4 com áudio embutido"
+                );
+                if (await isValidMP4(directMp4WithAudio)) {
+                  onProgress?.(1);
+                  return directMp4WithAudio;
+                }
+              }
+              throw new Error("Não foi possível gerar MP4 com áudio do template.");
+            }
+
+            if (await isValidMP4(rawBlob)) {
+              console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
+              onProgress?.(1);
+              return rawBlob;
+            }
           }
           throw transcodeErr;
         }
@@ -560,10 +579,21 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       onProgress?.(1);
       return mp4WithAudio;
     } catch (transcodeErr) {
-      if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(nativeMp4))) {
-        console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
-        onProgress?.(1);
-        return nativeMp4;
+      if (isFfmpegLoadFailure(transcodeErr)) {
+        if (audioUrl) {
+          if (await isValidMP4(nativeMp4)) {
+            console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo com áudio embutido.", transcodeErr);
+            onProgress?.(1);
+            return nativeMp4;
+          }
+          throw new Error("Não foi possível gerar MP4 com áudio do template.");
+        }
+
+        if (await isValidMP4(nativeMp4)) {
+          console.warn("[VideoEncoder] Conversão compatível indisponível, enviando MP4 bruto.", transcodeErr);
+          onProgress?.(1);
+          return nativeMp4;
+        }
       }
       throw transcodeErr;
     }
@@ -1381,7 +1411,8 @@ export async function encodeVideoSimple(
     imageRect,
     pageImageAdjustments,
     imageClipShape,
-    onProgress 
+    audioUrl,
+    onProgress
   } = options;
 
   // Keep full resolution on all devices — quality matters for social media
@@ -1685,19 +1716,72 @@ export async function encodeVideoSimple(
 
   // iOS: captureStream(0) — frame captured on each canvas draw
   // Desktop: captureStream(fps) — automatic frame rate
-  const stream = canvas.captureStream(isIOS ? 0 : fps);
-  console.log("[VideoEncoder] Stream tracks:", stream.getTracks().length, "active:", stream.active);
+  const videoStream = canvas.captureStream(isIOS ? 0 : fps);
+  const outputStream = new MediaStream(videoStream.getVideoTracks());
+
+  let audioCtx: AudioContext | null = null;
+  let audioSourceNode: AudioBufferSourceNode | null = null;
+  let audioDestination: MediaStreamAudioDestinationNode | null = null;
+
+  if (audioUrl) {
+    try {
+      const audioResponse = await withTimeout(
+        fetch(audioUrl, { cache: "no-store" }),
+        AUDIO_FETCH_TIMEOUT_MS,
+        "baixar trilha de áudio (fallback)"
+      );
+      if (!audioResponse.ok) {
+        throw new Error(`Falha ao baixar trilha (${audioResponse.status})`);
+      }
+
+      const audioBuffer = await withTimeout(
+        audioResponse.arrayBuffer(),
+        AUDIO_FETCH_TIMEOUT_MS,
+        "processar trilha de áudio (fallback)"
+      );
+      if (!audioBuffer.byteLength) {
+        throw new Error("Trilha vazia");
+      }
+
+      audioCtx = new AudioContext();
+      const decodedAudio = await audioCtx.decodeAudioData(audioBuffer.slice(0));
+
+      audioSourceNode = audioCtx.createBufferSource();
+      audioSourceNode.buffer = decodedAudio;
+      audioSourceNode.loop = true;
+
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.value = 1;
+
+      audioDestination = audioCtx.createMediaStreamDestination();
+      audioSourceNode.connect(gainNode);
+      gainNode.connect(audioDestination);
+
+      audioDestination.stream.getAudioTracks().forEach((track) => outputStream.addTrack(track));
+
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
+      audioSourceNode.start(0);
+      console.log("[VideoEncoder] Audio track embedded in MediaRecorder fallback stream.");
+    } catch (audioErr) {
+      console.error("[VideoEncoder] Failed to embed template audio in fallback stream:", audioErr);
+      throw new Error("Falha ao preparar áudio do template para exportação.");
+    }
+  }
+
+  console.log("[VideoEncoder] Stream tracks:", outputStream.getTracks().length, "active:", outputStream.active);
 
   let mediaRecorder: MediaRecorder;
   try {
-    mediaRecorder = new MediaRecorder(stream, {
+    mediaRecorder = new MediaRecorder(outputStream, {
       mimeType: chosenMime,
       videoBitsPerSecond: isMobileDevice ? 2_500_000 : bitrate,
     });
   } catch (mrErr) {
     console.error("[VideoEncoder] MediaRecorder creation failed:", mrErr);
     // Try without options
-    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder = new MediaRecorder(outputStream);
     console.log("[VideoEncoder] Fallback MediaRecorder created, mimeType:", mediaRecorder.mimeType);
   }
 
@@ -1737,9 +1821,24 @@ export async function encodeVideoSimple(
       }, 20_000);
     }
 
+    const cleanupRecorderResources = () => {
+      bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
+      outputStream.getTracks().forEach((track) => track.stop());
+      try {
+        audioSourceNode?.stop();
+      } catch {
+        // ignore double-stop
+      }
+      audioSourceNode?.disconnect();
+      audioDestination?.stream.getTracks().forEach((track) => track.stop());
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+      }
+    };
+
     mediaRecorder.onstop = () => {
       if (stallTimer) window.clearTimeout(stallTimer);
-      bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
+      cleanupRecorderResources();
       const result = new Blob(chunks, { type: outType });
       console.log("[VideoEncoder] Stopped. chunks:", chunks.length, "size:", result.size, "dataEvents:", dataEventCount);
       resolve(result);
@@ -1747,6 +1846,7 @@ export async function encodeVideoSimple(
     mediaRecorder.onerror = (e) => {
       console.error("[VideoEncoder] MediaRecorder error:", e);
       if (stallTimer) window.clearTimeout(stallTimer);
+      cleanupRecorderResources();
       reject(e);
     };
 
