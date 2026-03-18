@@ -518,10 +518,11 @@ async function ensureCompatibleMp4(blob: Blob, context: string): Promise<Blob> {
 }
 
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
-  const { onProgress, audioUrl, requireEmailSafePreview = false } = options;
+  const { onProgress, audioUrl, requireEmailSafePreview = false, pageDuration } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const videoDurationSec = pages.length * pageDuration;
 
-  console.log("[VideoEncoder] Starting encode. mobile:", isMobileDevice, "webcodecs:", hasWebCodecs());
+  console.log("[VideoEncoder] Starting encode. mobile:", isMobileDevice, "webcodecs:", hasWebCodecs(), "pages:", pages.length, "duration:", videoDurationSec);
   onProgress?.(0.05);
 
   // ====== ALL DEVICES: Try WebCodecs first (most reliable — each frame is encoded directly) ======
