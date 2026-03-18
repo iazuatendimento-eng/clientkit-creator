@@ -25,7 +25,7 @@ import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
 import { ArtGeneratorModal } from "@/components/ArtGeneratorModal";
 import { VideoSwapModal } from "@/components/VideoSwapModal";
 import { toast } from "sonner";
-import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder } from "@/lib/clientDatabase";
+import { getProjectBriefsByClient, createProjectBrief, updateProjectBrief, deleteProjectBrief, getCardUploads, updateBriefsSortOrder, createCardUpload } from "@/lib/clientDatabase";
 import { useAuth } from "@/hooks/useAuth";
 import {
   DndContext,
