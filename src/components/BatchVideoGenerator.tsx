@@ -2505,6 +2505,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsGenerating(true);
     setIsSendingEmails(true);
     setGenerationStatus("Iniciando exportação e envio...");
+    const capturedSubject = emailSubjectRef.current.trim();
+    console.log("[SendEmails] Subject captured:", JSON.stringify(capturedSubject));
 
     try {
       // Resolve each video's client from the card in DB (source of truth) to avoid stale/mismatched clientId in memory
