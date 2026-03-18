@@ -368,6 +368,7 @@ export const BatchHistoryEditor = ({
           const url2 = t.audioUrl2 || t.audio_url_2;
           return sel === 2 ? url2 : url1;
         })(),
+        requireEmailSafePreview: true,
         onProgress: (p) => setExportProgress(Math.round(p * 100)),
       });
 
