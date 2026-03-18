@@ -1686,19 +1686,72 @@ export async function encodeVideoSimple(
 
   // iOS: captureStream(0) — frame captured on each canvas draw
   // Desktop: captureStream(fps) — automatic frame rate
-  const stream = canvas.captureStream(isIOS ? 0 : fps);
-  console.log("[VideoEncoder] Stream tracks:", stream.getTracks().length, "active:", stream.active);
+  const videoStream = canvas.captureStream(isIOS ? 0 : fps);
+  const outputStream = new MediaStream(videoStream.getVideoTracks());
+
+  let audioCtx: AudioContext | null = null;
+  let audioSourceNode: AudioBufferSourceNode | null = null;
+  let audioDestination: MediaStreamAudioDestinationNode | null = null;
+
+  if (audioUrl) {
+    try {
+      const audioResponse = await withTimeout(
+        fetch(audioUrl, { cache: "no-store" }),
+        AUDIO_FETCH_TIMEOUT_MS,
+        "baixar trilha de áudio (fallback)"
+      );
+      if (!audioResponse.ok) {
+        throw new Error(`Falha ao baixar trilha (${audioResponse.status})`);
+      }
+
+      const audioBuffer = await withTimeout(
+        audioResponse.arrayBuffer(),
+        AUDIO_FETCH_TIMEOUT_MS,
+        "processar trilha de áudio (fallback)"
+      );
+      if (!audioBuffer.byteLength) {
+        throw new Error("Trilha vazia");
+      }
+
+      audioCtx = new AudioContext();
+      const decodedAudio = await audioCtx.decodeAudioData(audioBuffer.slice(0));
+
+      audioSourceNode = audioCtx.createBufferSource();
+      audioSourceNode.buffer = decodedAudio;
+      audioSourceNode.loop = true;
+
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.value = 1;
+
+      audioDestination = audioCtx.createMediaStreamDestination();
+      audioSourceNode.connect(gainNode);
+      gainNode.connect(audioDestination);
+
+      audioDestination.stream.getAudioTracks().forEach((track) => outputStream.addTrack(track));
+
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
+      audioSourceNode.start(0);
+      console.log("[VideoEncoder] Audio track embedded in MediaRecorder fallback stream.");
+    } catch (audioErr) {
+      console.error("[VideoEncoder] Failed to embed template audio in fallback stream:", audioErr);
+      throw new Error("Falha ao preparar áudio do template para exportação.");
+    }
+  }
+
+  console.log("[VideoEncoder] Stream tracks:", outputStream.getTracks().length, "active:", outputStream.active);
 
   let mediaRecorder: MediaRecorder;
   try {
-    mediaRecorder = new MediaRecorder(stream, {
+    mediaRecorder = new MediaRecorder(outputStream, {
       mimeType: chosenMime,
       videoBitsPerSecond: isMobileDevice ? 2_500_000 : bitrate,
     });
   } catch (mrErr) {
     console.error("[VideoEncoder] MediaRecorder creation failed:", mrErr);
     // Try without options
-    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder = new MediaRecorder(outputStream);
     console.log("[VideoEncoder] Fallback MediaRecorder created, mimeType:", mediaRecorder.mimeType);
   }
 
