@@ -174,7 +174,7 @@ async function transcodeToTrueMp4(params: {
   audioUrl?: string;
 }): Promise<Blob> {
   const { inputBlob, inputFileName, audioUrl } = params;
-  const ff = await withTimeout(loadFFmpeg(), FFMPEG_BOOT_TIMEOUT_MS, "inicializar conversor MP4");
+  const ff = await loadFFmpeg();
 
   let audioFileName: string | null = null;
 
