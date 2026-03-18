@@ -190,20 +190,31 @@ async function transcodeToTrueMp4(params: {
       await ff.writeFile(audioFileName, await fetchFile(audioBlob));
     }
 
+    // Gmail/Drive/Outlook need H.264 Baseline + AAC audio to show inline preview.
+    // When no external audio is provided, generate a silent AAC track so the
+    // container always has both video+audio streams — required for preview.
     const ffmpegArgs = audioFileName
       ? [
           "-i", inputFileName,
           "-stream_loop", "-1", "-i", audioFileName,
           "-map", "0:v:0", "-map", "1:a:0",
           "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-          "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
-          "-shortest", "-movflags", "+faststart", "-f", "mp4", "-y", "output.mp4",
+          "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2",
+          "-shortest", "-movflags", "+faststart", "-brand", "isom",
+          "-f", "mp4", "-y", "output.mp4",
         ]
       : [
+          // Generate silent audio via lavfi so the MP4 always has a valid audio stream
           "-i", inputFileName,
+          "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+          "-map", "0:v:0", "-map", "1:a:0",
           "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-          "-an", "-movflags", "+faststart", "-f", "mp4", "-y", "output.mp4",
+          "-c:a", "aac", "-b:a", "32k", "-ar", "44100", "-ac", "2",
+          "-shortest", "-movflags", "+faststart", "-brand", "isom",
+          "-f", "mp4", "-y", "output.mp4",
         ];
+
+    console.log("[FFmpeg] args:", ffmpegArgs.join(" "));
 
     await withTimeout(
       ff.exec(ffmpegArgs),
@@ -212,13 +223,14 @@ async function transcodeToTrueMp4(params: {
     );
 
     const mp4Data = await ff.readFile("output.mp4");
-    let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
-    mp4Blob = await patchMP4Brand(mp4Blob);
+    // Do NOT patch the ftyp box — FFmpeg already wrote it correctly via -brand isom
+    const mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
 
     if (!(await isValidMP4(mp4Blob))) {
       throw new Error("Arquivo final inválido: ftyp ausente");
     }
 
+    console.log("[FFmpeg] MP4 final OK, size:", mp4Blob.size, audioFileName ? "(com áudio)" : "(áudio silencioso)");
     return mp4Blob;
   } finally {
     await ff.deleteFile(inputFileName).catch(() => {});
