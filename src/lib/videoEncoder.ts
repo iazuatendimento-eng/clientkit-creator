@@ -1381,7 +1381,8 @@ export async function encodeVideoSimple(
     imageRect,
     pageImageAdjustments,
     imageClipShape,
-    onProgress 
+    audioUrl,
+    onProgress
   } = options;
 
   // Keep full resolution on all devices — quality matters for social media
