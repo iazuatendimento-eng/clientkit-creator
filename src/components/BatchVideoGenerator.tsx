@@ -2507,6 +2507,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     console.log("[SendEmails] Subject captured:", JSON.stringify(capturedSubject));
 
     try {
+      setGenerationStatus("Preparando conversor MP4...");
+      await loadFFmpeg();
+
       // Resolve each video's client from the card in DB (source of truth) to avoid stale/mismatched clientId in memory
       const approvedCardIds = [...new Set(approvedVideos.map((v) => v.cardId).filter(Boolean))];
       const { data: briefsData, error: briefsError } = await supabase
