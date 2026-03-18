@@ -2521,8 +2521,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       let sentCount = 0;
       const uploadedPaths: string[] = [];
 
-      // Pre-compute email-optimized resolution (480p max for speed, still looks good on mobile)
-      const emailScale = Math.min(480 / template.width, 854 / template.height, 1);
+      // Pre-compute email resolution (720p max, keeps aspect ratio)
+      const emailScale = Math.min(720 / template.width, 1280 / template.height, 1);
       const emailWidth = Math.round(template.width * emailScale / 2) * 2;
       const emailHeight = Math.round(template.height * emailScale / 2) * 2;
 
