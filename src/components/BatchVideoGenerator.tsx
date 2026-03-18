@@ -918,15 +918,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         // logo/contact/mascot/pngs that were stripped (base64/blob) during save
         const savedBk = item.brandKit || {};
         const freshBk = freshBrandKitMap[item.clientId] || {};
-        const mergedBrandKit = {
-          ...savedBk,
-          logo: savedBk.logo || freshBk.logo || "",
-          contactInfo: savedBk.contactInfo || freshBk.contactInfo || "",
-          mascot: savedBk.mascot || freshBk.mascot || "",
-          pngs: Array.isArray(savedBk.pngs)
-            ? savedBk.pngs.map((p: string, i: number) => p || (Array.isArray(freshBk.pngs) ? freshBk.pngs[i] : "") || "")
-            : freshBk.pngs || [],
-        };
+        const mergedBrandKit = mergeBrandKitAssets(savedBk, freshBk);
 
         return {
           clientId: item.clientId,
