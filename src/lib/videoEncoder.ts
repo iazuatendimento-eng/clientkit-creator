@@ -1046,6 +1046,49 @@ function applyCanvasClipShape(ctx: CanvasRenderingContext2D, shape: string, x: n
   ctx.clip();
 }
 
+// Check if AudioEncoder supports AAC
+async function checkAudioEncoderAAC(): Promise<boolean> {
+  try {
+    if (typeof AudioEncoder === "undefined") return false;
+    const support = await AudioEncoder.isConfigSupported({
+      codec: "mp4a.40.2",
+      numberOfChannels: 2,
+      sampleRate: 44100,
+      bitrate: 128000,
+    });
+    return !!support.supported;
+  } catch {
+    return false;
+  }
+}
+
+// Decode audio from URL into a Float32Array (mono or stereo interleaved)
+async function decodeAudioForMuxing(audioUrl: string, targetDurationSec: number, sampleRate: number = 44100): Promise<{ left: Float32Array; right: Float32Array; numberOfChannels: number }> {
+  const response = await withTimeout(fetch(audioUrl, { cache: "no-store" }), AUDIO_FETCH_TIMEOUT_MS, "baixar trilha de áudio");
+  if (!response.ok) throw new Error(`Falha ao baixar trilha de áudio (${response.status})`);
+  const arrayBuffer = await withTimeout(response.arrayBuffer(), AUDIO_FETCH_TIMEOUT_MS, "processar trilha de áudio");
+  if (!arrayBuffer.byteLength) throw new Error("A trilha de áudio está vazia");
+
+  const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate });
+  const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+  await audioCtx.close();
+
+  const totalSamples = Math.ceil(targetDurationSec * sampleRate);
+  const srcLeft = decoded.getChannelData(0);
+  const srcRight = decoded.numberOfChannels > 1 ? decoded.getChannelData(1) : srcLeft;
+
+  // Loop audio to fill the video duration
+  const left = new Float32Array(totalSamples);
+  const right = new Float32Array(totalSamples);
+  for (let i = 0; i < totalSamples; i++) {
+    const srcIdx = i % srcLeft.length;
+    left[i] = srcLeft[srcIdx];
+    right[i] = srcRight[srcIdx];
+  }
+
+  return { left, right, numberOfChannels: 2 };
+}
+
 // WebCodecs-based full video encoder (replaces MediaRecorder on mobile)
 // Replicates the same rendering pipeline as encodeVideoSimple but uses VideoEncoder + mp4-muxer
 async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
@@ -1054,7 +1097,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     motionEffect = "ken-burns", transitionEffect = "fade",
     textAnimation = "none", logoAnimation = "none", textAnimDuration,
     backgroundVideoUrls, frameOverlayPages, overlayPages, logoOverlayPages,
-    imageRect, pageImageAdjustments, imageClipShape, onProgress,
+    imageRect, pageImageAdjustments, imageClipShape, audioUrl, onProgress,
   } = options;
 
   const fps = Math.min(rawFps, 20);
