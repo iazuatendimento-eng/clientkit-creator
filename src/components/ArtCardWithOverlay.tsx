@@ -357,6 +357,15 @@ export function ArtCardWithOverlay({
             {(art.pageIndex ?? 0) + 1}/{art.totalPages}
           </div>
         )}
+
+        {/* Drag-over overlay */}
+        {isDragOver && (
+          <div className="absolute inset-0 bg-primary/20 border-2 border-dashed border-primary rounded flex items-center justify-center z-20 pointer-events-none">
+            <div className="bg-background/90 px-3 py-2 rounded-lg text-sm font-medium text-primary">
+              Solte a imagem aqui
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Info & Actions */}
