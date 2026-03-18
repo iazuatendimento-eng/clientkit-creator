@@ -66,6 +66,9 @@ export const BatchHistoryEditor = ({
   const [textAnimDuration, setTextAnimDuration] = useState(2.5);
   const [isExportingVideo, setIsExportingVideo] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [isBulkExporting, setIsBulkExporting] = useState(false);
+  const [bulkExportCurrent, setBulkExportCurrent] = useState(0);
+  const [bulkExportTotal, setBulkExportTotal] = useState(0);
 
   // Element adjustments
   const [adjustments, setAdjustments] = useState<BatchItem["adjustments"]>({});
