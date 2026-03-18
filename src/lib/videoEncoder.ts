@@ -447,6 +447,8 @@ function isFfmpegLoadFailure(err: unknown): boolean {
   return (
     message.includes("timeout: carregar conversor mp4") ||
     message.includes("timeout: baixar núcleo do conversor mp4") ||
+    message.includes("timeout: baixar núcleo mp4") ||
+    message.includes("timeout: aguardar carregamento em andamento do conversor mp4") ||
     message.includes("timeout: gerar mp4 com áudio") ||
     message.includes("timeout: gerar mp4 compatível") ||
     message.includes("timeout: baixar trilha de áudio") ||
