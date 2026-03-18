@@ -126,26 +126,12 @@ serve(async (req) => {
       return { url, filename };
     });
 
-    // Build download URLs via edge function proxy
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-    const downloadLinks: { url: string; name: string }[] = attachmentEntries.map((entry) => {
-      const proxyUrl = `${SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(entry.url)}&name=${encodeURIComponent(entry.filename)}`;
-      return { url: proxyUrl, name: entry.filename };
-    });
-
     const attachments = attachmentEntries.map((entry) => ({
       filename: entry.filename,
       path: entry.url,
     }));
 
     const count = allUrls.length;
-
-    // Build download buttons HTML
-    const downloadButtonsHtml = downloadLinks.map((link, i: number) => `
-      <a href="${link.url}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 4px;" target="_blank">
-        ⬇️ Baixar ${isVideo ? 'Vídeo' : 'Arte'}${downloadLinks.length > 1 ? ` ${i + 1}` : ''}
-      </a>
-    `).join('');
 
     let mediaSection = '';
     if (isVideo) {
