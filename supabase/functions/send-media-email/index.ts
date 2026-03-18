@@ -131,58 +131,23 @@ serve(async (req) => {
       path: entry.url,
     }));
 
-    const count = allUrls.length;
-
-    let mediaSection = '';
-    if (isVideo) {
-      const videoPlayersHtml = allUrls.map((url: string, i: number) => {
-        const poster = validVideoCoverUrls[i] || validVideoCoverUrls[0] || '';
-        const posterAttr = poster ? ` poster="${poster}"` : '';
-
-        return `
-          <div style="text-align: center; margin: 12px 0;">
-            <video controls playsinline preload="metadata"${posterAttr} style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb; background: #000;">
-              <source src="${url}" type="video/mp4" />
-              Seu provedor de e-mail não suporta reprodução inline de vídeo.
-            </video>
-          </div>
-        `;
-      }).join('');
-
-      mediaSection = `
-        <div style="margin: 20px 0;">
-          ${videoPlayersHtml}
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `Os ${count} vídeos foram enviados` : 'O vídeo foi enviado'} em anexo. Baixe o arquivo diretamente.</p>
-        </div>
-      `;
-    } else {
-      // For images: show inline previews
-      const imagePreviewsHtml = allUrls.map((url: string) => `
-        <div style="text-align: center; margin: 12px 0;">
-          <img src="${url}" alt="Arte - ${safeClientName}" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
-        </div>
-      `).join('');
-      mediaSection = `
-        <div style="margin: 20px 0;">
-          ${imagePreviewsHtml}
-          <p style="color: #555; text-align: center; font-size: 13px; margin-top: 12px;">${count > 1 ? `As ${count} artes foram enviadas` : 'A arte foi enviada'} em anexo. Baixe o arquivo diretamente.</p>
-        </div>
-      `;
-    }
-
-    const attachmentNotice = isVideo
-      ? `🎬 O vídeo está em anexo. Baixe o <strong>arquivo .MP4</strong> diretamente no seu e-mail.`
-      : `🎨 A arte está em anexo. Baixe o <strong>arquivo .PNG</strong> diretamente no seu e-mail.`;
+    // Simple, direct email body
+    const fileType = isVideo ? 'MP4' : 'PNG';
+    const mediaWord = isVideo ? 'VÍDEO' : 'ARTE';
+    const mediaWordLower = isVideo ? 'vídeo' : 'arte';
+    const downloadInstruction = isVideo
+      ? `⚠️ <strong style="color: #d32f2f; font-size: 16px;">SEU VÍDEO ESTÁ EM ANEXO ABAIXO, PARA VER O VÍDEO NÃO DÊ PLAY, É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...</strong><br/><br/>
+         <strong style="color: #d32f2f; font-size: 15px;">⬇️ ATENÇÃO: BAIXAR / FAZER O DOWNLOAD MESMO DO ${fileType}</strong>`
+      : `⚠️ <strong style="color: #d32f2f; font-size: 16px;">SUA ARTE ESTÁ EM ANEXO ABAIXO, FAÇA O DOWNLOAD DO ARQUIVO PNG.</strong><br/><br/>
+         <strong style="color: #d32f2f; font-size: 15px;">⬇️ ATENÇÃO: BAIXAR / FAZER O DOWNLOAD MESMO DO ${fileType}</strong>`;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333;">📬 ${mediaLabel} - ${safeClientName}</h2>
-        <p style="color: #555;">Olá! Segue ${isVideo ? 'o vídeo' : 'a arte'} para <strong>${safeClientName}</strong>.</p>
-        <div style="background-color: #eef2ff; border-left: 4px solid #4f46e5; border-radius: 6px; padding: 12px 16px; margin: 16px 0;">
-          <p style="color: #333; margin: 0; font-size: 14px;">${attachmentNotice}</p>
+        <h2 style="color: #333;">📬 ${mediaWord} - ${safeClientName}</h2>
+        <div style="background-color: #fff3f3; border: 2px solid #d32f2f; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0; line-height: 1.6;">${downloadInstruction}</p>
         </div>
         ${textSection}
-        ${mediaSection}
         <p style="color: #999; font-size: 12px; margin-top: 30px;">Enviado via iazu</p>
       </div>
     `;
