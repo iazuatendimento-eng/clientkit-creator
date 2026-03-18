@@ -71,7 +71,9 @@ serve(async (req) => {
       Array.isArray(videoCoverUrls) && videoCoverUrls.length > 0
         ? videoCoverUrls
         : (videoCoverUrl ? [videoCoverUrl] : [])
-    ).filter((url: unknown): url is string => typeof url === 'string' && url.trim().length > 0);
+    )
+      .map((url: unknown) => sanitizeHttpUrl(url))
+      .filter((url): url is string => !!url);
 
     // Build text/caption section if provided
     let textSection = '';
