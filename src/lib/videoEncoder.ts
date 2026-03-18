@@ -118,6 +118,10 @@ function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "og
   return "mp3";
 }
 
+const FFMPEG_BOOT_TIMEOUT_MS = 180_000;
+const FFMPEG_MUX_TIMEOUT_MS = 420_000;
+const FFMPEG_TRANSCODE_TIMEOUT_MS = 480_000;
+
 // Generate MP4 (best effort: native MediaRecorder MP4 when available, otherwise WebM->FFmpeg)
 // Check if blob is actually MP4 by verifying ftyp box header
 async function isValidMP4(blob: Blob): Promise<boolean> {
@@ -137,23 +141,91 @@ async function patchMP4Brand(blob: Blob): Promise<Blob> {
   try {
     const buffer = await blob.arrayBuffer();
     const view = new Uint8Array(buffer);
-    
+
     const ftyp = String.fromCharCode(view[4], view[5], view[6], view[7]);
     if (ftyp !== "ftyp") return blob;
-    
+
     const currentBrand = String.fromCharCode(view[8], view[9], view[10], view[11]);
     console.log("[VideoEncoder] Current major brand:", currentBrand);
-    
+
     if (currentBrand === "isom") return blob;
-    
+
     // Patch major brand to "isom" (bytes 8-11)
     view[8] = 105; view[9] = 115; view[10] = 111; view[11] = 109;
-    
+
     console.log("[VideoEncoder] Patched brand from", currentBrand, "to isom");
     return new Blob([view], { type: "video/mp4" });
   } catch (err) {
     console.error("[VideoEncoder] Failed to patch brand:", err);
     return blob;
+  }
+}
+
+async function transcodeToTrueMp4(params: {
+  inputBlob: Blob;
+  inputFileName: string;
+  audioUrl?: string;
+}): Promise<Blob> {
+  const { inputBlob, inputFileName, audioUrl } = params;
+  const ff = await withTimeout(loadFFmpeg(), FFMPEG_BOOT_TIMEOUT_MS, "inicializar conversor MP4");
+
+  let audioFileName: string | null = null;
+
+  try {
+    await ff.writeFile(inputFileName, await fetchFile(inputBlob));
+
+    if (audioUrl) {
+      const audioResponse = await fetch(audioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Falha ao baixar trilha de áudio (${audioResponse.status})`);
+      }
+
+      const audioBlob = await audioResponse.blob();
+      if (!audioBlob.size) {
+        throw new Error("A trilha de áudio está vazia");
+      }
+
+      const audioExt = inferAudioExt(audioUrl, audioBlob.type);
+      audioFileName = `audio.${audioExt}`;
+      await ff.writeFile(audioFileName, await fetchFile(audioBlob));
+    }
+
+    const ffmpegArgs = audioFileName
+      ? [
+          "-i", inputFileName,
+          "-stream_loop", "-1", "-i", audioFileName,
+          "-map", "0:v:0", "-map", "1:a:0",
+          "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+          "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
+          "-shortest", "-movflags", "+faststart", "-f", "mp4", "-y", "output.mp4",
+        ]
+      : [
+          "-i", inputFileName,
+          "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+          "-an", "-movflags", "+faststart", "-f", "mp4", "-y", "output.mp4",
+        ];
+
+    await withTimeout(
+      ff.exec(ffmpegArgs),
+      audioFileName ? FFMPEG_MUX_TIMEOUT_MS : FFMPEG_TRANSCODE_TIMEOUT_MS,
+      audioFileName ? "gerar MP4 com áudio" : "gerar MP4 compatível"
+    );
+
+    const mp4Data = await ff.readFile("output.mp4");
+    let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
+    mp4Blob = await patchMP4Brand(mp4Blob);
+
+    if (!(await isValidMP4(mp4Blob))) {
+      throw new Error("Arquivo final inválido: ftyp ausente");
+    }
+
+    return mp4Blob;
+  } finally {
+    await ff.deleteFile(inputFileName).catch(() => {});
+    await ff.deleteFile("output.mp4").catch(() => {});
+    if (audioFileName) {
+      await ff.deleteFile(audioFileName).catch(() => {});
+    }
   }
 }
 
@@ -290,9 +362,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   if (hasWebCodecs()) {
     console.log("[VideoEncoder] Using WebCodecs path (direct frame encoding)");
 
-    const attempts: { label: string; opts: VideoEncoderOptions }[] = [
-      { label: "full-res", opts: options },
-    ];
+    const attempts: { label: string; opts: VideoEncoderOptions }[] = [{ label: "full-res", opts: options }];
 
     // Add reduced resolution fallback for large canvases
     if (options.width > 720 || options.height > 1280) {
@@ -311,91 +381,29 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           600_000,
           "gerar vídeo (WebCodecs)"
         );
-        console.log("[VideoEncoder] WebCodecs SUCCESS!", attempt.label, "blob size:", rawBlob.size);
 
-        // Desktop: only run FFmpeg when we actually need to mux audio.
-        if (!isMobileDevice) {
-          if (!audioUrl) {
-            const patched = await patchMP4Brand(rawBlob);
-            onProgress?.(1);
-            return patched;
-          }
-
-          try {
-            const ff = await withTimeout(loadFFmpeg(), 25_000, "inicializar conversor MP4");
-            onProgress?.(0.7);
-            await ff.writeFile("input.mp4", await fetchFile(rawBlob));
-
-            let hasAudio = false;
-            let audioFileName: string | null = null;
-            if (audioUrl) {
-              try {
-                console.log("[VideoEncoder] Fetching audio:", audioUrl.substring(0, 80));
-                const audioResponse = await fetch(audioUrl);
-                if (audioResponse.ok) {
-                  const audioBlob = await audioResponse.blob();
-                  if (audioBlob.size > 0) {
-                    const audioExt = inferAudioExt(audioUrl, audioBlob.type);
-                    audioFileName = `audio.${audioExt}`;
-                    await ff.writeFile(audioFileName, await fetchFile(audioBlob));
-                    hasAudio = true;
-                    console.log(`[VideoEncoder] Audio loaded: ${audioBlob.size} bytes (${audioExt})`);
-                  } else {
-                    console.error("[VideoEncoder] Audio blob is empty (0 bytes)!");
-                  }
-                } else {
-                  console.error(`[VideoEncoder] Audio fetch failed: ${audioResponse.status} ${audioResponse.statusText}`);
-                }
-              } catch (audioErr) {
-                console.error("[VideoEncoder] Failed to fetch audio:", audioErr);
-              }
-            }
-
-            if (audioUrl && !hasAudio) {
-              console.error("[VideoEncoder] ⚠️ Audio was requested but could NOT be loaded! Video will be silent.");
-            }
-
-            const ffmpegArgs = hasAudio && audioFileName
-              ? ["-i", "input.mp4", "-stream_loop", "-1", "-i", audioFileName, "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]
-              : ["-i", "input.mp4", "-c:v", "copy", "-c:a", "copy", "-movflags", "+faststart", "-f", "mp4", "output.mp4"];
-
-            await withTimeout(ff.exec(ffmpegArgs), 180_000, hasAudio ? "muxar vídeo + áudio" : "remux faststart");
-            onProgress?.(0.9);
-
-            const mp4Data = await ff.readFile("output.mp4");
-            let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
-            await ff.deleteFile("input.mp4").catch(() => {});
-            await ff.deleteFile("output.mp4").catch(() => {});
-            if (hasAudio && audioFileName) await ff.deleteFile(audioFileName).catch(() => {});
-            mp4Blob = await patchMP4Brand(mp4Blob);
-
-            if (await isValidMP4(mp4Blob)) {
-              console.log("[VideoEncoder] Remuxed MP4 size:", mp4Blob.size, hasAudio ? "(WITH audio)" : "(NO audio)");
-              onProgress?.(1);
-              return mp4Blob;
-            }
-          } catch (err) {
-            console.error("[VideoEncoder] FFmpeg remux FAILED, using raw WebCodecs output (NO AUDIO):", err);
-          }
-
-          // If FFmpeg failed, return raw WebCodecs output (WITHOUT audio)
-          console.warn("[VideoEncoder] Returning video WITHOUT audio (FFmpeg failed or unavailable)");
+        if (!audioUrl) {
           const patched = await patchMP4Brand(rawBlob);
           onProgress?.(1);
           return patched;
         }
 
-        // Mobile: return directly (no FFmpeg needed)
+        onProgress?.(0.72);
+        const mp4WithAudio = await transcodeToTrueMp4({
+          inputBlob: rawBlob,
+          inputFileName: "input.mp4",
+          audioUrl,
+        });
+
+        console.log("[VideoEncoder] MP4 com áudio gerado (WebCodecs + FFmpeg), size:", mp4WithAudio.size);
         onProgress?.(1);
-        return rawBlob;
+        return mp4WithAudio;
       } catch (wcErr) {
         console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
         if (attempt === attempts[attempts.length - 1]) {
-          // On mobile, no fallback — throw error
           if (isMobileDevice) {
-            throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
+            throw new Error("Falha ao gerar vídeo com áudio: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
           }
-          // On desktop, fall through to MediaRecorder fallback
           console.log("[VideoEncoder] All WebCodecs attempts failed, trying MediaRecorder fallback...");
         }
         onProgress?.(0.05);
@@ -403,7 +411,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     }
   }
 
-  // ====== DESKTOP FALLBACK: MediaRecorder (only if WebCodecs unavailable/failed) ======
+  // ====== FALLBACK: MediaRecorder ======
   const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
   const webmMime = pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
   const recordMime = mp4Mime || webmMime || "video/webm";
@@ -414,7 +422,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   if (mp4Mime) {
     const nativeMp4 = await withTimeout(
       encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
-      240_000,
+      300_000,
       "gerar MP4"
     );
     onProgress?.(0.6);
@@ -425,108 +433,33 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       return patched;
     }
 
-    try {
-      const ff = await withTimeout(loadFFmpeg(), 25_000, "inicializar conversor MP4");
-      onProgress?.(0.7);
-      await ff.writeFile("input.mp4", await fetchFile(nativeMp4));
-
-      let hasAudio = false;
-      let audioFileName: string | null = null;
-      if (audioUrl) {
-        try {
-          console.log("[VideoEncoder/MR] Fetching audio:", audioUrl.substring(0, 80));
-          const audioResponse = await fetch(audioUrl);
-          if (audioResponse.ok) {
-            const audioBlob = await audioResponse.blob();
-            if (audioBlob.size > 0) {
-              const audioExt = inferAudioExt(audioUrl, audioBlob.type);
-              audioFileName = `audio.${audioExt}`;
-              await ff.writeFile(audioFileName, await fetchFile(audioBlob));
-              hasAudio = true;
-              console.log(`[VideoEncoder/MR] Audio loaded: ${audioBlob.size} bytes (${audioExt})`);
-            } else {
-              console.error("[VideoEncoder/MR] Audio blob is empty!");
-            }
-          } else {
-            console.error(`[VideoEncoder/MR] Audio fetch failed: ${audioResponse.status}`);
-          }
-        } catch (audioErr) {
-          console.error("[VideoEncoder/MR] Failed to fetch audio:", audioErr);
-        }
-      }
-      if (audioUrl && !hasAudio) {
-        console.error("[VideoEncoder/MR] ⚠️ Audio requested but NOT loaded! Video will be silent.");
-      }
-
-      const ffmpegArgs = hasAudio && audioFileName
-        ? ["-i", "input.mp4", "-stream_loop", "-1", "-i", audioFileName, "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", "-f", "mp4", "output.mp4"]
-        : ["-i", "input.mp4", "-c:v", "copy", "-c:a", "copy", "-movflags", "+faststart", "-f", "mp4", "output.mp4"];
-
-      await withTimeout(ff.exec(ffmpegArgs), 180_000, hasAudio ? "muxar vídeo + áudio" : "remux faststart");
-      onProgress?.(0.9);
-
-      const mp4Data = await ff.readFile("output.mp4");
-      let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
-      await ff.deleteFile("input.mp4").catch(() => {});
-      await ff.deleteFile("output.mp4").catch(() => {});
-      if (hasAudio && audioFileName) await ff.deleteFile(audioFileName).catch(() => {});
-      mp4Blob = await patchMP4Brand(mp4Blob);
-
-      if (await isValidMP4(mp4Blob)) {
-        onProgress?.(1);
-        return mp4Blob;
-      }
-    } catch (err) {
-      console.error("[VideoEncoder] FFmpeg remux failed, using native MP4:", err);
-    }
-
-    const patched = await patchMP4Brand(nativeMp4);
+    onProgress?.(0.72);
+    const mp4WithAudio = await transcodeToTrueMp4({
+      inputBlob: nativeMp4,
+      inputFileName: "input.mp4",
+      audioUrl,
+    });
     onProgress?.(1);
-    return patched;
+    return mp4WithAudio;
   }
 
-  // No native MP4 - WebM → FFmpeg
+  // No native MP4 -> WebM then convert to true MP4 (with optional audio)
   console.log("[VideoEncoder] No native MP4, recording WebM for FFmpeg conversion");
-  onProgress?.(0.1);
-  const webmBlob = await withTimeout(encodeVideoSimple(pages, options), 240_000, "gerar WebM");
+  const webmBlob = await withTimeout(
+    encodeVideoSimple(pages, options, { mimeType: webmMime || "video/webm", outputType: "video/webm" }),
+    300_000,
+    "gerar WebM"
+  );
 
-  try {
-    onProgress?.(0.35);
-    const ff = await withTimeout(loadFFmpeg(), 25_000, "inicializar conversor MP4");
-    onProgress?.(0.55);
-    await ff.writeFile("input.webm", await fetchFile(webmBlob));
-
-    const encoders = [
-      ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p"],
-      ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p"],
-    ];
-
-    for (const encoderArgs of encoders) {
-      try {
-        await withTimeout(
-          ff.exec(["-i", "input.webm", ...encoderArgs, "-movflags", "+faststart", "-an", "-y", "output.mp4"]),
-          360_000, "converter para MP4"
-        );
-        const mp4Data = await ff.readFile("output.mp4");
-        let mp4Blob = new Blob([new Uint8Array(mp4Data as unknown as ArrayBuffer)], { type: "video/mp4" });
-        mp4Blob = await patchMP4Brand(mp4Blob);
-        if (await isValidMP4(mp4Blob)) {
-          await ff.deleteFile("input.webm").catch(() => {});
-          await ff.deleteFile("output.mp4").catch(() => {});
-          onProgress?.(1);
-          return mp4Blob;
-        }
-      } catch (encErr) {
-        console.warn("[VideoEncoder] Encoder", encoderArgs[1], "failed:", encErr);
-      }
-    }
-    await ff.deleteFile("input.webm").catch(() => {});
-  } catch (err) {
-    console.error("[VideoEncoder] FFmpeg failed:", err);
-  }
+  onProgress?.(0.72);
+  const convertedMp4 = await transcodeToTrueMp4({
+    inputBlob: webmBlob,
+    inputFileName: "input.webm",
+    audioUrl,
+  });
 
   onProgress?.(1);
-  return webmBlob;
+  return convertedMp4;
 }
 
 // Calculate motion transform based on effect and progress (0-1)
