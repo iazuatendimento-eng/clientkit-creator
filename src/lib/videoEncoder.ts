@@ -567,6 +567,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
               inputBlob: rawBlob,
               inputFileName: "input.mp4",
               audioUrl,
+              videoDurationSec,
             });
             console.log("[VideoEncoder] MP4 com áudio via FFmpeg, size:", mp4WithAudio.size);
             onProgress?.(1);
