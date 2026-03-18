@@ -1,7 +1,5 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import coreJsUrl from "@ffmpeg/core/dist/esm/ffmpeg-core.js?url";
-import coreWasmUrl from "@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url";
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 // Video encoder using MediaRecorder API + FFmpeg for MP4 conversion
 export type MotionEffect = "none" | "ken-burns" | "ken-burns-reverse" | "pulse" | "pulse-strong" | "float" | "float-diagonal" | "shake" | "shake-strong" | "sway" | "breathe" | "drift" | "wobble" | "zoom-pulse" | "pan-left" | "pan-right";
