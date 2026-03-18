@@ -47,8 +47,6 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
   if (ffmpegLoadPromise) return ffmpegLoadPromise;
 
-  ffmpegLoading = true;
-
   const MAX_RETRIES = 2;
   const FFMPEG_FETCH_TIMEOUT_MS = 30_000;
   const FFMPEG_LOAD_TIMEOUT_MS = 45_000;
