@@ -509,10 +509,15 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       onProgress?.(1);
       return mp4WithAudio;
     } catch (transcodeErr) {
-      if (isFfmpegLoadFailure(transcodeErr) && (await isValidMP4(nativeMp4))) {
-        console.warn("[VideoEncoder] FFmpeg indisponível, enviando MP4 sem áudio.");
-        onProgress?.(1);
-        return nativeMp4;
+      if (isFfmpegLoadFailure(transcodeErr)) {
+        if (requireEmailSafePreview) {
+          throw new Error("Não foi possível gerar MP4 compatível para preview de e-mail. Tente novamente.");
+        }
+        if (await isValidMP4(nativeMp4)) {
+          console.warn("[VideoEncoder] FFmpeg indisponível, enviando MP4 sem áudio.");
+          onProgress?.(1);
+          return nativeMp4;
+        }
       }
       throw transcodeErr;
     }
