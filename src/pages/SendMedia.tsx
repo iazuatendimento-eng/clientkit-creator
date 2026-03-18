@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from "xlsx";
+import { detectMp4VideoCodec } from "@/lib/videoEncoder";
 
 type MediaMode = "arte" | "video";
 
