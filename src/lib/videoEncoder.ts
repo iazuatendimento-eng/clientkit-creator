@@ -44,9 +44,9 @@ let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
 let ffmpegLoadStartedAt = 0;
 let ffmpegUnavailableUntil = 0;
 
-const FFMPEG_MAX_RETRIES = 1;
-const FFMPEG_FETCH_TIMEOUT_MS = 12_000;
-const FFMPEG_LOAD_TIMEOUT_MS = 18_000;
+const FFMPEG_MAX_RETRIES = 2;
+const FFMPEG_FETCH_TIMEOUT_MS = 20_000;
+const FFMPEG_LOAD_TIMEOUT_MS = 30_000;
 const FFMPEG_RETRY_DELAY_MS = 500;
 const FFMPEG_COOLDOWN_MS = 90_000;
 const FFMPEG_STALE_PROMISE_MS = 25_000;
@@ -585,14 +585,16 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       return mp4H264;
     } catch (transcodeErr) {
       if (isFfmpegLoadFailure(transcodeErr)) {
-        // FFmpeg unavailable — fall back to native MP4 only if valid
+        // Em fluxo de e-mail/preview seguro, nunca retornar MP4 nativo (pode vir HEVC)
+        if (requireEmailSafePreview || audioUrl) {
+          throw new Error("Não foi possível gerar MP4 compatível para envio. Tente novamente em Chrome/Edge com conexão estável.");
+        }
+
+        // Fora do fluxo de e-mail, mantém fallback best-effort
         if (await isValidMP4(nativeMp4)) {
-          console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo (pode ser HEVC).", transcodeErr);
+          console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo (fallback).", transcodeErr);
           onProgress?.(1);
           return nativeMp4;
-        }
-        if (audioUrl) {
-          throw new Error("Não foi possível gerar MP4 com áudio do template.");
         }
       }
       throw transcodeErr;
