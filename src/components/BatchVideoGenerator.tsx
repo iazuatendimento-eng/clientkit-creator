@@ -207,6 +207,37 @@ const defaultAdjustments: ElementAdjustments = {
   textY: 0,
 };
 
+const getCleanAssetUrl = (...candidates: unknown[]): string => {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+  return "";
+};
+
+const mergeBrandKitAssets = (savedBrandKit: any, freshBrandKit: any) => {
+  const saved = savedBrandKit && typeof savedBrandKit === "object" ? savedBrandKit : {};
+  const fresh = freshBrandKit && typeof freshBrandKit === "object" ? freshBrandKit : {};
+
+  const savedPngs = Array.isArray(saved.pngs) ? saved.pngs : [];
+  const freshPngs = Array.isArray(fresh.pngs) ? fresh.pngs : [];
+
+  // Fresh assets first (current client data), then fallback to saved batch snapshot.
+  const logo = getCleanAssetUrl(freshPngs[0], fresh.logo, savedPngs[0], saved.logo);
+  const contactInfo = getCleanAssetUrl(freshPngs[1], fresh.contactInfo, savedPngs[1], saved.contactInfo);
+  const mascot = getCleanAssetUrl(freshPngs[2], fresh.mascot, savedPngs[2], saved.mascot);
+
+  return {
+    ...saved,
+    ...fresh,
+    logo,
+    contactInfo,
+    mascot,
+    pngs: [logo, contactInfo, mascot],
+  };
+};
+
 interface ClientVideo {
   clientId: string;
   clientName: string;
