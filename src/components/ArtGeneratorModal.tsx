@@ -613,6 +613,8 @@ export function ArtGeneratorModal({
       });
       if (error) throw error;
       toast.success(data?.message || "E-mail(s) enviado(s)!");
+      // Close modal after successful send
+      setTimeout(() => onClose(), 600);
     } catch (err: any) {
       console.error("Email error:", err);
       toast.error("Erro ao enviar e-mail: " + (err.message || ""));
