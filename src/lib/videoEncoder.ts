@@ -44,11 +44,12 @@ let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
 let ffmpegLoadStartedAt = 0;
 let ffmpegUnavailableUntil = 0;
 
-const FFMPEG_MAX_RETRIES = 2;
-const FFMPEG_LOAD_TIMEOUT_MS = 35_000;
+const FFMPEG_MAX_RETRIES = 1;
+const FFMPEG_FETCH_TIMEOUT_MS = 40_000;
+const FFMPEG_LOAD_TIMEOUT_MS = 60_000;
 const FFMPEG_RETRY_DELAY_MS = 900;
-const FFMPEG_COOLDOWN_MS = 120_000;
-const FFMPEG_STALE_PROMISE_MS = 40_000;
+const FFMPEG_COOLDOWN_MS = 90_000;
+const FFMPEG_STALE_PROMISE_MS = 75_000;
 
 const FFMPEG_SOURCES: FFmpegSource[] = [
   {
@@ -62,12 +63,6 @@ const FFMPEG_SOURCES: FFmpegSource[] = [
     core: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js",
     wasm: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm",
     classWorker: "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js",
-  },
-  {
-    label: "cdnjs",
-    core: "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.10/esm/ffmpeg-core.js",
-    wasm: "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.10/esm/ffmpeg-core.wasm",
-    classWorker: "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.10/esm/worker.js",
   },
 ];
 
@@ -114,18 +109,19 @@ export async function loadFFmpeg(onStatus?: FFmpegLoadStatusHandler): Promise<FF
         try {
           const instance = new FFmpeg();
 
-          // Convert all URLs to blob URLs to avoid cross-origin Worker restrictions
-          const [coreURL, wasmURL] = await withTimeout(
+          // Force same-origin worker + core/wasm via blob URL to avoid cross-origin worker hangs
+          const [classWorkerURL, coreURL, wasmURL] = await withTimeout(
             Promise.all([
+              toBlobURL(source.classWorker, "text/javascript"),
               toBlobURL(source.core, "text/javascript"),
               toBlobURL(source.wasm, "application/wasm"),
             ]),
-            FFMPEG_LOAD_TIMEOUT_MS,
+            FFMPEG_FETCH_TIMEOUT_MS,
             `baixar núcleo MP4 (${sourceLabel})`
           );
 
           await withTimeout(
-            instance.load({ coreURL, wasmURL }),
+            instance.load({ classWorkerURL, coreURL, wasmURL } as any),
             FFMPEG_LOAD_TIMEOUT_MS,
             `carregar conversor MP4 (${sourceLabel})`
           );
