@@ -2506,7 +2506,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     try {
       setGenerationStatus("Preparando conversor MP4...");
-      await loadFFmpeg();
+      await loadFFmpeg((status) => setGenerationStatus(status));
 
       // Resolve each video's client from the card in DB (source of truth) to avoid stale/mismatched clientId in memory
       const approvedCardIds = [...new Set(approvedVideos.map((v) => v.cardId).filter(Boolean))];
