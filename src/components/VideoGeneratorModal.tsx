@@ -304,6 +304,7 @@ export function VideoGeneratorModal({
           selectedAudioTrack === "2" ? (template.audioUrl2 || template.audioUrl1 || undefined) :
           undefined
         ),
+        requireEmailSafePreview: true,
         onProgress: setEmailProgress,
       });
 
@@ -588,6 +589,7 @@ export function VideoGeneratorModal({
           selectedAudioTrack === "2" ? (template.audioUrl2 || template.audioUrl1 || undefined) :
           undefined
         ),
+        requireEmailSafePreview: true,
         onProgress: setExportProgress,
       });
 

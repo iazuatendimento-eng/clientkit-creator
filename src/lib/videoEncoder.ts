@@ -461,6 +461,53 @@ function isFfmpegLoadFailure(err: unknown): boolean {
   );
 }
 
+type Mp4VideoCodec = "h264" | "hevc" | "unknown";
+
+function hasFourCC(bytes: Uint8Array, code: string): boolean {
+  const c0 = code.charCodeAt(0);
+  const c1 = code.charCodeAt(1);
+  const c2 = code.charCodeAt(2);
+  const c3 = code.charCodeAt(3);
+
+  for (let i = 0; i <= bytes.length - 4; i++) {
+    if (bytes[i] === c0 && bytes[i + 1] === c1 && bytes[i + 2] === c2 && bytes[i + 3] === c3) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function detectMp4VideoCodec(blob: Blob): Promise<Mp4VideoCodec> {
+  if (!(await isValidMP4(blob))) return "unknown";
+
+  try {
+    const scanSize = Math.min(blob.size, 512 * 1024);
+    const bytes = new Uint8Array(await blob.slice(0, scanSize).arrayBuffer());
+
+    if (hasFourCC(bytes, "hvc1") || hasFourCC(bytes, "hev1")) return "hevc";
+    if (hasFourCC(bytes, "avc1") || hasFourCC(bytes, "avc3")) return "h264";
+
+    return "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+async function ensureCompatibleMp4(blob: Blob, context: string): Promise<Blob> {
+  const codec = await detectMp4VideoCodec(blob);
+
+  if (codec === "hevc") {
+    throw new Error("Vídeo gerado em HEVC (incompatível). Gere novamente para sair em H.264.");
+  }
+
+  if (codec === "unknown") {
+    console.warn(`[VideoEncoder] Codec não identificado em ${context}; mantendo arquivo por compatibilidade.`);
+  }
+
+  return blob;
+}
+
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress, audioUrl, requireEmailSafePreview = false } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -497,8 +544,9 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
 
         // If audio was already muxed via AudioEncoder, skip FFmpeg entirely
         if (audioWasMuxed || (!audioUrl && !requireEmailSafePreview)) {
+          const compatibleBlob = await ensureCompatibleMp4(rawBlob, "WebCodecs direto");
           onProgress?.(1);
-          return rawBlob;
+          return compatibleBlob;
         }
 
         // Audio was requested but AudioEncoder AAC wasn't available — try FFmpeg
@@ -515,9 +563,9 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             return mp4WithAudio;
           } catch (transcodeErr) {
             console.warn("[VideoEncoder] FFmpeg transcode failed, returning video without audio:", transcodeErr);
-            // Return the raw H.264 MP4 without audio — much better than broken Opus
+            const compatibleBlob = await ensureCompatibleMp4(rawBlob, "WebCodecs sem áudio");
             onProgress?.(1);
-            return rawBlob;
+            return compatibleBlob;
           }
         }
 
@@ -533,16 +581,18 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             return mp4Safe;
           } catch (transcodeErr) {
             if (isFfmpegLoadFailure(transcodeErr) && await isValidMP4(rawBlob)) {
-              console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 bruto.", transcodeErr);
+              const compatibleBlob = await ensureCompatibleMp4(rawBlob, "WebCodecs fallback email-safe");
+              console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 bruto compatível.", transcodeErr);
               onProgress?.(1);
-              return rawBlob;
+              return compatibleBlob;
             }
             throw transcodeErr;
           }
         }
 
+        const compatibleBlob = await ensureCompatibleMp4(rawBlob, "WebCodecs final");
         onProgress?.(1);
-        return rawBlob;
+        return compatibleBlob;
       } catch (wcErr) {
         console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
         if (attempt === attempts[attempts.length - 1]) {
@@ -590,11 +640,12 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           throw new Error("Não foi possível gerar MP4 compatível para envio. Tente novamente em Chrome/Edge com conexão estável.");
         }
 
-        // Fora do fluxo de e-mail, mantém fallback best-effort
+        // Fora do fluxo de e-mail, só aceita fallback se não for HEVC
         if (await isValidMP4(nativeMp4)) {
-          console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo (fallback).", transcodeErr);
+          const compatibleNative = await ensureCompatibleMp4(nativeMp4, "MediaRecorder nativo");
+          console.warn("[VideoEncoder] FFmpeg indisponível, usando MP4 nativo compatível (fallback).", transcodeErr);
           onProgress?.(1);
-          return nativeMp4;
+          return compatibleNative;
         }
       }
       throw transcodeErr;
@@ -2081,12 +2132,10 @@ export async function reencodeForWhatsApp(
   const durationArgs = expectedDuration ? ["-t", String(expectedDuration)] : [];
   const strategies = stripAudio
     ? [
-        { name: "copy-noaudio", args: ["-c:v", "copy", "-an", ...durationArgs] },
         { name: "libx264-noaudio", args: ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-an", ...durationArgs] },
         { name: "mpeg4-noaudio", args: ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-an", ...durationArgs] },
       ]
     : [
-        { name: "copy", args: ["-c:v", "copy", "-c:a", "copy", ...durationArgs] },
         { name: "libx264", args: ["-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", "-an", ...durationArgs] },
         { name: "mpeg4", args: ["-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-an", ...durationArgs] },
       ];
