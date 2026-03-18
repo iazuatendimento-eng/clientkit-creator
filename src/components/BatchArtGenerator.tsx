@@ -2503,6 +2503,35 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   await updateBatchItem(currentBatchId, idx, { note: "", noteRead: true });
                 }
               }}
+              onDropImage={async (idx, file) => {
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                  const base64 = ev.target?.result as string;
+                  if (!base64) return;
+                  const art = clientArts[idx];
+                  const updatedArt = { ...art, photoImage: base64, photoOffset: { x: 0, y: 0 } };
+                  lockPhotoForArt(updatedArt, base64);
+                  const updatedArts = [...clientArts];
+                  updatedArts[idx] = updatedArt;
+                  setClientArts(updatedArts);
+                  const newImageUrl = await generateArtForClient(updatedArt);
+                  setClientArts((prev) => {
+                    const next = [...prev];
+                    next[idx] = { ...next[idx], imageUrl: newImageUrl };
+                    return next;
+                  });
+                  toast({ title: "Imagem aplicada via arraste!" });
+                };
+                reader.readAsDataURL(file);
+              }}
+              onMoveToEnd={(idx) => {
+                setClientArts((prev) => {
+                  const next = [...prev];
+                  const [moved] = next.splice(idx, 1);
+                  next.push(moved);
+                  return next;
+                });
+              }}
               isRemovingBg={isRemovingBg}
               removeBgProgress={removeBgProgress}
             />
