@@ -758,6 +758,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [shapeAnimation, setShapeAnimation] = useState<string>(getTemplateShapeAnimation);
   const [shapeAnimDuration, setShapeAnimDuration] = useState(getTemplateShapeAnimDuration);
 
+  // Keep emailSubject ref in sync
+  useEffect(() => { emailSubjectRef.current = emailSubject; }, [emailSubject]);
+
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
