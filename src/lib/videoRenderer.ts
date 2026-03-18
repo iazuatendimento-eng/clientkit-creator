@@ -396,6 +396,11 @@ export async function generatePageImage(
       }
 
       if (transparentBackground && !excludeText && !["text", "contact"].includes(el.type)) continue;
+
+      // Base page (logo/text excluded) should not paint decorative shapes,
+      // otherwise they are duplicated with frame/pre-image overlays.
+      const isDecorativeShape = !["image", "text", "contact", "logo", "mascot"].includes(el.type);
+      if (!transparentBackground && excludeLogo && excludeText && isDecorativeShape) continue;
     }
 
     // Draw background image at the image element's z-position
