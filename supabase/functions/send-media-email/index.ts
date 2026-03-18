@@ -172,10 +172,21 @@ serve(async (req) => {
       `;
     }
 
+    const attachmentNotice = isVideo
+      ? (count > 1
+          ? `📎 <strong>${count} vídeos em anexo</strong> — baixe os arquivos MP4 diretamente deste e-mail ou clique nos botões abaixo.`
+          : '📎 <strong>Vídeo em anexo</strong> — baixe o arquivo MP4 diretamente deste e-mail ou clique no botão abaixo.')
+      : (count > 1
+          ? `📎 <strong>${count} artes em anexo</strong> — baixe as imagens diretamente deste e-mail ou clique nos botões abaixo.`
+          : '📎 <strong>Arte em anexo</strong> — baixe a imagem diretamente deste e-mail ou clique no botão abaixo.');
+
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #333;">📬 ${mediaLabel} - ${safeClientName}</h2>
-        <p style="color: #555;">Olá! Segue ${isVideo ? 'o vídeo' : 'a arte'} gerada para <strong>${safeClientName}</strong>.</p>
+        <p style="color: #555;">Olá! Segue ${isVideo ? 'o vídeo' : 'a arte'} para <strong>${safeClientName}</strong>.</p>
+        <div style="background-color: #eef2ff; border-left: 4px solid #4f46e5; border-radius: 6px; padding: 12px 16px; margin: 16px 0;">
+          <p style="color: #333; margin: 0; font-size: 14px;">${attachmentNotice}</p>
+        </div>
         ${textSection}
         ${mediaSection}
         <p style="color: #999; font-size: 12px; margin-top: 30px;">Enviado via iazu</p>
