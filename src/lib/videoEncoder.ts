@@ -82,13 +82,23 @@ export async function loadFFmpeg(onStatus?: FFmpegLoadStatusHandler): Promise<FF
 
   if (ffmpegLoadPromise) {
     const age = Date.now() - ffmpegLoadStartedAt;
-    if (age < FFMPEG_STALE_PROMISE_MS) {
-      return ffmpegLoadPromise;
-    }
+    const remainingWindowMs = Math.max(8_000, FFMPEG_STALE_PROMISE_MS - age);
 
-    console.warn(`[FFmpeg] Load antigo preso (${Math.round(age / 1000)}s). Reiniciando carregamento.`);
-    ffmpegLoadPromise = null;
-    ffmpegLoadStartedAt = 0;
+    try {
+      return await withTimeout(
+        ffmpegLoadPromise,
+        remainingWindowMs,
+        "aguardar carregamento em andamento do conversor MP4"
+      );
+    } catch (pendingErr) {
+      console.warn(
+        `[FFmpeg] Carregamento em andamento travou (${Math.round(age / 1000)}s). Reiniciando.`,
+        pendingErr
+      );
+      ffmpegLoadPromise = null;
+      ffmpegLoadStartedAt = 0;
+      ffmpeg = null;
+    }
   }
 
   const now = Date.now();
