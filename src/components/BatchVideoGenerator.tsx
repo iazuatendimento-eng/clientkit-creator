@@ -2561,15 +2561,28 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const emailWidth = Math.round(template.width * emailScale / 2) * 2;
       const emailHeight = Math.round(template.height * emailScale / 2) * 2;
 
+      const isTrueMp4Blob = async (blob: Blob): Promise<boolean> => {
+        if (blob.type !== "video/mp4" || blob.size < 1024) return false;
+        try {
+          const header = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+          const boxType = String.fromCharCode(header[4], header[5], header[6], header[7]);
+          return boxType === "ftyp";
+        } catch {
+          return false;
+        }
+      };
+
       const uploadVideoBlob = async (blob: Blob, cardId: string): Promise<{ path: string; publicUrl: string }> => {
-        const isActualMP4 = blob.type === "video/mp4";
-        const fileExt = isActualMP4 ? "mp4" : "webm";
-        const contentType = isActualMP4 ? "video/mp4" : "video/webm";
-        const fileName = `temp_email_${cardId}_${Date.now()}.${fileExt}`;
+        const isMp4 = await isTrueMp4Blob(blob);
+        if (!isMp4) {
+          throw new Error("Falha de formato: o arquivo gerado não é MP4 verdadeiro.");
+        }
+
+        const fileName = `temp_email_${cardId}_${Date.now()}.mp4`;
         const path = `videos/${fileName}`;
         const { error: uploadError } = await supabase.storage
           .from("card-uploads")
-          .upload(path, blob, { contentType });
+          .upload(path, blob, { contentType: "video/mp4" });
         if (uploadError) throw new Error(`Erro ao subir vídeo: ${uploadError.message}`);
         const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(path);
         return { path, publicUrl: urlData.publicUrl };

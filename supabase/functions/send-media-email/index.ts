@@ -80,20 +80,38 @@ serve(async (req) => {
 
     // Build attachments - support multiple URLs for carousel
     const allUrls: string[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
-    const extension = isVideo ? 'mp4' : 'png';
     const baseName = (clientName || 'cliente').replace(/[^a-zA-Z0-9]/g, '_');
+
+    const inferExtensionFromUrl = (url: string, fallback: string): string => {
+      try {
+        const pathname = new URL(url).pathname.toLowerCase();
+        const match = pathname.match(/\.([a-z0-9]+)$/);
+        if (match?.[1]) return match[1];
+      } catch {
+        const normalized = url.toLowerCase().split('?')[0].split('#')[0];
+        const match = normalized.match(/\.([a-z0-9]+)$/);
+        if (match?.[1]) return match[1];
+      }
+      return fallback;
+    };
+
+    const fallbackExtension = isVideo ? 'mp4' : 'png';
+    const attachmentEntries = allUrls.map((url: string, i: number) => {
+      const ext = inferExtensionFromUrl(url, fallbackExtension);
+      const filename = allUrls.length > 1 ? `${baseName}_p${i + 1}.${ext}` : `${baseName}.${ext}`;
+      return { url, filename };
+    });
 
     // Build download URLs via edge function proxy
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-    const downloadLinks: { url: string; name: string }[] = allUrls.map((url: string, i: number) => {
-      const fileName = allUrls.length > 1 ? `${baseName}_p${i + 1}.${extension}` : `${baseName}.${extension}`;
-      const proxyUrl = `${SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(fileName)}`;
-      return { url: proxyUrl, name: fileName };
+    const downloadLinks: { url: string; name: string }[] = attachmentEntries.map((entry) => {
+      const proxyUrl = `${SUPABASE_URL}/functions/v1/download-file?url=${encodeURIComponent(entry.url)}&name=${encodeURIComponent(entry.filename)}`;
+      return { url: proxyUrl, name: entry.filename };
     });
 
-    const attachments = allUrls.map((url: string, i: number) => ({
-      filename: allUrls.length > 1 ? `${baseName}_p${i + 1}.${extension}` : `${baseName}.${extension}`,
-      path: url,
+    const attachments = attachmentEntries.map((entry) => ({
+      filename: entry.filename,
+      path: entry.url,
     }));
 
     const count = allUrls.length;
