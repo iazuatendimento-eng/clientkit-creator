@@ -642,6 +642,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         inputBlob: nativeMp4,
         inputFileName: "input.mp4",
         audioUrl,
+        videoDurationSec,
       });
       onProgress?.(1);
       return mp4H264;
