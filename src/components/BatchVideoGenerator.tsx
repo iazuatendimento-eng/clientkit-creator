@@ -237,6 +237,7 @@ interface ClientVideo {
   selectedAudio?: 1 | 2;
   note?: string;
   noteRead?: boolean;
+  exportedVideoUrl?: string; // URL do vídeo pré-encodado no storage (via Regerar Todos)
 }
 
 interface BatchVideoGeneratorProps {
@@ -2617,6 +2618,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         for (let vi = 0; vi < videos.length; vi++) {
           const video = videos[vi];
 
+          // Se já tem URL regenerada (via "Regerar Todos"), pula a re-codificação
+          if (video.exportedVideoUrl) {
+            mediaUrls.push(video.exportedVideoUrl);
+            continue;
+          }
+
           // Adaptive FPS: lower for long videos
           const estimatedDurationSec = Math.max(1, video.pages.length * (template.pageDuration || 3));
           const adaptiveFps = estimatedDurationSec >= 40 ? 12 : estimatedDurationSec >= 24 ? 15 : estimatedDurationSec >= 16 ? 18 : 24;
@@ -2868,7 +2875,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         setBulkExportProgress(`${i + 1}/${videosWithPages.length} • ${video.clientName}`);
 
         try {
-          // Regera as páginas antes de exportar para garantir assinatura no fim.
+          // Regera as páginas para garantir assinatura no fim
           const rebuilt = await regenerateSingleVideo(video);
           const exportVideo: ClientVideo = {
             ...video,
@@ -2923,16 +2930,28 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             onProgress: () => {},
           });
 
-          const url = URL.createObjectURL(videoBlob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `video_${video.clientName}_${Date.now()}.mp4`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          // Upload ao storage em vez de baixar
+          const safeName = (video.clientName || "video").replace(/[^a-zA-Z0-9]/g, "_");
+          const fileName = `regen_${safeName}_${Date.now()}.mp4`;
+          const storagePath = `videos/${fileName}`;
+          const { error: uploadError } = await supabase.storage
+            .from("card-uploads")
+            .upload(storagePath, videoBlob, { contentType: "video/mp4" });
+          if (uploadError) throw new Error(`Erro ao subir vídeo: ${uploadError.message}`);
+
+          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
+          const newPublicUrl = urlData.publicUrl;
+
+          // Atualiza a URL do vídeo no estado para uso no envio por e-mail
+          setClientVideos((prev) =>
+            prev.map((v) =>
+              v.cardId === video.cardId
+                ? { ...v, exportedVideoUrl: newPublicUrl }
+                : v
+            )
+          );
+
           successCount++;
-          await new Promise((r) => setTimeout(r, 500));
         } catch (error) {
           console.error(`Erro ao regerar vídeo de ${video.clientName}:`, error);
         }
@@ -2940,7 +2959,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
       toast({
         title: `${successCount}/${videosWithPages.length} vídeos regerados`,
-        description: "Downloads iniciados com a página de assinatura corrigida.",
+        description: "Vídeos atualizados com a página de assinatura. Prontos para envio.",
       });
     } finally {
       setIsBulkExporting(false);
