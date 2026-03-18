@@ -401,6 +401,73 @@ export const BatchHistoryEditor = ({
     }
   };
 
+  const handleBulkExportVideos = async () => {
+    if (batch.type !== "video") return;
+
+    setIsBulkExporting(true);
+    setBulkExportTotal(items.length);
+    setBulkExportCurrent(0);
+
+    let successCount = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      setBulkExportCurrent(i + 1);
+
+      try {
+        const pageDuration = template.pageDuration || (template as any).page_duration || 3;
+        const videoBlob = await encodeVideoToMP4(item.files, {
+          width: template.width || 1080,
+          height: template.height || 1920,
+          pageDuration,
+          fps: 24,
+          motionEffect,
+          transitionEffect,
+          textAnimation,
+          logoAnimation,
+          textAnimDuration: textAnimDuration / pageDuration,
+          overlayPages: (item as any).overlayPages || undefined,
+          logoOverlayPages: (item as any).logoOverlayPages || undefined,
+          frameOverlayPages: (item as any).frameOverlayPages || undefined,
+          audioUrl: (() => {
+            const t = template as any;
+            const sel = (item as any).selectedAudio || 1;
+            const url1 = t.audioUrl1 || t.audio_url_1;
+            const url2 = t.audioUrl2 || t.audio_url_2;
+            return sel === 2 ? url2 : url1;
+          })(),
+          requireEmailSafePreview: true,
+          onProgress: (p) => setExportProgress(Math.round(p * 100)),
+        });
+
+        const url = URL.createObjectURL(videoBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `video_${item.clientName}_${Date.now()}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        successCount++;
+
+        // Small delay between downloads to avoid browser blocking
+        await new Promise(r => setTimeout(r, 500));
+      } catch (error) {
+        console.error(`Error exporting video for ${item.clientName}:`, error);
+      }
+    }
+
+    toast({
+      title: `${successCount}/${items.length} vídeos exportados`,
+      description: "Todos os vídeos foram regerados com a página de assinatura.",
+    });
+
+    setIsBulkExporting(false);
+    setBulkExportCurrent(0);
+    setBulkExportTotal(0);
+    setExportProgress(0);
+  };
+
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
