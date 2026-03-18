@@ -2207,11 +2207,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       // Clear art generation tags
       await clearArtGenerationTags();
 
-      // Delete batch from history if exists
-      if (currentBatchId) {
-        await deleteBatch(currentBatchId);
-        setCurrentBatchId(null);
-      }
+      // Keep batch in history — user will delete manually after reviewing
 
       toast({
         title: "E-mails enviados!",
