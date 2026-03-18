@@ -705,6 +705,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmails, setIsSendingEmails] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
+  const emailSubjectRef = useRef(emailSubject);
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(0);
@@ -756,6 +757,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [textAnimDuration, setTextAnimDuration] = useState(getTemplateTextAnimDuration);
   const [shapeAnimation, setShapeAnimation] = useState<string>(getTemplateShapeAnimation);
   const [shapeAnimDuration, setShapeAnimDuration] = useState(getTemplateShapeAnimDuration);
+
+  // Keep emailSubject ref in sync
+  useEffect(() => { emailSubjectRef.current = emailSubject; }, [emailSubject]);
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -2501,6 +2505,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsGenerating(true);
     setIsSendingEmails(true);
     setGenerationStatus("Iniciando exportação e envio...");
+    const capturedSubject = emailSubjectRef.current.trim();
+    console.log("[SendEmails] Subject captured:", JSON.stringify(capturedSubject));
 
     try {
       // Resolve each video's client from the card in DB (source of truth) to avoid stale/mismatched clientId in memory
@@ -2690,7 +2696,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const { error } = await supabase.functions.invoke("send-media-email", {
           body: {
             emails,
-            subject: emailSubject.trim() || `Vídeo - ${clientLabel}`,
+            subject: capturedSubject || `Vídeo - ${clientLabel}`,
             mediaUrls,
             mediaUrl: mediaUrls[0],
             mediaType: "video",
