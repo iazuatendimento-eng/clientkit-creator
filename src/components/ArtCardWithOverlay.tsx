@@ -405,6 +405,11 @@ export function ArtCardWithOverlay({
                 </Button>
               </>
             )}
+            {onMoveToEnd && (
+              <Button size="sm" variant="outline" title="Mover para o final da fila" onClick={() => onMoveToEnd(index)}>
+                <ArrowDownToLine className="h-4 w-4" />
+              </Button>
+            )}
             <Button size="sm" variant="destructive" onClick={() => onReject(index)}>
               <X className="h-4 w-4" />
             </Button>
