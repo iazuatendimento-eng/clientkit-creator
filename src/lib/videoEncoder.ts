@@ -236,8 +236,9 @@ async function transcodeToTrueMp4(params: {
   inputBlob: Blob;
   inputFileName: string;
   audioUrl?: string;
+  videoDurationSec?: number;
 }): Promise<Blob> {
-  const { inputBlob, inputFileName, audioUrl } = params;
+  const { inputBlob, inputFileName, audioUrl, videoDurationSec } = params;
   const ff = await loadFFmpeg();
 
   let audioFileName: string | null = null;
@@ -269,6 +270,12 @@ async function transcodeToTrueMp4(params: {
       await ff.writeFile(audioFileName, await fetchFile(audioBlob));
     }
 
+    // Use explicit duration (+1s buffer) instead of -shortest to prevent
+    // FFmpeg from truncating the last page (signature page).
+    const durationLimit = videoDurationSec
+      ? ["-t", String(Math.ceil(videoDurationSec) + 1)]
+      : [];
+
     // Gmail/Drive/Outlook need H.264 Baseline + AAC audio to show inline preview.
     // When no external audio is provided, generate a silent AAC track so the
     // container always has both video+audio streams — required for preview.
@@ -279,7 +286,8 @@ async function transcodeToTrueMp4(params: {
           "-map", "0:v:0", "-map", "1:a:0",
           "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
           "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2",
-          "-shortest", "-movflags", "+faststart", "-brand", "isom",
+          ...durationLimit, ...(durationLimit.length === 0 ? ["-shortest"] : []),
+          "-movflags", "+faststart", "-brand", "isom",
           "-f", "mp4", "-y", "output.mp4",
         ]
       : [
@@ -289,7 +297,8 @@ async function transcodeToTrueMp4(params: {
           "-map", "0:v:0", "-map", "1:a:0",
           "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1", "-preset", "veryfast", "-pix_fmt", "yuv420p",
           "-c:a", "aac", "-b:a", "32k", "-ar", "44100", "-ac", "2",
-          "-shortest", "-movflags", "+faststart", "-brand", "isom",
+          ...durationLimit, ...(durationLimit.length === 0 ? ["-shortest"] : []),
+          "-movflags", "+faststart", "-brand", "isom",
           "-f", "mp4", "-y", "output.mp4",
         ];
 
@@ -509,10 +518,11 @@ async function ensureCompatibleMp4(blob: Blob, context: string): Promise<Blob> {
 }
 
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
-  const { onProgress, audioUrl, requireEmailSafePreview = false } = options;
+  const { onProgress, audioUrl, requireEmailSafePreview = false, pageDuration } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const videoDurationSec = pages.length * pageDuration;
 
-  console.log("[VideoEncoder] Starting encode. mobile:", isMobileDevice, "webcodecs:", hasWebCodecs());
+  console.log("[VideoEncoder] Starting encode. mobile:", isMobileDevice, "webcodecs:", hasWebCodecs(), "pages:", pages.length, "duration:", videoDurationSec);
   onProgress?.(0.05);
 
   // ====== ALL DEVICES: Try WebCodecs first (most reliable — each frame is encoded directly) ======
@@ -557,6 +567,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
               inputBlob: rawBlob,
               inputFileName: "input.mp4",
               audioUrl,
+              videoDurationSec,
             });
             console.log("[VideoEncoder] MP4 com áudio via FFmpeg, size:", mp4WithAudio.size);
             onProgress?.(1);
@@ -576,6 +587,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             const mp4Safe = await transcodeToTrueMp4({
               inputBlob: rawBlob,
               inputFileName: "input.mp4",
+              videoDurationSec,
             });
             onProgress?.(1);
             return mp4Safe;
@@ -630,6 +642,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         inputBlob: nativeMp4,
         inputFileName: "input.mp4",
         audioUrl,
+        videoDurationSec,
       });
       onProgress?.(1);
       return mp4H264;
@@ -665,6 +678,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     inputBlob: webmBlob,
     inputFileName: "input.webm",
     audioUrl,
+    videoDurationSec,
   });
 
   onProgress?.(1);
