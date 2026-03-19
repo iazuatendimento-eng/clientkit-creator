@@ -761,6 +761,11 @@ export function ArtAdjustOverlay({
         ? "z-10"
         : part === "logo"
           ? "z-20"
+          : part === "mascot"
+            ? "z-25"
+            : part === "contact"
+              ? "z-30"
+              : "z-40";
           : part === "contact"
             ? "z-30"
             : "z-40";
