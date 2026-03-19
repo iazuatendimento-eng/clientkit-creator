@@ -199,6 +199,7 @@ const MasterVideo = () => {
           initialBatch={editingBatch || undefined}
           onBack={handleBatchBack}
           onComplete={handleComplete}
+          autoAdvance={isMultiTeamMode}
         />
       </div>
     );
