@@ -729,7 +729,7 @@ const SortableVideoCard = ({ id, status, children }: { id: string; status: strin
   );
 };
 
-export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchVideoGeneratorProps) => {
+export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete, autoAdvance }: BatchVideoGeneratorProps) => {
   const [clientVideos, setClientVideos] = useState<ClientVideo[]>([]);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
   const [isLoading, setIsLoading] = useState(true);
