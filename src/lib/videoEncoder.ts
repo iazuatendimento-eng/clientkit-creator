@@ -610,6 +610,38 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           }
         }
 ...
+        const compatibleBlob = await ensureCompatibleMp4(rawBlob, "WebCodecs final");
+        onProgress?.(1);
+        return compatibleBlob;
+      } catch (wcErr) {
+        console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
+        if (attempt === attempts[attempts.length - 1]) {
+          if (isMobileDevice) {
+            throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
+          }
+          console.log("[VideoEncoder] All WebCodecs attempts failed, trying MediaRecorder fallback...");
+        }
+        onProgress?.(0.05);
+      }
+    }
+  }
+
+  // ====== FALLBACK: MediaRecorder ======
+  const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
+  const webmMime = pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
+  const recordMime = mp4Mime || webmMime || "video/webm";
+
+  console.log("[VideoEncoder] MediaRecorder fallback, MIME:", recordMime);
+  onProgress?.(0.1);
+
+  if (mp4Mime) {
+    const nativeMp4 = await withTimeout(
+      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
+      300_000,
+      "gerar MP4"
+    );
+    onProgress?.(0.6);
+
     // Always transcode native MP4 through FFmpeg to guarantee H.264 Baseline
     // (some browsers produce HEVC via MediaRecorder which isn't universally playable)
     onProgress?.(0.72);
