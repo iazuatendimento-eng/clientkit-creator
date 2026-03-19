@@ -673,7 +673,7 @@ export function ArtAdjustOverlay({
         setTextFontSize(newScale);
 
         if (handleHasN(h)) {
-          setTextY(clamp(s.start.textY + (s.start.textH - newH), -200, 200));
+          setTextY(s.start.textY + (s.start.textH - newH));
         }
 
         return;
