@@ -595,7 +595,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             <Calendar className="h-3 w-3" />
             <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
           </div>
-          
+          {brief.completionType && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-auto bg-primary/10 text-primary border-primary/30">
+                {brief.completionType}
+              </Badge>
+              {brief.completionTemplateName && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-auto bg-muted text-muted-foreground border-border">
+                  {brief.completionTemplateName}
+                </Badge>
+              )}
+            </div>
+          )}
           
           {!isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
