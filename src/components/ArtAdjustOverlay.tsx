@@ -673,7 +673,10 @@ export function ArtAdjustOverlay({
           zClass
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
-        onPointerDown={(e) => begin(e, part, "move")}
+        onPointerDown={(e) => {
+          setActive(part);
+          begin(e, part, "move");
+        }}
       >
         {/* Border lines - Canva style solid */}
         <div className={cn(
@@ -696,6 +699,15 @@ export function ArtAdjustOverlay({
       </div>
     );
   };
+
+  const selectableParts = useMemo(() => {
+    const parts: Array<{ key: Part; label: string }> = [];
+    if (els.photoFrame) parts.push({ key: "photo", label: "Foto" });
+    if (els.logoEl) parts.push({ key: "logo", label: "Logo" });
+    if (els.textEl) parts.push({ key: "text", label: "Texto" });
+    if (els.contactEl) parts.push({ key: "contact", label: "Contato" });
+    return parts;
+  }, [els.photoFrame, els.logoEl, els.textEl, els.contactEl]);
 
   // Build grid lines (Canva-style)
   const gridLines = useMemo(() => {
@@ -760,6 +772,29 @@ export function ArtAdjustOverlay({
           Sem prévia
         </div>
       )}
+
+      {/* Seletor rápido de camadas */}
+      <div className="absolute top-2 right-2 z-[60] flex items-center gap-1">
+        {selectableParts.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setActive(item.key);
+            }}
+            className={cn(
+              "h-6 px-2 rounded border text-[10px] leading-none backdrop-blur-sm",
+              active === item.key
+                ? "border-primary text-primary bg-background/90"
+                : "border-border text-muted-foreground bg-background/70 hover:text-foreground"
+            )}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
 
       {/* Canva-style grid */}
       <div className="absolute inset-0 pointer-events-none z-[5]">
