@@ -2078,6 +2078,29 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       await Promise.all(preloadPromises);
       console.log(`[preload] Finished pre-loading ${preloadPromises.length} brand kit images`);
 
+      const globalVideoResultsCache = new Map<string, Awaited<ReturnType<typeof searchVideos>>>();
+      let lastVideoSearchAt = 0;
+      const minSearchIntervalMs = 350;
+      const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      const fetchVideosCached = async (query: string, perPage = 6) => {
+        const key = query.trim().toLowerCase();
+        if (!key) return [] as Awaited<ReturnType<typeof searchVideos>>;
+
+        const cached = globalVideoResultsCache.get(key);
+        if (cached) return cached;
+
+        const elapsed = Date.now() - lastVideoSearchAt;
+        if (elapsed < minSearchIntervalMs) {
+          await wait(minSearchIntervalMs - elapsed);
+        }
+
+        const results = await searchVideos(key, perPage);
+        lastVideoSearchAt = Date.now();
+        globalVideoResultsCache.set(key, results);
+        return results;
+      };
+
       for (let i = 0; i < updatedVideos.length; i++) {
         const video = updatedVideos[i];
         setGenerationStatus(`Gerando páginas (${i + 1}/${updatedVideos.length}) • ${video.clientName}`);
@@ -2087,17 +2110,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const existingImages = video.searchedImages || [];
         const searchedImages: string[] = [];
         const pexelsVideoUrls: (string | null)[] = [];
-        const videoResultsCache = new Map<string, Awaited<ReturnType<typeof searchVideos>>>();
-
-        const fetchVideosCached = async (query: string, perPage = 6) => {
-          const key = query.trim().toLowerCase();
-          if (!key) return [] as Awaited<ReturnType<typeof searchVideos>>;
-          const cached = videoResultsCache.get(key);
-          if (cached) return cached;
-          const results = await searchVideos(key, perPage);
-          videoResultsCache.set(key, results);
-          return results;
-        };
 
         for (let pageIdx = 0; pageIdx < video.pageTexts.length; pageIdx++) {
           const text = video.pageTexts[pageIdx];
@@ -2134,15 +2146,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               searchTerms = "business professional";
             }
 
-            // Search Pexels videos with multiple fallback strategies
+            // Search video with one fallback only to reduce API throttle
             let foundVideo = false;
             let videos = await fetchVideosCached(searchTerms, 6);
             if (videos.length === 0 && searchTerms.includes(" ")) {
               const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
-              videos = await fetchVideosCached(simpleTerms, 6);
-            }
-            if (videos.length === 0) {
-              videos = await fetchVideosCached("business technology", 6);
+              if (simpleTerms && simpleTerms !== searchTerms) {
+                videos = await fetchVideosCached(simpleTerms, 6);
+              }
             }
             if (videos.length > 0) {
               const seed = i * 53 + pageIdx * 17 + (video.clientName?.length || 0) + (text?.length || 0);

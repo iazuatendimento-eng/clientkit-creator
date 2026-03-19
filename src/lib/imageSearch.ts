@@ -150,58 +150,37 @@ export interface SearchVideo {
 }
 
 export const searchPexelsVideos = async (query: string, perPage: number = 5, page: number = 1): Promise<SearchVideo[]> => {
-  const apiKey = import.meta.env.VITE_PEXELS_API_KEY || 'Ogmbd5yQ7EvLxAyzUKA7o9JqFsQj28loZrZKNoPzzQflzmBjCl28EUuk';
-  
-  if (!apiKey) {
-    console.log('Pexels API key not configured');
-    return [];
-  }
-
-  // Sanitize query: remove newlines, trim, and limit to first 80 chars (3-5 words)
   const sanitized = query.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
   const shortQuery = sanitized.split(/\s+/).slice(0, 5).join(' ').substring(0, 80);
+
   if (!shortQuery) {
     console.warn('[Pexels Video] Empty query after sanitization');
     return [];
   }
+
   console.log(`[Pexels Video] Searching: "${shortQuery}"`);
 
   try {
-    const response = await fetch(
-      `https://api.pexels.com/videos/search?query=${encodeURIComponent(shortQuery)}&per_page=${perPage}&page=${page}&orientation=portrait`,
-      {
-        headers: {
-          'Authorization': apiKey
-        }
-      }
-    );
+    const { data, error } = await supabase.functions.invoke('search-pexels-videos', {
+      body: { query: shortQuery, perPage, page },
+    });
 
-    if (!response.ok) {
-      console.error('Pexels Video API error:', response.status);
+    if (error) {
+      const message = typeof error.message === 'string' ? error.message : 'Unknown error';
+      console.error('Pexels video search error:', message);
       return [];
     }
 
-    const data = await response.json();
-    
-    return (data.videos || []).map((video: any) => {
-      // Get the best quality video file (prefer HD, then SD)
-      const videoFiles = video.video_files || [];
-      const hdFile = videoFiles.find((f: any) => f.quality === 'hd' && f.width >= 1080) 
-        || videoFiles.find((f: any) => f.quality === 'hd')
-        || videoFiles.find((f: any) => f.quality === 'sd')
-        || videoFiles[0];
-      
-      return {
-        id: `pexels-video-${video.id}`,
-        url: video.url,
-        image: video.image, // Pexels provides a thumbnail image
-        duration: video.duration,
-        videoUrl: hdFile?.link || '',
-        photographer: video.user?.name || 'Pexels',
-      description: query,
+    return (data?.videos || []).map((video: any) => ({
+      id: video.id,
+      url: video.url,
+      image: video.image,
+      duration: video.duration,
+      videoUrl: video.videoUrl,
+      photographer: video.photographer || 'Pexels',
+      description: video.description || shortQuery,
       source: 'pexels' as const,
-    };
-    }).filter((v: SearchVideo) => v.image && v.videoUrl);
+    }));
   } catch (error) {
     console.error('Error fetching Pexels videos:', error);
     return [];
