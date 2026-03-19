@@ -3315,6 +3315,36 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
                    {/* Actions */}
                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title="Copiar e-mails do cliente"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const { data } = await supabase
+                              .from("client_data")
+                              .select("email, email_2, email_3")
+                              .eq("id", video.clientId)
+                              .maybeSingle();
+                            if (data) {
+                              const emails = [data.email, data.email_2, data.email_3]
+                                .filter((e): e is string => !!e && e.trim().length > 0)
+                                .join(", ");
+                              if (emails) {
+                                await navigator.clipboard.writeText(emails);
+                                toast({ title: `E-mails copiados: ${emails}` });
+                              } else {
+                                toast({ title: "Nenhum e-mail cadastrado", variant: "destructive" });
+                              }
+                            }
+                          } catch {
+                            toast({ title: "Erro ao buscar e-mails", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
                      <Button
                        variant="outline"
                        size="sm"
