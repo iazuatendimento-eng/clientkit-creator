@@ -563,12 +563,16 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         if (audioUrl && !audioWasMuxed) {
           onProgress?.(0.72);
           try {
-            const mp4WithAudio = await transcodeToTrueMp4({
-              inputBlob: rawBlob,
-              inputFileName: "input.mp4",
-              audioUrl,
-              videoDurationSec,
-            });
+            const mp4WithAudio = await withTimeout(
+              transcodeToTrueMp4({
+                inputBlob: rawBlob,
+                inputFileName: "input.mp4",
+                audioUrl,
+                videoDurationSec,
+              }),
+              35_000,
+              "gerar MP4 com áudio"
+            );
             console.log("[VideoEncoder] MP4 com áudio via FFmpeg, size:", mp4WithAudio.size);
             onProgress?.(1);
             return mp4WithAudio;
@@ -584,11 +588,15 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         if (requireEmailSafePreview) {
           onProgress?.(0.72);
           try {
-            const mp4Safe = await transcodeToTrueMp4({
-              inputBlob: rawBlob,
-              inputFileName: "input.mp4",
-              videoDurationSec,
-            });
+            const mp4Safe = await withTimeout(
+              transcodeToTrueMp4({
+                inputBlob: rawBlob,
+                inputFileName: "input.mp4",
+                videoDurationSec,
+              }),
+              35_000,
+              "gerar MP4 compatível"
+            );
             onProgress?.(1);
             return mp4Safe;
           } catch (transcodeErr) {
@@ -601,7 +609,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             throw transcodeErr;
           }
         }
-
         const compatibleBlob = await ensureCompatibleMp4(rawBlob, "WebCodecs final");
         onProgress?.(1);
         return compatibleBlob;
@@ -638,12 +645,16 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     // (some browsers produce HEVC via MediaRecorder which isn't universally playable)
     onProgress?.(0.72);
     try {
-      const mp4H264 = await transcodeToTrueMp4({
-        inputBlob: nativeMp4,
-        inputFileName: "input.mp4",
-        audioUrl,
-        videoDurationSec,
-      });
+      const mp4H264 = await withTimeout(
+        transcodeToTrueMp4({
+          inputBlob: nativeMp4,
+          inputFileName: "input.mp4",
+          audioUrl,
+          videoDurationSec,
+        }),
+        35_000,
+        "gerar MP4 compatível"
+      );
       onProgress?.(1);
       return mp4H264;
     } catch (transcodeErr) {
@@ -674,12 +685,16 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   );
 
   onProgress?.(0.72);
-  const convertedMp4 = await transcodeToTrueMp4({
-    inputBlob: webmBlob,
-    inputFileName: "input.webm",
-    audioUrl,
-    videoDurationSec,
-  });
+  const convertedMp4 = await withTimeout(
+    transcodeToTrueMp4({
+      inputBlob: webmBlob,
+      inputFileName: "input.webm",
+      audioUrl,
+      videoDurationSec,
+    }),
+    35_000,
+    "gerar MP4 compatível"
+  );
 
   onProgress?.(1);
   return convertedMp4;
