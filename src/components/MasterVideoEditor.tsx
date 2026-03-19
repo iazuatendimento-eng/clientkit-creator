@@ -1781,6 +1781,23 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     onGenerateBatch(template, selectedTeamFilter);
   };
 
+  const handleGenerateAllTeams = () => {
+    if (!onGenerateAllTeams) return;
+    const template: VideoTemplate = {
+      id: `template-${Date.now()}`,
+      name: templateName,
+      contentElements,
+      signatureElements,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      backgroundColor,
+      pageDuration,
+      audioUrl1: audioUrl1 || undefined,
+      audioUrl2: audioUrl2 || undefined,
+    };
+    onGenerateAllTeams(template);
+  };
+
   const handleAudioUpload = async (slot: 1 | 2, file: File) => {
     try {
       // Sanitize filename: remove special chars, keep extension
