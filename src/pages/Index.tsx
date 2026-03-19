@@ -1235,6 +1235,61 @@ const Index = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Completion type/template dialog */}
+      <Dialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Concluir Cards</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Tipo:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={completionType === "art" ? "default" : "outline"}
+                  onClick={() => { setCompletionType("art"); setCompletionTemplateId(""); }}
+                  className="w-full"
+                >
+                  <Palette className="h-4 w-4 mr-2" />
+                  Arte
+                </Button>
+                <Button
+                  variant={completionType === "video" ? "default" : "outline"}
+                  onClick={() => { setCompletionType("video"); setCompletionTemplateId(""); }}
+                  className="w-full"
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  Vídeo
+                </Button>
+              </div>
+            </div>
+            {completionType && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Template usado:</p>
+                <Select value={completionTemplateId} onValueChange={setCompletionTemplateId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(completionType === "art" ? artTemplates : videoTemplates).map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Button
+              onClick={handleConfirmCompletion}
+              disabled={!completionType || !completionTemplateId}
+              className="w-full"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Confirmar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
