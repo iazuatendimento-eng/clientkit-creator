@@ -31,16 +31,7 @@ type Part = BasePart | ShapePart;
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
-const clampOffsetWithinCanvas = (
-  nextOffset: number,
-  basePos: number,
-  size: number,
-  canvasSize: number
-) => {
-  const minOffset = -basePos;
-  const maxOffset = canvasSize - (basePos + size);
-  return clamp(nextOffset, Math.min(minOffset, maxOffset), Math.max(minOffset, maxOffset));
-};
+// Position offsets are unclamped — elements can move freely beyond canvas bounds
 
 const handleHasW = (h: Handle) => h === "nw" || h === "sw" || h === "w";
 const handleHasE = (h: Handle) => h === "ne" || h === "se" || h === "e";
@@ -271,8 +262,8 @@ export function ArtAdjustOverlay({
       const h = els.textEl.height * scale;
       const rawX = els.textEl.x + textX;
       const rawY = els.textEl.y + textY;
-      const x = clamp(rawX, 0, Math.max(0, template.width - w));
-      const y = clamp(rawY, 0, Math.max(0, template.height - h));
+      const x = rawX;
+      const y = rawY;
       return { x, y, w, h };
     }
 
@@ -471,8 +462,8 @@ export function ArtAdjustOverlay({
 
         // Move = pan the photo inside the frame
         if (s.mode === "move") {
-          setPhotoOffsetX(clamp(s.start.photoOffsetX + dx, -500, 500));
-          setPhotoOffsetY(clamp(s.start.photoOffsetY + dy, -500, 500));
+          setPhotoOffsetX(s.start.photoOffsetX + dx);
+          setPhotoOffsetY(s.start.photoOffsetY + dy);
           return;
         }
 
@@ -510,8 +501,8 @@ export function ArtAdjustOverlay({
 
       if (s.part === "logo") {
         if (s.mode === "move") {
-          setLogoX(clamp(s.start.logoX + dx, -200, 200));
-          setLogoY(clamp(s.start.logoY + dy, -200, 200));
+          setLogoX(s.start.logoX + dx);
+          setLogoY(s.start.logoY + dy);
           return;
         }
 
@@ -529,14 +520,14 @@ export function ArtAdjustOverlay({
           const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setLogoScaleX(newScaleX);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
+          if (handleHasW(h)) setLogoX(s.start.logoX + dx);
         } else if (isVerticalHandle) {
           // Side handles: stretch Y only
           const signedDy = handleSignY(h) * dy;
           const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setLogoScaleY(newScaleY);
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
+          if (handleHasN(h)) setLogoY(s.start.logoY + dy);
         } else {
           // Corner handles: proportional resize
           const signedDx = handleSignX(h) * dx;
@@ -548,8 +539,8 @@ export function ArtAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setLogoScaleX(newScaleX);
           setLogoScaleY(newScaleY);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + (s.start.logoW - newW), -200, 200));
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + (s.start.logoH - newH), -200, 200));
+          if (handleHasW(h)) setLogoX(s.start.logoX + (s.start.logoW - newW));
+          if (handleHasN(h)) setLogoY(s.start.logoY + (s.start.logoH - newH));
         }
         return;
       }
@@ -559,22 +550,8 @@ export function ArtAdjustOverlay({
         const baseContactY = els.contactEl?.y || 0;
 
         if (s.mode === "move") {
-          setContactX(
-            clampOffsetWithinCanvas(
-              s.start.contactX + dx,
-              baseContactX,
-              s.start.contactW,
-              template.width
-            )
-          );
-          setContactY(
-            clampOffsetWithinCanvas(
-              s.start.contactY + dy,
-              baseContactY,
-              s.start.contactH,
-              template.height
-            )
-          );
+          setContactX(s.start.contactX + dx);
+          setContactY(s.start.contactY + dy);
           return;
         }
 
@@ -590,14 +567,7 @@ export function ArtAdjustOverlay({
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setContactScaleX(newScaleX);
           if (handleHasW(h)) {
-            setContactX(
-              clampOffsetWithinCanvas(
-                s.start.contactX + (s.start.contactW - newW),
-                baseContactX,
-                newW,
-                template.width
-              )
-            );
+            setContactX(s.start.contactX + (s.start.contactW - newW));
           }
         } else if (isVerticalHandle) {
           const signedDy = handleSignY(h) * dy;
@@ -605,14 +575,7 @@ export function ArtAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setContactScaleY(newScaleY);
           if (handleHasN(h)) {
-            setContactY(
-              clampOffsetWithinCanvas(
-                s.start.contactY + (s.start.contactH - newH),
-                baseContactY,
-                newH,
-                template.height
-              )
-            );
+            setContactY(s.start.contactY + (s.start.contactH - newH));
           }
         } else {
           // Corner: proportional
@@ -626,24 +589,10 @@ export function ArtAdjustOverlay({
           setContactScaleX(newScaleX);
           setContactScaleY(newScaleY);
           if (handleHasW(h)) {
-            setContactX(
-              clampOffsetWithinCanvas(
-                s.start.contactX + (s.start.contactW - newW),
-                baseContactX,
-                newW,
-                template.width
-              )
-            );
+            setContactX(s.start.contactX + (s.start.contactW - newW));
           }
           if (handleHasN(h)) {
-            setContactY(
-              clampOffsetWithinCanvas(
-                s.start.contactY + (s.start.contactH - newH),
-                baseContactY,
-                newH,
-                template.height
-              )
-            );
+            setContactY(s.start.contactY + (s.start.contactH - newH));
           }
         }
         return;
@@ -651,8 +600,8 @@ export function ArtAdjustOverlay({
 
       if (s.part === "mascot" && setMascotX && setMascotY && setMascotScaleX && setMascotScaleY) {
         if (s.mode === "move") {
-          setMascotX(clamp(s.start.mascotX + dx, -200, 200));
-          setMascotY(clamp(s.start.mascotY + dy, -200, 200));
+          setMascotX(s.start.mascotX + dx);
+          setMascotY(s.start.mascotY + dy);
           return;
         }
 
@@ -667,13 +616,13 @@ export function ArtAdjustOverlay({
           const newW = clamp(s.start.mascotW + signedDx, baseW * 0.25, baseW * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setMascotScaleX(newScaleX);
-          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + dx, -200, 200));
+          if (handleHasW(h)) setMascotX(s.start.mascotX + dx);
         } else if (isVerticalHandle) {
           const signedDy = handleSignY(h) * dy;
           const newH = clamp(s.start.mascotH + signedDy, baseH * 0.25, baseH * 3);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setMascotScaleY(newScaleY);
-          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + dy, -200, 200));
+          if (handleHasN(h)) setMascotY(s.start.mascotY + dy);
         } else {
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
@@ -684,16 +633,16 @@ export function ArtAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setMascotScaleX(newScaleX);
           setMascotScaleY(newScaleY);
-          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + (s.start.mascotW - newW), -200, 200));
-          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + (s.start.mascotH - newH), -200, 200));
+          if (handleHasW(h)) setMascotX(s.start.mascotX + (s.start.mascotW - newW));
+          if (handleHasN(h)) setMascotY(s.start.mascotY + (s.start.mascotH - newH));
         }
         return;
       }
 
       if (s.part === "text") {
         if (s.mode === "move") {
-          setTextX(clamp(s.start.textX + dx, -200, 200));
-          setTextY(clamp(s.start.textY + dy, -200, 200));
+          setTextX(s.start.textX + dx);
+          setTextY(s.start.textY + dy);
           return;
         }
 
@@ -724,7 +673,7 @@ export function ArtAdjustOverlay({
         setTextFontSize(newScale);
 
         if (handleHasN(h)) {
-          setTextY(clamp(s.start.textY + (s.start.textH - newH), -200, 200));
+          setTextY(s.start.textY + (s.start.textH - newH));
         }
 
         return;
