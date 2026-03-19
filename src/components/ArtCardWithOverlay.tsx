@@ -249,6 +249,8 @@ export function ArtCardWithOverlay({
       textX: v.textX, textY: v.textY, textFontSize: v.textFontSize,
       contactX: v.contactX, contactY: v.contactY,
       contactScaleX: v.contactScaleX, contactScaleY: v.contactScaleY,
+      mascotX: v.mascotX, mascotY: v.mascotY,
+      mascotScaleX: v.mascotScaleX, mascotScaleY: v.mascotScaleY,
       photoScale: v.photoScale,
       photoFrame: v.photoFrame || undefined,
       shapes: v.shapeOverrides,
