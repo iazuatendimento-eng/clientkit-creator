@@ -2579,7 +2579,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 setSelectedArt(a);
                 setSelectedArtIndex(idx);
                 const queryParts = [a.cardText, a.imageType].filter(Boolean);
-                setSearchQuery(queryParts.join(" ").slice(0, 150));
+                setSearchQuery(translateToEnglishLocal(queryParts.join(" ").slice(0, 150)));
                 setIsImageDialogOpen(true);
               }}
               onRefreshBrandKit={refreshBrandKitAndRegenerate}
