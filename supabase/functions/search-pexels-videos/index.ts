@@ -7,6 +7,45 @@ const corsHeaders = {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const MAX_POOL_SIZE = 80;
+const queryCache = new Map<string, { videos: any[]; cachedAt: number }>();
+let fallbackPool: any[] = [];
+
+const getCached = (key: string): any[] | null => {
+  const item = queryCache.get(key);
+  if (!item) return null;
+  if (Date.now() - item.cachedAt > CACHE_TTL_MS) {
+    queryCache.delete(key);
+    return null;
+  }
+  return item.videos;
+};
+
+const setCached = (key: string, videos: any[]) => {
+  queryCache.set(key, { videos, cachedAt: Date.now() });
+  if (videos.length > 0) {
+    const merged = [...videos, ...fallbackPool];
+    const uniqueById = new Map<string, any>();
+    for (const item of merged) {
+      if (item?.id && !uniqueById.has(item.id)) uniqueById.set(item.id, item);
+    }
+    fallbackPool = Array.from(uniqueById.values()).slice(0, MAX_POOL_SIZE);
+  }
+};
+
+const calcRetryDelayMs = (retryAfterHeader: string | null, attempt: number): number => {
+  const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : NaN;
+  if (!Number.isNaN(retryAfterSeconds) && retryAfterSeconds > 0) {
+    return Math.ceil(retryAfterSeconds * 1000);
+  }
+
+  const base = 1200;
+  const exp = Math.min(attempt, 6);
+  const jitter = Math.floor(Math.random() * 500);
+  return base * 2 ** exp + jitter;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,10 +73,18 @@ serve(async (req) => {
       throw new Error("Query is required");
     }
 
+    const cacheKey = `${shortQuery}|${perPage}|${page}`;
+    const cachedVideos = getCached(cacheKey);
+    if (cachedVideos && cachedVideos.length > 0) {
+      return new Response(JSON.stringify({ videos: cachedVideos, cached: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(shortQuery)}&per_page=${perPage}&page=${page}&orientation=portrait`;
 
     let response: Response | null = null;
-    const maxRetries = 4;
+    const maxRetries = 6;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       response = await fetch(url, {
@@ -46,11 +93,34 @@ serve(async (req) => {
         },
       });
 
-      if (response.status === 429 || response.status >= 500) {
+      if (response.status === 429) {
         const isLastAttempt = attempt === maxRetries - 1;
         if (!isLastAttempt) {
-          const waitMs = 900 * (attempt + 1) + Math.floor(Math.random() * 400);
-          console.warn(`Pexels throttled (${response.status}), retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+          const waitMs = calcRetryDelayMs(response.headers.get("Retry-After"), attempt);
+          console.warn(`Pexels throttled (429), retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await sleep(waitMs);
+          continue;
+        }
+
+        const poolFallback = fallbackPool.slice(0, Math.min(perPage, fallbackPool.length));
+        return new Response(
+          JSON.stringify({
+            error: "Pexels API throttled",
+            throttled: true,
+            videos: poolFallback,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      if (response.status >= 500) {
+        const isLastAttempt = attempt === maxRetries - 1;
+        if (!isLastAttempt) {
+          const waitMs = calcRetryDelayMs(response.headers.get("Retry-After"), attempt);
+          console.warn(`Pexels server error (${response.status}), retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
           await sleep(waitMs);
           continue;
         }
@@ -89,16 +159,17 @@ serve(async (req) => {
       })
       .filter((v: any) => v.image && v.videoUrl);
 
+    setCached(cacheKey, videos);
+
     return new Response(JSON.stringify({ videos }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Pexels search error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    const status = message.includes("[429]") ? 429 : 500;
 
     return new Response(JSON.stringify({ error: message, videos: [] }), {
-      status,
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
