@@ -1728,6 +1728,19 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     onGenerateBatch(template, selectedTeamFilter);
   };
 
+  const handleGenerateAllTeams = () => {
+    if (!onGenerateAllTeams) return;
+    const template: MasterTemplate = {
+      id: `template-${Date.now()}`,
+      name: templateName,
+      elements,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      backgroundColor,
+    };
+    onGenerateAllTeams(template);
+  };
+
   const selectedEl = elements.find((el) => el.id === selectedElement);
 
   return (
