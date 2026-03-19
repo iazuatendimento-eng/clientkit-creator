@@ -315,14 +315,12 @@ export function ArtCardWithOverlay({
     runRegenerate();
   }, [art, index, onArtUpdate, onRegenerate]);
 
-  const showOverlay = art.imageUrl && art.status === "pending";
+  const showOverlay = !!art.imageUrl;
 
   return (
     <div
       className={cn(
         "border rounded-lg overflow-hidden bg-card transition-all",
-        art.status === "approved" && "ring-2 ring-green-500",
-        art.status === "rejected" && "ring-2 ring-destructive opacity-50",
         isDragOver && "ring-2 ring-primary ring-offset-2",
       )}
       onDragOver={handleFileDragOver}
