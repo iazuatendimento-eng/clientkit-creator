@@ -87,6 +87,7 @@ interface ArtCardWithOverlayProps {
   onResolveNote: (index: number) => Promise<void>;
   onDropImage?: (index: number, file: File) => void;
   onMoveToEnd?: (index: number) => void;
+  onDelete?: (index: number) => void;
   isRemovingBg?: boolean;
   removeBgProgress?: string;
 }
