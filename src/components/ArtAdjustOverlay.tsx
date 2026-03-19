@@ -311,6 +311,12 @@ export function ArtAdjustOverlay({
     const logoH = els.logoEl ? els.logoEl.height * (logoScaleY / 100) : 0;
     const contactW = els.contactEl ? els.contactEl.width * (contactScaleX / 100) : 0;
     const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
+    const _mascotScaleX = mascotScaleX ?? 100;
+    const _mascotScaleY = mascotScaleY ?? 100;
+    const _mascotX = mascotX ?? 0;
+    const _mascotY = mascotY ?? 0;
+    const mascotW = els.mascotEl ? els.mascotEl.width * (_mascotScaleX / 100) : 0;
+    const mascotH = els.mascotEl ? els.mascotEl.height * (_mascotScaleY / 100) : 0;
     const textW = els.textEl ? els.textEl.width : 0;
     const textH = els.textEl ? els.textEl.height * (textFontSize / 100) : 0;
 
