@@ -135,11 +135,16 @@ serve(async (req) => {
     const fileType = isVideo ? 'MP4' : 'PNG';
     const mediaWord = isVideo ? 'VÍDEO' : 'ARTE';
     const mediaWordLower = isVideo ? 'vídeo' : 'arte';
+    const downloadInstructionText = isVideo
+      ? `SEU VÍDEO ESTÁ EM ANEXO ABAIXO, PARA VER O VÍDEO NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO MP4`
+      : `SUA ARTE ESTÁ EM ANEXO ABAIXO, PARA VER A ARTE NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO PNG`;
     const downloadInstruction = isVideo
       ? `<strong style="color: #d32f2f; font-size: 16px;">SEU VÍDEO ESTÁ EM ANEXO ABAIXO, PARA VER O VÍDEO NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...</strong><br/><br/>
          <strong style="color: #d32f2f; font-size: 15px;">AVISO: BAIXAR FAZER O DOWNLOAD MESMO DO MP4</strong>`
       : `<strong style="color: #d32f2f; font-size: 16px;">SUA ARTE ESTÁ EM ANEXO ABAIXO, PARA VER A ARTE NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...</strong><br/><br/>
          <strong style="color: #d32f2f; font-size: 15px;">AVISO: BAIXAR FAZER O DOWNLOAD MESMO DO PNG</strong>`;
+
+    const plainText = downloadInstructionText;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -162,6 +167,7 @@ serve(async (req) => {
               from: 'iazu <noreply@contato.iazu.com.br>',
               to: [email],
               subject: subject || `${mediaLabel} - ${clientName}`,
+              text: plainText,
               html: htmlBody,
               attachments,
             }),
