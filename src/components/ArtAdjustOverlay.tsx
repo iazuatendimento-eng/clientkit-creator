@@ -781,6 +781,7 @@ export function ArtAdjustOverlay({
   return (
     <div
       ref={containerRef}
+      onPointerDownCapture={handleContainerPointerDownCapture}
       className="relative mx-auto w-full max-w-md overflow-hidden rounded-lg border bg-muted"
       style={{ aspectRatio: `${template.width} / ${template.height}` }}
     >
