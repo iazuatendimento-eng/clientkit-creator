@@ -142,11 +142,18 @@ export function useVideoPregenerate(
             // Build search context from card text + client image_type, translate locally (no AI cost)
             const contextParts = [fullText, clientImageType].filter(Boolean);
             const searchContext = contextParts.join(" ");
-            const translatedTerms = translateToEnglishLocal(searchContext);
+            let translatedTerms = translateToEnglishLocal(searchContext);
+            // If local dictionary produced nothing, use the raw text as-is (Pexels handles many languages)
+            if (!translatedTerms.trim()) {
+              translatedTerms = searchContext.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).slice(0, 5).join(' ');
+            }
             console.log(`[Video Search] Local translation: "${searchContext}" → "${translatedTerms}"`);
 
-            let results = await searchVideos(translatedTerms, Math.max(pagesNeedingBankVideo.length, 3));
-            if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
+            let results: Awaited<ReturnType<typeof searchVideos>> = [];
+            if (translatedTerms.trim()) {
+              results = await searchVideos(translatedTerms, Math.max(pagesNeedingBankVideo.length, 3));
+              if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
+            }
             if (results.length === 0) results = await searchVideos("business technology", 3);
 
             if (results.length > 0) {
