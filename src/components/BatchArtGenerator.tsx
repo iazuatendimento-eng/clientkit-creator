@@ -519,22 +519,25 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setClientArts(arts);
     setIsLoading(false);
 
-    // Regenerate previews for items that lost their base64 images after sanitization
+    // Regenerate previews in background for items that lost their images after sanitization
     const needsRegen = arts.filter(a => !a.imageUrl || a.imageUrl.startsWith("data:") || a.imageUrl.startsWith("blob:"));
     if (needsRegen.length > 0) {
-      const updatedArts = [...arts];
-      for (let i = 0; i < updatedArts.length; i++) {
-        const a = updatedArts[i];
-        if (!a.imageUrl || a.imageUrl.startsWith("data:") || a.imageUrl.startsWith("blob:")) {
-          try {
-            const newUrl = await generateArtForClient(a);
-            updatedArts[i] = { ...a, imageUrl: newUrl };
-            setClientArts([...updatedArts]);
-          } catch (e) {
-            console.error("Error regenerating preview for:", a.company, e);
+      // Run in background – don't block UI
+      (async () => {
+        const updatedArts = [...arts];
+        for (let i = 0; i < updatedArts.length; i++) {
+          const a = updatedArts[i];
+          if (!a.imageUrl || a.imageUrl.startsWith("data:") || a.imageUrl.startsWith("blob:")) {
+            try {
+              const newUrl = await generateArtForClient(a);
+              updatedArts[i] = { ...a, imageUrl: newUrl };
+              setClientArts([...updatedArts]);
+            } catch (e) {
+              console.error("Error regenerating preview for:", a.company, e);
+            }
           }
         }
-      }
+      })();
     }
   };
 

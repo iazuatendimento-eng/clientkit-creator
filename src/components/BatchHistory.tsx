@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getBatchGenerations, getBatchById, deleteBatch, deleteBatchItem, BatchGeneration, BatchItem } from "@/lib/batchHistory";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -59,58 +58,12 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   const loadBatches = async () => {
     setIsLoading(true);
     const data = await getBatchGenerations(filterType || "video");
-    
-    // Resolve missing team names from items
-    const batchesWithTeam = await resolveTeamNames(data);
-    setBatches(batchesWithTeam);
+    setBatches(data);
     setIsLoading(false);
   };
 
-  const resolveTeamNames = async (list: BatchGeneration[]): Promise<BatchGeneration[]> => {
-    const missing = list.filter(b => !(b.template_snapshot as any)?.teamFilter);
-    if (missing.length === 0) return list;
 
-    // Fetch first clientId from items for each batch missing a team
-    const batchIds = missing.map(b => b.id);
-    const { data: rows } = await supabase
-      .from("batch_generations")
-      .select("id, items")
-      .in("id", batchIds);
 
-    if (!rows || rows.length === 0) return list;
-
-    // Gather unique client IDs
-    const clientIdMap: Record<string, string> = {};
-    for (const row of rows) {
-      const items = row.items as any[];
-      if (items && items.length > 0 && items[0].clientId) {
-        clientIdMap[row.id] = items[0].clientId;
-      }
-    }
-
-    const uniqueClientIds = [...new Set(Object.values(clientIdMap))];
-    if (uniqueClientIds.length === 0) return list;
-
-    const { data: clients } = await supabase
-      .from("client_data")
-      .select("id, team")
-      .in("id", uniqueClientIds);
-
-    const teamByClient: Record<string, string> = {};
-    for (const c of clients || []) {
-      if (c.team) teamByClient[c.id] = c.team;
-    }
-
-    return list.map(b => {
-      if ((b.template_snapshot as any)?.teamFilter) return b;
-      const cid = clientIdMap[b.id];
-      const team = cid ? teamByClient[cid] : undefined;
-      if (team) {
-        return { ...b, template_snapshot: { ...(b.template_snapshot as any), teamFilter: team } };
-      }
-      return b;
-    });
-  };
 
   const filteredBatches = useMemo(() => {
     if (!searchQuery.trim()) return batches;
