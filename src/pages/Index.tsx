@@ -464,27 +464,46 @@ const Index = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleBulkMoveToCompleted = async (team?: string) => {
+  const openCompletionDialog = (team?: string) => {
+    setCompletionTeam(team);
+    setCompletionType("");
+    setCompletionTemplateId("");
+    setIsCompletionDialogOpen(true);
+  };
+
+  const handleConfirmCompletion = async () => {
+    if (!completionType) {
+      toast({ title: "Selecione o tipo", description: "Informe se é Arte ou Vídeo.", variant: "destructive" });
+      return;
+    }
+    if (!completionTemplateId) {
+      toast({ title: "Selecione o template", description: "Informe qual template foi usado.", variant: "destructive" });
+      return;
+    }
+
+    const templates = completionType === "art" ? artTemplates : videoTemplates;
+    const selectedTemplate = templates.find(t => t.id === completionTemplateId);
+
     try {
-      const filteredClients = (team 
-        ? clients.filter(c => (c.team || "").toLowerCase() === team.toLowerCase() && c.active)
+      const filteredClients = (completionTeam 
+        ? clients.filter(c => (c.team || "").toLowerCase() === completionTeam!.toLowerCase() && c.active)
         : clients.filter(c => c.active));
       
       const clientIds = filteredClients.map(c => c.id);
       
       if (clientIds.length === 0) {
-        toast({
-          title: "Nenhum cliente ativo",
-          description: "Não há clientes ativos para mover.",
-          variant: "destructive",
-        });
+        toast({ title: "Nenhum cliente ativo", description: "Não há clientes ativos para mover.", variant: "destructive" });
         return;
       }
       
-      await bulkUpdateBriefStatus(clientIds, "completed");
+      await bulkUpdateBriefStatus(clientIds, "completed", {
+        completion_type: completionType === "art" ? "Arte" : "Vídeo",
+        completion_template_id: completionTemplateId,
+        completion_template_name: selectedTemplate?.name || "",
+      });
       
-      // Dispatch event to notify all ProjectBoard instances to reload
       window.dispatchEvent(new Event("bulkBriefsUpdated"));
+      setIsCompletionDialogOpen(false);
       
       toast({
         title: "Cards movidos!",
@@ -492,11 +511,7 @@ const Index = () => {
       });
     } catch (error) {
       console.error("Error moving cards:", error);
-      toast({
-        title: "Erro ao mover cards",
-        description: "Não foi possível mover os cards.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao mover cards", description: "Não foi possível mover os cards.", variant: "destructive" });
     }
   };
 
