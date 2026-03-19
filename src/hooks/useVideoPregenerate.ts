@@ -13,7 +13,7 @@ import {
   type PageTextAdjustment,
   type PageImageAdjustment,
 } from "@/lib/videoRenderer";
-import { searchVideos } from "@/lib/imageSearch";
+import { searchPexelsVideos } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
 
 export interface PreloadedVideoData {
