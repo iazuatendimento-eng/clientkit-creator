@@ -268,6 +268,7 @@ export function ArtAdjustOverlay({
   >(null);
 
   const begin = (e: React.PointerEvent, part: Part, mode: "move" | "resize", handle?: Handle) => {
+    console.log("[ArtAdjustOverlay] begin", part, mode, handle, "pointerId:", e.pointerId);
     e.preventDefault();
     e.stopPropagation();
 
