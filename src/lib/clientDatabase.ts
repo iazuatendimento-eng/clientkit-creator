@@ -238,7 +238,11 @@ export async function updateBriefsSortOrder(briefIds: string[]) {
   await Promise.all(updates);
 }
 
-export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "todo" | "completed") {
+export async function bulkUpdateBriefStatus(
+  clientIds: string[], 
+  newStatus: "todo" | "completed",
+  completionMeta?: { completion_type?: string; completion_template_id?: string; completion_template_name?: string }
+) {
   // Get all todo briefs for these clients (ordered by sort_order then created_at to match visual order)
   const { data: briefs, error: fetchError } = await supabase
     .from("project_briefs")
@@ -262,9 +266,16 @@ export async function bulkUpdateBriefStatus(clientIds: string[], newStatus: "tod
   const briefIdsToUpdate = Array.from(firstBriefPerClient.values());
 
   // Update status for first brief of each client
+  const updatePayload: any = { status: newStatus };
+  if (newStatus === "completed" && completionMeta) {
+    if (completionMeta.completion_type) updatePayload.completion_type = completionMeta.completion_type;
+    if (completionMeta.completion_template_id) updatePayload.completion_template_id = completionMeta.completion_template_id;
+    if (completionMeta.completion_template_name) updatePayload.completion_template_name = completionMeta.completion_template_name;
+  }
+
   const { data, error } = await supabase
     .from("project_briefs")
-    .update({ status: newStatus })
+    .update(updatePayload)
     .in("id", briefIdsToUpdate)
     .select();
 

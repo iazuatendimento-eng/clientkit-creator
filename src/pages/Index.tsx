@@ -127,6 +127,13 @@ const Index = () => {
   const [quickCreateClientId, setQuickCreateClientId] = useState<string>("");
   const [quickCreateBrandKit, setQuickCreateBrandKit] = useState<any>(null);
   const [visibleCount, setVisibleCount] = useState(50);
+  // Completion dialog state
+  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
+  const [completionTeam, setCompletionTeam] = useState<string | undefined>();
+  const [completionType, setCompletionType] = useState<"art" | "video" | "">("");
+  const [completionTemplateId, setCompletionTemplateId] = useState("");
+  const [artTemplates, setArtTemplates] = useState<{ id: string; name: string }[]>([]);
+  const [videoTemplates, setVideoTemplates] = useState<{ id: string; name: string }[]>([]);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -135,6 +142,13 @@ const Index = () => {
     loadClients();
     supabase.from("teams").select("*").order("name", { ascending: true }).then(({ data }) => {
       if (data) setAvailableTeams(data.filter(t => /^T\d{4}/.test(t.name.trim())));
+    });
+    // Load templates for completion dialog
+    supabase.from("master_templates").select("id, name").eq("deleted", false).order("name").then(({ data }) => {
+      if (data) setArtTemplates(data);
+    });
+    supabase.from("master_video_templates").select("id, name").eq("deleted", false).order("name").then(({ data }) => {
+      if (data) setVideoTemplates(data);
     });
 
   }, []);
@@ -450,27 +464,46 @@ const Index = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleBulkMoveToCompleted = async (team?: string) => {
+  const openCompletionDialog = (team?: string) => {
+    setCompletionTeam(team);
+    setCompletionType("");
+    setCompletionTemplateId("");
+    setIsCompletionDialogOpen(true);
+  };
+
+  const handleConfirmCompletion = async () => {
+    if (!completionType) {
+      toast({ title: "Selecione o tipo", description: "Informe se é Arte ou Vídeo.", variant: "destructive" });
+      return;
+    }
+    if (!completionTemplateId) {
+      toast({ title: "Selecione o template", description: "Informe qual template foi usado.", variant: "destructive" });
+      return;
+    }
+
+    const templates = completionType === "art" ? artTemplates : videoTemplates;
+    const selectedTemplate = templates.find(t => t.id === completionTemplateId);
+
     try {
-      const filteredClients = (team 
-        ? clients.filter(c => (c.team || "").toLowerCase() === team.toLowerCase() && c.active)
+      const filteredClients = (completionTeam 
+        ? clients.filter(c => (c.team || "").toLowerCase() === completionTeam!.toLowerCase() && c.active)
         : clients.filter(c => c.active));
       
       const clientIds = filteredClients.map(c => c.id);
       
       if (clientIds.length === 0) {
-        toast({
-          title: "Nenhum cliente ativo",
-          description: "Não há clientes ativos para mover.",
-          variant: "destructive",
-        });
+        toast({ title: "Nenhum cliente ativo", description: "Não há clientes ativos para mover.", variant: "destructive" });
         return;
       }
       
-      await bulkUpdateBriefStatus(clientIds, "completed");
+      await bulkUpdateBriefStatus(clientIds, "completed", {
+        completion_type: completionType === "art" ? "Arte" : "Vídeo",
+        completion_template_id: completionTemplateId,
+        completion_template_name: selectedTemplate?.name || "",
+      });
       
-      // Dispatch event to notify all ProjectBoard instances to reload
       window.dispatchEvent(new Event("bulkBriefsUpdated"));
+      setIsCompletionDialogOpen(false);
       
       toast({
         title: "Cards movidos!",
@@ -478,11 +511,7 @@ const Index = () => {
       });
     } catch (error) {
       console.error("Error moving cards:", error);
-      toast({
-        title: "Erro ao mover cards",
-        description: "Não foi possível mover os cards.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao mover cards", description: "Não foi possível mover os cards.", variant: "destructive" });
     }
   };
 
@@ -855,9 +884,9 @@ const Index = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleBulkMoveToCompleted()}>Todos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openCompletionDialog()}>Todos</DropdownMenuItem>
                 {availableTeams.map(t => (
-                  <DropdownMenuItem key={t.id} onClick={() => handleBulkMoveToCompleted(t.name)}>{t.name}</DropdownMenuItem>
+                  <DropdownMenuItem key={t.id} onClick={() => openCompletionDialog(t.name)}>{t.name}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1204,6 +1233,61 @@ const Index = () => {
               brandKit={quickCreateBrandKit}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Completion type/template dialog */}
+      <Dialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Concluir Cards</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Tipo:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={completionType === "art" ? "default" : "outline"}
+                  onClick={() => { setCompletionType("art"); setCompletionTemplateId(""); }}
+                  className="w-full"
+                >
+                  <Palette className="h-4 w-4 mr-2" />
+                  Arte
+                </Button>
+                <Button
+                  variant={completionType === "video" ? "default" : "outline"}
+                  onClick={() => { setCompletionType("video"); setCompletionTemplateId(""); }}
+                  className="w-full"
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  Vídeo
+                </Button>
+              </div>
+            </div>
+            {completionType && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Template usado:</p>
+                <Select value={completionTemplateId} onValueChange={setCompletionTemplateId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(completionType === "art" ? artTemplates : videoTemplates).map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Button
+              onClick={handleConfirmCompletion}
+              disabled={!completionType || !completionTemplateId}
+              className="w-full"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Confirmar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

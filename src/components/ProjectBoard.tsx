@@ -126,6 +126,8 @@ interface ProjectBrief {
   generatedVideoExpiresAt?: string;
   generatedArtUrl?: string;
   generatedArtExpiresAt?: string;
+  completionType?: string;
+  completionTemplateName?: string;
 }
 
 interface ProjectBoardProps {
@@ -593,7 +595,18 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
             <Calendar className="h-3 w-3" />
             <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
           </div>
-          
+          {brief.completionType && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-auto bg-primary/10 text-primary border-primary/30">
+                {brief.completionType}
+              </Badge>
+              {brief.completionTemplateName && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-auto bg-muted text-muted-foreground border-border">
+                  {brief.completionTemplateName}
+                </Badge>
+              )}
+            </div>
+          )}
           
           {!isPublicView && (
             <div className="flex flex-col gap-2 mt-2">
@@ -1061,6 +1074,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
           generatedArtUrl: (brief as any).generated_art_url || undefined,
           generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
+          completionType: (brief as any).completion_type || undefined,
+          completionTemplateName: (brief as any).completion_template_name || undefined,
         }));
         setBriefs(mappedBriefs);
       } catch (error) {
@@ -1229,6 +1244,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
         generatedArtUrl: (brief as any).generated_art_url || undefined,
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
+        completionType: (brief as any).completion_type || undefined,
+        completionTemplateName: (brief as any).completion_template_name || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1332,6 +1349,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
         generatedArtUrl: (brief as any).generated_art_url || undefined,
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
+        completionType: (brief as any).completion_type || undefined,
+        completionTemplateName: (brief as any).completion_template_name || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1391,6 +1410,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
         generatedArtUrl: (brief as any).generated_art_url || undefined,
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
+        completionType: (brief as any).completion_type || undefined,
+        completionTemplateName: (brief as any).completion_template_name || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1442,6 +1463,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
         generatedArtUrl: (brief as any).generated_art_url || undefined,
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
+        completionType: (brief as any).completion_type || undefined,
+        completionTemplateName: (brief as any).completion_template_name || undefined,
       }));
       setBriefs(mappedBriefs);
       
@@ -1483,6 +1506,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
         generatedArtUrl: (brief as any).generated_art_url || undefined,
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
+        completionType: (brief as any).completion_type || undefined,
+        completionTemplateName: (brief as any).completion_template_name || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1537,6 +1562,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
         generatedArtUrl: (brief as any).generated_art_url || undefined,
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
+        completionType: (brief as any).completion_type || undefined,
+        completionTemplateName: (brief as any).completion_template_name || undefined,
       }));
       setBriefs(mappedBriefs);
 
