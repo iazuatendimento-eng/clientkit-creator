@@ -277,6 +277,7 @@ interface BatchVideoGeneratorProps {
   initialBatch?: import("@/lib/batchHistory").BatchGeneration;
   onBack: () => void;
   onComplete: () => void;
+  autoAdvance?: boolean;
 }
 
 // Image cache to avoid reloading the same large base64/URL images
