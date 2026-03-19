@@ -468,12 +468,6 @@ export function ArtCardWithOverlay({
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
-            <Button size="sm" variant="destructive" onClick={() => onReject(index)}>
-              <X className="h-4 w-4" />
-            </Button>
-            <Button size="sm" className="bg-green-500 hover:bg-green-600" onClick={() => onApprove(index)}>
-              <Check className="h-4 w-4" />
-            </Button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
