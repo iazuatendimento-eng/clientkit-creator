@@ -2018,33 +2018,148 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       if (cardRes.data) {
         freshArt.cardTitle = cardRes.data.title || art.cardTitle;
         const fullText = cardRes.data.description || cardRes.data.title || art.cardText;
-        // For carousel pages, split by semicolon and use only the part for this page
-        if (art.pageIndex !== undefined && art.totalPages && art.totalPages > 1) {
-          const textParts = fullText.split(';').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
-          freshArt.cardText = textParts[art.pageIndex] || art.cardText;
-          // Update totalPages in case text changed
-          freshArt.totalPages = textParts.length;
+        const textParts = fullText.split(';').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+        const newPageCount = textParts.length;
+        const isCarousel = art.pageIndex !== undefined && art.totalPages && art.totalPages > 1;
+        const wasCarousel = isCarousel;
+        const becomesCarousel = newPageCount > 1;
+
+        if (becomesCarousel) {
+          // Find all sibling pages of this card (same cardId)
+          const siblingIndices = updatedArts
+            .map((a, i) => a.cardId === art.cardId ? i : -1)
+            .filter(i => i >= 0);
+          const oldPageCount = siblingIndices.length;
+
+          if (newPageCount > oldPageCount) {
+            // Add new pages after the last sibling
+            const lastSiblingIdx = siblingIndices[siblingIndices.length - 1];
+            const newPages: ClientArt[] = [];
+            for (let pi = oldPageCount; pi < newPageCount; pi++) {
+              newPages.push({
+                clientId: art.clientId,
+                clientName: art.clientName,
+                company: art.company,
+                cardId: art.cardId,
+                cardTitle: cardRes.data.title || art.cardTitle,
+                cardText: textParts[pi],
+                brandKit: clientRes.data.brand_kit,
+                imageType: art.imageType,
+                narrationType: art.narrationType,
+                briefing: art.briefing,
+                imageUrl: null,
+                status: "pending",
+                pageIndex: pi,
+                totalPages: newPageCount,
+              });
+            }
+            updatedArts.splice(lastSiblingIdx + 1, 0, ...newPages);
+            // Re-calculate current index (it may have shifted)
+            // Update all siblings with new totalPages and correct text
+            const freshSiblingIndices = updatedArts
+              .map((a, i) => a.cardId === art.cardId ? i : -1)
+              .filter(i => i >= 0);
+            freshSiblingIndices.forEach((si, pi) => {
+              updatedArts[si] = {
+                ...updatedArts[si],
+                pageIndex: pi,
+                totalPages: newPageCount,
+                cardText: textParts[pi] || updatedArts[si].cardText,
+                cardTitle: cardRes.data!.title || art.cardTitle,
+                brandKit: clientRes.data.brand_kit,
+              };
+            });
+          } else if (newPageCount < oldPageCount) {
+            // Remove excess pages (from the end)
+            const toRemove = siblingIndices.slice(newPageCount);
+            // Remove in reverse order to keep indices stable
+            for (let ri = toRemove.length - 1; ri >= 0; ri--) {
+              updatedArts.splice(toRemove[ri], 1);
+            }
+            // Update remaining siblings
+            const freshSiblingIndices = updatedArts
+              .map((a, i) => a.cardId === art.cardId ? i : -1)
+              .filter(i => i >= 0);
+            freshSiblingIndices.forEach((si, pi) => {
+              updatedArts[si] = {
+                ...updatedArts[si],
+                pageIndex: pi,
+                totalPages: newPageCount,
+                cardText: textParts[pi] || updatedArts[si].cardText,
+                cardTitle: cardRes.data!.title || art.cardTitle,
+                brandKit: clientRes.data.brand_kit,
+              };
+            });
+          } else {
+            // Same count - just update text for all siblings
+            siblingIndices.forEach((si, pi) => {
+              updatedArts[si] = {
+                ...updatedArts[si],
+                pageIndex: pi,
+                totalPages: newPageCount,
+                cardText: textParts[pi] || updatedArts[si].cardText,
+                cardTitle: cardRes.data!.title || art.cardTitle,
+                brandKit: clientRes.data.brand_kit,
+              };
+            });
+          }
+
+          // Find current art's new index
+          const currentIdx = updatedArts.findIndex(
+            a => a.cardId === art.cardId && a.pageIndex === (art.pageIndex ?? 0)
+          );
+          setClientArts([...updatedArts]);
+
+          // Regenerate all sibling pages that need it
+          const finalSiblingIndices = updatedArts
+            .map((a, i) => a.cardId === art.cardId ? i : -1)
+            .filter(i => i >= 0);
+          for (const si of finalSiblingIndices) {
+            const imgUrl = await generateArtForClient({ ...updatedArts[si] });
+            updatedArts[si] = { ...updatedArts[si], imageUrl: imgUrl, imageUrl: imgUrl };
+          }
+          setClientArts([...updatedArts]);
         } else {
-          // Check if the updated text now has semicolons (became a carousel)
-          const textParts = fullText.split(';').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
-          if (textParts.length > 1) {
-            // Text became a carousel - use first part for this card
-            freshArt.cardText = textParts[0];
-            freshArt.pageIndex = 0;
-            freshArt.totalPages = textParts.length;
+          // Not a carousel anymore or was never one
+          if (wasCarousel) {
+            // Remove sibling pages, keep only this one
+            const siblingIndices = updatedArts
+              .map((a, i) => a.cardId === art.cardId && i !== index ? i : -1)
+              .filter(i => i >= 0);
+            for (let ri = siblingIndices.length - 1; ri >= 0; ri--) {
+              updatedArts.splice(siblingIndices[ri], 1);
+            }
+            // Find updated index of current card
+            const newIdx = updatedArts.findIndex(a => a.cardId === art.cardId);
+            if (newIdx >= 0) {
+              updatedArts[newIdx] = {
+                ...updatedArts[newIdx],
+                ...freshArt,
+                cardText: fullText,
+                pageIndex: undefined,
+                totalPages: undefined,
+              };
+            }
           } else {
             freshArt.cardText = fullText;
+            updatedArts[index] = { ...updatedArts[index], ...freshArt };
+          }
+          setClientArts([...updatedArts]);
+
+          const targetIdx = updatedArts.findIndex(a => a.cardId === art.cardId);
+          if (targetIdx >= 0) {
+            const newImageUrl = await generateArtForClient({ ...updatedArts[targetIdx] });
+            updatedArts[targetIdx] = { ...updatedArts[targetIdx], imageUrl: newImageUrl };
+            setClientArts([...updatedArts]);
           }
         }
+      } else {
+        updatedArts[index] = { ...updatedArts[index], ...freshArt };
+        setClientArts(updatedArts);
+        const newImageUrl = await generateArtForClient({ ...updatedArts[index] });
+        updatedArts[index] = { ...updatedArts[index], imageUrl: newImageUrl };
+        setClientArts([...updatedArts]);
       }
-
-      updatedArts[index] = { ...updatedArts[index], ...freshArt };
-      setClientArts(updatedArts);
-
-      // Regenerate art with new data
-      const newImageUrl = await generateArtForClient({ ...updatedArts[index] });
-      updatedArts[index] = { ...updatedArts[index], imageUrl: newImageUrl };
-      setClientArts([...updatedArts]);
 
       toast({ title: "Dados atualizados!", description: `Kit de marca e texto de ${art.clientName} recarregados.` });
     } catch (error) {
