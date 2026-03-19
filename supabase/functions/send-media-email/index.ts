@@ -131,16 +131,20 @@ serve(async (req) => {
       path: entry.url,
     }));
 
-    // Build plain body from cardText and caption only
+    // Fixed download instruction text
+    const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
+    const tipoArquivo = isVideo ? 'MP4' : 'PNG';
+    const downloadInstruction = `SUA ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER A ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`;
+
+    // Build plain text: cardText + caption + download instruction
     let bodyParts: string[] = [];
     if (cardText) bodyParts.push(cardText);
     if (caption) bodyParts.push(caption);
-    const plainText = bodyParts.join('\n\n') || ' ';
+    bodyParts.push(downloadInstruction);
+    const plainText = bodyParts.join('\n\n');
 
     // Simple HTML version of the same text
-    const htmlBody = bodyParts.length > 0
-      ? `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${bodyParts.map(t => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`).join('')}</div>`
-      : '<div></div>';
+    const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${bodyParts.map(t => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`).join('')}</div>`;
 
     const results = await Promise.all(
       validEmails.map(async (email: string) => {
