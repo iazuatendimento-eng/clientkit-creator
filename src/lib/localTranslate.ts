@@ -104,18 +104,18 @@ const PT_EN: Record<string, string> = {
   igreja: "church", fé: "faith", fe: "faith", deus: "god", oração: "prayer", oracao: "prayer",
 
   // Transport & Logistics
-  frete: "freight", transporte: "transport", caminhão: "truck", caminhao: "truck",
+  frete: "freight", caminhão: "truck", caminhao: "truck",
   logística: "logistics", logistica: "logistics", entrega: "delivery", envio: "shipping",
   pontualidade: "punctuality", garantida: "guaranteed", garantia: "warranty",
-  exclusivo: "exclusive", sempre: "always", rápido: "fast", rapido: "fast",
+  sempre: "always", rápido: "fast", rapido: "fast",
   mudança: "moving", mudanca: "moving", carga: "cargo", frota: "fleet",
   rodoviário: "road", rodoviario: "road", estrada: "road", motorista: "driver",
 
   // More adjectives & common words
-  contínuo: "continuous", continuo: "continuous",
+  contínuo: "continuous",
   completo: "complete", completa: "complete",
   eficiente: "efficient", eficiência: "efficiency", eficiencia: "efficiency",
-  seguro: "safe", rápida: "fast", rapida: "fast",
+  rápida: "fast", rapida: "fast",
   serviço: "service", servico: "service", serviços: "services", servicos: "services",
   solução: "solution", solucao: "solution", soluções: "solutions", solucoes: "solutions",
   produto: "product", produtos: "products", oferta: "offer", promoção: "promotion", promocao: "promotion",
