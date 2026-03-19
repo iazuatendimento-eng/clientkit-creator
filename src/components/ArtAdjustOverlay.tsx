@@ -123,7 +123,7 @@ export function ArtAdjustOverlay({
   setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState<Part>("photo");
+  const [active, setActive] = useState<Part | null>(null);
 
   // Use a ref for onDragEnd to avoid stale closures in pointer event listeners
   const onDragEndRef = useRef(onDragEnd);
@@ -680,7 +680,7 @@ export function ArtAdjustOverlay({
             ? "z-30"
             : "z-40";
 
-    const zClass = isActive ? "z-50" : baseLayerClass;
+    const zClass = baseLayerClass;
 
     return (
       <div
