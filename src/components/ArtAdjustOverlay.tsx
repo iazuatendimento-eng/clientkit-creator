@@ -98,6 +98,13 @@ export function ArtAdjustOverlay({
   setMascotScaleY,
   shapeOverrides,
   setShapeOverrides,
+  bgOffsetX,
+  bgOffsetY,
+  bgScale,
+  setBgOffsetX,
+  setBgOffsetY,
+  setBgScale,
+  hasBackgroundImage,
 }: {
   template: MasterTemplateLike;
   previewUrl: string | null;
