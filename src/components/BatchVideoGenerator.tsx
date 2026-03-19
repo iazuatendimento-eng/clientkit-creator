@@ -2152,8 +2152,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               foundVideo = true;
             }
             if (!foundVideo) {
-              const images = await searchImages(searchTerms, 1);
-              searchedImages.push(images.length > 0 ? images[0].urls.regular : "");
+              // No video found at all — leave empty, never fall back to static image
+              searchedImages.push("");
               pexelsVideoUrls.push(null);
             }
           } catch (error) {
