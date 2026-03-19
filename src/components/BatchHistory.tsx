@@ -59,10 +59,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   const loadBatches = async () => {
     setIsLoading(true);
     const data = await getBatchGenerations(filterType || "video");
-    
-    // Resolve missing team names from items
-    const batchesWithTeam = await resolveTeamNames(data);
-    setBatches(batchesWithTeam);
+    setBatches(data);
     setIsLoading(false);
   };
 
