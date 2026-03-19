@@ -780,29 +780,6 @@ export function ArtAdjustOverlay({
         </div>
       )}
 
-      {/* Seletor rápido de camadas */}
-      <div className="absolute top-2 right-2 z-[60] flex items-center gap-1">
-        {selectableParts.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setActive(item.key);
-            }}
-            className={cn(
-              "h-6 px-2 rounded border text-[10px] leading-none backdrop-blur-sm",
-              active === item.key
-                ? "border-primary text-primary bg-background/90"
-                : "border-border text-muted-foreground bg-background/70 hover:text-foreground"
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
       {/* Canva-style grid */}
       <div className="absolute inset-0 pointer-events-none z-[5]">
         {gridLines}
