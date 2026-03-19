@@ -299,6 +299,36 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [customImageUrl, setCustomImageUrl] = useState("");
   // Team filter is now fixed based on initial selection - no runtime switching
   const teamFilter = initialTeamFilter;
+  const hasImagePlaceholder = template.elements.some((el) => el.type === "image" && el.placeholder);
+
+  const buildDefaultStockQuery = useCallback((art: ClientArt) => {
+    const tokenize = (value?: string) =>
+      (value || "")
+        .toLowerCase()
+        .replace(/[^\w\s\u00C0-\u024F-]/g, " ")
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 3 && !/^\d+$/.test(token));
+
+    const dedupe = (tokens: string[]) => Array.from(new Set(tokens));
+
+    const primary = dedupe([
+      ...tokenize(art.cardText),
+      ...tokenize(art.imageType),
+    ]);
+
+    const fallback = dedupe([
+      ...tokenize(art.cardTitle),
+      ...tokenize(art.company),
+      ...tokenize(art.clientName),
+    ]);
+
+    const rawQuery = (primary.length > 0 ? primary : fallback).slice(0, 10).join(" ").trim();
+    const translated = translateToEnglishLocal(rawQuery).trim();
+
+    return translated || "business marketing";
+  }, []);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Element override states
@@ -891,8 +921,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     // Draw background image if set — but only as full-canvas background when
     // no image placeholder exists, otherwise it will be drawn inside the frame.
     const hasImagePlaceholderEl = template.elements.some(e => e.type === "image" && e.placeholder);
-    if (art.backgroundImage && !hasImagePlaceholderEl) {
-      const bgImg = await loadImage(art.backgroundImage);
+    const backgroundSource = !hasImagePlaceholderEl
+      ? (art.backgroundImage || resolvedPhotoImage || null)
+      : null;
+
+    if (backgroundSource) {
+      const bgImg = await loadImage(backgroundSource);
       if (bgImg) {
         const bgOx = art.elementOverrides?.bgOffsetX ?? 0;
         const bgOy = art.elementOverrides?.bgOffsetY ?? 0;
@@ -1741,7 +1775,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const index = selectedArtIndex;
     if (index >= clientArts.length) return;
 
-    const updatedArt = { ...clientArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
+    const currentArt = clientArts[index];
+    const updatedArt = {
+      ...currentArt,
+      photoImage: image.urls.regular,
+      backgroundImage: hasImagePlaceholder ? currentArt.backgroundImage : image.urls.regular,
+      photoOffset: { x: 0, y: 0 },
+      elementOverrides: {
+        ...currentArt.elementOverrides,
+        ...(hasImagePlaceholder ? {} : { bgOffsetX: 0, bgOffsetY: 0, bgScale: 100 }),
+      },
+    };
+
     lockPhotoForArt(updatedArt, image.urls.regular);
     const updatedArts = [...clientArts];
     updatedArts[index] = updatedArt;
@@ -1785,7 +1830,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const index = selectedArtIndex;
     if (index >= clientArts.length) return;
 
-    const updatedArt = { ...clientArts[index], photoImage: imageUrl, photoOffset: { x: 0, y: 0 } };
+    const currentArt = clientArts[index];
+    const updatedArt = {
+      ...currentArt,
+      photoImage: imageUrl,
+      backgroundImage: hasImagePlaceholder ? currentArt.backgroundImage : imageUrl,
+      photoOffset: { x: 0, y: 0 },
+      elementOverrides: {
+        ...currentArt.elementOverrides,
+        ...(hasImagePlaceholder ? {} : { bgOffsetX: 0, bgOffsetY: 0, bgScale: 100 }),
+      },
+    };
+
     lockPhotoForArt(updatedArt, imageUrl);
     const updatedArts = [...clientArts];
     updatedArts[index] = updatedArt;
@@ -2578,8 +2634,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               onOpenImageDialog={(a, idx) => {
                 setSelectedArt(a);
                 setSelectedArtIndex(idx);
-                const queryParts = [a.cardText, a.imageType].filter(Boolean);
-                setSearchQuery(translateToEnglishLocal(queryParts.join(" ").slice(0, 150)));
+                setSearchQuery(buildDefaultStockQuery(a));
                 setIsImageDialogOpen(true);
               }}
               onRefreshBrandKit={refreshBrandKitAndRegenerate}
