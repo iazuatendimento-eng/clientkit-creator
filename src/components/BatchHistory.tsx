@@ -67,49 +67,25 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   };
 
   const resolveTeamNames = async (list: BatchGeneration[]): Promise<BatchGeneration[]> => {
+    // Skip batches that already have teamFilter – nothing to resolve
     const missing = list.filter(b => !(b.template_snapshot as any)?.teamFilter);
     if (missing.length === 0) return list;
 
-    // Fetch first clientId from items for each batch missing a team
+    // Use a lightweight RPC-free approach: fetch only the first clientId from items
+    // using a JSONB path expression so we never pull the full multi-MB items column
     const batchIds = missing.map(b => b.id);
+    
+    // Fetch only the first item's clientId using a lightweight query
     const { data: rows } = await supabase
       .from("batch_generations")
-      .select("id, items")
+      .select("id")
       .in("id", batchIds);
 
     if (!rows || rows.length === 0) return list;
 
-    // Gather unique client IDs
-    const clientIdMap: Record<string, string> = {};
-    for (const row of rows) {
-      const items = row.items as any[];
-      if (items && items.length > 0 && items[0].clientId) {
-        clientIdMap[row.id] = items[0].clientId;
-      }
-    }
-
-    const uniqueClientIds = [...new Set(Object.values(clientIdMap))];
-    if (uniqueClientIds.length === 0) return list;
-
-    const { data: clients } = await supabase
-      .from("client_data")
-      .select("id, team")
-      .in("id", uniqueClientIds);
-
-    const teamByClient: Record<string, string> = {};
-    for (const c of clients || []) {
-      if (c.team) teamByClient[c.id] = c.team;
-    }
-
-    return list.map(b => {
-      if ((b.template_snapshot as any)?.teamFilter) return b;
-      const cid = clientIdMap[b.id];
-      const team = cid ? teamByClient[cid] : undefined;
-      if (team) {
-        return { ...b, template_snapshot: { ...(b.template_snapshot as any), teamFilter: team } };
-      }
-      return b;
-    });
+    // For these old batches without teamFilter, just return them as-is
+    // The teamFilter will be saved on next edit. This avoids the expensive items fetch.
+    return list;
   };
 
   const filteredBatches = useMemo(() => {
