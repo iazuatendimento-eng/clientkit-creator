@@ -1701,6 +1701,9 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
               <div className="space-y-4 min-w-0 self-start" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
                 <div className="p-4 rounded-lg border bg-blue-500/20 border-blue-500/30">
                   <h3 className="font-semibold text-center">Briefing</h3>
+                  <div className="text-center text-sm text-muted-foreground mt-1">
+                    Cliente
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {clientInfo.image_type && (
