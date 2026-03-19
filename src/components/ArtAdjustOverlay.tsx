@@ -495,20 +495,36 @@ export function ArtAdjustOverlay({
           return;
         }
 
+        const baseW = els.textEl?.width || 1;
         const baseH = els.textEl?.height || 1;
         const h = s.handle as Handle;
-
-        // All handles (side, corner) change font size based on vertical delta
-        // Width stays fixed - font size increase causes more line wrapping
-        const signedDy = handleSignY(h) * dy;
-        // For horizontal-only handles, use dx mapped to height change
+        const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
-        const delta = isHorizontalHandle ? handleSignX(h) * dx : signedDy;
-        
+
+        let delta = 0;
+        if (isHorizontalHandle) {
+          // Side handles: horizontal drag controls font size change
+          delta = handleSignX(h) * dx;
+        } else if (isVerticalHandle) {
+          // Side handles: vertical drag controls font size change
+          delta = handleSignY(h) * dy;
+        } else {
+          // Corner handles: use dominant axis so resizing works even when dragging mostly sideways
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          delta = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH)
+            ? signedDx * (baseH / baseW)
+            : signedDy;
+        }
+
         const newH = clamp(s.start.textH + delta, baseH * 0.5, baseH * 3);
         const newScale = clamp((newH / baseH) * 100, 50, 300);
         setTextFontSize(newScale);
-        if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
+
+        if (handleHasN(h)) {
+          setTextY(clamp(s.start.textY + (s.start.textH - newH), -200, 200));
+        }
+
         return;
       }
 
@@ -700,15 +716,6 @@ export function ArtAdjustOverlay({
     );
   };
 
-  const selectableParts = useMemo(() => {
-    const parts: Array<{ key: Part; label: string }> = [];
-    if (els.photoFrame) parts.push({ key: "photo", label: "Foto" });
-    if (els.logoEl) parts.push({ key: "logo", label: "Logo" });
-    if (els.textEl) parts.push({ key: "text", label: "Texto" });
-    if (els.contactEl) parts.push({ key: "contact", label: "Contato" });
-    return parts;
-  }, [els.photoFrame, els.logoEl, els.textEl, els.contactEl]);
-
   // Build grid lines (Canva-style)
   const gridLines = useMemo(() => {
     const lines: React.ReactNode[] = [];
@@ -772,29 +779,6 @@ export function ArtAdjustOverlay({
           Sem prévia
         </div>
       )}
-
-      {/* Seletor rápido de camadas */}
-      <div className="absolute top-2 right-2 z-[60] flex items-center gap-1">
-        {selectableParts.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setActive(item.key);
-            }}
-            className={cn(
-              "h-6 px-2 rounded border text-[10px] leading-none backdrop-blur-sm",
-              active === item.key
-                ? "border-primary text-primary bg-background/90"
-                : "border-border text-muted-foreground bg-background/70 hover:text-foreground"
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
 
       {/* Canva-style grid */}
       <div className="absolute inset-0 pointer-events-none z-[5]">
