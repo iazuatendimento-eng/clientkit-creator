@@ -150,6 +150,7 @@ export function ArtCardWithOverlay({
     logoX, logoY, logoScaleX, logoScaleY,
     textX, textY, textFontSize,
     contactX, contactY, contactScaleX, contactScaleY,
+    mascotX, mascotY, mascotScaleX, mascotScaleY,
     shapeOverrides,
   });
 
