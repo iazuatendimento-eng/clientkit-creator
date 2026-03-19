@@ -123,24 +123,24 @@ const getFallbackVideos = (perPage: number) => {
   return source.slice(0, Math.max(1, Math.min(perPage, source.length)));
 };
 
-const calcRetryDelayMs = (retryAfterHeader: string | null, attempt: number): number => {
+const calcRetryDelayMs = (retryAfterHeader: string | null, attempt: number, maxDelayMs: number): number => {
   if (retryAfterHeader) {
     const asSeconds = Number(retryAfterHeader);
     if (!Number.isNaN(asSeconds) && asSeconds > 0) {
-      return Math.ceil(asSeconds * 1000);
+      return Math.min(Math.ceil(asSeconds * 1000), maxDelayMs);
     }
 
     const asDate = new Date(retryAfterHeader).getTime();
     if (!Number.isNaN(asDate)) {
       const diff = asDate - Date.now();
-      if (diff > 0) return diff;
+      if (diff > 0) return Math.min(diff, maxDelayMs);
     }
   }
 
-  const base = 1200;
-  const exp = Math.min(attempt, 6);
-  const jitter = Math.floor(Math.random() * 500);
-  return base * 2 ** exp + jitter;
+  const base = 450;
+  const exp = Math.min(attempt, 4);
+  const jitter = Math.floor(Math.random() * 220);
+  return Math.min(base * 2 ** exp + jitter, maxDelayMs);
 };
 
 serve(async (req) => {
@@ -162,6 +162,7 @@ serve(async (req) => {
     const query = typeof body?.query === "string" ? body.query : "";
     const perPage = Math.min(Math.max(Number(body?.perPage) || 6, 1), 20);
     const page = Math.max(Number(body?.page) || 1, 1);
+    const fastMode = body?.fastMode !== false;
 
     const sanitized = query.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim();
     const shortQuery = sanitized.split(/\s+/).slice(0, 5).join(" ").substring(0, 80);
@@ -184,7 +185,8 @@ serve(async (req) => {
     const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(shortQuery)}&per_page=${perPage}&page=${page}&orientation=portrait`;
 
     let response: Response | null = null;
-    const maxRetries = 6;
+    const maxRetries = fastMode ? 2 : 4;
+    const maxRetryDelayMs = fastMode ? 900 : 2600;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       response = await fetch(url, {
@@ -194,9 +196,24 @@ serve(async (req) => {
       });
 
       if (response.status === 429) {
+        if (fastMode && fallbackPool.length > 0) {
+          return new Response(
+            JSON.stringify({
+              error: "Pexels API throttled (fast fallback)",
+              throttled: true,
+              fallback: true,
+              videos: getFallbackVideos(perPage),
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+
         const isLastAttempt = attempt === maxRetries - 1;
         if (!isLastAttempt) {
-          const waitMs = calcRetryDelayMs(response.headers.get("Retry-After"), attempt);
+          const waitMs = calcRetryDelayMs(response.headers.get("Retry-After"), attempt, maxRetryDelayMs);
           console.warn(`Pexels throttled (429), retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
           await sleep(waitMs);
           continue;
@@ -219,7 +236,7 @@ serve(async (req) => {
       if (response.status >= 500) {
         const isLastAttempt = attempt === maxRetries - 1;
         if (!isLastAttempt) {
-          const waitMs = calcRetryDelayMs(response.headers.get("Retry-After"), attempt);
+          const waitMs = calcRetryDelayMs(response.headers.get("Retry-After"), attempt, maxRetryDelayMs);
           console.warn(`Pexels server error (${response.status}), retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
           await sleep(waitMs);
           continue;

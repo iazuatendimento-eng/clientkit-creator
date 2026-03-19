@@ -23,6 +23,7 @@ import {
 import { VideoPreviewPlayer } from "@/components/VideoPreviewPlayer";
 import { VideoAdjustOverlay } from "@/components/VideoAdjustOverlay";
 import { searchVideos, type SearchVideo } from "@/lib/imageSearch";
+import { translateToEnglishLocal } from "@/lib/localTranslate";
 import { encodeVideoToMP4, reencodeForWhatsApp, type MotionEffect, type TransitionEffect, type TextAnimation, type LogoAnimation } from "@/lib/videoEncoder";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -461,19 +462,22 @@ export function VideoGeneratorModal({
       if (matImages.length === 0) {
         // No material uploads — search for stock videos
         try {
-          const searchTerms = fullText.split(" ").slice(0, 6).join(" ");
-          let translatedTerms = searchTerms;
-          try {
-            const { data: transData } = await Promise.race([
-              supabase.functions.invoke("translate-text", { body: { text: searchTerms } }),
-              new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000)),
-            ]);
-            if (transData?.translatedText) translatedTerms = transData.translatedText;
-          } catch { /* use original */ }
+          const searchContext = fullText.split(" ").slice(0, 12).join(" ");
+          let searchTerms = translateToEnglishLocal(searchContext).trim();
+          if (!searchTerms) {
+            searchTerms = searchContext
+              .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .split(" ")
+              .slice(0, 6)
+              .join(" ");
+          }
+          if (!searchTerms) {
+            searchTerms = "business technology";
+          }
 
-          let results = await searchVideos(translatedTerms, Math.max(texts.length, 3));
-          if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
-          if (results.length === 0) results = await searchVideos("business technology", 3);
+          let results = await searchVideos(searchTerms, Math.max(texts.length, 3));
 
           if (results.length > 0) {
             bgVideoUrls = texts.map((_, idx) => results[idx % results.length]?.videoUrl || null);

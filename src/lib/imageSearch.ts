@@ -162,7 +162,7 @@ export const searchPexelsVideos = async (query: string, perPage: number = 5, pag
 
   try {
     const { data, error } = await supabase.functions.invoke('search-pexels-videos', {
-      body: { query: shortQuery, perPage, page },
+      body: { query: shortQuery, perPage, page, fastMode: true },
     });
 
     if (error) {
