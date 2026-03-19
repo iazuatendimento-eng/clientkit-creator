@@ -186,6 +186,16 @@ export function ArtAdjustOverlay({
 
 
   const getRect = (part: Part) => {
+    if (part === "bg") {
+      if (!hasBackgroundImage) return null;
+      const scale = (bgScale ?? 100) / 100;
+      const w = template.width * scale;
+      const h = template.height * scale;
+      const x = bgOffsetX ?? 0;
+      const y = bgOffsetY ?? 0;
+      return { x, y, w, h };
+    }
+
     if (part === "photo") {
       if (!els.photoFrame) return null;
 
