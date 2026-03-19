@@ -2457,7 +2457,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           ) : (
             <Button
               onClick={handleSendEmails}
-              disabled={approvedCount === 0 || isSendingEmails || !emailSubject.trim()}
+              disabled={readyCount === 0 || isSendingEmails || !emailSubject.trim()}
               className="bg-gradient-primary"
             >
               {isSendingEmails ? (
@@ -2468,7 +2468,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               ) : (
                 <>
                   <Mail className="mr-2 h-4 w-4" />
-                  Enviar {approvedCount} por E-mail
+                  Enviar {readyCount} por E-mail
                 </>
               )}
             </Button>
