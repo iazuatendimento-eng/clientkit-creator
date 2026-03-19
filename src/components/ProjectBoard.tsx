@@ -137,6 +137,7 @@ interface ProjectBoardProps {
   clientId?: string;
   isPublicView?: boolean;
   isInactive?: boolean;
+  onBack?: () => void;
 }
 
 interface SortableCardProps {
