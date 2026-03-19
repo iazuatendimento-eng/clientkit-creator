@@ -46,6 +46,10 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<BatchItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [deletingItemIdx, setDeletingItemIdx] = useState<number | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
