@@ -246,14 +246,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleToggleExpand(batch.id)}
-                      title="Ver itens"
-                    >
-                      {expandedBatchId === batch.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => handleEdit(batch)}
                       disabled={loadingEditId === batch.id}
                     >
