@@ -1012,6 +1012,18 @@ const Index = () => {
             <p className="text-sm text-muted-foreground px-3 mb-2">
               {filteredClients.length} de {clients.length} clientes
             </p>
+            <Button
+              size="sm"
+              variant="gradient"
+              onClick={() => {
+                setEditingClient(null);
+                setCurrentView("client-editor");
+              }}
+              className="w-full glow-effect mb-2"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Novo
+            </Button>
             {visibleClients.length > 0 ? (
               <>
               {visibleClients.map((client) => (
