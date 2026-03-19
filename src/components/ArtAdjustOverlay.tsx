@@ -462,8 +462,8 @@ export function ArtAdjustOverlay({
 
         // Move = pan the photo inside the frame
         if (s.mode === "move") {
-          setPhotoOffsetX(clamp(s.start.photoOffsetX + dx, -500, 500));
-          setPhotoOffsetY(clamp(s.start.photoOffsetY + dy, -500, 500));
+          setPhotoOffsetX(s.start.photoOffsetX + dx);
+          setPhotoOffsetY(s.start.photoOffsetY + dy);
           return;
         }
 
