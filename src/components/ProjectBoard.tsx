@@ -1046,6 +1046,20 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [showSplitDialog, setShowSplitDialog] = useState(false); // kept for compatibility
   
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({});
+  const [clientInfo, setClientInfo] = useState<{ briefing?: string; image_type?: string; narration_type?: string; particularity_type?: string } | null>(null);
+
+  // Load client info for briefing column
+  useEffect(() => {
+    if (!clientId || isPublicView) return;
+    supabase
+      .from("client_data")
+      .select("briefing, image_type, narration_type, particularity_type")
+      .eq("id", clientId)
+      .single()
+      .then(({ data }) => {
+        if (data) setClientInfo(data);
+      });
+  }, [clientId, isPublicView]);
 
   // Load briefs from Supabase
   useEffect(() => {
