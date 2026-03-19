@@ -563,12 +563,16 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         if (audioUrl && !audioWasMuxed) {
           onProgress?.(0.72);
           try {
-            const mp4WithAudio = await transcodeToTrueMp4({
-              inputBlob: rawBlob,
-              inputFileName: "input.mp4",
-              audioUrl,
-              videoDurationSec,
-            });
+            const mp4WithAudio = await withTimeout(
+              transcodeToTrueMp4({
+                inputBlob: rawBlob,
+                inputFileName: "input.mp4",
+                audioUrl,
+                videoDurationSec,
+              }),
+              35_000,
+              "gerar MP4 com áudio"
+            );
             console.log("[VideoEncoder] MP4 com áudio via FFmpeg, size:", mp4WithAudio.size);
             onProgress?.(1);
             return mp4WithAudio;
@@ -584,11 +588,15 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         if (requireEmailSafePreview) {
           onProgress?.(0.72);
           try {
-            const mp4Safe = await transcodeToTrueMp4({
-              inputBlob: rawBlob,
-              inputFileName: "input.mp4",
-              videoDurationSec,
-            });
+            const mp4Safe = await withTimeout(
+              transcodeToTrueMp4({
+                inputBlob: rawBlob,
+                inputFileName: "input.mp4",
+                videoDurationSec,
+              }),
+              35_000,
+              "gerar MP4 compatível"
+            );
             onProgress?.(1);
             return mp4Safe;
           } catch (transcodeErr) {
@@ -601,49 +609,21 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             throw transcodeErr;
           }
         }
-
-        const compatibleBlob = await ensureCompatibleMp4(rawBlob, "WebCodecs final");
-        onProgress?.(1);
-        return compatibleBlob;
-      } catch (wcErr) {
-        console.error("[VideoEncoder] WebCodecs FAILED (" + attempt.label + "):", wcErr);
-        if (attempt === attempts[attempts.length - 1]) {
-          if (isMobileDevice) {
-            throw new Error("Falha ao gerar vídeo: " + (wcErr instanceof Error ? wcErr.message : String(wcErr)));
-          }
-          console.log("[VideoEncoder] All WebCodecs attempts failed, trying MediaRecorder fallback...");
-        }
-        onProgress?.(0.05);
-      }
-    }
-  }
-
-  // ====== FALLBACK: MediaRecorder ======
-  const mp4Mime = pickSupportedMimeType(["video/mp4;codecs=avc1", "video/mp4"]);
-  const webmMime = pickSupportedMimeType(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
-  const recordMime = mp4Mime || webmMime || "video/webm";
-
-  console.log("[VideoEncoder] MediaRecorder fallback, MIME:", recordMime);
-  onProgress?.(0.1);
-
-  if (mp4Mime) {
-    const nativeMp4 = await withTimeout(
-      encodeVideoSimple(pages, options, { mimeType: mp4Mime, outputType: "video/mp4" }),
-      300_000,
-      "gerar MP4"
-    );
-    onProgress?.(0.6);
-
+...
     // Always transcode native MP4 through FFmpeg to guarantee H.264 Baseline
     // (some browsers produce HEVC via MediaRecorder which isn't universally playable)
     onProgress?.(0.72);
     try {
-      const mp4H264 = await transcodeToTrueMp4({
-        inputBlob: nativeMp4,
-        inputFileName: "input.mp4",
-        audioUrl,
-        videoDurationSec,
-      });
+      const mp4H264 = await withTimeout(
+        transcodeToTrueMp4({
+          inputBlob: nativeMp4,
+          inputFileName: "input.mp4",
+          audioUrl,
+          videoDurationSec,
+        }),
+        35_000,
+        "gerar MP4 compatível"
+      );
       onProgress?.(1);
       return mp4H264;
     } catch (transcodeErr) {
@@ -674,12 +654,16 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
   );
 
   onProgress?.(0.72);
-  const convertedMp4 = await transcodeToTrueMp4({
-    inputBlob: webmBlob,
-    inputFileName: "input.webm",
-    audioUrl,
-    videoDurationSec,
-  });
+  const convertedMp4 = await withTimeout(
+    transcodeToTrueMp4({
+      inputBlob: webmBlob,
+      inputFileName: "input.webm",
+      audioUrl,
+      videoDurationSec,
+    }),
+    35_000,
+    "gerar MP4 compatível"
+  );
 
   onProgress?.(1);
   return convertedMp4;
