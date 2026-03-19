@@ -29,7 +29,7 @@ import {
   Check,
   X,
   Loader2,
-  Download,
+  
   RefreshCw,
   CheckCircle2,
   Image as ImageIcon,
@@ -268,7 +268,7 @@ interface ClientVideo {
   selectedAudio?: 1 | 2;
   note?: string;
   noteRead?: boolean;
-  exportedVideoUrl?: string; // URL do vídeo pré-encodado no storage (via Regerar Todos)
+  
 }
 
 interface BatchVideoGeneratorProps {
@@ -789,8 +789,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [textAnimDuration, setTextAnimDuration] = useState(getTemplateTextAnimDuration);
   const [shapeAnimation, setShapeAnimation] = useState<string>(getTemplateShapeAnimation);
   const [shapeAnimDuration, setShapeAnimDuration] = useState(getTemplateShapeAnimDuration);
-  const [isBulkExporting, setIsBulkExporting] = useState(false);
-  const [bulkExportProgress, setBulkExportProgress] = useState("");
 
   // Keep emailSubject ref in sync
   useEffect(() => { emailSubjectRef.current = emailSubject; }, [emailSubject]);
@@ -2641,11 +2639,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         for (let vi = 0; vi < videos.length; vi++) {
           const video = videos[vi];
 
-          // Se já tem URL regenerada (via "Regerar Todos"), pula a re-codificação
-          if (video.exportedVideoUrl) {
-            mediaUrls.push(video.exportedVideoUrl);
-            continue;
-          }
 
           // Adaptive FPS: lower for long videos
           const estimatedDurationSec = Math.max(1, video.pages.length * (template.pageDuration || 3));
@@ -2882,150 +2875,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   };
 
-  const handleBulkRegenerate = async () => {
-    const videosWithPages = clientVideos.filter((v) => v.pages.length > 0);
-    if (videosWithPages.length === 0) {
-      toast({ title: "Nenhum vídeo para regerar", variant: "destructive" });
-      return;
-    }
-
-    setIsBulkExporting(true);
-    let successCount = 0;
-
-    try {
-      // Hidratar brand kit atual do cliente para garantir logo/contato na assinatura
-      const uniqueClientIds = [...new Set(videosWithPages.map((v) => v.clientId).filter(Boolean))];
-      const freshBrandKitMap: Record<string, any> = {};
-
-      if (uniqueClientIds.length > 0) {
-        const { data: freshClients, error: freshClientsError } = await supabase
-          .from("client_data")
-          .select("id, brand_kit")
-          .in("id", uniqueClientIds);
-
-        if (freshClientsError) {
-          console.warn("Não foi possível carregar brand kits atualizados para regeração:", freshClientsError);
-        } else {
-          freshClients?.forEach((client) => {
-            if (client.brand_kit) {
-              freshBrandKitMap[client.id] = client.brand_kit;
-            }
-          });
-        }
-      }
-
-      for (let i = 0; i < videosWithPages.length; i++) {
-        const video = videosWithPages[i];
-        setBulkExportProgress(`${i + 1}/${videosWithPages.length} • ${video.clientName}`);
-
-        try {
-          const hydratedBrandKit = mergeBrandKitAssets(video.brandKit, freshBrandKitMap[video.clientId]);
-
-          // Preload explícito para evitar assinatura sem assets
-          const brandAssetUrls = [
-            hydratedBrandKit?.pngs?.[0] || hydratedBrandKit?.logo,
-            hydratedBrandKit?.pngs?.[1] || hydratedBrandKit?.contactInfo,
-            hydratedBrandKit?.pngs?.[2] || hydratedBrandKit?.mascot,
-          ].filter((url): url is string => typeof url === "string" && url.length > 0);
-          await Promise.all(brandAssetUrls.map((url) => loadImage(url, 3)));
-
-          const videoForRegen: ClientVideo = {
-            ...video,
-            brandKit: hydratedBrandKit,
-          };
-
-          // Regera as páginas para garantir assinatura no fim + assets hidratados
-          const rebuilt = await regenerateSingleVideo(videoForRegen);
-          const exportVideo: ClientVideo = {
-            ...videoForRegen,
-            pages: rebuilt.pages,
-            overlayPages: rebuilt.overlayPages,
-            frameOverlayPages: rebuilt.frameOverlayPages,
-            preImageOverlayPages: rebuilt.preImageOverlayPages,
-            logoOverlayPages: rebuilt.logoOverlayPages,
-          };
-
-          setClientVideos((prev) =>
-            prev.map((v) =>
-              v.cardId === video.cardId
-                ? {
-                    ...v,
-                    brandKit: hydratedBrandKit,
-                    pages: rebuilt.pages,
-                    overlayPages: rebuilt.overlayPages,
-                    frameOverlayPages: rebuilt.frameOverlayPages,
-                    preImageOverlayPages: rebuilt.preImageOverlayPages,
-                    logoOverlayPages: rebuilt.logoOverlayPages,
-                  }
-                : v
-            )
-          );
-
-          const audioUrl = (() => {
-            const sel = exportVideo.selectedAudio || 1;
-            const preferred = sel === 2 ? template.audioUrl2 : template.audioUrl1;
-            const fallback = sel === 2 ? template.audioUrl1 : template.audioUrl2;
-            return preferred || fallback || undefined;
-          })();
-
-          const videoBlob = await encodeVideoToMP4(exportVideo.pages, {
-            width: template.width,
-            height: template.height,
-            pageDuration: template.pageDuration,
-            fps: 24,
-            motionEffect,
-            transitionEffect,
-            textAnimation,
-            logoAnimation,
-            textAnimDuration: textAnimDuration / (template.pageDuration || 3),
-            backgroundVideoUrls: exportVideo.previewVideoUrls || undefined,
-            frameOverlayPages: exportVideo.frameOverlayPages || undefined,
-            overlayPages: exportVideo.overlayPages || undefined,
-            logoOverlayPages: exportVideo.logoOverlayPages || undefined,
-            imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
-            imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
-            pageImageAdjustments: exportVideo.pageImageAdjustments,
-            audioUrl,
-            requireEmailSafePreview: true,
-            onProgress: () => {},
-          });
-
-          // Upload ao storage em vez de baixar
-          const safeName = (video.clientName || "video").replace(/[^a-zA-Z0-9]/g, "_");
-          const fileName = `regen_${safeName}_${Date.now()}.mp4`;
-          const storagePath = `videos/${fileName}`;
-          const { error: uploadError } = await supabase.storage
-            .from("card-uploads")
-            .upload(storagePath, videoBlob, { contentType: "video/mp4" });
-          if (uploadError) throw new Error(`Erro ao subir vídeo: ${uploadError.message}`);
-
-          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
-          const newPublicUrl = urlData.publicUrl;
-
-          // Atualiza a URL do vídeo no estado para uso no envio por e-mail
-          setClientVideos((prev) =>
-            prev.map((v) =>
-              v.cardId === video.cardId
-                ? { ...v, brandKit: hydratedBrandKit, exportedVideoUrl: newPublicUrl }
-                : v
-            )
-          );
-
-          successCount++;
-        } catch (error) {
-          console.error(`Erro ao regerar vídeo de ${video.clientName}:`, error);
-        }
-      }
-
-      toast({
-        title: `${successCount}/${videosWithPages.length} vídeos regerados`,
-        description: "Vídeos atualizados com a página de assinatura. Prontos para envio.",
-      });
-    } finally {
-      setIsBulkExporting(false);
-      setBulkExportProgress("");
-    }
-  };
 
 
   const approvedCount = clientVideos.filter((v) => v.status === "approved").length;
@@ -3107,25 +2956,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             className={`w-32 h-7 text-xs shrink-0 ${!emailSubject.trim() ? 'border-destructive' : ''}`}
           />
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs px-2 h-7 shrink-0"
-            onClick={handleBulkRegenerate}
-            disabled={isBulkExporting || isSendingEmails}
-          >
-            {isBulkExporting ? (
-              <>
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                {bulkExportProgress}
-              </>
-            ) : (
-              <>
-                <Download className="mr-1 h-3 w-3" />
-                Regerar Todos
-              </>
-            )}
-          </Button>
 
           <Button variant="outline" size="sm" className="text-xs px-2 h-7 shrink-0" onClick={handleSaveDraft}>
             <Save className="mr-1 h-3 w-3" />
