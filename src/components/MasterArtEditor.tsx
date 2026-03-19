@@ -121,10 +121,11 @@ type TeamFilter = string | undefined;
 interface MasterArtEditorProps {
   onBack: () => void;
   onGenerateBatch: (template: MasterTemplate, teamFilter: TeamFilter) => void;
+  onGenerateAllTeams?: (template: MasterTemplate) => void;
   onOpenHistory?: () => void;
 }
 
-export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: MasterArtEditorProps) => {
+export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, onOpenHistory }: MasterArtEditorProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -1727,6 +1728,19 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
     onGenerateBatch(template, selectedTeamFilter);
   };
 
+  const handleGenerateAllTeams = () => {
+    if (!onGenerateAllTeams) return;
+    const template: MasterTemplate = {
+      id: `template-${Date.now()}`,
+      name: templateName,
+      elements,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      backgroundColor,
+    };
+    onGenerateAllTeams(template);
+  };
+
   const selectedEl = elements.find((el) => el.id === selectedElement);
 
   return (
@@ -1812,6 +1826,13 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Mast
               <Play className="mr-2 h-4 w-4" />
               Gerar em Lote
             </Button>
+
+            {onGenerateAllTeams && availableTeams.length > 1 && (
+              <Button variant="outline" onClick={handleGenerateAllTeams}>
+                <Layers className="mr-2 h-4 w-4" />
+                Todas Equipes
+              </Button>
+            )}
 
             {onOpenHistory && (
               <Button variant="outline" onClick={onOpenHistory}>
