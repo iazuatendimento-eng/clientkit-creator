@@ -2116,7 +2116,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             .filter(i => i >= 0);
           for (const si of finalSiblingIndices) {
             const imgUrl = await generateArtForClient({ ...updatedArts[si] });
-            updatedArts[si] = { ...updatedArts[si], imageUrl: imgUrl, imageUrl: imgUrl };
+            updatedArts[si] = { ...updatedArts[si], imageUrl: imgUrl };
           }
           setClientArts([...updatedArts]);
         } else {
