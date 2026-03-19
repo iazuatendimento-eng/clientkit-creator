@@ -1103,20 +1103,23 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const video = updatedVideos[i];
       // Skip videos that already have valid previewVideoUrls (user-chosen videos)
       if (video.previewVideoUrls && video.previewVideoUrls.some(u => u && u !== "")) continue;
-      // Prioritize imageType and briefing for search (most relevant for visual content)
-      const searchContext = [video.imageType, video.cardTitle, video.briefing].filter(Boolean).join(" ");
-      const firstText = searchContext || video.pageTexts[0] || "";
-      if (!firstText) continue;
+      if (!video.imageType && !video.cardTitle && !video.pageTexts[0]) continue;
       try {
-        const combinedText = firstText.split(" ").slice(0, 15).join(" ");
-        let searchTerms = translateToEnglishLocal(combinedText);
-        // If local dictionary produced nothing, use raw text (Pexels handles many languages)
-        if (!searchTerms.trim()) {
-          searchTerms = combinedText.replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).slice(0, 5).join(" ");
+        // Use image_type as PRIMARY search term (most specific to the client's visual needs)
+        let searchTerms = "";
+        if (video.imageType?.trim()) {
+          searchTerms = translateToEnglishLocal(video.imageType).trim();
+          if (!searchTerms) searchTerms = video.imageType.trim().split(/\s+/).slice(0, 4).join(" ");
         }
-        console.log(`[BatchVideo] Card "${video.clientName}": search="${searchTerms}" (from: "${combinedText.substring(0, 60)}")`);
+        if (!searchTerms) {
+          const fallbackText = [video.cardTitle, video.pageTexts[0]].filter(Boolean).join(" ").split(" ").slice(0, 10).join(" ");
+          searchTerms = translateToEnglishLocal(fallbackText).trim();
+          if (!searchTerms) searchTerms = fallbackText.replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).slice(0, 5).join(" ");
+        }
+        if (!searchTerms) searchTerms = "business professional";
+        console.log(`[BatchVideo] Card "${video.clientName}": search="${searchTerms}" (imageType: "${video.imageType || 'N/A'}")`);
 
-        // Try search - fetch enough results for all content pages (Pexels only for quality)
+        // Try search - fetch enough results for all content pages
         const contentPageCount = video.pageTexts.length;
         const fetchCount = Math.max(contentPageCount, 5);
         let results = await searchPexelsVideos(searchTerms, fetchCount);
