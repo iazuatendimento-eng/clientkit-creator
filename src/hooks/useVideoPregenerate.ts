@@ -13,7 +13,7 @@ import {
   type PageTextAdjustment,
   type PageImageAdjustment,
 } from "@/lib/videoRenderer";
-import { searchVideos } from "@/lib/imageSearch";
+import { searchPexelsVideos } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
 
 export interface PreloadedVideoData {
@@ -149,12 +149,12 @@ export function useVideoPregenerate(
             }
             console.log(`[Video Search] Local translation: "${searchContext}" → "${translatedTerms}"`);
 
-            let results: Awaited<ReturnType<typeof searchVideos>> = [];
+            let results: Awaited<ReturnType<typeof searchPexelsVideos>> = [];
             if (translatedTerms.trim()) {
-              results = await searchVideos(translatedTerms, Math.max(pagesNeedingBankVideo.length, 3));
-              if (results.length === 0) results = await searchVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
+              results = await searchPexelsVideos(translatedTerms, Math.max(pagesNeedingBankVideo.length, 3));
+              if (results.length === 0) results = await searchPexelsVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
             }
-            if (results.length === 0) results = await searchVideos("business technology", 3);
+            if (results.length === 0) results = await searchPexelsVideos("business professional", 3);
 
             if (results.length > 0) {
               pagesNeedingBankVideo.forEach((pageIdx, i) => {

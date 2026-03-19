@@ -1104,23 +1104,28 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       // Skip videos that already have valid previewVideoUrls (user-chosen videos)
       if (video.previewVideoUrls && video.previewVideoUrls.some(u => u && u !== "")) continue;
       // Prioritize imageType and briefing for search (most relevant for visual content)
-      const searchContext = [video.imageType, video.briefing, video.cardTitle].filter(Boolean).join(" ");
+      const searchContext = [video.imageType, video.cardTitle, video.briefing].filter(Boolean).join(" ");
       const firstText = searchContext || video.pageTexts[0] || "";
       if (!firstText) continue;
       try {
         const combinedText = firstText.split(" ").slice(0, 15).join(" ");
         let searchTerms = translateToEnglishLocal(combinedText);
+        // If local dictionary produced nothing, use raw text (Pexels handles many languages)
+        if (!searchTerms.trim()) {
+          searchTerms = combinedText.replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).slice(0, 5).join(" ");
+        }
+        console.log(`[BatchVideo] Card "${video.clientName}": search="${searchTerms}" (from: "${combinedText.substring(0, 60)}")`);
 
-        // Try search - fetch enough results for all content pages
+        // Try search - fetch enough results for all content pages (Pexels only for quality)
         const contentPageCount = video.pageTexts.length;
         const fetchCount = Math.max(contentPageCount, 5);
-        let results = await searchVideos(searchTerms, fetchCount);
-        if (results.length === 0) {
+        let results = await searchPexelsVideos(searchTerms, fetchCount);
+        if (results.length === 0 && searchTerms.split(" ").length > 2) {
           const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
-          results = await searchVideos(simpleTerms, fetchCount);
+          results = await searchPexelsVideos(simpleTerms, fetchCount);
         }
         if (results.length === 0) {
-          results = await searchVideos("business technology", fetchCount);
+          results = await searchPexelsVideos("business professional", fetchCount);
         }
 
         if (results.length > 0) {
