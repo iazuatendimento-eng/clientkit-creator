@@ -1600,8 +1600,13 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       <div className={isPublicView ? 'w-full' : 'container mx-auto'}>
         {!isPublicView && (
           <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold gradient-text mb-2">
+            <div className="flex items-center gap-4">
+              {onBack && (
+                <Button variant="outline" size="sm" onClick={onBack}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <h1 className="text-4xl font-bold gradient-text">
                 {clientName || "Board de Projetos"}
               </h1>
             </div>
