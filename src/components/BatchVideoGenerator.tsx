@@ -1103,20 +1103,23 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const video = updatedVideos[i];
       // Skip videos that already have valid previewVideoUrls (user-chosen videos)
       if (video.previewVideoUrls && video.previewVideoUrls.some(u => u && u !== "")) continue;
-      // Prioritize imageType and briefing for search (most relevant for visual content)
-      const searchContext = [video.imageType, video.cardTitle, video.briefing].filter(Boolean).join(" ");
-      const firstText = searchContext || video.pageTexts[0] || "";
-      if (!firstText) continue;
+      if (!video.imageType && !video.cardTitle && !video.pageTexts[0]) continue;
       try {
-        const combinedText = firstText.split(" ").slice(0, 15).join(" ");
-        let searchTerms = translateToEnglishLocal(combinedText);
-        // If local dictionary produced nothing, use raw text (Pexels handles many languages)
-        if (!searchTerms.trim()) {
-          searchTerms = combinedText.replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).slice(0, 5).join(" ");
+        // Use image_type as PRIMARY search term (most specific to the client's visual needs)
+        let searchTerms = "";
+        if (video.imageType?.trim()) {
+          searchTerms = translateToEnglishLocal(video.imageType).trim();
+          if (!searchTerms) searchTerms = video.imageType.trim().split(/\s+/).slice(0, 4).join(" ");
         }
-        console.log(`[BatchVideo] Card "${video.clientName}": search="${searchTerms}" (from: "${combinedText.substring(0, 60)}")`);
+        if (!searchTerms) {
+          const fallbackText = [video.cardTitle, video.pageTexts[0]].filter(Boolean).join(" ").split(" ").slice(0, 10).join(" ");
+          searchTerms = translateToEnglishLocal(fallbackText).trim();
+          if (!searchTerms) searchTerms = fallbackText.replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).slice(0, 5).join(" ");
+        }
+        if (!searchTerms) searchTerms = "business professional";
+        console.log(`[BatchVideo] Card "${video.clientName}": search="${searchTerms}" (imageType: "${video.imageType || 'N/A'}")`);
 
-        // Try search - fetch enough results for all content pages (Pexels only for quality)
+        // Try search - fetch enough results for all content pages
         const contentPageCount = video.pageTexts.length;
         const fetchCount = Math.max(contentPageCount, 5);
         let results = await searchPexelsVideos(searchTerms, fetchCount);
@@ -2084,21 +2087,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const minSearchIntervalMs = 450;
       const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      const buildVideoSearchTerms = (rawContext: string) => {
-        const clippedContext = rawContext.split(" ").slice(0, 18).join(" ");
-        let terms = translateToEnglishLocal(clippedContext).trim();
-
-        if (!terms) {
-          terms = clippedContext
-            .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .split(" ")
-            .slice(0, 6)
-            .join(" ");
+      const buildVideoSearchTerms = (imageType: string, briefing: string, cardTitle: string, cardText: string) => {
+        // Priority 1: image_type is the BEST indicator (e.g. "odontologia", "transporte")
+        if (imageType?.trim()) {
+          const translated = translateToEnglishLocal(imageType).trim();
+          if (translated) return translated;
+          // If dictionary can't translate, use raw image_type (Pexels handles many languages)
+          return imageType.trim().split(/\s+/).slice(0, 4).join(" ");
         }
-
-        return terms || "business professional";
+        // Priority 2: briefing (client description)
+        if (briefing?.trim()) {
+          const translated = translateToEnglishLocal(briefing.split(" ").slice(0, 10).join(" ")).trim();
+          if (translated) return translated;
+        }
+        // Priority 3: card text content
+        const textContext = [cardTitle, cardText].filter(Boolean).join(" ").split(" ").slice(0, 12).join(" ");
+        const translated = translateToEnglishLocal(textContext).trim();
+        if (translated) return translated;
+        // Fallback: raw words
+        return textContext.replace(/[^\p{L}\p{N}\s]+/gu, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 5).join(" ") || "business professional";
       };
 
       const fetchVideosCached = async (query: string, perPage = 6) => {
@@ -2147,10 +2154,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         if (missingPageIndexes.length > 0) {
           try {
             const missingTexts = missingPageIndexes.map((idx) => video.pageTexts[idx] || "").join(" ");
-            const searchContext = [video.imageType, video.briefing, video.cardTitle, missingTexts]
-              .filter(Boolean)
-              .join(" ");
-            const searchTerms = buildVideoSearchTerms(searchContext);
+            const searchTerms = buildVideoSearchTerms(video.imageType || "", video.briefing || "", video.cardTitle, missingTexts);
             const fetchCount = Math.max(missingPageIndexes.length, 6);
 
             const foundVideos = await fetchVideosCached(searchTerms, fetchCount);

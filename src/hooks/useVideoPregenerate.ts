@@ -139,15 +139,19 @@ export function useVideoPregenerate(
         // Search bank videos only for uncovered pages
         if (pagesNeedingBankVideo.length > 0) {
           try {
-            // Build search context from card text + client image_type, translate locally (no AI cost)
-            const contextParts = [fullText, clientImageType].filter(Boolean);
-            const searchContext = contextParts.join(" ");
-            let translatedTerms = translateToEnglishLocal(searchContext);
-            // If local dictionary produced nothing, use the raw text as-is (Pexels handles many languages)
-            if (!translatedTerms.trim()) {
-              translatedTerms = searchContext.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).slice(0, 5).join(' ');
+            // Use image_type as PRIMARY search term (most relevant)
+            let translatedTerms = "";
+            if (clientImageType?.trim()) {
+              translatedTerms = translateToEnglishLocal(clientImageType).trim();
+              if (!translatedTerms) translatedTerms = clientImageType.trim().split(/\s+/).slice(0, 4).join(" ");
             }
-            console.log(`[Video Search] Local translation: "${searchContext}" → "${translatedTerms}"`);
+            if (!translatedTerms) {
+              const fallbackContext = [fullText, clientBriefing].filter(Boolean).join(" ").split(" ").slice(0, 10).join(" ");
+              translatedTerms = translateToEnglishLocal(fallbackContext).trim();
+              if (!translatedTerms) translatedTerms = fallbackContext.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).slice(0, 5).join(' ');
+            }
+            if (!translatedTerms) translatedTerms = "business professional";
+            console.log(`[Video Search] imageType: "${clientImageType}" → "${translatedTerms}"`);
 
             let results: Awaited<ReturnType<typeof searchPexelsVideos>> = [];
             if (translatedTerms.trim()) {
