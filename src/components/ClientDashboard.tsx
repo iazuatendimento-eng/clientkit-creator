@@ -109,6 +109,7 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
           brandKits={client.brand_kit ? [client.brand_kit] : []}
           onCreateProject={handleCreateProject}
           isInactive={client.active === false}
+          onBack={onBack}
         />
       </div>
     </div>
