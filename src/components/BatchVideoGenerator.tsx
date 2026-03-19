@@ -856,6 +856,68 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     }
   }, [clientVideos, isLoading]);
 
+  // Auto-advance: when generation finishes in multi-team mode, auto-save and move to next team
+  const prevIsGenerating = useRef(false);
+  useEffect(() => {
+    if (autoAdvance && prevIsGenerating.current && !isGenerating) {
+      // Generation just finished — check if we have generated videos
+      const hasVideos = clientVideos.some(v => v.pages.length > 0);
+      if (hasVideos) {
+        // Auto-save draft and advance
+        const autoSave = async () => {
+          try {
+            const videosWithPages = clientVideos.filter(v => v.pages.length > 0);
+            const newBatchItems: BatchItem[] = videosWithPages.map((video) => ({
+              cardId: video.cardId,
+              clientId: video.clientId,
+              clientName: video.clientName,
+              company: video.company,
+              cardTitle: video.cardTitle,
+              cardText: video.cardText,
+              brandKit: sanitizeBrandKitForStorage(video.brandKit),
+              files: [],
+              backgroundImages: video.searchedImages,
+              previewVideoUrls: video.previewVideoUrls?.map(u => u && !u.startsWith("blob:") ? u : null),
+              adjustments: video.adjustments as any,
+              pageTextAdjustments: video.pageTextAdjustments,
+              pageImageAdjustments: video.pageImageAdjustments,
+              note: video.note,
+              noteRead: video.noteRead,
+            }));
+
+            let batchItems = newBatchItems;
+            if (currentBatchId) {
+              try {
+                const existingBatch = await getBatchById(currentBatchId);
+                if (existingBatch && existingBatch.items.length > 0) {
+                  const updatedCardIds = new Set(newBatchItems.map(i => i.cardId));
+                  const preservedItems = existingBatch.items.filter(i => !updatedCardIds.has(i.cardId));
+                  batchItems = [...preservedItems, ...newBatchItems];
+                }
+              } catch { /* ignore */ }
+            }
+
+            const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
+            const snapshotWithTeam = { ...template, teamFilter: teamFilter || (template as any).teamFilter || null, hasUnresolvedNotes };
+            await saveBatchGeneration("video", snapshotWithTeam, batchItems, currentBatchId || undefined);
+            await clearArtGenerationTags();
+
+            toast({
+              title: `Rascunho salvo automaticamente`,
+              description: `${videosWithPages.length} vídeos salvos. Avançando...`,
+            });
+          } catch (err) {
+            console.error("Auto-save error:", err);
+          }
+          // Advance to next team
+          onBack();
+        };
+        autoSave();
+      }
+    }
+    prevIsGenerating.current = isGenerating;
+  }, [isGenerating, autoAdvance]);
+
   // Keep preview static (no auto page cycling)
   useEffect(() => {
     if (!selectedVideo) return;
