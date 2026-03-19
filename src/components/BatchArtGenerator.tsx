@@ -1698,14 +1698,14 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setIsSearching(true);
     setSearchPage(1);
     try {
-      const images = await searchImages(searchQuery, 12, 1);
+      const searchFn = imageSourceTab === "pixabay" ? searchPixabayImages : searchPexelsImages;
+      const images = await searchFn(searchQuery, 12, 1);
       setSearchImagesResults(images);
       
-      const apis = getConfiguredApis();
-      if (!apis.pexels && !apis.unsplash) {
+      if (images.length === 0) {
         toast({
-          title: "Busca limitada",
-          description: "Configure VITE_PEXELS_API_KEY para busca real de imagens.",
+          title: "Nenhuma imagem encontrada",
+          description: "Tente outro termo de busca.",
         });
       }
     } catch (error) {
@@ -1723,7 +1723,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const nextPage = searchPage + 1;
     setIsLoadingMore(true);
     try {
-      const images = await searchImages(searchQuery, 12, nextPage);
+      const searchFn = imageSourceTab === "pixabay" ? searchPixabayImages : searchPexelsImages;
+      const images = await searchFn(searchQuery, 12, nextPage);
       if (images.length > 0) {
         setSearchImagesResults(prev => [...prev, ...images]);
         setSearchPage(nextPage);
