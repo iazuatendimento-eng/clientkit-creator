@@ -473,10 +473,8 @@ export function ArtAdjustOverlay({
             newY = startRect.y + (startRect.height - newH);
           }
 
-          newX = clamp(newX, 0, template.width - minSize);
-          newY = clamp(newY, 0, template.height - minSize);
-          newW = clamp(newW, minSize, template.width);
-          newH = clamp(newH, minSize, template.height);
+          newW = Math.max(minSize, newW);
+          newH = Math.max(minSize, newH);
 
           setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
         }
