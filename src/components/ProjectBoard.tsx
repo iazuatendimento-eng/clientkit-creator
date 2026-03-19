@@ -1695,7 +1695,43 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className={`grid ${isPublicView ? 'grid-cols-1 sm:grid-cols-2 gap-4' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid ${isPublicView ? 'grid-cols-1 sm:grid-cols-2 gap-4' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-3'}`}>
+            {/* Briefing Column - only in admin view */}
+            {!isPublicView && clientInfo && (clientInfo.briefing || clientInfo.image_type || clientInfo.narration_type || clientInfo.particularity_type) && (
+              <div className="space-y-4 min-w-0">
+                <div className="p-4 rounded-lg border bg-blue-500/20 border-blue-500/30">
+                  <h3 className="font-semibold text-center">Briefing</h3>
+                </div>
+                <Card className="bg-gradient-card border-primary/20">
+                  <CardContent className="p-4 space-y-3">
+                    {clientInfo.image_type && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Tipo de Imagem</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{clientInfo.image_type}</p>
+                      </div>
+                    )}
+                    {clientInfo.narration_type && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Narração</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{clientInfo.narration_type}</p>
+                      </div>
+                    )}
+                    {clientInfo.particularity_type && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Particularidade</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{clientInfo.particularity_type}</p>
+                      </div>
+                    )}
+                    {clientInfo.briefing && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Briefing</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{clientInfo.briefing}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
             {columns.map(column => {
               let columnBriefs = briefs.filter(b => b.status === column.id);
               
