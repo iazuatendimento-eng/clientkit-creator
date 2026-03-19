@@ -680,7 +680,7 @@ export function ArtAdjustOverlay({
             ? "z-30"
             : "z-40";
 
-    const zClass = isActive ? "z-50" : baseLayerClass;
+    const zClass = baseLayerClass;
 
     return (
       <div
