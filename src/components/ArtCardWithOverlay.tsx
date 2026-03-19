@@ -42,6 +42,9 @@ interface ElementOverrides {
   photoScale?: number;
   photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgScale?: number;
 }
 
 interface ClientArt {
@@ -138,6 +141,9 @@ export function ArtCardWithOverlay({
   const [mascotScaleX, _setMascotScaleX] = useState(art.elementOverrides?.mascotScaleX || 100);
   const [mascotScaleY, _setMascotScaleY] = useState(art.elementOverrides?.mascotScaleY || 100);
   const [shapeOverrides, _setShapeOverrides] = useState<Record<string, ShapeOverride>>(art.elementOverrides?.shapes || {});
+  const [bgOffsetX, _setBgOffsetX] = useState(art.elementOverrides?.bgOffsetX || 0);
+  const [bgOffsetY, _setBgOffsetY] = useState(art.elementOverrides?.bgOffsetY || 0);
+  const [bgScale, _setBgScale] = useState(art.elementOverrides?.bgScale || 100);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,6 +158,7 @@ export function ArtCardWithOverlay({
     contactX, contactY, contactScaleX, contactScaleY,
     mascotX, mascotY, mascotScaleX, mascotScaleY,
     shapeOverrides,
+    bgOffsetX, bgOffsetY, bgScale,
   });
 
   // Wrapped setters that update both React state AND the ref synchronously
@@ -175,6 +182,9 @@ export function ArtCardWithOverlay({
   const setMascotScaleX = useCallback((v: number) => { latestRef.current.mascotScaleX = v; _setMascotScaleX(v); }, []);
   const setMascotScaleY = useCallback((v: number) => { latestRef.current.mascotScaleY = v; _setMascotScaleY(v); }, []);
   const setShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => { latestRef.current.shapeOverrides = v; _setShapeOverrides(v); }, []);
+  const setBgOffsetX = useCallback((v: number) => { latestRef.current.bgOffsetX = v; _setBgOffsetX(v); }, []);
+  const setBgOffsetY = useCallback((v: number) => { latestRef.current.bgOffsetY = v; _setBgOffsetY(v); }, []);
+  const setBgScale = useCallback((v: number) => { latestRef.current.bgScale = v; _setBgScale(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
@@ -202,6 +212,9 @@ export function ArtCardWithOverlay({
       setMascotScaleX(art.elementOverrides?.mascotScaleX || 100);
       setMascotScaleY(art.elementOverrides?.mascotScaleY || 100);
       setShapeOverrides(art.elementOverrides?.shapes || {});
+      setBgOffsetX(art.elementOverrides?.bgOffsetX || 0);
+      setBgOffsetY(art.elementOverrides?.bgOffsetY || 0);
+      setBgScale(art.elementOverrides?.bgScale || 100);
     }
   }, [art]);
 
@@ -254,6 +267,9 @@ export function ArtCardWithOverlay({
       photoScale: v.photoScale,
       photoFrame: v.photoFrame || undefined,
       shapes: v.shapeOverrides,
+      bgOffsetX: v.bgOffsetX,
+      bgOffsetY: v.bgOffsetY,
+      bgScale: v.bgScale,
     };
 
     const updatedArt: ClientArt = {
@@ -361,6 +377,13 @@ export function ArtCardWithOverlay({
               setMascotScaleY={setMascotScaleY}
               shapeOverrides={shapeOverrides}
               setShapeOverrides={setShapeOverrides}
+              bgOffsetX={bgOffsetX}
+              bgOffsetY={bgOffsetY}
+              bgScale={bgScale}
+              setBgOffsetX={setBgOffsetX}
+              setBgOffsetY={setBgOffsetY}
+              setBgScale={setBgScale}
+              hasBackgroundImage={!!art.backgroundImage && !template.elements.some(e => e.type === "image" && e.placeholder)}
               onDragEnd={handleDragEnd}
             />
           </div>

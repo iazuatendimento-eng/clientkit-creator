@@ -120,6 +120,9 @@ interface ElementOverrides {
   // When set, resizes/moves the photo placeholder frame (instead of zooming the crop)
   photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgScale?: number;
 }
 
 interface ClientArt {
@@ -890,7 +893,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     if (art.backgroundImage && !hasImagePlaceholderEl) {
       const bgImg = await loadImage(art.backgroundImage);
       if (bgImg) {
-        ctx.drawImage(bgImg, 0, 0, template.width, template.height);
+        const bgOx = art.elementOverrides?.bgOffsetX ?? 0;
+        const bgOy = art.elementOverrides?.bgOffsetY ?? 0;
+        const bgSc = (art.elementOverrides?.bgScale ?? 100) / 100;
+        const bgW = template.width * bgSc;
+        const bgH = template.height * bgSc;
+        ctx.drawImage(bgImg, bgOx, bgOy, bgW, bgH);
       }
     }
 

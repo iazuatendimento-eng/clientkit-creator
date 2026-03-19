@@ -23,7 +23,7 @@ type ShapeOverride = { x: number; y: number; width: number; height: number };
 
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
-type BasePart = "photo" | "logo" | "text" | "contact" | "mascot";
+type BasePart = "photo" | "logo" | "text" | "contact" | "mascot" | "bg";
 
 type ShapePart = `shape:${string}`;
 
@@ -98,6 +98,13 @@ export function ArtAdjustOverlay({
   setMascotScaleY,
   shapeOverrides,
   setShapeOverrides,
+  bgOffsetX,
+  bgOffsetY,
+  bgScale,
+  setBgOffsetX,
+  setBgOffsetY,
+  setBgScale,
+  hasBackgroundImage,
 }: {
   template: MasterTemplateLike;
   previewUrl: string | null;
@@ -149,6 +156,14 @@ export function ArtAdjustOverlay({
 
   shapeOverrides?: Record<string, ShapeOverride>;
   setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
+
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgScale?: number;
+  setBgOffsetX?: (v: number) => void;
+  setBgOffsetY?: (v: number) => void;
+  setBgScale?: (v: number) => void;
+  hasBackgroundImage?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part | null>(null);
@@ -171,6 +186,16 @@ export function ArtAdjustOverlay({
 
 
   const getRect = (part: Part) => {
+    if (part === "bg") {
+      if (!hasBackgroundImage) return null;
+      const scale = (bgScale ?? 100) / 100;
+      const w = template.width * scale;
+      const h = template.height * scale;
+      const x = bgOffsetX ?? 0;
+      const y = bgOffsetY ?? 0;
+      return { x, y, w, h };
+    }
+
     if (part === "photo") {
       if (!els.photoFrame) return null;
 
@@ -306,6 +331,9 @@ export function ArtAdjustOverlay({
           textW: number;
           textH: number;
           shapeRect?: ShapeOverride;
+          bgOffsetX: number;
+          bgOffsetY: number;
+          bgScale: number;
         };
       }
   >(null);
@@ -388,6 +416,9 @@ export function ArtAdjustOverlay({
         textW,
         textH,
         shapeRect,
+        bgOffsetX: bgOffsetX ?? 0,
+        bgOffsetY: bgOffsetY ?? 0,
+        bgScale: bgScale ?? 100,
       },
     };
 
@@ -409,6 +440,30 @@ export function ArtAdjustOverlay({
       const resizeBoost = s.mode === "resize" ? 2 : 1;
       const dx = (dxClient / r.width) * template.width * resizeBoost;
       const dy = (dyClient / r.height) * template.height * resizeBoost;
+
+      if (s.part === "bg" && setBgOffsetX && setBgOffsetY && setBgScale) {
+        if (s.mode === "move") {
+          setBgOffsetX(s.start.bgOffsetX + dx);
+          setBgOffsetY(s.start.bgOffsetY + dy);
+          return;
+        }
+        // Resize = scale uniformly
+        const h = s.handle as Handle;
+        const signedDx = handleSignX(h) * dx;
+        const signedDy = handleSignY(h) * dy;
+        const dominant = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        const scaleChange = (dominant / template.width) * 100;
+        const newScale = clamp(s.start.bgScale + scaleChange, 50, 400);
+        setBgScale(newScale);
+        // Adjust offset so it scales from center
+        const oldW = template.width * (s.start.bgScale / 100);
+        const oldH = template.height * (s.start.bgScale / 100);
+        const newW = template.width * (newScale / 100);
+        const newH = template.height * (newScale / 100);
+        setBgOffsetX(s.start.bgOffsetX - (newW - oldW) / 2);
+        setBgOffsetY(s.start.bgOffsetY - (newH - oldH) / 2);
+        return;
+      }
 
       if (s.part === "photo") {
         const base = els.photoFrame;
@@ -817,17 +872,19 @@ export function ArtAdjustOverlay({
       );
     };
 
-    const baseLayerClass = part === "photo"
-      ? "z-0"
-      : isShapePart(part)
-        ? "z-10"
-        : part === "logo"
-          ? "z-20"
-          : part === "mascot"
-            ? "z-25"
-            : part === "contact"
-              ? "z-30"
-              : "z-40";
+    const baseLayerClass = part === "bg"
+      ? "-z-[1]"
+      : part === "photo"
+        ? "z-0"
+        : isShapePart(part)
+          ? "z-10"
+          : part === "logo"
+            ? "z-20"
+            : part === "mascot"
+              ? "z-25"
+              : part === "contact"
+                ? "z-30"
+                : "z-40";
 
     const zClass = baseLayerClass;
 
@@ -935,6 +992,7 @@ export function ArtAdjustOverlay({
       </div>
 
       <div className="absolute inset-0 z-10">
+        {hasBackgroundImage && <Box part="bg" label="Fundo" resizable />}
         <Box part="photo" label="Foto" resizable />
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
