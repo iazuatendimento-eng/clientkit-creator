@@ -329,40 +329,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
                               <p className="text-sm font-medium truncate">{item.company || item.clientName}</p>
                               <p className="text-xs text-muted-foreground truncate">{item.cardText}</p>
                             </div>
-                            {/* Delete */}
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={deletingItemIdx === idx}
-                                  className="shrink-0"
-                                >
-                                  {deletingItemIdx === idx ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  )}
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Remover item?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    {item.company || item.clientName} será removido deste lote.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteItem(batch.id, idx)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Remover
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
                           </div>
                         ))}
                       </div>
