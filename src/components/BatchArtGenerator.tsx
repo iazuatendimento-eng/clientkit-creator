@@ -2073,7 +2073,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         if (cd?.team) effectiveTeam = cd.team;
       }
       const snapshotWithTeam = { ...template, teamFilter: effectiveTeam, hasUnresolvedNotes };
-      const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
+      const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, batchIdRef.current || undefined);
       if (savedId) setCurrentBatchId(savedId);
 
       // Clear the art generation tags so they can regenerate later
