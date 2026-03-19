@@ -182,6 +182,9 @@ export function ArtCardWithOverlay({
   const setMascotScaleX = useCallback((v: number) => { latestRef.current.mascotScaleX = v; _setMascotScaleX(v); }, []);
   const setMascotScaleY = useCallback((v: number) => { latestRef.current.mascotScaleY = v; _setMascotScaleY(v); }, []);
   const setShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => { latestRef.current.shapeOverrides = v; _setShapeOverrides(v); }, []);
+  const setBgOffsetX = useCallback((v: number) => { latestRef.current.bgOffsetX = v; _setBgOffsetX(v); }, []);
+  const setBgOffsetY = useCallback((v: number) => { latestRef.current.bgOffsetY = v; _setBgOffsetY(v); }, []);
+  const setBgScale = useCallback((v: number) => { latestRef.current.bgScale = v; _setBgScale(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
