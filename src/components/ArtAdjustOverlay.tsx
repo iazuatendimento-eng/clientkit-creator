@@ -203,14 +203,12 @@ export function ArtAdjustOverlay({
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textFontSize / 100;
-      // Width stays fixed at original element width so text wraps to more lines
-      const w = els.textEl.width;
-      // Height grows with font size to accommodate extra lines from wrapping
+      const w = els.textEl.width * scale;
       const h = els.textEl.height * scale;
       const rawX = els.textEl.x + textX;
       const rawY = els.textEl.y + textY;
-      const x = clamp(rawX, 0, template.width - w);
-      const y = clamp(rawY, 0, template.height - h);
+      const x = clamp(rawX, 0, Math.max(0, template.width - w));
+      const y = clamp(rawY, 0, Math.max(0, template.height - h));
       return { x, y, w, h };
     }
 
