@@ -210,6 +210,16 @@ export function ArtAdjustOverlay({
       };
     }
 
+    if (part === "mascot") {
+      if (!els.mascotEl) return null;
+      return {
+        x: els.mascotEl.x + (mascotX ?? 0),
+        y: els.mascotEl.y + (mascotY ?? 0),
+        w: els.mascotEl.width * ((mascotScaleX ?? 100) / 100),
+        h: els.mascotEl.height * ((mascotScaleY ?? 100) / 100),
+      };
+    }
+
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textFontSize / 100;
