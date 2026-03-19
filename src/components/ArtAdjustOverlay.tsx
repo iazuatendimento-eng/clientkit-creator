@@ -567,14 +567,7 @@ export function ArtAdjustOverlay({
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setContactScaleX(newScaleX);
           if (handleHasW(h)) {
-            setContactX(
-              clampOffsetWithinCanvas(
-                s.start.contactX + (s.start.contactW - newW),
-                baseContactX,
-                newW,
-                template.width
-              )
-            );
+            setContactX(s.start.contactX + (s.start.contactW - newW));
           }
         } else if (isVerticalHandle) {
           const signedDy = handleSignY(h) * dy;
