@@ -226,23 +226,11 @@ export const searchPixabayVideos = async (query: string, perPage: number = 5, pa
   }
 };
 
-// Combined video search - searches Pexels and Pixabay in parallel and merges results
+// Combined video search - Pexels only
 export const searchVideos = async (query: string, perPage: number = 5, page: number = 1): Promise<SearchVideo[]> => {
-  const [pexelsResults, pixabayResults] = await Promise.all([
-    searchPexelsVideos(query, perPage, page),
-    searchPixabayVideos(query, perPage, page),
-  ]);
-
-  // Interleave results: pexels1, pixabay1, pexels2, pixabay2, ...
-  const combined: SearchVideo[] = [];
-  const maxLen = Math.max(pexelsResults.length, pixabayResults.length);
-  for (let i = 0; i < maxLen; i++) {
-    if (i < pexelsResults.length) combined.push(pexelsResults[i]);
-    if (i < pixabayResults.length) combined.push(pixabayResults[i]);
-  }
-
-  console.log(`[Video Search] Combined: ${pexelsResults.length} Pexels + ${pixabayResults.length} Pixabay = ${combined.length} total`);
-  return combined;
+  const results = await searchPexelsVideos(query, perPage, page);
+  console.log(`[Video Search] Pexels: ${results.length} results`);
+  return results;
 };
 
 // Pixabay Image search (via edge function since API key is a secret)
