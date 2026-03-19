@@ -377,6 +377,13 @@ export function ArtCardWithOverlay({
               setMascotScaleY={setMascotScaleY}
               shapeOverrides={shapeOverrides}
               setShapeOverrides={setShapeOverrides}
+              bgOffsetX={bgOffsetX}
+              bgOffsetY={bgOffsetY}
+              bgScale={bgScale}
+              setBgOffsetX={setBgOffsetX}
+              setBgOffsetY={setBgOffsetY}
+              setBgScale={setBgScale}
+              hasBackgroundImage={!!art.backgroundImage && !template.elements.some(e => e.type === "image" && e.placeholder)}
               onDragEnd={handleDragEnd}
             />
           </div>
