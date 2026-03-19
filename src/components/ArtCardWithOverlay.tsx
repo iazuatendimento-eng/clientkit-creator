@@ -399,11 +399,6 @@ export function ArtCardWithOverlay({
           </div>
         )}
 
-        {art.status === "approved" && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
-            <Check className="h-4 w-4" />
-          </div>
-        )}
 
         {art.totalPages && art.totalPages > 1 && (
           <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-semibold">
