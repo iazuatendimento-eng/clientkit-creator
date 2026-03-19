@@ -75,24 +75,7 @@ serve(async (req) => {
       .map((url: unknown) => sanitizeHttpUrl(url))
       .filter((url): url is string => !!url);
 
-    // Build text/caption section if provided
-    let textSection = '';
-    if (cardText) {
-      textSection += `
-        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-          <p style="color: #333; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">📝 Texto:</p>
-          <p style="color: #555; margin: 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(cardText)}</p>
-        </div>
-      `;
-    }
-    if (caption) {
-      textSection += `
-        <div style="background-color: #f0f4ff; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-          <p style="color: #333; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">💬 Legenda:</p>
-          <p style="color: #555; margin: 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(caption)}</p>
-        </div>
-      `;
-    }
+    // No styled text cards in email
 
     // Build attachments - support multiple URLs for carousel
     const rawUrls: unknown[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
