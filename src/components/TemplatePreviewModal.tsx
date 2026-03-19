@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Pause, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 
 interface CanvasElement {
   id: string;
@@ -49,6 +49,11 @@ interface TemplatePreviewModalProps {
   canvasHeight: number;
 }
 
+const BASE_PREVIEW_SCALE = 0.28;
+const MIN_PREVIEW_SCALE = 0.2;
+const MAX_PREVIEW_SCALE = 0.7;
+const SCALE_STEP = 0.04;
+
 export function TemplatePreviewModal({
   open,
   onClose,
@@ -62,12 +67,23 @@ export function TemplatePreviewModal({
   const [currentPage, setCurrentPage] = useState<"content" | "signature">("content");
   const [playing, setPlaying] = useState(true);
   const [animKey, setAnimKey] = useState(0);
+  const [previewScale, setPreviewScale] = useState(BASE_PREVIEW_SCALE);
 
-  const PREVIEW_SCALE = 0.28;
-  const previewW = canvasWidth * PREVIEW_SCALE;
-  const previewH = canvasHeight * PREVIEW_SCALE;
+  const previewW = canvasWidth * previewScale;
+  const previewH = canvasHeight * previewScale;
 
   const elements = currentPage === "content" ? contentElements : signatureElements;
+
+  const adjustPreviewScale = useCallback((direction: "in" | "out") => {
+    setPreviewScale((prev) => {
+      const next = direction === "in" ? prev + SCALE_STEP : prev - SCALE_STEP;
+      return Math.min(MAX_PREVIEW_SCALE, Math.max(MIN_PREVIEW_SCALE, Number(next.toFixed(2))));
+    });
+  }, []);
+
+  const resetPreviewScale = useCallback(() => {
+    setPreviewScale(BASE_PREVIEW_SCALE);
+  }, []);
 
   // Auto-cycle pages
   useEffect(() => {
@@ -122,14 +138,14 @@ export function TemplatePreviewModal({
 
     const baseStyle: React.CSSProperties = {
       position: "absolute",
-      left: el.x * PREVIEW_SCALE,
-      top: el.y * PREVIEW_SCALE,
-      width: el.width * PREVIEW_SCALE,
-      height: el.height * PREVIEW_SCALE,
+      left: el.x * previewScale,
+      top: el.y * previewScale,
+      width: el.width * previewScale,
+      height: el.height * previewScale,
       opacity: (el.opacity ?? 100) / 100,
       transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
-      borderRadius: el.borderRadius ? el.borderRadius * PREVIEW_SCALE : undefined,
-      borderWidth: el.borderWidth ? el.borderWidth * PREVIEW_SCALE : undefined,
+      borderRadius: el.borderRadius ? el.borderRadius * previewScale : undefined,
+      borderWidth: el.borderWidth ? el.borderWidth * previewScale : undefined,
       borderColor: el.borderColor,
       borderStyle: el.borderWidth ? "solid" : undefined,
       animationDuration: isAnimated ? `${duration}s` : undefined,
@@ -153,7 +169,7 @@ export function TemplatePreviewModal({
           style={{
             ...baseStyle,
             color: el.color || "#ffffff",
-            fontSize: (el.fontSize || 48) * PREVIEW_SCALE,
+            fontSize: (el.fontSize || 48) * previewScale,
             lineHeight: el.lineHeight || 1.2,
             textAlign: el.textAlign || "left",
             display: "flex",
@@ -175,8 +191,8 @@ export function TemplatePreviewModal({
     }
 
     if (el.type === "triangle") {
-      const w = el.width * PREVIEW_SCALE;
-      const h = el.height * PREVIEW_SCALE;
+      const w = el.width * previewScale;
+      const h = el.height * previewScale;
       return (
         <div
           key={`${el.id}-${animKey}`}
@@ -210,7 +226,7 @@ export function TemplatePreviewModal({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 10 * PREVIEW_SCALE,
+            fontSize: 10 * previewScale,
             color: "rgba(255,255,255,0.6)",
             border: "1px dashed rgba(255,255,255,0.3)",
           }}
@@ -231,7 +247,7 @@ export function TemplatePreviewModal({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 10 * PREVIEW_SCALE,
+            fontSize: 10 * previewScale,
             color: "rgba(255,255,255,0.4)",
             border: "1px dashed rgba(255,255,255,0.2)",
             overflow: "hidden",
@@ -253,7 +269,7 @@ export function TemplatePreviewModal({
           className={animClass}
           style={{
             ...baseStyle,
-            height: Math.max(2, (el.height || 4) * PREVIEW_SCALE),
+            height: Math.max(2, (el.height || 4) * previewScale),
             backgroundColor: el.color || "#3B82F6",
             borderRadius: 999,
           }}
@@ -271,10 +287,12 @@ export function TemplatePreviewModal({
     );
   };
 
+  const zoomPercentage = Math.round((previewScale / BASE_PREVIEW_SCALE) * 100);
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-[380px] p-0 bg-card border-primary/30 overflow-hidden">
-        <div className="p-3 border-b border-primary/20 flex items-center justify-between">
+        <div className="p-3 border-b border-primary/20 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-foreground">Preview Template</span>
             <span className="text-xs text-muted-foreground px-2 py-0.5 rounded bg-muted">
@@ -282,6 +300,32 @@ export function TemplatePreviewModal({
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => adjustPreviewScale("out")}
+              disabled={previewScale <= MIN_PREVIEW_SCALE}
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-[11px]"
+              onClick={resetPreviewScale}
+            >
+              {zoomPercentage}%
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => adjustPreviewScale("in")}
+              disabled={previewScale >= MAX_PREVIEW_SCALE}
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -300,9 +344,9 @@ export function TemplatePreviewModal({
             </Button>
           </div>
         </div>
-        <div className="flex items-center justify-center p-4 bg-muted/30">
+        <div className="flex items-center justify-center p-4 bg-muted/30 overflow-auto max-h-[70vh]">
           <div
-            className="relative rounded-lg overflow-hidden shadow-xl"
+            className="relative rounded-lg overflow-hidden shadow-xl shrink-0"
             style={{
               width: previewW,
               height: previewH,
