@@ -443,10 +443,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const cardIds = [...new Set(batchItems.map(item => item.cardId).filter(Boolean))];
 
     const [{ data: clientsData }, { data: briefsData }] = await Promise.all([
-      supabase
-        .from("client_data")
-        .select("id, image_type, narration_type, briefing, brand_kit")
-        .in("id", clientIds),
+      supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
       supabase
         .from("project_briefs")
         .select("id, cover_image")
@@ -459,11 +456,17 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const brandKitMap: Record<string, any> = {};
     const coverImageMap: Record<string, string> = {};
 
-    clientsData?.forEach(c => {
+    (clientsData as any[])?.forEach((c: any) => {
       if (c.image_type) imageTypeMap[c.id] = c.image_type;
       if (c.narration_type) narrationTypeMap[c.id] = c.narration_type;
       if (c.briefing) briefingMap[c.id] = c.briefing;
-      if ((c as any).brand_kit) brandKitMap[c.id] = (c as any).brand_kit;
+      brandKitMap[c.id] = {
+        logo: c.logo || "",
+        contactInfo: c.contact_info || "",
+        mascot: c.mascot || "",
+        pngs: [c.logo || "", c.contact_info || "", c.mascot || ""],
+        colors: c.colors || {},
+      };
     });
 
     briefsData?.forEach(b => {
