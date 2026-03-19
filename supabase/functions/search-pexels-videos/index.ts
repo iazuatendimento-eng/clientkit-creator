@@ -9,8 +9,92 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_POOL_SIZE = 80;
+
+const EMERGENCY_VIDEOS = [
+  {
+    id: "pexels-video-7308225",
+    url: "https://www.pexels.com/video/posting-the-business-products-on-instagram-story-7308225/",
+    image: "https://images.pexels.com/videos/7308225/advertising-appliance-branding-business-7308225.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    duration: 24,
+    videoUrl: "https://videos.pexels.com/video-files/7308225/7308225-hd_1080_1920_24fps.mp4",
+    photographer: "RDNE Stock project",
+    description: "business marketing",
+    source: "pexels",
+  },
+  {
+    id: "pexels-video-8348724",
+    url: "https://www.pexels.com/video/woman-in-a-meeting-discussing-about-graphs-8348724/",
+    image: "https://images.pexels.com/videos/8348724/pexels-photo-8348724.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    duration: 14,
+    videoUrl: "https://videos.pexels.com/video-files/8348724/8348724-hd_1080_1920_25fps.mp4",
+    photographer: "Kampus Production",
+    description: "business marketing",
+    source: "pexels",
+  },
+  {
+    id: "pexels-video-7578609",
+    url: "https://www.pexels.com/video/analyzing-a-graphic-7578609/",
+    image: "https://images.pexels.com/videos/7578609/pexels-photo-7578609.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    duration: 37,
+    videoUrl: "https://videos.pexels.com/video-files/7578609/7578609-hd_1080_2048_25fps.mp4",
+    photographer: "Tima Miroshnichenko",
+    description: "business marketing",
+    source: "pexels",
+  },
+  {
+    id: "pexels-video-7563942",
+    url: "https://www.pexels.com/video/woman-holding-placard-quotes-7563942/",
+    image: "https://images.pexels.com/videos/7563942/abstract-accomplishment-achievement-aid-7563942.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    duration: 9,
+    videoUrl: "https://videos.pexels.com/video-files/7563942/7563942-hd_1080_1920_30fps.mp4",
+    photographer: "RDNE Stock project",
+    description: "social media",
+    source: "pexels",
+  },
+  {
+    id: "pexels-video-7564016",
+    url: "https://www.pexels.com/video/person-holding-a-letter-board-7564016/",
+    image: "https://images.pexels.com/videos/7564016/architecture-art-blogging-and-social-media-blue-sky-7564016.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    duration: 8,
+    videoUrl: "https://videos.pexels.com/video-files/7564016/7564016-hd_1080_1920_30fps.mp4",
+    photographer: "RDNE Stock project",
+    description: "social media",
+    source: "pexels",
+  },
+  {
+    id: "pexels-video-8987453",
+    url: "https://www.pexels.com/video/mechanic-fixing-the-engine-of-a-vehicle-8987453/",
+    image: "https://images.pexels.com/videos/8987453/auto-automobile-automotive-car-8987453.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    duration: 12,
+    videoUrl: "https://videos.pexels.com/video-files/8987453/8987453-hd_1080_1920_30fps.mp4",
+    photographer: "Artem Podrez",
+    description: "service",
+    source: "pexels",
+  },
+  {
+    id: "pexels-video-7541843",
+    url: "https://www.pexels.com/video/a-person-removing-a-part-of-the-engine-of-a-truck-7541843/",
+    image: "https://images.pexels.com/videos/7541843/action-adult-at-work-auto-7541843.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    duration: 13,
+    videoUrl: "https://videos.pexels.com/video-files/7541843/7541843-hd_1080_2048_25fps.mp4",
+    photographer: "cottonbro studio",
+    description: "service",
+    source: "pexels",
+  },
+  {
+    id: "pexels-video-8987409",
+    url: "https://www.pexels.com/video/man-repairing-a-motor-vehicle-8987409/",
+    image: "https://images.pexels.com/videos/8987409/auto-automobile-automotive-car-8987409.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    duration: 11,
+    videoUrl: "https://videos.pexels.com/video-files/8987409/8987409-hd_1080_1920_30fps.mp4",
+    photographer: "Artem Podrez",
+    description: "service",
+    source: "pexels",
+  },
+];
+
 const queryCache = new Map<string, { videos: any[]; cachedAt: number }>();
-let fallbackPool: any[] = [];
+let fallbackPool: any[] = [...EMERGENCY_VIDEOS];
 
 const getCached = (key: string): any[] | null => {
   const item = queryCache.get(key);
@@ -25,7 +109,7 @@ const getCached = (key: string): any[] | null => {
 const setCached = (key: string, videos: any[]) => {
   queryCache.set(key, { videos, cachedAt: Date.now() });
   if (videos.length > 0) {
-    const merged = [...videos, ...fallbackPool];
+    const merged = [...videos, ...fallbackPool, ...EMERGENCY_VIDEOS];
     const uniqueById = new Map<string, any>();
     for (const item of merged) {
       if (item?.id && !uniqueById.has(item.id)) uniqueById.set(item.id, item);
@@ -34,10 +118,23 @@ const setCached = (key: string, videos: any[]) => {
   }
 };
 
+const getFallbackVideos = (perPage: number) => {
+  const source = fallbackPool.length > 0 ? fallbackPool : EMERGENCY_VIDEOS;
+  return source.slice(0, Math.max(1, Math.min(perPage, source.length)));
+};
+
 const calcRetryDelayMs = (retryAfterHeader: string | null, attempt: number): number => {
-  const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : NaN;
-  if (!Number.isNaN(retryAfterSeconds) && retryAfterSeconds > 0) {
-    return Math.ceil(retryAfterSeconds * 1000);
+  if (retryAfterHeader) {
+    const asSeconds = Number(retryAfterHeader);
+    if (!Number.isNaN(asSeconds) && asSeconds > 0) {
+      return Math.ceil(asSeconds * 1000);
+    }
+
+    const asDate = new Date(retryAfterHeader).getTime();
+    if (!Number.isNaN(asDate)) {
+      const diff = asDate - Date.now();
+      if (diff > 0) return diff;
+    }
   }
 
   const base = 1200;
@@ -54,7 +151,11 @@ serve(async (req) => {
   try {
     const apiKey = Deno.env.get("PEXELS_API_KEY");
     if (!apiKey) {
-      throw new Error("PEXELS_API_KEY is not configured");
+      console.warn("PEXELS_API_KEY is not configured, using fallback videos");
+      return new Response(JSON.stringify({ error: "PEXELS_API_KEY is not configured", videos: getFallbackVideos(6), fallback: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const body = await req.json().catch(() => ({}));
@@ -62,15 +163,14 @@ serve(async (req) => {
     const perPage = Math.min(Math.max(Number(body?.perPage) || 6, 1), 20);
     const page = Math.max(Number(body?.page) || 1, 1);
 
-    if (!query.trim()) {
-      throw new Error("Query is required");
-    }
-
     const sanitized = query.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim();
     const shortQuery = sanitized.split(/\s+/).slice(0, 5).join(" ").substring(0, 80);
 
     if (!shortQuery) {
-      throw new Error("Query is required");
+      return new Response(JSON.stringify({ error: "Query is required", videos: getFallbackVideos(perPage), fallback: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const cacheKey = `${shortQuery}|${perPage}|${page}`;
@@ -102,12 +202,12 @@ serve(async (req) => {
           continue;
         }
 
-        const poolFallback = fallbackPool.slice(0, Math.min(perPage, fallbackPool.length));
         return new Response(
           JSON.stringify({
             error: "Pexels API throttled",
             throttled: true,
-            videos: poolFallback,
+            fallback: true,
+            videos: getFallbackVideos(perPage),
           }),
           {
             status: 200,
@@ -132,7 +232,16 @@ serve(async (req) => {
     if (!response || !response.ok) {
       const status = response?.status ?? "unknown";
       const errorBody = response ? await response.text() : "No response";
-      throw new Error(`Pexels API error [${status}]: ${errorBody}`);
+      console.error(`Pexels API error [${status}]: ${errorBody}`);
+
+      return new Response(JSON.stringify({
+        error: `Pexels API error [${status}]`,
+        fallback: true,
+        videos: getFallbackVideos(perPage),
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await response.json();
@@ -159,17 +268,22 @@ serve(async (req) => {
       })
       .filter((v: any) => v.image && v.videoUrl);
 
-    setCached(cacheKey, videos);
+    const finalVideos = videos.length > 0 ? videos : getFallbackVideos(perPage);
+    setCached(cacheKey, finalVideos);
 
-    return new Response(JSON.stringify({ videos }), {
+    return new Response(JSON.stringify({ videos: finalVideos, fallback: videos.length === 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Pexels search error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
 
-    return new Response(JSON.stringify({ error: message, videos: [] }), {
-      status: 500,
+    return new Response(JSON.stringify({
+      error: message,
+      fallback: true,
+      videos: getFallbackVideos(6),
+    }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
