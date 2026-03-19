@@ -2079,8 +2079,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       console.log(`[preload] Finished pre-loading ${preloadPromises.length} brand kit images`);
 
       const globalVideoResultsCache = new Map<string, Awaited<ReturnType<typeof searchVideos>>>();
+      const successfulVideoPool: Awaited<ReturnType<typeof searchVideos>> = [];
       let lastVideoSearchAt = 0;
-      const minSearchIntervalMs = 350;
+      const minSearchIntervalMs = 1200;
       const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
       const fetchVideosCached = async (query: string, perPage = 6) => {
@@ -2098,6 +2099,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const results = await searchVideos(key, perPage);
         lastVideoSearchAt = Date.now();
         globalVideoResultsCache.set(key, results);
+        if (results.length > 0) {
+          results.forEach((v) => {
+            if (!successfulVideoPool.some((p) => p.id === v.id)) successfulVideoPool.push(v);
+          });
+        }
         return results;
       };
 
@@ -2146,15 +2152,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               searchTerms = "business professional";
             }
 
-            // Search video with one fallback only to reduce API throttle
+            // Single search query to reduce API throttle pressure
             let foundVideo = false;
-            let videos = await fetchVideosCached(searchTerms, 6);
-            if (videos.length === 0 && searchTerms.includes(" ")) {
-              const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
-              if (simpleTerms && simpleTerms !== searchTerms) {
-                videos = await fetchVideosCached(simpleTerms, 6);
-              }
-            }
+            const videos = await fetchVideosCached(searchTerms, 6);
             if (videos.length > 0) {
               const seed = i * 53 + pageIdx * 17 + (video.clientName?.length || 0) + (text?.length || 0);
               const selected = videos[Math.abs(seed) % videos.length];
