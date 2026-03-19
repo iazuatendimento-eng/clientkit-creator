@@ -1200,30 +1200,48 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   };
 
   // Helper: load video with short timeout (mobile often blocks video preload)
+  // Downloads the video as a blob first so seeking works reliably on fully-buffered local data
   const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const vidTimeout = isMob ? 3_000 : 8_000;
-  const loadVid = (url: string): Promise<HTMLVideoElement | null> => {
-    if (!url) return Promise.resolve(null);
-    return new Promise<HTMLVideoElement | null>((resolve) => {
-      const timer = setTimeout(() => { console.warn("[WebCodecs] Vid timeout (" + vidTimeout + "ms):", url.slice(0, 60)); resolve(null); }, vidTimeout);
-      const video = document.createElement("video");
-      video.crossOrigin = "anonymous";
-      video.muted = true;
-      video.playsInline = true;
-      video.preload = "auto";
-      video.loop = true;
-      // Listen to multiple events — mobile may only fire canplay, not loadeddata
-      let resolved = false;
-      const done = () => { if (resolved) return; resolved = true; clearTimeout(timer); resolve(video); };
-      const fail = () => { if (resolved) return; resolved = true; clearTimeout(timer); resolve(null); };
-      video.onloadeddata = done;
-      video.oncanplay = done;
-      video.onerror = fail;
-      video.onstalled = () => console.warn("[WebCodecs] Vid stalled:", url.slice(0, 40));
-      video.src = url;
-      // On mobile, try to trigger load explicitly
-      try { video.load(); } catch {}
-    });
+  const vidTimeout = isMob ? 8_000 : 15_000;
+  const loadVid = async (url: string): Promise<HTMLVideoElement | null> => {
+    if (!url) return null;
+    try {
+      // Download video as blob for reliable seeking (remote videos don't buffer well)
+      const controller = new AbortController();
+      const fetchTimer = setTimeout(() => controller.abort(), vidTimeout);
+      let blobUrl: string;
+      try {
+        const resp = await fetch(url, { signal: controller.signal, cache: "no-store" });
+        clearTimeout(fetchTimer);
+        if (!resp.ok) { console.warn("[WebCodecs] Vid fetch failed:", resp.status, url.slice(0, 60)); return null; }
+        const blob = await resp.blob();
+        blobUrl = URL.createObjectURL(blob);
+      } catch (fetchErr) {
+        clearTimeout(fetchTimer);
+        console.warn("[WebCodecs] Vid download failed:", url.slice(0, 60), fetchErr);
+        return null;
+      }
+
+      return new Promise<HTMLVideoElement | null>((resolve) => {
+        const timer = setTimeout(() => { console.warn("[WebCodecs] Vid load timeout:", url.slice(0, 60)); URL.revokeObjectURL(blobUrl); resolve(null); }, 5_000);
+        const video = document.createElement("video");
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.loop = true;
+        let resolved = false;
+        const done = () => { if (resolved) return; resolved = true; clearTimeout(timer); resolve(video); };
+        const fail = () => { if (resolved) return; resolved = true; clearTimeout(timer); URL.revokeObjectURL(blobUrl); resolve(null); };
+        video.onloadeddata = done;
+        video.oncanplay = done;
+        video.onerror = fail;
+        video.src = blobUrl;
+        try { video.load(); } catch {}
+      });
+    } catch (err) {
+      console.warn("[WebCodecs] Vid load error:", err);
+      return null;
+    }
   };
 
   // Load page images (data URLs = instant)
