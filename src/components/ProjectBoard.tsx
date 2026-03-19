@@ -126,6 +126,8 @@ interface ProjectBrief {
   generatedVideoExpiresAt?: string;
   generatedArtUrl?: string;
   generatedArtExpiresAt?: string;
+  completionType?: string;
+  completionTemplateName?: string;
 }
 
 interface ProjectBoardProps {
