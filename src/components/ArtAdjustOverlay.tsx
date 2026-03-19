@@ -31,6 +31,17 @@ type Part = BasePart | ShapePart;
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
+const clampOffsetWithinCanvas = (
+  nextOffset: number,
+  basePos: number,
+  size: number,
+  canvasSize: number
+) => {
+  const minOffset = -basePos;
+  const maxOffset = canvasSize - (basePos + size);
+  return clamp(nextOffset, Math.min(minOffset, maxOffset), Math.max(minOffset, maxOffset));
+};
+
 const handleHasW = (h: Handle) => h === "nw" || h === "sw" || h === "w";
 const handleHasE = (h: Handle) => h === "ne" || h === "se" || h === "e";
 const handleHasN = (h: Handle) => h === "nw" || h === "ne" || h === "n";
