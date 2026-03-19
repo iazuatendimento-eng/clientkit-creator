@@ -532,6 +532,47 @@ export function ArtAdjustOverlay({
         return;
       }
 
+      if (s.part === "mascot" && setMascotX && setMascotY && setMascotScaleX && setMascotScaleY) {
+        if (s.mode === "move") {
+          setMascotX(clamp(s.start.mascotX + dx, -200, 200));
+          setMascotY(clamp(s.start.mascotY + dy, -200, 200));
+          return;
+        }
+
+        const baseW = els.mascotEl?.width || 1;
+        const baseH = els.mascotEl?.height || 1;
+        const h = s.handle as Handle;
+        const isVerticalHandle = h === "n" || h === "s";
+        const isHorizontalHandle = h === "e" || h === "w";
+
+        if (isHorizontalHandle) {
+          const signedDx = handleSignX(h) * dx;
+          const newW = clamp(s.start.mascotW + signedDx, baseW * 0.25, baseW * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          setMascotScaleX(newScaleX);
+          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + dx, -200, 200));
+        } else if (isVerticalHandle) {
+          const signedDy = handleSignY(h) * dy;
+          const newH = clamp(s.start.mascotH + signedDy, baseH * 0.25, baseH * 3);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setMascotScaleY(newScaleY);
+          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + dy, -200, 200));
+        } else {
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
+          const newW = clamp(s.start.mascotW + dominant * baseW, baseW * 0.25, baseW * 3);
+          const newH = clamp(s.start.mascotH + dominant * baseH, baseH * 0.25, baseH * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setMascotScaleX(newScaleX);
+          setMascotScaleY(newScaleY);
+          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + (s.start.mascotW - newW), -200, 200));
+          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + (s.start.mascotH - newH), -200, 200));
+        }
+        return;
+      }
+
       if (s.part === "text") {
         if (s.mode === "move") {
           setTextX(clamp(s.start.textX + dx, -200, 200));
