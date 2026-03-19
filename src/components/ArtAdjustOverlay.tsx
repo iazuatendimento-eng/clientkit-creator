@@ -589,14 +589,7 @@ export function ArtAdjustOverlay({
           setContactScaleX(newScaleX);
           setContactScaleY(newScaleY);
           if (handleHasW(h)) {
-            setContactX(
-              clampOffsetWithinCanvas(
-                s.start.contactX + (s.start.contactW - newW),
-                baseContactX,
-                newW,
-                template.width
-              )
-            );
+            setContactX(s.start.contactX + (s.start.contactW - newW));
           }
           if (handleHasN(h)) {
             setContactY(
