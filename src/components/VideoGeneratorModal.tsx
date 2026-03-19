@@ -23,6 +23,7 @@ import {
 import { VideoPreviewPlayer } from "@/components/VideoPreviewPlayer";
 import { VideoAdjustOverlay } from "@/components/VideoAdjustOverlay";
 import { searchVideos, type SearchVideo } from "@/lib/imageSearch";
+import { translateToEnglishLocal } from "@/lib/localTranslate";
 import { encodeVideoToMP4, reencodeForWhatsApp, type MotionEffect, type TransitionEffect, type TextAnimation, type LogoAnimation } from "@/lib/videoEncoder";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
