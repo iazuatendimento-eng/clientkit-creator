@@ -500,9 +500,26 @@ export function ArtAdjustOverlay({
       }
 
       if (s.part === "contact") {
+        const baseContactX = els.contactEl?.x || 0;
+        const baseContactY = els.contactEl?.y || 0;
+
         if (s.mode === "move") {
-          setContactX(clamp(s.start.contactX + dx, -200, 200));
-          setContactY(clamp(s.start.contactY + dy, -200, 200));
+          setContactX(
+            clampOffsetWithinCanvas(
+              s.start.contactX + dx,
+              baseContactX,
+              s.start.contactW,
+              template.width
+            )
+          );
+          setContactY(
+            clampOffsetWithinCanvas(
+              s.start.contactY + dy,
+              baseContactY,
+              s.start.contactH,
+              template.height
+            )
+          );
           return;
         }
 
@@ -512,20 +529,36 @@ export function ArtAdjustOverlay({
         const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
 
-        const isCorner = !isVerticalHandle && !isHorizontalHandle;
-
         if (isHorizontalHandle) {
           const signedDx = handleSignX(h) * dx;
           const newW = clamp(s.start.contactW + signedDx, baseW * 0.25, baseW * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setContactScaleX(newScaleX);
-          if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -200, 200));
+          if (handleHasW(h)) {
+            setContactX(
+              clampOffsetWithinCanvas(
+                s.start.contactX + (s.start.contactW - newW),
+                baseContactX,
+                newW,
+                template.width
+              )
+            );
+          }
         } else if (isVerticalHandle) {
           const signedDy = handleSignY(h) * dy;
           const newH = clamp(s.start.contactH + signedDy, baseH * 0.25, baseH * 3);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setContactScaleY(newScaleY);
-          if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -200, 200));
+          if (handleHasN(h)) {
+            setContactY(
+              clampOffsetWithinCanvas(
+                s.start.contactY + (s.start.contactH - newH),
+                baseContactY,
+                newH,
+                template.height
+              )
+            );
+          }
         } else {
           // Corner: proportional
           const signedDx = handleSignX(h) * dx;
@@ -537,8 +570,26 @@ export function ArtAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setContactScaleX(newScaleX);
           setContactScaleY(newScaleY);
-          if (handleHasW(h)) setContactX(clamp(s.start.contactX + (s.start.contactW - newW), -200, 200));
-          if (handleHasN(h)) setContactY(clamp(s.start.contactY + (s.start.contactH - newH), -200, 200));
+          if (handleHasW(h)) {
+            setContactX(
+              clampOffsetWithinCanvas(
+                s.start.contactX + (s.start.contactW - newW),
+                baseContactX,
+                newW,
+                template.width
+              )
+            );
+          }
+          if (handleHasN(h)) {
+            setContactY(
+              clampOffsetWithinCanvas(
+                s.start.contactY + (s.start.contactH - newH),
+                baseContactY,
+                newH,
+                template.height
+              )
+            );
+          }
         }
         return;
       }
