@@ -2162,6 +2162,16 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               pexelsVideoUrls.push(selected.videoUrl);
               foundVideo = true;
             }
+
+            // If current query is throttled/empty, reuse already successful videos from this batch run
+            if (!foundVideo && successfulVideoPool.length > 0) {
+              const seed = i * 53 + pageIdx * 17 + (video.clientName?.length || 0) + (text?.length || 0);
+              const selected = successfulVideoPool[Math.abs(seed) % successfulVideoPool.length];
+              searchedImages.push(selected.image);
+              pexelsVideoUrls.push(selected.videoUrl);
+              foundVideo = true;
+            }
+
             if (!foundVideo) {
               // No video found at all — leave empty, never fall back to static image
               searchedImages.push("");
