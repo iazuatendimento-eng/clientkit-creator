@@ -143,6 +143,13 @@ const Index = () => {
     supabase.from("teams").select("*").order("name", { ascending: true }).then(({ data }) => {
       if (data) setAvailableTeams(data.filter(t => /^T\d{4}/.test(t.name.trim())));
     });
+    // Load templates for completion dialog
+    supabase.from("master_templates").select("id, name").eq("deleted", false).order("name").then(({ data }) => {
+      if (data) setArtTemplates(data);
+    });
+    supabase.from("master_video_templates").select("id, name").eq("deleted", false).order("name").then(({ data }) => {
+      if (data) setVideoTemplates(data);
+    });
 
   }, []);
 
