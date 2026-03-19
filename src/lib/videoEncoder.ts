@@ -1678,26 +1678,35 @@ export async function encodeVideoSimple(
     )
   );
 
-  // Load background videos for pages that have them
+  // Load background videos for pages that have them (download as blob for reliable seeking)
   const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
     (backgroundVideoUrls || []).map(async (videoUrl, idx) => {
       if (!videoUrl) return null;
       try {
+        // Download as blob so seeking works on fully-buffered local data
+        const resp = await fetch(videoUrl, { cache: "no-store" });
+        if (!resp.ok) { console.warn(`[VideoEncoder] Video ${idx} fetch failed: ${resp.status}`); return null; }
+        const blob = await resp.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
         const video = document.createElement("video");
-        video.crossOrigin = "anonymous";
         video.muted = true;
         video.playsInline = true;
         video.preload = "auto";
         video.loop = true;
-        video.src = videoUrl;
+        video.src = blobUrl;
         
         await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(() => resolve(), 5000);
           video.onloadeddata = () => {
+            clearTimeout(timer);
             console.log(`[VideoEncoder] Video ${idx} loaded: ${video.videoWidth}x${video.videoHeight}, duration: ${video.duration}s`);
             resolve();
           };
           video.onerror = () => {
+            clearTimeout(timer);
             console.error(`[VideoEncoder] Video ${idx} failed to load`);
+            URL.revokeObjectURL(blobUrl);
             reject(new Error(`Video ${idx} failed`));
           };
         });
