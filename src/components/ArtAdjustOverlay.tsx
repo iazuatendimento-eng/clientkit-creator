@@ -629,8 +629,8 @@ export function ArtAdjustOverlay({
 
       if (s.part === "mascot" && setMascotX && setMascotY && setMascotScaleX && setMascotScaleY) {
         if (s.mode === "move") {
-          setMascotX(clamp(s.start.mascotX + dx, -200, 200));
-          setMascotY(clamp(s.start.mascotY + dy, -200, 200));
+          setMascotX(s.start.mascotX + dx);
+          setMascotY(s.start.mascotY + dy);
           return;
         }
 
