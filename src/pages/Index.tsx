@@ -961,18 +961,6 @@ const Index = () => {
             >
               <LogOut className="h-4 w-4" />
             </Button>
-            <Button
-              size="sm"
-              variant="gradient"
-              onClick={() => {
-                setEditingClient(null);
-                setCurrentView("client-editor");
-              }}
-              className="glow-effect"
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Novo
-            </Button>
           </div>
         </div>
       </div>
