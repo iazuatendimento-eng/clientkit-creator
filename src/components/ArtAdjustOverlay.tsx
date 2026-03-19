@@ -641,7 +641,8 @@ export function ArtAdjustOverlay({
 
       return (
         <div
-          className={cn("absolute z-30 touch-none flex items-center justify-center", cursor)}
+          data-overlay-handle="true"
+          className={cn("absolute z-30 touch-none pointer-events-auto flex items-center justify-center", cursor)}
           style={{ ...style, width: hitSize, height: hitSize }}
           onPointerDown={(e) => {
             e.preventDefault();
@@ -669,7 +670,7 @@ export function ArtAdjustOverlay({
       return (
       <div
         className={cn(
-          "absolute touch-none cursor-move",
+          "absolute touch-none cursor-move pointer-events-auto",
           zClass
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
@@ -743,9 +744,44 @@ export function ArtAdjustOverlay({
     return lines;
   }, []);
 
+  const getHitPartFromClientPoint = (clientX: number, clientY: number): Part | null => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+
+    const x = ((clientX - rect.left) / rect.width) * template.width;
+    const y = ((clientY - rect.top) / rect.height) * template.height;
+
+    const contains = (p: Part) => {
+      const r = getRect(p);
+      if (!r) return false;
+      return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    };
+
+    const shapeParts = els.shapes.map((s) => `shape:${s.id}` as Part);
+    const hitOrder: Part[] = ["text", "contact", "logo", ...shapeParts, "photo"];
+
+    for (const part of hitOrder) {
+      if (contains(part)) return part;
+    }
+
+    return null;
+  };
+
+  const handleContainerPointerDownCapture = (e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-overlay-handle="true"]')) return;
+
+    const hitPart = getHitPartFromClientPoint(e.clientX, e.clientY);
+    if (!hitPart) return;
+
+    setActive(hitPart);
+    begin(e as unknown as React.PointerEvent, hitPart, "move");
+  };
+
   return (
     <div
       ref={containerRef}
+      onPointerDownCapture={handleContainerPointerDownCapture}
       className="relative mx-auto w-full max-w-md overflow-hidden rounded-lg border bg-muted"
       style={{ aspectRatio: `${template.width} / ${template.height}` }}
     >
@@ -768,7 +804,7 @@ export function ArtAdjustOverlay({
       </div>
 
 
-      <div className="absolute inset-0 z-10">
+      <div className="absolute inset-0 z-10 pointer-events-auto">
         <Box part="photo" label="Foto" resizable />
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
