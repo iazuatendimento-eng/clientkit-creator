@@ -1006,7 +1006,7 @@ const Index = () => {
                 setEditingClient(null);
                 setCurrentView("client-editor");
               }}
-              className="w-full glow-effect mb-2 h-auto min-h-[3.5rem] py-2 px-4 text-sm"
+              className="w-full glow-effect mb-2 h-[4.5rem] px-4 text-sm"
             >
               <Plus className="mr-1 h-4 w-4" />
               Novo
