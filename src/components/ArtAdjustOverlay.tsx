@@ -441,6 +441,30 @@ export function ArtAdjustOverlay({
       const dx = (dxClient / r.width) * template.width * resizeBoost;
       const dy = (dyClient / r.height) * template.height * resizeBoost;
 
+      if (s.part === "bg" && setBgOffsetX && setBgOffsetY && setBgScale) {
+        if (s.mode === "move") {
+          setBgOffsetX(s.start.bgOffsetX + dx);
+          setBgOffsetY(s.start.bgOffsetY + dy);
+          return;
+        }
+        // Resize = scale uniformly
+        const h = s.handle as Handle;
+        const signedDx = handleSignX(h) * dx;
+        const signedDy = handleSignY(h) * dy;
+        const dominant = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        const scaleChange = (dominant / template.width) * 100;
+        const newScale = clamp(s.start.bgScale + scaleChange, 50, 400);
+        setBgScale(newScale);
+        // Adjust offset so it scales from center
+        const oldW = template.width * (s.start.bgScale / 100);
+        const oldH = template.height * (s.start.bgScale / 100);
+        const newW = template.width * (newScale / 100);
+        const newH = template.height * (newScale / 100);
+        setBgOffsetX(s.start.bgOffsetX - (newW - oldW) / 2);
+        setBgOffsetY(s.start.bgOffsetY - (newH - oldH) / 2);
+        return;
+      }
+
       if (s.part === "photo") {
         const base = els.photoFrame;
         if (!base) return;
