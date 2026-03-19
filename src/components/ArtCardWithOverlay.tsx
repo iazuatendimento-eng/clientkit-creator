@@ -197,6 +197,10 @@ export function ArtCardWithOverlay({
       setContactY(art.elementOverrides?.contactY || 0);
       setContactScaleX(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
       setContactScaleY(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
+      setMascotX(art.elementOverrides?.mascotX || 0);
+      setMascotY(art.elementOverrides?.mascotY || 0);
+      setMascotScaleX(art.elementOverrides?.mascotScaleX || 100);
+      setMascotScaleY(art.elementOverrides?.mascotScaleY || 100);
       setShapeOverrides(art.elementOverrides?.shapes || {});
     }
   }, [art]);
