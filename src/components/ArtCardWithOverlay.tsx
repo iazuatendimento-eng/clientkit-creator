@@ -158,6 +158,7 @@ export function ArtCardWithOverlay({
     contactX, contactY, contactScaleX, contactScaleY,
     mascotX, mascotY, mascotScaleX, mascotScaleY,
     shapeOverrides,
+    bgOffsetX, bgOffsetY, bgScale,
   });
 
   // Wrapped setters that update both React state AND the ref synchronously
