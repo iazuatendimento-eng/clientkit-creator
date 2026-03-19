@@ -23,7 +23,7 @@ type ShapeOverride = { x: number; y: number; width: number; height: number };
 
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
-type BasePart = "photo" | "logo" | "text" | "contact";
+type BasePart = "photo" | "logo" | "text" | "contact" | "mascot";
 
 type ShapePart = `shape:${string}`;
 
