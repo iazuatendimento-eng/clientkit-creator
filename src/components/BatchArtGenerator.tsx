@@ -2380,8 +2380,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   };
 
-  const approvedCount = clientArts.filter((a) => a.status === "approved").length;
-  const pendingCount = clientArts.filter((a) => a.status === "pending").length;
+  const readyCount = clientArts.filter((a) => a.imageUrl).length;
 
   if (isLoading) {
     return (
