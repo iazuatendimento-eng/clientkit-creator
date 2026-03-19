@@ -2643,7 +2643,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               onOpenImageDialog={(a, idx) => {
                 setSelectedArt(a);
                 setSelectedArtIndex(idx);
-                setSearchQuery(buildDefaultStockQuery(a));
+                setSearchQuery("");
                 setIsImageDialogOpen(true);
               }}
               onRefreshBrandKit={refreshBrandKitAndRegenerate}
