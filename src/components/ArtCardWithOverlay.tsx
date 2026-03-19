@@ -170,6 +170,10 @@ export function ArtCardWithOverlay({
   const setContactY = useCallback((v: number) => { latestRef.current.contactY = v; _setContactY(v); }, []);
   const setContactScaleX = useCallback((v: number) => { latestRef.current.contactScaleX = v; _setContactScaleX(v); }, []);
   const setContactScaleY = useCallback((v: number) => { latestRef.current.contactScaleY = v; _setContactScaleY(v); }, []);
+  const setMascotX = useCallback((v: number) => { latestRef.current.mascotX = v; _setMascotX(v); }, []);
+  const setMascotY = useCallback((v: number) => { latestRef.current.mascotY = v; _setMascotY(v); }, []);
+  const setMascotScaleX = useCallback((v: number) => { latestRef.current.mascotScaleX = v; _setMascotScaleX(v); }, []);
+  const setMascotScaleY = useCallback((v: number) => { latestRef.current.mascotScaleY = v; _setMascotScaleY(v); }, []);
   const setShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => { latestRef.current.shapeOverrides = v; _setShapeOverrides(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
