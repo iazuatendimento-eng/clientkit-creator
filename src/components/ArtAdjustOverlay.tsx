@@ -766,9 +766,6 @@ export function ArtAdjustOverlay({
             : part === "contact"
               ? "z-30"
               : "z-40";
-          : part === "contact"
-            ? "z-30"
-            : "z-40";
 
     const zClass = baseLayerClass;
 
