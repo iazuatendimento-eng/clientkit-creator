@@ -662,8 +662,8 @@ export function ArtAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setMascotScaleX(newScaleX);
           setMascotScaleY(newScaleY);
-          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + (s.start.mascotW - newW), -200, 200));
-          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + (s.start.mascotH - newH), -200, 200));
+          if (handleHasW(h)) setMascotX(s.start.mascotX + (s.start.mascotW - newW));
+          if (handleHasN(h)) setMascotY(s.start.mascotY + (s.start.mascotH - newH));
         }
         return;
       }
