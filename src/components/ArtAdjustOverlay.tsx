@@ -262,8 +262,8 @@ export function ArtAdjustOverlay({
       const h = els.textEl.height * scale;
       const rawX = els.textEl.x + textX;
       const rawY = els.textEl.y + textY;
-      const x = clamp(rawX, 0, Math.max(0, template.width - w));
-      const y = clamp(rawY, 0, Math.max(0, template.height - h));
+      const x = rawX;
+      const y = rawY;
       return { x, y, w, h };
     }
 
