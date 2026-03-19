@@ -295,6 +295,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
+  const [imageSourceTab, setImageSourceTab] = useState<"pexels" | "pixabay">("pexels");
   const [customImageUrl, setCustomImageUrl] = useState("");
   // Team filter is now fixed based on initial selection - no runtime switching
   const teamFilter = initialTeamFilter;
