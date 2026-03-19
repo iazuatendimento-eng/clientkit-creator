@@ -804,9 +804,9 @@ export function ArtAdjustOverlay({
     };
 
     const baseLayerClass = part === "bg"
-      ? "-z-[1]"
+      ? "z-[1]"
       : part === "photo"
-        ? "z-0"
+        ? "z-[2]"
         : isShapePart(part)
           ? "z-10"
           : part === "logo"
