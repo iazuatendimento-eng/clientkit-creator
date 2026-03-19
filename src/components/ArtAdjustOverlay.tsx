@@ -192,28 +192,12 @@ export function ArtAdjustOverlay({
 
       // If caller provides a resized frame, sanitize and use it.
       if (photoFrame) {
-        const safeW = clamp(
-          Number.isFinite(photoFrame.width) ? photoFrame.width : els.photoFrame.width,
-          20,
-          template.width
-        );
-        const safeH = clamp(
-          Number.isFinite(photoFrame.height) ? photoFrame.height : els.photoFrame.height,
-          20,
-          template.height
-        );
-        const safeX = clamp(
-          Number.isFinite(photoFrame.x) ? photoFrame.x : els.photoFrame.x,
-          0,
-          Math.max(0, template.width - safeW)
-        );
-        const safeY = clamp(
-          Number.isFinite(photoFrame.y) ? photoFrame.y : els.photoFrame.y,
-          0,
-          Math.max(0, template.height - safeH)
-        );
+        const safeW = Number.isFinite(photoFrame.width) ? photoFrame.width : els.photoFrame.width;
+        const safeH = Number.isFinite(photoFrame.height) ? photoFrame.height : els.photoFrame.height;
+        const safeX = Number.isFinite(photoFrame.x) ? photoFrame.x : els.photoFrame.x;
+        const safeY = Number.isFinite(photoFrame.y) ? photoFrame.y : els.photoFrame.y;
 
-        return { x: safeX, y: safeY, w: safeW, h: safeH };
+        return { x: safeX, y: safeY, w: Math.max(20, safeW), h: Math.max(20, safeH) };
       }
 
       // Default: use template element dimensions directly
@@ -489,10 +473,8 @@ export function ArtAdjustOverlay({
             newY = startRect.y + (startRect.height - newH);
           }
 
-          newX = clamp(newX, 0, template.width - minSize);
-          newY = clamp(newY, 0, template.height - minSize);
-          newW = clamp(newW, minSize, template.width);
-          newH = clamp(newH, minSize, template.height);
+          newW = Math.max(minSize, newW);
+          newH = Math.max(minSize, newH);
 
           setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
         }
