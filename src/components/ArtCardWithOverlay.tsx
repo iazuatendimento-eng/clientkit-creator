@@ -267,6 +267,9 @@ export function ArtCardWithOverlay({
       photoScale: v.photoScale,
       photoFrame: v.photoFrame || undefined,
       shapes: v.shapeOverrides,
+      bgOffsetX: v.bgOffsetX,
+      bgOffsetY: v.bgOffsetY,
+      bgScale: v.bgScale,
     };
 
     const updatedArt: ClientArt = {
