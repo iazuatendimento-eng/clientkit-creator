@@ -641,7 +641,7 @@ export function ArtAdjustOverlay({
 
       return (
         <div
-          className={cn("absolute z-30 touch-none flex items-center justify-center", cursor)}
+          className={cn("absolute z-30 touch-none pointer-events-auto flex items-center justify-center", cursor)}
           style={{ ...style, width: hitSize, height: hitSize }}
           onPointerDown={(e) => {
             e.preventDefault();
@@ -669,7 +669,7 @@ export function ArtAdjustOverlay({
       return (
       <div
         className={cn(
-          "absolute touch-none cursor-move",
+          "absolute touch-none cursor-move pointer-events-auto",
           zClass
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
