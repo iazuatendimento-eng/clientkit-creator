@@ -129,10 +129,11 @@ type TeamFilter = string | undefined;
 interface MasterVideoEditorProps {
   onBack: () => void;
   onGenerateBatch: (template: VideoTemplate, teamFilter: TeamFilter) => void;
+  onGenerateAllTeams?: (template: VideoTemplate) => void;
   onOpenHistory?: () => void;
 }
 
-export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: MasterVideoEditorProps) => {
+export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, onOpenHistory }: MasterVideoEditorProps) => {
   const [currentPage, setCurrentPage] = useState<"content" | "signature">("content");
   const [contentElements, setContentElements] = useState<CanvasElement[]>([]);
   const [signatureElements, setSignatureElements] = useState<CanvasElement[]>([]);
@@ -1780,6 +1781,23 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
     onGenerateBatch(template, selectedTeamFilter);
   };
 
+  const handleGenerateAllTeams = () => {
+    if (!onGenerateAllTeams) return;
+    const template: VideoTemplate = {
+      id: `template-${Date.now()}`,
+      name: templateName,
+      contentElements,
+      signatureElements,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      backgroundColor,
+      pageDuration,
+      audioUrl1: audioUrl1 || undefined,
+      audioUrl2: audioUrl2 || undefined,
+    };
+    onGenerateAllTeams(template);
+  };
+
   const handleAudioUpload = async (slot: 1 | 2, file: File) => {
     try {
       // Sanitize filename: remove special chars, keep extension
@@ -2731,6 +2749,16 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: Ma
             <Film className="mr-1 h-4 w-4" />
             Gerar Lote
           </Button>
+          {onGenerateAllTeams && availableTeams.length > 1 && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleGenerateAllTeams}
+            >
+              <Layers className="mr-1 h-4 w-4" />
+              Gerar Todas Equipes
+            </Button>
+          )}
         </div>
       </div>
 
