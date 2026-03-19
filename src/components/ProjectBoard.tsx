@@ -1698,38 +1698,44 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           <div className={`grid ${isPublicView ? 'grid-cols-1 sm:grid-cols-2 gap-4' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-3'}`}>
             {/* Briefing Column - only in admin view */}
             {!isPublicView && clientInfo && (clientInfo.briefing || clientInfo.image_type || clientInfo.narration_type || clientInfo.particularity_type) && (
-              <div className="space-y-4 min-w-0">
+              <div className="space-y-4 min-w-0 self-start" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
                 <div className="p-4 rounded-lg border bg-blue-500/20 border-blue-500/30">
                   <h3 className="font-semibold text-center">Briefing</h3>
                 </div>
-                <Card className="bg-gradient-card border-primary/20">
-                  <CardContent className="p-4 space-y-3">
-                    {clientInfo.image_type && (
-                      <div>
+                <div className="space-y-3">
+                  {clientInfo.image_type && (
+                    <Card className="bg-gradient-card border-primary/20">
+                      <CardContent className="p-3">
                         <p className="text-xs font-semibold text-muted-foreground mb-0.5">Tipo de Imagem</p>
                         <p className="text-sm whitespace-pre-wrap break-words">{clientInfo.image_type}</p>
-                      </div>
-                    )}
-                    {clientInfo.narration_type && (
-                      <div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {clientInfo.narration_type && (
+                    <Card className="bg-gradient-card border-primary/20">
+                      <CardContent className="p-3">
                         <p className="text-xs font-semibold text-muted-foreground mb-0.5">Narração</p>
                         <p className="text-sm whitespace-pre-wrap break-words">{clientInfo.narration_type}</p>
-                      </div>
-                    )}
-                    {clientInfo.particularity_type && (
-                      <div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {clientInfo.particularity_type && (
+                    <Card className="bg-gradient-card border-primary/20">
+                      <CardContent className="p-3">
                         <p className="text-xs font-semibold text-muted-foreground mb-0.5">Particularidade</p>
                         <p className="text-sm whitespace-pre-wrap break-words">{clientInfo.particularity_type}</p>
-                      </div>
-                    )}
-                    {clientInfo.briefing && (
-                      <div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {clientInfo.briefing && (
+                    <Card className="bg-gradient-card border-primary/20">
+                      <CardContent className="p-3">
                         <p className="text-xs font-semibold text-muted-foreground mb-0.5">Briefing</p>
                         <p className="text-sm whitespace-pre-wrap break-words">{clientInfo.briefing}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
             )}
             {columns.map(column => {
