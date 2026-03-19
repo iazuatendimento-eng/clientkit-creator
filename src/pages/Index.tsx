@@ -1030,7 +1030,7 @@ const Index = () => {
                     }
                     setCurrentView("client-dashboard");
                   }}
-                  className={`w-full text-left min-h-[3.5rem] py-2 px-4 rounded-lg transition-all ${
+                  className={`w-full text-left h-[4.5rem] py-2 px-4 rounded-lg transition-all ${
                     !client.active ? 'opacity-60' : ''
                   } ${
                     selectedClient?.id === client.id
@@ -1038,9 +1038,9 @@ const Index = () => {
                       : 'bg-card hover:bg-card/80 border border-border'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between h-full">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <div className="font-semibold line-clamp-2 min-h-[2.5rem] flex items-center">{client.name}</div>
+                      <div className="font-semibold line-clamp-2">{client.name}</div>
                       {!client.active && (
                         <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-500">
                           Inativa
