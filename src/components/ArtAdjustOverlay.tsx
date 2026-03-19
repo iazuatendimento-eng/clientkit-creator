@@ -119,14 +119,14 @@ export function ArtAdjustOverlay({
   setContactScaleX: (v: number) => void;
   setContactScaleY: (v: number) => void;
 
-  mascotX: number;
-  mascotY: number;
-  mascotScaleX: number;
-  mascotScaleY: number;
-  setMascotX: (v: number) => void;
-  setMascotY: (v: number) => void;
-  setMascotScaleX: (v: number) => void;
-  setMascotScaleY: (v: number) => void;
+  mascotX?: number;
+  mascotY?: number;
+  mascotScaleX?: number;
+  mascotScaleY?: number;
+  setMascotX?: (v: number) => void;
+  setMascotY?: (v: number) => void;
+  setMascotScaleX?: (v: number) => void;
+  setMascotScaleY?: (v: number) => void;
 
   shapeOverrides?: Record<string, ShapeOverride>;
   setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
