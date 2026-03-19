@@ -104,30 +104,9 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
               </Button>
               <div>
                 <h1 className="text-2xl font-bold gradient-text">{client.name}</h1>
-                <p className="text-muted-foreground">{client.email}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {client.company && (
-                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                  {client.company}
-                </span>
-              )}
-              {client.team && (
-                <span className="px-3 py-1 bg-secondary/10 text-secondary-foreground rounded-full text-sm">
-                  {client.team}
-                </span>
-              )}
-            </div>
           </div>
-          {/* Observações do cliente */}
-          {client.notes && (
-            <div className="mt-3">
-              <span className="px-2 py-1 bg-muted rounded text-muted-foreground text-xs">
-                📝 <LinkableText text={client.notes} />
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
