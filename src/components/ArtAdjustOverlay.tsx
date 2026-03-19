@@ -641,6 +641,7 @@ export function ArtAdjustOverlay({
 
       return (
         <div
+          data-overlay-handle="true"
           className={cn("absolute z-30 touch-none pointer-events-auto flex items-center justify-center", cursor)}
           style={{ ...style, width: hitSize, height: hitSize }}
           onPointerDown={(e) => {
