@@ -1609,7 +1609,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             if (cd?.team) effectiveTeam = cd.team;
           }
           const snapshotWithTeam = { ...template, teamFilter: effectiveTeam, hasUnresolvedNotes };
-          const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
+          const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, batchIdRef.current || undefined);
           if (savedId) setCurrentBatchId(savedId);
           console.log("Auto-saved batch draft after generation:", savedId);
         }
