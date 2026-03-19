@@ -491,16 +491,21 @@ const Index = () => {
       
       const clientIds = filteredClients.map(c => c.id);
       
+      console.log("[Completion] team:", completionTeam, "type:", completionType, "templateId:", completionTemplateId);
+      console.log("[Completion] filteredClients:", filteredClients.length, "clientIds:", clientIds.length);
+      
       if (clientIds.length === 0) {
         toast({ title: "Nenhum cliente ativo", description: "Não há clientes ativos para mover.", variant: "destructive" });
         return;
       }
       
-      await bulkUpdateBriefStatus(clientIds, "completed", {
+      const result = await bulkUpdateBriefStatus(clientIds, "completed", {
         completion_type: completionType === "art" ? "Arte" : "Vídeo",
         completion_template_id: completionTemplateId,
         completion_template_name: selectedTemplate?.name || "",
       });
+      
+      console.log("[Completion] result:", result);
       
       window.dispatchEvent(new Event("bulkBriefsUpdated"));
       setIsCompletionDialogOpen(false);
