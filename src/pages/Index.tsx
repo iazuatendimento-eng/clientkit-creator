@@ -1030,7 +1030,7 @@ const Index = () => {
                     }
                     setCurrentView("client-dashboard");
                   }}
-                  className={`w-full text-left py-2 px-4 rounded-lg transition-all ${
+                  className={`w-full text-left min-h-[3.5rem] py-2 px-4 rounded-lg transition-all ${
                     !client.active ? 'opacity-60' : ''
                   } ${
                     selectedClient?.id === client.id
