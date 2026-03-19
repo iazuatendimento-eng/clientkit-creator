@@ -29,7 +29,7 @@ import {
   Check,
   X,
   Loader2,
-  Download,
+  
   RefreshCw,
   CheckCircle2,
   Image as ImageIcon,
