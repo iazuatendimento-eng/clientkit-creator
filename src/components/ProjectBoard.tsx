@@ -1698,7 +1698,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           <div className={`grid ${isPublicView ? 'grid-cols-1 sm:grid-cols-2 gap-4' : 'gap-3 sm:gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-3'}`}>
             {/* Briefing Column - only in admin view */}
             {!isPublicView && clientInfo && (clientInfo.briefing || clientInfo.image_type || clientInfo.narration_type || clientInfo.particularity_type) && (
-              <div className="space-y-4 min-w-0 self-start" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+              <div className="space-y-4 min-w-0">
                 <div className="p-4 rounded-lg border bg-blue-500/20 border-blue-500/30">
                   <h3 className="font-semibold text-center">Briefing</h3>
                   <div className="text-center text-sm text-muted-foreground mt-1">
