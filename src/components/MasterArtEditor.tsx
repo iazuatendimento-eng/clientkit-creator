@@ -121,10 +121,11 @@ type TeamFilter = string | undefined;
 interface MasterArtEditorProps {
   onBack: () => void;
   onGenerateBatch: (template: MasterTemplate, teamFilter: TeamFilter) => void;
+  onGenerateAllTeams?: (template: MasterTemplate) => void;
   onOpenHistory?: () => void;
 }
 
-export const MasterArtEditor = ({ onBack, onGenerateBatch, onOpenHistory }: MasterArtEditorProps) => {
+export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, onOpenHistory }: MasterArtEditorProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
