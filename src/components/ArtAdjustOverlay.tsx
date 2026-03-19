@@ -716,15 +716,6 @@ export function ArtAdjustOverlay({
     );
   };
 
-  const selectableParts = useMemo(() => {
-    const parts: Array<{ key: Part; label: string }> = [];
-    if (els.photoFrame) parts.push({ key: "photo", label: "Foto" });
-    if (els.logoEl) parts.push({ key: "logo", label: "Logo" });
-    if (els.textEl) parts.push({ key: "text", label: "Texto" });
-    if (els.contactEl) parts.push({ key: "contact", label: "Contato" });
-    return parts;
-  }, [els.photoFrame, els.logoEl, els.textEl, els.contactEl]);
-
   // Build grid lines (Canva-style)
   const gridLines = useMemo(() => {
     const lines: React.ReactNode[] = [];
