@@ -550,21 +550,8 @@ export function ArtAdjustOverlay({
         const baseContactY = els.contactEl?.y || 0;
 
         if (s.mode === "move") {
-          setContactX(
-            clampOffsetWithinCanvas(
-              s.start.contactX + dx,
-              baseContactX,
-              s.start.contactW,
-              template.width
-            )
-          );
-          setContactY(
-            clampOffsetWithinCanvas(
-              s.start.contactY + dy,
-              baseContactY,
-              s.start.contactH,
-              template.height
-            )
+          setContactX(s.start.contactX + dx);
+          setContactY(s.start.contactY + dy);
           );
           return;
         }
