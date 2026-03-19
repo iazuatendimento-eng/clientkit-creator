@@ -1775,7 +1775,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const index = selectedArtIndex;
     if (index >= clientArts.length) return;
 
-    const updatedArt = { ...clientArts[index], photoImage: image.urls.regular, photoOffset: { x: 0, y: 0 } };
+    const currentArt = clientArts[index];
+    const updatedArt = {
+      ...currentArt,
+      photoImage: image.urls.regular,
+      backgroundImage: hasImagePlaceholder ? currentArt.backgroundImage : image.urls.regular,
+      photoOffset: { x: 0, y: 0 },
+      elementOverrides: {
+        ...currentArt.elementOverrides,
+        ...(hasImagePlaceholder ? {} : { bgOffsetX: 0, bgOffsetY: 0, bgScale: 100 }),
+      },
+    };
+
     lockPhotoForArt(updatedArt, image.urls.regular);
     const updatedArts = [...clientArts];
     updatedArts[index] = updatedArt;
@@ -1819,7 +1830,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const index = selectedArtIndex;
     if (index >= clientArts.length) return;
 
-    const updatedArt = { ...clientArts[index], photoImage: imageUrl, photoOffset: { x: 0, y: 0 } };
+    const currentArt = clientArts[index];
+    const updatedArt = {
+      ...currentArt,
+      photoImage: imageUrl,
+      backgroundImage: hasImagePlaceholder ? currentArt.backgroundImage : imageUrl,
+      photoOffset: { x: 0, y: 0 },
+      elementOverrides: {
+        ...currentArt.elementOverrides,
+        ...(hasImagePlaceholder ? {} : { bgOffsetX: 0, bgOffsetY: 0, bgScale: 100 }),
+      },
+    };
+
     lockPhotoForArt(updatedArt, imageUrl);
     const updatedArts = [...clientArts];
     updatedArts[index] = updatedArt;
