@@ -1075,6 +1075,39 @@ const Index = () => {
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const { data } = await supabase
+                              .from("client_data")
+                              .select("email, email_2, email_3")
+                              .eq("id", client.id)
+                              .maybeSingle();
+                            if (data) {
+                              const emails = [data.email, data.email_2, data.email_3]
+                                .filter((em): em is string => !!em && em.trim().length > 0)
+                                .join(", ");
+                              if (emails) {
+                                await navigator.clipboard.writeText(emails);
+                                toast({ title: "E-mails copiados", description: emails });
+                              } else {
+                                toast({ title: "Nenhum e-mail cadastrado", variant: "destructive" });
+                              }
+                            }
+                          } catch {
+                            toast({ title: "Erro ao buscar e-mails", variant: "destructive" });
+                          }
+                        }}
+                        className={`p-1 rounded transition-colors ${
+                          selectedClient?.id === client.id
+                            ? 'hover:bg-primary-foreground/20'
+                            : 'hover:bg-muted'
+                        }`}
+                        title="Copiar e-mails do cliente"
+                      >
+                        <Mail className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleToggleClientActive(client.id, client.active !== false);
