@@ -591,10 +591,12 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
       </CardHeader>
       <CardContent className={`pt-0 ${isPublicView ? 'p-3 pt-0' : ''} overflow-hidden`}>
         <div className="space-y-2 min-w-0">
-          <div className={`flex items-center gap-2 ${isPublicView ? 'text-sm' : 'text-xs'}`}>
-            <Calendar className="h-3 w-3" />
-            <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
-          </div>
+          {(isPublicView || brief.status === "completed") && (
+            <div className={`flex items-center gap-2 ${isPublicView ? 'text-sm' : 'text-xs'}`}>
+              <Calendar className="h-3 w-3" />
+              <span>{brief.deadline ? new Date(brief.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
+            </div>
+          )}
           {brief.completionType && (
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-auto bg-primary/10 text-primary border-primary/30">
