@@ -133,6 +133,10 @@ export function ArtCardWithOverlay({
   const [contactY, _setContactY] = useState(art.elementOverrides?.contactY || 0);
   const [contactScaleX, _setContactScaleX] = useState(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
   const [contactScaleY, _setContactScaleY] = useState(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
+  const [mascotX, _setMascotX] = useState(art.elementOverrides?.mascotX || 0);
+  const [mascotY, _setMascotY] = useState(art.elementOverrides?.mascotY || 0);
+  const [mascotScaleX, _setMascotScaleX] = useState(art.elementOverrides?.mascotScaleX || 100);
+  const [mascotScaleY, _setMascotScaleY] = useState(art.elementOverrides?.mascotScaleY || 100);
   const [shapeOverrides, _setShapeOverrides] = useState<Record<string, ShapeOverride>>(art.elementOverrides?.shapes || {});
   const [isRegenerating, setIsRegenerating] = useState(false);
 
