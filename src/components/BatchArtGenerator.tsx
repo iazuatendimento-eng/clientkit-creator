@@ -299,6 +299,36 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [customImageUrl, setCustomImageUrl] = useState("");
   // Team filter is now fixed based on initial selection - no runtime switching
   const teamFilter = initialTeamFilter;
+  const hasImagePlaceholder = template.elements.some((el) => el.type === "image" && el.placeholder);
+
+  const buildDefaultStockQuery = useCallback((art: ClientArt) => {
+    const tokenize = (value?: string) =>
+      (value || "")
+        .toLowerCase()
+        .replace(/[^\w\s\u00C0-\u024F-]/g, " ")
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 3 && !/^\d+$/.test(token));
+
+    const dedupe = (tokens: string[]) => Array.from(new Set(tokens));
+
+    const primary = dedupe([
+      ...tokenize(art.cardText),
+      ...tokenize(art.imageType),
+    ]);
+
+    const fallback = dedupe([
+      ...tokenize(art.cardTitle),
+      ...tokenize(art.company),
+      ...tokenize(art.clientName),
+    ]);
+
+    const rawQuery = (primary.length > 0 ? primary : fallback).slice(0, 10).join(" ").trim();
+    const translated = translateToEnglishLocal(rawQuery).trim();
+
+    return translated || "business marketing";
+  }, []);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Element override states
