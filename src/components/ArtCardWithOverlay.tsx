@@ -413,6 +413,11 @@ export function ArtCardWithOverlay({
                 <ArrowDownToLine className="h-4 w-4" />
               </Button>
             )}
+            {onDelete && (
+              <Button size="sm" variant="outline" title="Remover item" className="text-destructive hover:text-destructive" onClick={() => onDelete(index)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <Button size="sm" variant="destructive" onClick={() => onReject(index)}>
               <X className="h-4 w-4" />
             </Button>
