@@ -35,6 +35,10 @@ interface ElementOverrides {
   contactScale?: number;
   contactScaleX?: number;
   contactScaleY?: number;
+  mascotX?: number;
+  mascotY?: number;
+  mascotScaleX?: number;
+  mascotScaleY?: number;
   photoScale?: number;
   photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
