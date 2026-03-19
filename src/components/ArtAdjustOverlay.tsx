@@ -992,6 +992,7 @@ export function ArtAdjustOverlay({
       </div>
 
       <div className="absolute inset-0 z-10">
+        {hasBackgroundImage && <Box part="bg" label="Fundo" resizable />}
         <Box part="photo" label="Foto" resizable />
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
