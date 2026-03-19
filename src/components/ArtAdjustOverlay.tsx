@@ -331,6 +331,9 @@ export function ArtAdjustOverlay({
           textW: number;
           textH: number;
           shapeRect?: ShapeOverride;
+          bgOffsetX: number;
+          bgOffsetY: number;
+          bgScale: number;
         };
       }
   >(null);
