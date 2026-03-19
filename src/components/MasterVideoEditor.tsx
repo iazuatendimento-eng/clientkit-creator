@@ -129,10 +129,11 @@ type TeamFilter = string | undefined;
 interface MasterVideoEditorProps {
   onBack: () => void;
   onGenerateBatch: (template: VideoTemplate, teamFilter: TeamFilter) => void;
+  onGenerateAllTeams?: (template: VideoTemplate) => void;
   onOpenHistory?: () => void;
 }
 
-export const MasterVideoEditor = ({ onBack, onGenerateBatch, onOpenHistory }: MasterVideoEditorProps) => {
+export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, onOpenHistory }: MasterVideoEditorProps) => {
   const [currentPage, setCurrentPage] = useState<"content" | "signature">("content");
   const [contentElements, setContentElements] = useState<CanvasElement[]>([]);
   const [signatureElements, setSignatureElements] = useState<CanvasElement[]>([]);
