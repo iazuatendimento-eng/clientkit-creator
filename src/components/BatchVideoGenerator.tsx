@@ -3107,25 +3107,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             className={`w-32 h-7 text-xs shrink-0 ${!emailSubject.trim() ? 'border-destructive' : ''}`}
           />
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs px-2 h-7 shrink-0"
-            onClick={handleBulkRegenerate}
-            disabled={isBulkExporting || isSendingEmails}
-          >
-            {isBulkExporting ? (
-              <>
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                {bulkExportProgress}
-              </>
-            ) : (
-              <>
-                <Download className="mr-1 h-3 w-3" />
-                Regerar Todos
-              </>
-            )}
-          </Button>
 
           <Button variant="outline" size="sm" className="text-xs px-2 h-7 shrink-0" onClick={handleSaveDraft}>
             <Save className="mr-1 h-3 w-3" />
