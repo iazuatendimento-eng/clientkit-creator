@@ -918,7 +918,29 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     prevIsGenerating.current = isGenerating;
   }, [isGenerating, autoAdvance]);
 
-  // Keep preview static (no auto page cycling)
+  // Prevent browser from throttling/suspending tab during generation
+  useEffect(() => {
+    if (!isGenerating) return;
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch { /* ignore - not supported or denied */ }
+    };
+    requestWakeLock();
+    // Re-acquire on visibility change (browser releases on tab hide)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && isGenerating) requestWakeLock();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      wakeLock?.release?.().catch(() => {});
+    };
+  }, [isGenerating]);
+
   useEffect(() => {
     if (!selectedVideo) return;
     if (currentPreviewPage >= selectedVideo.pages.length) {
