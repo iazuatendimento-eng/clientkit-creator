@@ -268,7 +268,6 @@ export function ArtAdjustOverlay({
   >(null);
 
   const begin = (e: React.PointerEvent, part: Part, mode: "move" | "resize", handle?: Handle) => {
-    console.log("[ArtAdjustOverlay] begin", part, mode, handle, "pointerId:", e.pointerId);
     e.preventDefault();
     e.stopPropagation();
 
@@ -655,11 +654,15 @@ export function ArtAdjustOverlay({
       );
     };
 
-    return (
+      const zClass = part === "photo"
+        ? (isActive ? "z-10" : "z-0")
+        : (isActive ? "z-30" : "z-20");
+
+      return (
       <div
         className={cn(
           "absolute touch-none cursor-move",
-          isActive ? "z-30" : "z-10"
+          zClass
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
         onPointerDown={(e) => begin(e, part, "move")}
