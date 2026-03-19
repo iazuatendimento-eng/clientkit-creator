@@ -436,6 +436,9 @@ export type Database = {
           brand_kit_id: string | null
           brief_type: string | null
           client_id: string | null
+          completion_template_id: string | null
+          completion_template_name: string | null
+          completion_type: string | null
           cover_image: string | null
           cover_video: string | null
           created_at: string | null
@@ -457,6 +460,9 @@ export type Database = {
           brand_kit_id?: string | null
           brief_type?: string | null
           client_id?: string | null
+          completion_template_id?: string | null
+          completion_template_name?: string | null
+          completion_type?: string | null
           cover_image?: string | null
           cover_video?: string | null
           created_at?: string | null
@@ -478,6 +484,9 @@ export type Database = {
           brand_kit_id?: string | null
           brief_type?: string | null
           client_id?: string | null
+          completion_template_id?: string | null
+          completion_template_name?: string | null
+          completion_type?: string | null
           cover_image?: string | null
           cover_video?: string | null
           created_at?: string | null
