@@ -316,6 +316,8 @@ export function ArtCardWithOverlay({
   }, [art, index, onArtUpdate, onRegenerate]);
 
   const showOverlay = !!art.imageUrl;
+  const hasImagePlaceholder = template.elements.some((e) => e.type === "image" && e.placeholder);
+  const hasAdjustableBackground = !hasImagePlaceholder && !!(art.backgroundImage || art.photoImage);
 
   return (
     <div
@@ -381,7 +383,7 @@ export function ArtCardWithOverlay({
               setBgOffsetX={setBgOffsetX}
               setBgOffsetY={setBgOffsetY}
               setBgScale={setBgScale}
-              hasBackgroundImage={!!art.backgroundImage && !template.elements.some(e => e.type === "image" && e.placeholder)}
+              hasBackgroundImage={hasAdjustableBackground}
               onDragEnd={handleDragEnd}
             />
           </div>
