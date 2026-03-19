@@ -245,6 +245,28 @@ export const searchVideos = async (query: string, perPage: number = 5, page: num
   return combined;
 };
 
+// Pixabay Image search (via edge function since API key is a secret)
+export const searchPixabayImages = async (query: string, perPage: number = 12, page: number = 1): Promise<SearchImage[]> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('search-pixabay-images', {
+      body: { query, perPage, page },
+    });
+
+    if (error) {
+      console.error('Pixabay image search error:', error);
+      return [];
+    }
+
+    return (data?.images || []).map((img: any) => ({
+      ...img,
+      source: 'pixabay' as const,
+    }));
+  } catch (error) {
+    console.error('Error fetching Pixabay images:', error);
+    return [];
+  }
+};
+
 // Check which APIs are configured
 export const getConfiguredApis = (): { pexels: boolean; unsplash: boolean } => {
   return {
