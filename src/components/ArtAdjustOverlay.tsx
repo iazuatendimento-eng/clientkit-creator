@@ -744,6 +744,40 @@ export function ArtAdjustOverlay({
     return lines;
   }, []);
 
+  const getHitPartFromClientPoint = (clientX: number, clientY: number): Part | null => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+
+    const x = ((clientX - rect.left) / rect.width) * template.width;
+    const y = ((clientY - rect.top) / rect.height) * template.height;
+
+    const contains = (p: Part) => {
+      const r = getRect(p);
+      if (!r) return false;
+      return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    };
+
+    const shapeParts = els.shapes.map((s) => `shape:${s.id}` as Part);
+    const hitOrder: Part[] = ["text", "contact", "logo", ...shapeParts, "photo"];
+
+    for (const part of hitOrder) {
+      if (contains(part)) return part;
+    }
+
+    return null;
+  };
+
+  const handleContainerPointerDownCapture = (e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-overlay-handle="true"]')) return;
+
+    const hitPart = getHitPartFromClientPoint(e.clientX, e.clientY);
+    if (!hitPart) return;
+
+    setActive(hitPart);
+    begin(e as unknown as React.PointerEvent, hitPart, "move");
+  };
+
   return (
     <div
       ref={containerRef}
