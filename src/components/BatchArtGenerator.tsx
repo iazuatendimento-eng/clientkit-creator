@@ -269,7 +269,12 @@ interface BatchArtGeneratorProps {
 
 export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchArtGeneratorProps) => {
   const [clientArts, setClientArts] = useState<ClientArt[]>([]);
-  const [currentBatchId, setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
+  const [currentBatchId, _setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
+  const batchIdRef = useRef<string | null>(initialBatch?.id || null);
+  const setCurrentBatchId = (id: string | null) => {
+    batchIdRef.current = id;
+    _setCurrentBatchId(id);
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmails, setIsSendingEmails] = useState(false);
