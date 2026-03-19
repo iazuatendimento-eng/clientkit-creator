@@ -143,10 +143,11 @@ export function ArtAdjustOverlay({
     const logoEl = template.elements.find((e) => e.type === "logo");
     const contactEl = template.elements.find((e) => e.type === "contact");
     const textEl = template.elements.find((e) => e.type === "text");
+    const mascotEl = template.elements.find((e) => e.type === "mascot");
     const shapes = template.elements
       .filter((e) => (e.type === "rect" || e.type === "circle") && !!e.id)
       .map((e) => ({ ...e, id: e.id as string }));
-    return { photoFrame, logoEl, contactEl, textEl, shapes };
+    return { photoFrame, logoEl, contactEl, textEl, mascotEl, shapes };
   }, [template.elements]);
 
 
