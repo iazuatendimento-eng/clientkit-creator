@@ -575,14 +575,7 @@ export function ArtAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setContactScaleY(newScaleY);
           if (handleHasN(h)) {
-            setContactY(
-              clampOffsetWithinCanvas(
-                s.start.contactY + (s.start.contactH - newH),
-                baseContactY,
-                newH,
-                template.height
-              )
-            );
+            setContactY(s.start.contactY + (s.start.contactH - newH));
           }
         } else {
           // Corner: proportional
