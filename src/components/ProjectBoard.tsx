@@ -1551,6 +1551,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedVideoExpiresAt: (brief as any).generated_video_expires_at || undefined,
         generatedArtUrl: (brief as any).generated_art_url || undefined,
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
+        completionType: (brief as any).completion_type || undefined,
+        completionTemplateName: (brief as any).completion_template_name || undefined,
       }));
       setBriefs(mappedBriefs);
 
