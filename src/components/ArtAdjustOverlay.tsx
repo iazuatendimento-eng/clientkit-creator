@@ -552,7 +552,6 @@ export function ArtAdjustOverlay({
         if (s.mode === "move") {
           setContactX(s.start.contactX + dx);
           setContactY(s.start.contactY + dy);
-          );
           return;
         }
 
