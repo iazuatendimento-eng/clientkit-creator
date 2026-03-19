@@ -150,10 +150,10 @@ export function translateToEnglishLocal(text: string): string {
   for (const word of words) {
     const normalised = removeAccents(word);
     const eng = PT_EN[word] || PT_EN[normalised];
-    const out = eng || word; // keep original if not found
-    if (!seen.has(out)) {
-      seen.add(out);
-      translated.push(out);
+    if (!eng) continue; // drop untranslated words — only English goes to stock APIs
+    if (!seen.has(eng)) {
+      seen.add(eng);
+      translated.push(eng);
     }
   }
 
