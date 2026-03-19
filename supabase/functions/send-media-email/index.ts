@@ -143,12 +143,9 @@ serve(async (req) => {
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333;">📬 ${mediaWord} - ${safeClientName}</h2>
         <div style="background-color: #fff3f3; border: 2px solid #d32f2f; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
           <p style="margin: 0; line-height: 1.6;">${downloadInstruction}</p>
         </div>
-        ${textSection}
-        <p style="color: #999; font-size: 12px; margin-top: 30px;">Enviado via iazu</p>
       </div>
     `;
 
