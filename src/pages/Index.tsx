@@ -884,9 +884,9 @@ const Index = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleBulkMoveToCompleted()}>Todos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openCompletionDialog()}>Todos</DropdownMenuItem>
                 {availableTeams.map(t => (
-                  <DropdownMenuItem key={t.id} onClick={() => handleBulkMoveToCompleted(t.name)}>{t.name}</DropdownMenuItem>
+                  <DropdownMenuItem key={t.id} onClick={() => openCompletionDialog(t.name)}>{t.name}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
