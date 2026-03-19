@@ -880,6 +880,7 @@ export function ArtAdjustOverlay({
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
         <Box part="contact" label="Contato" resizable />
+        <Box part="mascot" label="Mascote" resizable />
         {els.shapes.map((s, idx) => (
           <Box
             key={s.id}
