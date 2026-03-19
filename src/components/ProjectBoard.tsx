@@ -1632,14 +1632,8 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-4xl font-bold gradient-text mb-2">
-                {clientName ? `Projetos - ${clientName}` : "Board de Projetos"}
+                {clientName || "Board de Projetos"}
               </h1>
-              <p className="text-muted-foreground">
-                {clientName 
-                  ? `Organize os projetos de ${clientName}` 
-                  : "Organize os briefings e projetos dos seus clientes"
-                }
-              </p>
             </div>
           
             <div className="flex items-center gap-2">
