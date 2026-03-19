@@ -120,6 +120,9 @@ interface ElementOverrides {
   // When set, resizes/moves the photo placeholder frame (instead of zooming the crop)
   photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgScale?: number;
 }
 
 interface ClientArt {
