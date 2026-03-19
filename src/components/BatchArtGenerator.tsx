@@ -269,7 +269,12 @@ interface BatchArtGeneratorProps {
 
 export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchArtGeneratorProps) => {
   const [clientArts, setClientArts] = useState<ClientArt[]>([]);
-  const [currentBatchId, setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
+  const [currentBatchId, _setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
+  const batchIdRef = useRef<string | null>(initialBatch?.id || null);
+  const setCurrentBatchId = (id: string | null) => {
+    batchIdRef.current = id;
+    _setCurrentBatchId(id);
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmails, setIsSendingEmails] = useState(false);
@@ -1604,7 +1609,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             if (cd?.team) effectiveTeam = cd.team;
           }
           const snapshotWithTeam = { ...template, teamFilter: effectiveTeam, hasUnresolvedNotes };
-          const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
+          const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, batchIdRef.current || undefined);
           if (savedId) setCurrentBatchId(savedId);
           console.log("Auto-saved batch draft after generation:", savedId);
         }
@@ -2068,7 +2073,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         if (cd?.team) effectiveTeam = cd.team;
       }
       const snapshotWithTeam = { ...template, teamFilter: effectiveTeam, hasUnresolvedNotes };
-      const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchId || undefined);
+      const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, batchIdRef.current || undefined);
       if (savedId) setCurrentBatchId(savedId);
 
       // Clear the art generation tags so they can regenerate later
