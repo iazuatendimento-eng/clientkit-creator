@@ -142,7 +142,6 @@ serve(async (req) => {
               to: [email],
               subject: subject || `${mediaLabel} - ${clientName}`,
               text: plainText,
-              html: htmlBody,
               attachments,
             }),
           });
