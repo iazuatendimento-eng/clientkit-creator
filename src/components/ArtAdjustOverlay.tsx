@@ -501,8 +501,8 @@ export function ArtAdjustOverlay({
 
       if (s.part === "logo") {
         if (s.mode === "move") {
-          setLogoX(clamp(s.start.logoX + dx, -200, 200));
-          setLogoY(clamp(s.start.logoY + dy, -200, 200));
+          setLogoX(s.start.logoX + dx);
+          setLogoY(s.start.logoY + dy);
           return;
         }
 
