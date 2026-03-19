@@ -212,6 +212,9 @@ export function ArtCardWithOverlay({
       setMascotScaleX(art.elementOverrides?.mascotScaleX || 100);
       setMascotScaleY(art.elementOverrides?.mascotScaleY || 100);
       setShapeOverrides(art.elementOverrides?.shapes || {});
+      setBgOffsetX(art.elementOverrides?.bgOffsetX || 0);
+      setBgOffsetY(art.elementOverrides?.bgOffsetY || 0);
+      setBgScale(art.elementOverrides?.bgScale || 100);
     }
   }, [art]);
 
