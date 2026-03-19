@@ -62,27 +62,8 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     setIsLoading(false);
   };
 
-  const resolveTeamNames = async (list: BatchGeneration[]): Promise<BatchGeneration[]> => {
-    // Skip batches that already have teamFilter – nothing to resolve
-    const missing = list.filter(b => !(b.template_snapshot as any)?.teamFilter);
-    if (missing.length === 0) return list;
 
-    // Use a lightweight RPC-free approach: fetch only the first clientId from items
-    // using a JSONB path expression so we never pull the full multi-MB items column
-    const batchIds = missing.map(b => b.id);
-    
-    // Fetch only the first item's clientId using a lightweight query
-    const { data: rows } = await supabase
-      .from("batch_generations")
-      .select("id")
-      .in("id", batchIds);
 
-    if (!rows || rows.length === 0) return list;
-
-    // For these old batches without teamFilter, just return them as-is
-    // The teamFilter will be saved on next edit. This avoids the expensive items fetch.
-    return list;
-  };
 
   const filteredBatches = useMemo(() => {
     if (!searchQuery.trim()) return batches;
