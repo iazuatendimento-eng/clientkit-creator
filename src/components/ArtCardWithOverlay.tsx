@@ -315,14 +315,12 @@ export function ArtCardWithOverlay({
     runRegenerate();
   }, [art, index, onArtUpdate, onRegenerate]);
 
-  const showOverlay = art.imageUrl && art.status === "pending";
+  const showOverlay = !!art.imageUrl;
 
   return (
     <div
       className={cn(
         "border rounded-lg overflow-hidden bg-card transition-all",
-        art.status === "approved" && "ring-2 ring-green-500",
-        art.status === "rejected" && "ring-2 ring-destructive opacity-50",
         isDragOver && "ring-2 ring-primary ring-offset-2",
       )}
       onDragOver={handleFileDragOver}
@@ -399,11 +397,6 @@ export function ArtCardWithOverlay({
           </div>
         )}
 
-        {art.status === "approved" && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
-            <Check className="h-4 w-4" />
-          </div>
-        )}
 
         {art.totalPages && art.totalPages > 1 && (
           <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-semibold">
@@ -429,7 +422,7 @@ export function ArtCardWithOverlay({
           <p className="text-xs text-primary/70 truncate mt-0.5">{art.imageType}</p>
         )}
 
-        {art.imageUrl && art.status === "pending" && (
+        {art.imageUrl && (
           <div className="flex flex-wrap gap-2 mt-3">
             <Button size="sm" variant="outline" title="Trocar foto" onClick={() => onOpenImageDialog(art, index)}>
               <ImageIcon className="h-4 w-4" />
@@ -468,12 +461,6 @@ export function ArtCardWithOverlay({
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
-            <Button size="sm" variant="destructive" onClick={() => onReject(index)}>
-              <X className="h-4 w-4" />
-            </Button>
-            <Button size="sm" className="bg-green-500 hover:bg-green-600" onClick={() => onApprove(index)}>
-              <Check className="h-4 w-4" />
-            </Button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -528,25 +515,6 @@ export function ArtCardWithOverlay({
           </div>
         )}
 
-        {art.status === "approved" && (
-          <div className="mt-3 flex items-center justify-center gap-2">
-            <Badge className="bg-green-500">Aprovada</Badge>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground"
-              onClick={() => onArtUpdate(index, { status: "pending" })}
-            >
-              <X className="h-3 w-3 mr-1" />
-              Desaprovar
-            </Button>
-          </div>
-        )}
-        {art.status === "rejected" && (
-          <div className="mt-3 text-center">
-            <Badge variant="destructive">Rejeitada</Badge>
-          </div>
-        )}
       </div>
     </div>
   );

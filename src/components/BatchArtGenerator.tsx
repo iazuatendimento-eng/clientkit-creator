@@ -2245,12 +2245,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
 
   const handleSendEmails = async () => {
-    const approvedArts = clientArts.filter((a) => a.status === "approved" && a.imageUrl);
+    const readyArts = clientArts.filter((a) => a.imageUrl);
 
-    if (approvedArts.length === 0) {
+    if (readyArts.length === 0) {
       toast({
-        title: "Nenhuma arte aprovada",
-        description: "Aprove as artes antes de enviar.",
+        title: "Nenhuma arte gerada",
+        description: "Gere as artes antes de enviar.",
         variant: "destructive",
       });
       return;
@@ -2259,9 +2259,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setIsSendingEmails(true);
 
     try {
-      // Group approved arts by clientId
-      const byClient = new Map<string, typeof approvedArts>();
-      for (const art of approvedArts) {
+      // Group ready arts by clientId
+      const byClient = new Map<string, typeof readyArts>();
+      for (const art of readyArts) {
         const list = byClient.get(art.clientId) || [];
         list.push(art);
         byClient.set(art.clientId, list);
@@ -2380,8 +2380,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
   };
 
-  const approvedCount = clientArts.filter((a) => a.status === "approved").length;
-  const pendingCount = clientArts.filter((a) => a.status === "pending").length;
+  const readyCount = clientArts.filter((a) => a.imageUrl).length;
 
   if (isLoading) {
     return (
@@ -2415,41 +2414,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         )}
         
         <div className="flex items-center gap-4">
-          <div className="flex gap-2 items-center">
-            <Badge variant="outline">{pendingCount} pendentes</Badge>
-            <Badge className="bg-green-500">{approvedCount} aprovadas</Badge>
-            {pendingCount > 0 && clientArts.some((a) => a.imageUrl) && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                onClick={() => {
-                  const updated = clientArts.map((a) =>
-                    a.status === "pending" && a.imageUrl ? { ...a, status: "approved" as const } : a
-                  );
-                  setClientArts(updated);
-                }}
-              >
-                <Check className="h-3 w-3 mr-1" />
-                Aprovar Todas
-              </Button>
-            )}
-            {approvedCount > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs border-muted-foreground text-muted-foreground hover:bg-muted"
-                onClick={() => {
-                  const updated = clientArts.map((a) =>
-                    a.status === "approved" ? { ...a, status: "pending" as const } : a
-                  );
-                  setClientArts(updated);
-                }}
-              >
-                <X className="h-3 w-3 mr-1" />
-                Desaprovar Todas
-              </Button>
-            )}
+           <div className="flex gap-2 items-center">
+            <Badge variant="outline">{clientArts.filter(a => a.imageUrl).length} geradas</Badge>
           </div>
           
           {/* Email subject input */}
@@ -2491,7 +2457,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           ) : (
             <Button
               onClick={handleSendEmails}
-              disabled={approvedCount === 0 || isSendingEmails || !emailSubject.trim()}
+              disabled={readyCount === 0 || isSendingEmails || !emailSubject.trim()}
               className="bg-gradient-primary"
             >
               {isSendingEmails ? (
@@ -2502,7 +2468,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               ) : (
                 <>
                   <Mail className="mr-2 h-4 w-4" />
-                  Enviar {approvedCount} por E-mail
+                  Enviar {readyCount} por E-mail
                 </>
               )}
             </Button>
