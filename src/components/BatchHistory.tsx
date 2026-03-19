@@ -113,8 +113,13 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     setDeletingItemIdx(null);
   };
 
-  const handleEdit = (batch: BatchGeneration) => {
-    onEditBatch(batch);
+  const handleEdit = async (batch: BatchGeneration) => {
+    setLoadingEditId(batch.id);
+    try {
+      await onEditBatch(batch);
+    } finally {
+      setLoadingEditId(null);
+    }
   };
 
   const handleDelete = async (id: string) => {
