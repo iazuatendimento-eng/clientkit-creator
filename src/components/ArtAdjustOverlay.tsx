@@ -495,20 +495,36 @@ export function ArtAdjustOverlay({
           return;
         }
 
+        const baseW = els.textEl?.width || 1;
         const baseH = els.textEl?.height || 1;
         const h = s.handle as Handle;
-
-        // All handles (side, corner) change font size based on vertical delta
-        // Width stays fixed - font size increase causes more line wrapping
-        const signedDy = handleSignY(h) * dy;
-        // For horizontal-only handles, use dx mapped to height change
+        const isVerticalHandle = h === "n" || h === "s";
         const isHorizontalHandle = h === "e" || h === "w";
-        const delta = isHorizontalHandle ? handleSignX(h) * dx : signedDy;
-        
+
+        let delta = 0;
+        if (isHorizontalHandle) {
+          // Side handles: horizontal drag controls font size change
+          delta = handleSignX(h) * dx;
+        } else if (isVerticalHandle) {
+          // Side handles: vertical drag controls font size change
+          delta = handleSignY(h) * dy;
+        } else {
+          // Corner handles: use dominant axis so resizing works even when dragging mostly sideways
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          delta = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH)
+            ? signedDx * (baseH / baseW)
+            : signedDy;
+        }
+
         const newH = clamp(s.start.textH + delta, baseH * 0.5, baseH * 3);
         const newScale = clamp((newH / baseH) * 100, 50, 300);
         setTextFontSize(newScale);
-        if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -200, 200));
+
+        if (handleHasN(h)) {
+          setTextY(clamp(s.start.textY + (s.start.textH - newH), -200, 200));
+        }
+
         return;
       }
 
