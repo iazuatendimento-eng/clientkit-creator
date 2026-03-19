@@ -527,7 +527,7 @@ export function ArtAdjustOverlay({
           const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setLogoScaleY(newScaleY);
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -200, 200));
+          if (handleHasN(h)) setLogoY(s.start.logoY + dy);
         } else {
           // Corner handles: proportional resize
           const signedDx = handleSignX(h) * dx;
