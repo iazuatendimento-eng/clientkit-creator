@@ -2112,12 +2112,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           }
 
           try {
-            // Prioritize imageType and briefing for search context (most relevant for visual content)
-            const fullContext = [video.imageType, video.briefing, video.cardTitle, text]
+            // Use only card text + imageType for search context
+            const fullContext = [text, video.imageType]
               .filter(Boolean)
               .join(" ")
               .split(" ")
-              .slice(0, 15)
+              .slice(0, 10)
               .join(" ");
 
             let searchTerms = translateToEnglishLocal(fullContext).trim();
@@ -2131,7 +2131,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                 .join(" ");
             }
             if (!searchTerms) {
-              searchTerms = "business technology";
+              searchTerms = "business professional";
             }
 
             // Search Pexels videos with multiple fallback strategies
