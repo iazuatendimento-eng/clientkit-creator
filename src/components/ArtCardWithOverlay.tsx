@@ -35,6 +35,10 @@ interface ElementOverrides {
   contactScale?: number;
   contactScaleX?: number;
   contactScaleY?: number;
+  mascotX?: number;
+  mascotY?: number;
+  mascotScaleX?: number;
+  mascotScaleY?: number;
   photoScale?: number;
   photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
@@ -129,6 +133,10 @@ export function ArtCardWithOverlay({
   const [contactY, _setContactY] = useState(art.elementOverrides?.contactY || 0);
   const [contactScaleX, _setContactScaleX] = useState(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
   const [contactScaleY, _setContactScaleY] = useState(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
+  const [mascotX, _setMascotX] = useState(art.elementOverrides?.mascotX || 0);
+  const [mascotY, _setMascotY] = useState(art.elementOverrides?.mascotY || 0);
+  const [mascotScaleX, _setMascotScaleX] = useState(art.elementOverrides?.mascotScaleX || 100);
+  const [mascotScaleY, _setMascotScaleY] = useState(art.elementOverrides?.mascotScaleY || 100);
   const [shapeOverrides, _setShapeOverrides] = useState<Record<string, ShapeOverride>>(art.elementOverrides?.shapes || {});
   const [isRegenerating, setIsRegenerating] = useState(false);
 
@@ -142,6 +150,7 @@ export function ArtCardWithOverlay({
     logoX, logoY, logoScaleX, logoScaleY,
     textX, textY, textFontSize,
     contactX, contactY, contactScaleX, contactScaleY,
+    mascotX, mascotY, mascotScaleX, mascotScaleY,
     shapeOverrides,
   });
 
@@ -161,6 +170,10 @@ export function ArtCardWithOverlay({
   const setContactY = useCallback((v: number) => { latestRef.current.contactY = v; _setContactY(v); }, []);
   const setContactScaleX = useCallback((v: number) => { latestRef.current.contactScaleX = v; _setContactScaleX(v); }, []);
   const setContactScaleY = useCallback((v: number) => { latestRef.current.contactScaleY = v; _setContactScaleY(v); }, []);
+  const setMascotX = useCallback((v: number) => { latestRef.current.mascotX = v; _setMascotX(v); }, []);
+  const setMascotY = useCallback((v: number) => { latestRef.current.mascotY = v; _setMascotY(v); }, []);
+  const setMascotScaleX = useCallback((v: number) => { latestRef.current.mascotScaleX = v; _setMascotScaleX(v); }, []);
+  const setMascotScaleY = useCallback((v: number) => { latestRef.current.mascotScaleY = v; _setMascotScaleY(v); }, []);
   const setShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => { latestRef.current.shapeOverrides = v; _setShapeOverrides(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
@@ -184,6 +197,10 @@ export function ArtCardWithOverlay({
       setContactY(art.elementOverrides?.contactY || 0);
       setContactScaleX(art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100);
       setContactScaleY(art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100);
+      setMascotX(art.elementOverrides?.mascotX || 0);
+      setMascotY(art.elementOverrides?.mascotY || 0);
+      setMascotScaleX(art.elementOverrides?.mascotScaleX || 100);
+      setMascotScaleY(art.elementOverrides?.mascotScaleY || 100);
       setShapeOverrides(art.elementOverrides?.shapes || {});
     }
   }, [art]);
@@ -232,6 +249,8 @@ export function ArtCardWithOverlay({
       textX: v.textX, textY: v.textY, textFontSize: v.textFontSize,
       contactX: v.contactX, contactY: v.contactY,
       contactScaleX: v.contactScaleX, contactScaleY: v.contactScaleY,
+      mascotX: v.mascotX, mascotY: v.mascotY,
+      mascotScaleX: v.mascotScaleX, mascotScaleY: v.mascotScaleY,
       photoScale: v.photoScale,
       photoFrame: v.photoFrame || undefined,
       shapes: v.shapeOverrides,
@@ -332,6 +351,14 @@ export function ArtCardWithOverlay({
               setContactY={setContactY}
               setContactScaleX={setContactScaleX}
               setContactScaleY={setContactScaleY}
+              mascotX={mascotX}
+              mascotY={mascotY}
+              mascotScaleX={mascotScaleX}
+              mascotScaleY={mascotScaleY}
+              setMascotX={setMascotX}
+              setMascotY={setMascotY}
+              setMascotScaleX={setMascotScaleX}
+              setMascotScaleY={setMascotScaleY}
               shapeOverrides={shapeOverrides}
               setShapeOverrides={setShapeOverrides}
               onDragEnd={handleDragEnd}

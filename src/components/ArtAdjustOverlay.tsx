@@ -23,7 +23,7 @@ type ShapeOverride = { x: number; y: number; width: number; height: number };
 
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
-type BasePart = "photo" | "logo" | "text" | "contact";
+type BasePart = "photo" | "logo" | "text" | "contact" | "mascot";
 
 type ShapePart = `shape:${string}`;
 
@@ -77,6 +77,14 @@ export function ArtAdjustOverlay({
   setContactY,
   setContactScaleX,
   setContactScaleY,
+  mascotX,
+  mascotY,
+  mascotScaleX,
+  mascotScaleY,
+  setMascotX,
+  setMascotY,
+  setMascotScaleX,
+  setMascotScaleY,
   shapeOverrides,
   setShapeOverrides,
 }: {
@@ -119,6 +127,15 @@ export function ArtAdjustOverlay({
   setContactScaleX: (v: number) => void;
   setContactScaleY: (v: number) => void;
 
+  mascotX?: number;
+  mascotY?: number;
+  mascotScaleX?: number;
+  mascotScaleY?: number;
+  setMascotX?: (v: number) => void;
+  setMascotY?: (v: number) => void;
+  setMascotScaleX?: (v: number) => void;
+  setMascotScaleY?: (v: number) => void;
+
   shapeOverrides?: Record<string, ShapeOverride>;
   setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
 }) {
@@ -134,10 +151,11 @@ export function ArtAdjustOverlay({
     const logoEl = template.elements.find((e) => e.type === "logo");
     const contactEl = template.elements.find((e) => e.type === "contact");
     const textEl = template.elements.find((e) => e.type === "text");
+    const mascotEl = template.elements.find((e) => e.type === "mascot");
     const shapes = template.elements
       .filter((e) => (e.type === "rect" || e.type === "circle") && !!e.id)
       .map((e) => ({ ...e, id: e.id as string }));
-    return { photoFrame, logoEl, contactEl, textEl, shapes };
+    return { photoFrame, logoEl, contactEl, textEl, mascotEl, shapes };
   }, [template.elements]);
 
 
@@ -200,6 +218,16 @@ export function ArtAdjustOverlay({
       };
     }
 
+    if (part === "mascot") {
+      if (!els.mascotEl) return null;
+      return {
+        x: els.mascotEl.x + (mascotX ?? 0),
+        y: els.mascotEl.y + (mascotY ?? 0),
+        w: els.mascotEl.width * ((mascotScaleX ?? 100) / 100),
+        h: els.mascotEl.height * ((mascotScaleY ?? 100) / 100),
+      };
+    }
+
     if (part === "text") {
       if (!els.textEl) return null;
       const scale = textFontSize / 100;
@@ -258,6 +286,12 @@ export function ArtAdjustOverlay({
           logoH: number;
           contactW: number;
           contactH: number;
+          mascotX: number;
+          mascotY: number;
+          mascotScaleX: number;
+          mascotScaleY: number;
+          mascotW: number;
+          mascotH: number;
           textW: number;
           textH: number;
           shapeRect?: ShapeOverride;
@@ -285,6 +319,12 @@ export function ArtAdjustOverlay({
     const logoH = els.logoEl ? els.logoEl.height * (logoScaleY / 100) : 0;
     const contactW = els.contactEl ? els.contactEl.width * (contactScaleX / 100) : 0;
     const contactH = els.contactEl ? els.contactEl.height * (contactScaleY / 100) : 0;
+    const _mascotScaleX = mascotScaleX ?? 100;
+    const _mascotScaleY = mascotScaleY ?? 100;
+    const _mascotX = mascotX ?? 0;
+    const _mascotY = mascotY ?? 0;
+    const mascotW = els.mascotEl ? els.mascotEl.width * (_mascotScaleX / 100) : 0;
+    const mascotH = els.mascotEl ? els.mascotEl.height * (_mascotScaleY / 100) : 0;
     const textW = els.textEl ? els.textEl.width : 0;
     const textH = els.textEl ? els.textEl.height * (textFontSize / 100) : 0;
 
@@ -328,6 +368,12 @@ export function ArtAdjustOverlay({
         logoH,
         contactW,
         contactH,
+        mascotX: _mascotX,
+        mascotY: _mascotY,
+        mascotScaleX: _mascotScaleX,
+        mascotScaleY: _mascotScaleY,
+        mascotW,
+        mascotH,
         textW,
         textH,
         shapeRect,
@@ -482,6 +528,47 @@ export function ArtAdjustOverlay({
           setContactScaleY(newScaleY);
           if (handleHasW(h)) setContactX(clamp(s.start.contactX + (s.start.contactW - newW), -200, 200));
           if (handleHasN(h)) setContactY(clamp(s.start.contactY + (s.start.contactH - newH), -200, 200));
+        }
+        return;
+      }
+
+      if (s.part === "mascot" && setMascotX && setMascotY && setMascotScaleX && setMascotScaleY) {
+        if (s.mode === "move") {
+          setMascotX(clamp(s.start.mascotX + dx, -200, 200));
+          setMascotY(clamp(s.start.mascotY + dy, -200, 200));
+          return;
+        }
+
+        const baseW = els.mascotEl?.width || 1;
+        const baseH = els.mascotEl?.height || 1;
+        const h = s.handle as Handle;
+        const isVerticalHandle = h === "n" || h === "s";
+        const isHorizontalHandle = h === "e" || h === "w";
+
+        if (isHorizontalHandle) {
+          const signedDx = handleSignX(h) * dx;
+          const newW = clamp(s.start.mascotW + signedDx, baseW * 0.25, baseW * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          setMascotScaleX(newScaleX);
+          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + dx, -200, 200));
+        } else if (isVerticalHandle) {
+          const signedDy = handleSignY(h) * dy;
+          const newH = clamp(s.start.mascotH + signedDy, baseH * 0.25, baseH * 3);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setMascotScaleY(newScaleY);
+          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + dy, -200, 200));
+        } else {
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          const dominant = Math.abs(signedDx / baseW) > Math.abs(signedDy / baseH) ? signedDx / baseW : signedDy / baseH;
+          const newW = clamp(s.start.mascotW + dominant * baseW, baseW * 0.25, baseW * 3);
+          const newH = clamp(s.start.mascotH + dominant * baseH, baseH * 0.25, baseH * 3);
+          const newScaleX = clamp((newW / baseW) * 100, 25, 300);
+          const newScaleY = clamp((newH / baseH) * 100, 25, 300);
+          setMascotScaleX(newScaleX);
+          setMascotScaleY(newScaleY);
+          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + (s.start.mascotW - newW), -200, 200));
+          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + (s.start.mascotH - newH), -200, 200));
         }
         return;
       }
@@ -674,9 +761,11 @@ export function ArtAdjustOverlay({
         ? "z-10"
         : part === "logo"
           ? "z-20"
-          : part === "contact"
-            ? "z-30"
-            : "z-40";
+          : part === "mascot"
+            ? "z-25"
+            : part === "contact"
+              ? "z-30"
+              : "z-40";
 
     const zClass = baseLayerClass;
 
@@ -788,6 +877,7 @@ export function ArtAdjustOverlay({
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
         <Box part="contact" label="Contato" resizable />
+        <Box part="mascot" label="Mascote" resizable />
         {els.shapes.map((s, idx) => (
           <Box
             key={s.id}
