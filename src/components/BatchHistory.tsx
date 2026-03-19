@@ -128,8 +128,39 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     });
   }, [batches, searchQuery]);
 
+  const handleToggleExpand = async (batchId: string) => {
+    if (expandedBatchId === batchId) {
+      setExpandedBatchId(null);
+      setExpandedItems([]);
+      return;
+    }
+    setExpandedBatchId(batchId);
+    setLoadingItems(true);
+    const batch = await getBatchById(batchId);
+    setExpandedItems(batch?.items || []);
+    setLoadingItems(false);
+  };
+
+  const handleDeleteItem = async (batchId: string, itemIndex: number) => {
+    setDeletingItemIdx(itemIndex);
+    const result = await deleteBatchItem(batchId, itemIndex);
+    if (result.deleted) {
+      if (result.batchEmpty) {
+        setBatches((prev) => prev.filter((b) => b.id !== batchId));
+        setExpandedBatchId(null);
+        setExpandedItems([]);
+        toast({ title: "Lote removido (estava vazio)" });
+      } else {
+        setExpandedItems((prev) => prev.filter((_, i) => i !== itemIndex));
+        toast({ title: "Item removido do lote" });
+      }
+    } else {
+      toast({ title: "Erro ao remover item", variant: "destructive" });
+    }
+    setDeletingItemIdx(null);
+  };
+
   const handleEdit = (batch: BatchGeneration) => {
-    // Pass lightweight batch immediately — the generator will fetch items lazily
     onEditBatch(batch);
   };
 
@@ -138,6 +169,10 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     const success = await deleteBatch(id);
     if (success) {
       setBatches((prev) => prev.filter((b) => b.id !== id));
+      if (expandedBatchId === id) {
+        setExpandedBatchId(null);
+        setExpandedItems([]);
+      }
       toast({
         title: "Lote excluído",
         description: "O lote foi removido com sucesso.",
