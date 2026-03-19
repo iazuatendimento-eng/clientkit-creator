@@ -654,9 +654,17 @@ export function ArtAdjustOverlay({
       );
     };
 
-      const zClass = part === "photo"
-        ? (isActive ? "z-10" : "z-0")
-        : (isActive ? "z-30" : "z-20");
+      const baseLayerClass = part === "photo"
+        ? "z-0"
+        : isShapePart(part)
+          ? "z-10"
+          : part === "logo"
+            ? "z-20"
+            : part === "contact"
+              ? "z-30"
+              : "z-40"; // text fica acima para ser clicável
+
+      const zClass = isActive ? "z-50" : baseLayerClass;
 
       return (
       <div
