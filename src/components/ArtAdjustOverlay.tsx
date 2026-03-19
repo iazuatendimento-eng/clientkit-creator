@@ -872,17 +872,19 @@ export function ArtAdjustOverlay({
       );
     };
 
-    const baseLayerClass = part === "photo"
-      ? "z-0"
-      : isShapePart(part)
-        ? "z-10"
-        : part === "logo"
-          ? "z-20"
-          : part === "mascot"
-            ? "z-25"
-            : part === "contact"
-              ? "z-30"
-              : "z-40";
+    const baseLayerClass = part === "bg"
+      ? "-z-[1]"
+      : part === "photo"
+        ? "z-0"
+        : isShapePart(part)
+          ? "z-10"
+          : part === "logo"
+            ? "z-20"
+            : part === "mascot"
+              ? "z-25"
+              : part === "contact"
+                ? "z-30"
+                : "z-40";
 
     const zClass = baseLayerClass;
 
