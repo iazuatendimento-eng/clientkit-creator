@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette, Mail, Sparkles } from "lucide-react";
+import { Plus, Calendar, User, FileText, Trash2, Edit, Upload, Download, Link2, Eye, Volume2, VolumeX, Film, Loader2, Clock, CheckCircle, Palette, Mail, Sparkles, ArrowLeft } from "lucide-react";
 import { QuickCreate } from "@/components/QuickCreate";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { VideoGeneratorModal } from "@/components/VideoGeneratorModal";
@@ -137,6 +137,7 @@ interface ProjectBoardProps {
   clientId?: string;
   isPublicView?: boolean;
   isInactive?: boolean;
+  onBack?: () => void;
 }
 
 interface SortableCardProps {
@@ -1035,7 +1036,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   );
 };
 
-const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPublicView = false, isInactive = false }: ProjectBoardProps) => {
+const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPublicView = false, isInactive = false, onBack }: ProjectBoardProps) => {
   const [briefs, setBriefs] = useState<ProjectBrief[]>([]);
   const { user } = useAuth();
 
@@ -1599,8 +1600,13 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
       <div className={isPublicView ? 'w-full' : 'container mx-auto'}>
         {!isPublicView && (
           <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold gradient-text mb-2">
+            <div className="flex items-center gap-4">
+              {onBack && (
+                <Button variant="outline" size="sm" onClick={onBack}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <h1 className="text-4xl font-bold gradient-text">
                 {clientName || "Board de Projetos"}
               </h1>
             </div>

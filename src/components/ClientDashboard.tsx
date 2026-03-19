@@ -93,15 +93,6 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80">
-      <div className="border-b bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-4">
-          <Button variant="outline" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
         {!client.active && (
@@ -118,6 +109,7 @@ export const ClientDashboard = ({ client, onBack, onUpdateClient }: ClientDashbo
           brandKits={client.brand_kit ? [client.brand_kit] : []}
           onCreateProject={handleCreateProject}
           isInactive={client.active === false}
+          onBack={onBack}
         />
       </div>
     </div>
