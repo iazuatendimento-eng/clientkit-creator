@@ -119,9 +119,8 @@ serve(async (req) => {
     const tipoArquivo = isVideo ? 'MP4' : 'PNG';
     const downloadInstruction = `SUA ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER A ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`;
 
-    // Build plain text: cardText + caption + download instruction
+    // Build plain text: caption + download instruction only (no cardText)
     let bodyParts: string[] = [];
-    if (cardText) bodyParts.push(cardText);
     if (caption) bodyParts.push(caption);
     bodyParts.push(downloadInstruction);
     const plainText = bodyParts.join('\n\n');
