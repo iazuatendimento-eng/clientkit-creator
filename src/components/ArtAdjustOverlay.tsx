@@ -539,8 +539,8 @@ export function ArtAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setLogoScaleX(newScaleX);
           setLogoScaleY(newScaleY);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + (s.start.logoW - newW), -200, 200));
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + (s.start.logoH - newH), -200, 200));
+          if (handleHasW(h)) setLogoX(s.start.logoX + (s.start.logoW - newW));
+          if (handleHasN(h)) setLogoY(s.start.logoY + (s.start.logoH - newH));
         }
         return;
       }
