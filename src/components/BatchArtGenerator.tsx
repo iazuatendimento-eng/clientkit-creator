@@ -2634,8 +2634,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               onOpenImageDialog={(a, idx) => {
                 setSelectedArt(a);
                 setSelectedArtIndex(idx);
-                const queryParts = [a.cardText, a.imageType].filter(Boolean);
-                setSearchQuery(translateToEnglishLocal(queryParts.join(" ").slice(0, 150)));
+                setSearchQuery(buildDefaultStockQuery(a));
                 setIsImageDialogOpen(true);
               }}
               onRefreshBrandKit={refreshBrandKitAndRegenerate}
