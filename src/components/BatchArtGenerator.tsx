@@ -2245,12 +2245,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
 
   const handleSendEmails = async () => {
-    const approvedArts = clientArts.filter((a) => a.status === "approved" && a.imageUrl);
+    const readyArts = clientArts.filter((a) => a.imageUrl);
 
-    if (approvedArts.length === 0) {
+    if (readyArts.length === 0) {
       toast({
-        title: "Nenhuma arte aprovada",
-        description: "Aprove as artes antes de enviar.",
+        title: "Nenhuma arte gerada",
+        description: "Gere as artes antes de enviar.",
         variant: "destructive",
       });
       return;
