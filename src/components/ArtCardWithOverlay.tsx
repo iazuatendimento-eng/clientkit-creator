@@ -422,7 +422,7 @@ export function ArtCardWithOverlay({
           <p className="text-xs text-primary/70 truncate mt-0.5">{art.imageType}</p>
         )}
 
-        {art.imageUrl && art.status === "pending" && (
+        {art.imageUrl && (
           <div className="flex flex-wrap gap-2 mt-3">
             <Button size="sm" variant="outline" title="Trocar foto" onClick={() => onOpenImageDialog(art, index)}>
               <ImageIcon className="h-4 w-4" />
