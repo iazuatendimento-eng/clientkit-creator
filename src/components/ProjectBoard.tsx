@@ -1036,7 +1036,7 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
   );
 };
 
-const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPublicView = false, isInactive = false }: ProjectBoardProps) => {
+const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPublicView = false, isInactive = false, onBack }: ProjectBoardProps) => {
   const [briefs, setBriefs] = useState<ProjectBrief[]>([]);
   const { user } = useAuth();
 
