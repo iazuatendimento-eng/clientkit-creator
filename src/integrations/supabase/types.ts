@@ -539,7 +539,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_client_brand_kit_urls: {
+        Args: { client_ids: string[] }
+        Returns: {
+          briefing: string
+          colors: Json
+          contact_info: string
+          id: string
+          image_type: string
+          logo: string
+          mascot: string
+          narration_type: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
