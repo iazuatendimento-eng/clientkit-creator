@@ -654,11 +654,15 @@ export function ArtAdjustOverlay({
       );
     };
 
-    return (
+      const zClass = part === "photo"
+        ? (isActive ? "z-10" : "z-0")
+        : (isActive ? "z-30" : "z-20");
+
+      return (
       <div
         className={cn(
           "absolute touch-none cursor-move",
-          isActive ? "z-30" : "z-10"
+          zClass
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
         onPointerDown={(e) => begin(e, part, "move")}
