@@ -340,6 +340,36 @@ export async function updateBatchItem(
   }
 }
 
+export async function deleteBatchItem(batchId: string, itemIndex: number): Promise<{ deleted: boolean; batchEmpty: boolean }> {
+  try {
+    const batch = await getBatchById(batchId);
+    if (!batch) return { deleted: false, batchEmpty: false };
+
+    const items = [...batch.items];
+    items.splice(itemIndex, 1);
+
+    if (items.length === 0) {
+      await deleteBatch(batchId);
+      return { deleted: true, batchEmpty: true };
+    }
+
+    const { error } = await supabase
+      .from("batch_generations")
+      .update({ items: items as any })
+      .eq("id", batchId);
+
+    if (error) {
+      console.error("Error deleting batch item:", error);
+      return { deleted: false, batchEmpty: false };
+    }
+
+    return { deleted: true, batchEmpty: false };
+  } catch (error) {
+    console.error("Error deleting batch item:", error);
+    return { deleted: false, batchEmpty: false };
+  }
+}
+
 export async function deleteBatch(id: string): Promise<boolean> {
   try {
     const { error } = await supabase
