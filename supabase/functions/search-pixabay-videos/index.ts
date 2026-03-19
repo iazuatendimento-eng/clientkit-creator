@@ -27,9 +27,23 @@ serve(async (req) => {
 
     const url = `https://pixabay.com/api/videos/?key=${apiKey}&q=${encodeURIComponent(shortQuery)}&per_page=${perPage}&page=${page}&safesearch=true`;
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Pixabay API error [${response.status}]: ${await response.text()}`);
+    let response: Response | null = null;
+    const maxRetries = 3;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      response = await fetch(url);
+      if (response.status === 429) {
+        const delay = 1000 * (attempt + 1); // 1s, 2s, 3s
+        console.warn(`Pixabay 429 throttled, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      break;
+    }
+
+    if (!response || !response.ok) {
+      const status = response?.status || 'unknown';
+      const body = response ? await response.text() : 'No response';
+      throw new Error(`Pixabay API error [${status}]: ${body}`);
     }
 
     const data = await response.json();
