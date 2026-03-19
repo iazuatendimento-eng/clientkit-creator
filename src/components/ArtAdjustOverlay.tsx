@@ -520,7 +520,7 @@ export function ArtAdjustOverlay({
           const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setLogoScaleX(newScaleX);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -200, 200));
+          if (handleHasW(h)) setLogoX(s.start.logoX + dx);
         } else if (isVerticalHandle) {
           // Side handles: stretch Y only
           const signedDy = handleSignY(h) * dy;
