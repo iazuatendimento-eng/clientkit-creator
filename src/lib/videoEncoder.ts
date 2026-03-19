@@ -609,7 +609,6 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
             throw transcodeErr;
           }
         }
-...
         const compatibleBlob = await ensureCompatibleMp4(rawBlob, "WebCodecs final");
         onProgress?.(1);
         return compatibleBlob;
