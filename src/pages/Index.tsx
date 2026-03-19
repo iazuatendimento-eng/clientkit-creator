@@ -1013,13 +1013,12 @@ const Index = () => {
               {filteredClients.length} de {clients.length} clientes
             </p>
             <Button
-              size="sm"
               variant="gradient"
               onClick={() => {
                 setEditingClient(null);
                 setCurrentView("client-editor");
               }}
-              className="w-full glow-effect mb-2"
+              className="w-full glow-effect mb-2 h-auto py-2 px-4 text-sm"
             >
               <Plus className="mr-1 h-4 w-4" />
               Novo
@@ -1043,7 +1042,7 @@ const Index = () => {
                     }
                     setCurrentView("client-dashboard");
                   }}
-                  className={`w-full text-left p-4 rounded-lg transition-all ${
+                  className={`w-full text-left py-2 px-4 rounded-lg transition-all ${
                     !client.active ? 'opacity-60' : ''
                   } ${
                     selectedClient?.id === client.id
