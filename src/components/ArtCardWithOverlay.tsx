@@ -42,6 +42,9 @@ interface ElementOverrides {
   photoScale?: number;
   photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgScale?: number;
 }
 
 interface ClientArt {
