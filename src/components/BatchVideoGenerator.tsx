@@ -2084,21 +2084,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const minSearchIntervalMs = 450;
       const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      const buildVideoSearchTerms = (rawContext: string) => {
-        const clippedContext = rawContext.split(" ").slice(0, 18).join(" ");
-        let terms = translateToEnglishLocal(clippedContext).trim();
-
-        if (!terms) {
-          terms = clippedContext
-            .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .split(" ")
-            .slice(0, 6)
-            .join(" ");
+      const buildVideoSearchTerms = (imageType: string, briefing: string, cardTitle: string, cardText: string) => {
+        // Priority 1: image_type is the BEST indicator (e.g. "odontologia", "transporte")
+        if (imageType?.trim()) {
+          const translated = translateToEnglishLocal(imageType).trim();
+          if (translated) return translated;
+          // If dictionary can't translate, use raw image_type (Pexels handles many languages)
+          return imageType.trim().split(/\s+/).slice(0, 4).join(" ");
         }
-
-        return terms || "business professional";
+        // Priority 2: briefing (client description)
+        if (briefing?.trim()) {
+          const translated = translateToEnglishLocal(briefing.split(" ").slice(0, 10).join(" ")).trim();
+          if (translated) return translated;
+        }
+        // Priority 3: card text content
+        const textContext = [cardTitle, cardText].filter(Boolean).join(" ").split(" ").slice(0, 12).join(" ");
+        const translated = translateToEnglishLocal(textContext).trim();
+        if (translated) return translated;
+        // Fallback: raw words
+        return textContext.replace(/[^\p{L}\p{N}\s]+/gu, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 5).join(" ") || "business professional";
       };
 
       const fetchVideosCached = async (query: string, perPage = 6) => {
