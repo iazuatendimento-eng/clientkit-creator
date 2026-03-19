@@ -577,37 +577,6 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  try {
-                    const { data } = await supabase
-                      .from("client_data")
-                      .select("email, email_2, email_3")
-                      .eq("id", clientId)
-                      .maybeSingle();
-                    if (data) {
-                      const emails = [data.email, data.email_2, data.email_3]
-                        .filter((em): em is string => !!em && em.trim().length > 0)
-                        .join(", ");
-                      if (emails) {
-                        await navigator.clipboard.writeText(emails);
-                        toast.success(`E-mails copiados: ${emails}`);
-                      } else {
-                        toast.error("Nenhum e-mail cadastrado");
-                      }
-                    }
-                  } catch {
-                    toast.error("Erro ao buscar e-mails");
-                  }
-                }}
-                className="h-6 w-6 p-0"
-                title="Copiar e-mails do cliente"
-              >
-                <Mail className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(brief.id);
