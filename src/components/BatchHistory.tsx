@@ -241,97 +241,176 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
               return (
               <div
                 key={batch.id}
-                className="bg-card border rounded-lg p-4 flex gap-4"
+                className="bg-card border rounded-lg overflow-hidden"
               >
-                {/* Icon */}
-                <div className="flex items-center shrink-0">
-                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                    {batch.type === "art" ? <ImageIcon className="h-6 w-6 text-muted-foreground" /> : <Film className="h-6 w-6 text-muted-foreground" />}
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Badge variant="secondary">
-                      {batch.type === "art" ? <ImageIcon className="mr-1 h-3 w-3" /> : <Film className="mr-1 h-3 w-3" />}
-                      {batch.type === "art" ? "Arte" : "Vídeo"}
-                    </Badge>
-                    {teamName && (
-                      <Badge variant="outline" className="text-xs">
-                        <Users className="mr-1 h-3 w-3" />
-                        {teamName}
-                      </Badge>
-                    )}
-                    {hasUnresolvedNotes && (
-                      <Badge variant="destructive" className="text-xs">
-                        <MessageSquareWarning className="mr-1 h-3 w-3" />
-                        Anotações
-                      </Badge>
-                    )}
-                    <span className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(batch.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                        locale: ptBR,
-                      })}
-                    </span>
+                <div className="p-4 flex gap-4">
+                  {/* Icon */}
+                  <div className="flex items-center shrink-0">
+                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                      {batch.type === "art" ? <ImageIcon className="h-6 w-6 text-muted-foreground" /> : <Film className="h-6 w-6 text-muted-foreground" />}
+                    </div>
                   </div>
 
-                  <p className="text-sm font-medium">
-                    Template: {(batch.template_snapshot as any)?.name || "Sem nome"}
-                  </p>
-                </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <Badge variant="secondary">
+                        {batch.type === "art" ? <ImageIcon className="mr-1 h-3 w-3" /> : <Film className="mr-1 h-3 w-3" />}
+                        {batch.type === "art" ? "Arte" : "Vídeo"}
+                      </Badge>
+                      {teamName && (
+                        <Badge variant="outline" className="text-xs">
+                          <Users className="mr-1 h-3 w-3" />
+                          {teamName}
+                        </Badge>
+                      )}
+                      {hasUnresolvedNotes && (
+                        <Badge variant="destructive" className="text-xs">
+                          <MessageSquareWarning className="mr-1 h-3 w-3" />
+                          Anotações
+                        </Badge>
+                      )}
+                      <span className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(batch.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                          locale: ptBR,
+                        })}
+                      </span>
+                    </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(batch)}
-                    disabled={loadingEditId === batch.id}
-                  >
-                    {loadingEditId === batch.id ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Edit className="mr-2 h-4 w-4" />
-                    )}
-                    Editar
-                  </Button>
+                    <p className="text-sm font-medium">
+                      Template: {(batch.template_snapshot as any)?.name || "Sem nome"}
+                    </p>
+                  </div>
 
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={deletingId === batch.id}
-                      >
-                        {deletingId === batch.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        )}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir lote?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta ação não pode ser desfeita. O histórico deste lote
-                          será removido permanentemente.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(batch.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  {/* Actions */}
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleExpand(batch.id)}
+                      title="Ver itens"
+                    >
+                      {expandedBatchId === batch.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(batch)}
+                      disabled={loadingEditId === batch.id}
+                    >
+                      {loadingEditId === batch.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Edit className="mr-2 h-4 w-4" />
+                      )}
+                      Editar
+                    </Button>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={deletingId === batch.id}
                         >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          {deletingId === batch.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir lote?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. O histórico deste lote
+                            será removido permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(batch.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
+
+                {/* Expanded items list */}
+                {expandedBatchId === batch.id && (
+                  <div className="border-t bg-muted/30 px-4 py-3">
+                    {loadingItems ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : expandedItems.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-2">Nenhum item neste lote.</p>
+                    ) : (
+                      <div className="grid gap-2">
+                        {expandedItems.map((item, idx) => (
+                          <div key={`${item.cardId}-${item.pageIndex ?? 0}-${idx}`} className="flex items-center gap-3 bg-card rounded-md p-2 border">
+                            {/* Thumbnail */}
+                            <div className="w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
+                              {item.files?.[0] ? (
+                                <img src={item.files[0]} alt={item.clientName} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{item.company || item.clientName}</p>
+                              <p className="text-xs text-muted-foreground truncate">{item.cardText}</p>
+                            </div>
+                            {/* Delete */}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={deletingItemIdx === idx}
+                                  className="shrink-0"
+                                >
+                                  {deletingItemIdx === idx ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remover item?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {item.company || item.clientName} será removido deste lote.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteItem(batch.id, idx)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Remover
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               );
             })}
