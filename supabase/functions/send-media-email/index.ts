@@ -131,28 +131,16 @@ serve(async (req) => {
       path: entry.url,
     }));
 
-    // Simple, direct email body
-    const fileType = isVideo ? 'MP4' : 'PNG';
-    const mediaWord = isVideo ? 'VÍDEO' : 'ARTE';
-    const mediaWordLower = isVideo ? 'vídeo' : 'arte';
-    const downloadInstructionText = isVideo
-      ? `SEU VÍDEO ESTÁ EM ANEXO ABAIXO, PARA VER O VÍDEO NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO MP4`
-      : `SUA ARTE ESTÁ EM ANEXO ABAIXO, PARA VER A ARTE NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO PNG`;
-    const downloadInstruction = isVideo
-      ? `<strong style="color: #d32f2f; font-size: 16px;">SEU VÍDEO ESTÁ EM ANEXO ABAIXO, PARA VER O VÍDEO NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...</strong><br/><br/>
-         <strong style="color: #d32f2f; font-size: 15px;">AVISO: BAIXAR FAZER O DOWNLOAD MESMO DO MP4</strong>`
-      : `<strong style="color: #d32f2f; font-size: 16px;">SUA ARTE ESTÁ EM ANEXO ABAIXO, PARA VER A ARTE NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...</strong><br/><br/>
-         <strong style="color: #d32f2f; font-size: 15px;">AVISO: BAIXAR FAZER O DOWNLOAD MESMO DO PNG</strong>`;
+    // Build plain body from cardText and caption only
+    let bodyParts: string[] = [];
+    if (cardText) bodyParts.push(cardText);
+    if (caption) bodyParts.push(caption);
+    const plainText = bodyParts.join('\n\n') || ' ';
 
-    const plainText = downloadInstructionText;
-
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #fff3f3; border: 2px solid #d32f2f; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0; line-height: 1.6;">${downloadInstruction}</p>
-        </div>
-      </div>
-    `;
+    // Simple HTML version of the same text
+    const htmlBody = bodyParts.length > 0
+      ? `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${bodyParts.map(t => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`).join('')}</div>`
+      : '<div></div>';
 
     const results = await Promise.all(
       validEmails.map(async (email: string) => {
