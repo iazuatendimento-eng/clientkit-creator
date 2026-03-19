@@ -2081,8 +2081,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const globalVideoResultsCache = new Map<string, Awaited<ReturnType<typeof searchVideos>>>();
       const successfulVideoPool: Awaited<ReturnType<typeof searchVideos>> = [];
       let lastVideoSearchAt = 0;
-      const minSearchIntervalMs = 1200;
+      const minSearchIntervalMs = 450;
       const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      const buildVideoSearchTerms = (rawContext: string) => {
+        const clippedContext = rawContext.split(" ").slice(0, 18).join(" ");
+        let terms = translateToEnglishLocal(clippedContext).trim();
+
+        if (!terms) {
+          terms = clippedContext
+            .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .split(" ")
+            .slice(0, 6)
+            .join(" ");
+        }
+
+        return terms || "business professional";
+      };
 
       const fetchVideosCached = async (query: string, perPage = 6) => {
         const key = query.trim().toLowerCase();
@@ -2099,11 +2116,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const results = await searchVideos(key, perPage);
         lastVideoSearchAt = Date.now();
         globalVideoResultsCache.set(key, results);
+
         if (results.length > 0) {
           results.forEach((v) => {
             if (!successfulVideoPool.some((p) => p.id === v.id)) successfulVideoPool.push(v);
           });
         }
+
         return results;
       };
 
@@ -2111,76 +2130,49 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const video = updatedVideos[i];
         setGenerationStatus(`Gerando páginas (${i + 1}/${updatedVideos.length}) • ${video.clientName}`);
 
-        // Reuse existing user-chosen videos/images when available; only search for missing pages
+        // Reuse existing user-chosen videos/images when available; search once per card for missing pages
         const existingVideoUrls = video.previewVideoUrls || [];
         const existingImages = video.searchedImages || [];
-        const searchedImages: string[] = [];
-        const pexelsVideoUrls: (string | null)[] = [];
+        const searchedImages: string[] = video.pageTexts.map((_, idx) => existingImages[idx] || "");
+        const pexelsVideoUrls: (string | null)[] = video.pageTexts.map((_, idx) => existingVideoUrls[idx] || null);
+        const missingPageIndexes: number[] = [];
 
         for (let pageIdx = 0; pageIdx < video.pageTexts.length; pageIdx++) {
-          const text = video.pageTexts[pageIdx];
           const existingUrl = existingVideoUrls[pageIdx];
-          const existingImg = existingImages[pageIdx];
-
-          // If this page already has a user-chosen video, keep it
-          if (existingUrl && existingUrl !== "") {
-            searchedImages.push(existingImg || "");
-            pexelsVideoUrls.push(existingUrl);
-            continue;
+          if (!existingUrl || existingUrl === "") {
+            missingPageIndexes.push(pageIdx);
           }
+        }
 
+        if (missingPageIndexes.length > 0) {
           try {
-            // Use only card text + imageType for search context
-            const fullContext = [text, video.imageType]
+            const missingTexts = missingPageIndexes.map((idx) => video.pageTexts[idx] || "").join(" ");
+            const searchContext = [video.imageType, video.briefing, video.cardTitle, missingTexts]
               .filter(Boolean)
-              .join(" ")
-              .split(" ")
-              .slice(0, 10)
               .join(" ");
+            const searchTerms = buildVideoSearchTerms(searchContext);
+            const fetchCount = Math.max(missingPageIndexes.length, 6);
 
-            let searchTerms = translateToEnglishLocal(fullContext).trim();
-            if (!searchTerms) {
-              searchTerms = fullContext
-                .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-                .replace(/\s+/g, " ")
-                .trim()
-                .split(" ")
-                .slice(0, 5)
-                .join(" ");
-            }
-            if (!searchTerms) {
-              searchTerms = "business professional";
-            }
+            const foundVideos = await fetchVideosCached(searchTerms, fetchCount);
+            const candidates = foundVideos.length > 0 ? foundVideos : successfulVideoPool;
 
-            // Single search query to reduce API throttle pressure
-            let foundVideo = false;
-            const videos = await fetchVideosCached(searchTerms, 6);
-            if (videos.length > 0) {
-              const seed = i * 53 + pageIdx * 17 + (video.clientName?.length || 0) + (text?.length || 0);
-              const selected = videos[Math.abs(seed) % videos.length];
-              searchedImages.push(selected.image);
-              pexelsVideoUrls.push(selected.videoUrl);
-              foundVideo = true;
-            }
-
-            // If current query is throttled/empty, reuse already successful videos from this batch run
-            if (!foundVideo && successfulVideoPool.length > 0) {
-              const seed = i * 53 + pageIdx * 17 + (video.clientName?.length || 0) + (text?.length || 0);
-              const selected = successfulVideoPool[Math.abs(seed) % successfulVideoPool.length];
-              searchedImages.push(selected.image);
-              pexelsVideoUrls.push(selected.videoUrl);
-              foundVideo = true;
-            }
-
-            if (!foundVideo) {
-              // No video found at all — leave empty, never fall back to static image
-              searchedImages.push("");
-              pexelsVideoUrls.push(null);
+            if (candidates.length > 0) {
+              missingPageIndexes.forEach((pageIdx, offset) => {
+                const pageText = video.pageTexts[pageIdx] || "";
+                const seed =
+                  i * 53 +
+                  pageIdx * 17 +
+                  offset * 11 +
+                  (video.clientName?.length || 0) +
+                  (video.cardId?.length || 0) +
+                  pageText.length;
+                const selected = candidates[Math.abs(seed) % candidates.length];
+                searchedImages[pageIdx] = selected.image;
+                pexelsVideoUrls[pageIdx] = selected.videoUrl;
+              });
             }
           } catch (error) {
-            console.error("Error searching video for page:", error);
-            searchedImages.push("");
-            pexelsVideoUrls.push(null);
+            console.error("Error searching videos for card:", error);
           }
         }
 
