@@ -141,6 +141,9 @@ export function ArtCardWithOverlay({
   const [mascotScaleX, _setMascotScaleX] = useState(art.elementOverrides?.mascotScaleX || 100);
   const [mascotScaleY, _setMascotScaleY] = useState(art.elementOverrides?.mascotScaleY || 100);
   const [shapeOverrides, _setShapeOverrides] = useState<Record<string, ShapeOverride>>(art.elementOverrides?.shapes || {});
+  const [bgOffsetX, _setBgOffsetX] = useState(art.elementOverrides?.bgOffsetX || 0);
+  const [bgOffsetY, _setBgOffsetY] = useState(art.elementOverrides?.bgOffsetY || 0);
+  const [bgScale, _setBgScale] = useState(art.elementOverrides?.bgScale || 100);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
