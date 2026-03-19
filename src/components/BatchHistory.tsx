@@ -35,7 +35,7 @@ import { ptBR } from "date-fns/locale";
 
 interface BatchHistoryProps {
   onBack: () => void;
-  onEditBatch: (batch: BatchGeneration) => void;
+  onEditBatch: (batch: BatchGeneration) => void | Promise<void>;
   filterType?: "art" | "video";
 }
 
@@ -113,8 +113,13 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     setDeletingItemIdx(null);
   };
 
-  const handleEdit = (batch: BatchGeneration) => {
-    onEditBatch(batch);
+  const handleEdit = async (batch: BatchGeneration) => {
+    setLoadingEditId(batch.id);
+    try {
+      await onEditBatch(batch);
+    } finally {
+      setLoadingEditId(null);
+    }
   };
 
   const handleDelete = async (id: string) => {
