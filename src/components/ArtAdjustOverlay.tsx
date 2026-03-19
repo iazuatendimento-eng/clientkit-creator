@@ -670,8 +670,8 @@ export function ArtAdjustOverlay({
 
       if (s.part === "text") {
         if (s.mode === "move") {
-          setTextX(clamp(s.start.textX + dx, -200, 200));
-          setTextY(clamp(s.start.textY + dy, -200, 200));
+          setTextX(s.start.textX + dx);
+          setTextY(s.start.textY + dy);
           return;
         }
 
