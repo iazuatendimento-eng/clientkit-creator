@@ -2749,6 +2749,16 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
             <Film className="mr-1 h-4 w-4" />
             Gerar Lote
           </Button>
+          {onGenerateAllTeams && availableTeams.length > 1 && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleGenerateAllTeams}
+            >
+              <Layers className="mr-1 h-4 w-4" />
+              Gerar Todas Equipes
+            </Button>
+          )}
         </div>
       </div>
 
