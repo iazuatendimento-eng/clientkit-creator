@@ -35,7 +35,7 @@ import { ptBR } from "date-fns/locale";
 
 interface BatchHistoryProps {
   onBack: () => void;
-  onEditBatch: (batch: BatchGeneration) => void;
+  onEditBatch: (batch: BatchGeneration) => void | Promise<void>;
   filterType?: "art" | "video";
 }
 
