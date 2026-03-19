@@ -278,6 +278,12 @@ export function ArtAdjustOverlay({
           logoH: number;
           contactW: number;
           contactH: number;
+          mascotX: number;
+          mascotY: number;
+          mascotScaleX: number;
+          mascotScaleY: number;
+          mascotW: number;
+          mascotH: number;
           textW: number;
           textH: number;
           shapeRect?: ShapeOverride;
