@@ -156,6 +156,14 @@ export function ArtAdjustOverlay({
 
   shapeOverrides?: Record<string, ShapeOverride>;
   setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
+
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgScale?: number;
+  setBgOffsetX?: (v: number) => void;
+  setBgOffsetY?: (v: number) => void;
+  setBgScale?: (v: number) => void;
+  hasBackgroundImage?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part | null>(null);
