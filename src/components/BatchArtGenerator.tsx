@@ -2259,9 +2259,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setIsSendingEmails(true);
 
     try {
-      // Group approved arts by clientId
-      const byClient = new Map<string, typeof approvedArts>();
-      for (const art of approvedArts) {
+      // Group ready arts by clientId
+      const byClient = new Map<string, typeof readyArts>();
+      for (const art of readyArts) {
         const list = byClient.get(art.clientId) || [];
         list.push(art);
         byClient.set(art.clientId, list);
