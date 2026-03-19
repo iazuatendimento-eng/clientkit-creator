@@ -439,40 +439,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       batchItems = fullBatch.items;
     }
 
-    const clientIds = [...new Set(batchItems.map(item => item.clientId).filter(Boolean))];
-    const cardIds = [...new Set(batchItems.map(item => item.cardId).filter(Boolean))];
-
-    const [{ data: clientsData }, { data: briefsData }] = await Promise.all([
-      supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
-      supabase
-        .from("project_briefs")
-        .select("id, cover_image")
-        .in("id", cardIds),
-    ]);
-
-    const imageTypeMap: Record<string, string> = {};
-    const narrationTypeMap: Record<string, string> = {};
-    const briefingMap: Record<string, string> = {};
-    const brandKitMap: Record<string, any> = {};
-    const coverImageMap: Record<string, string> = {};
-
-    (clientsData as any[])?.forEach((c: any) => {
-      if (c.image_type) imageTypeMap[c.id] = c.image_type;
-      if (c.narration_type) narrationTypeMap[c.id] = c.narration_type;
-      if (c.briefing) briefingMap[c.id] = c.briefing;
-      brandKitMap[c.id] = {
-        logo: c.logo || "",
-        contactInfo: c.contact_info || "",
-        mascot: c.mascot || "",
-        pngs: [c.logo || "", c.contact_info || "", c.mascot || ""],
-        colors: c.colors || {},
-      };
-    });
-
-    briefsData?.forEach(b => {
-      if (b.cover_image) coverImageMap[b.id] = b.cover_image;
-    });
-
     const mergeBrandKitAssets = (itemBrandKit: any, latestBrandKit: any) => {
       const itemBk = itemBrandKit || {};
       const latestBk = latestBrandKit || {};
@@ -491,7 +457,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       };
     };
 
-    const arts: ClientArt[] = batchItems.map((item) => {
+    // Render imediato com dados do lote (sem bloquear em fetch pesado)
+    const initialArts: ClientArt[] = batchItems.map((item) => {
       const itemData = item as any;
 
       return {
@@ -501,29 +468,82 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         cardId: item.cardId,
         cardTitle: item.cardTitle,
         cardText: item.cardText,
-        brandKit: mergeBrandKitAssets(item.brandKit, brandKitMap[item.clientId]),
+        brandKit: item.brandKit || {},
         imageUrl: item.files?.[0] || null,
         backgroundImage: item.backgroundImages?.[0],
-        photoImage: itemData.photoImage || coverImageMap[item.cardId] || undefined,
+        photoImage: itemData.photoImage,
         photoOffset: itemData.photoOffset,
         elementOverrides: itemData.elementOverrides,
         pageIndex: itemData.pageIndex,
         totalPages: itemData.totalPages,
-        imageType: itemData.imageType || imageTypeMap[item.clientId] || undefined,
-        narrationType: itemData.narrationType || narrationTypeMap[item.clientId] || undefined,
-        briefing: itemData.briefing || briefingMap[item.clientId] || undefined,
+        imageType: itemData.imageType || undefined,
+        narrationType: itemData.narrationType || undefined,
+        briefing: itemData.briefing || undefined,
         status: "pending" as const,
         note: item.note,
         noteRead: item.noteRead,
       };
     });
 
-    arts.sort((a, b) => a.company.localeCompare(b.company, "pt-BR", { numeric: true }));
-    setClientArts(arts);
+    initialArts.sort((a, b) => a.company.localeCompare(b.company, "pt-BR", { numeric: true }));
+    setClientArts(initialArts);
     setIsLoading(false);
 
+    // Hidratação em background (não bloqueia abertura do editor)
+    void (async () => {
+      try {
+        const clientIds = [...new Set(batchItems.map((item) => item.clientId).filter(Boolean))];
+        const cardIds = [...new Set(batchItems.map((item) => item.cardId).filter(Boolean))];
+
+        const [{ data: clientsData }, { data: briefsData }] = await Promise.all([
+          clientIds.length > 0
+            ? supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds })
+            : Promise.resolve({ data: [] as any[] }),
+          cardIds.length > 0
+            ? supabase.from("project_briefs").select("id, cover_image").in("id", cardIds)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+
+        const imageTypeMap: Record<string, string> = {};
+        const narrationTypeMap: Record<string, string> = {};
+        const briefingMap: Record<string, string> = {};
+        const brandKitMap: Record<string, any> = {};
+        const coverImageMap: Record<string, string> = {};
+
+        (clientsData as any[])?.forEach((c: any) => {
+          if (c.image_type) imageTypeMap[c.id] = c.image_type;
+          if (c.narration_type) narrationTypeMap[c.id] = c.narration_type;
+          if (c.briefing) briefingMap[c.id] = c.briefing;
+          brandKitMap[c.id] = {
+            logo: c.logo || "",
+            contactInfo: c.contact_info || "",
+            mascot: c.mascot || "",
+            pngs: [c.logo || "", c.contact_info || "", c.mascot || ""],
+            colors: c.colors || {},
+          };
+        });
+
+        (briefsData as any[])?.forEach((b: any) => {
+          if (b.cover_image) coverImageMap[b.id] = b.cover_image;
+        });
+
+        setClientArts((prev) =>
+          prev.map((art) => ({
+            ...art,
+            brandKit: mergeBrandKitAssets(art.brandKit, brandKitMap[art.clientId]),
+            photoImage: art.photoImage || coverImageMap[art.cardId] || undefined,
+            imageType: art.imageType || imageTypeMap[art.clientId] || undefined,
+            narrationType: art.narrationType || narrationTypeMap[art.clientId] || undefined,
+            briefing: art.briefing || briefingMap[art.clientId] || undefined,
+          }))
+        );
+      } catch (error) {
+        console.error("Background hydration error (batch art):", error);
+      }
+    })();
+
     // Regenerate previews in background for items that lost their images after sanitization
-    const needsRegen = arts.filter(a => !a.imageUrl || a.imageUrl.startsWith("data:") || a.imageUrl.startsWith("blob:"));
+    const needsRegen = initialArts.filter(a => !a.imageUrl || a.imageUrl.startsWith("data:") || a.imageUrl.startsWith("blob:"));
     if (needsRegen.length > 0) {
       // Run in background – don't block UI
       (async () => {
