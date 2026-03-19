@@ -1827,6 +1827,13 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
               Gerar em Lote
             </Button>
 
+            {onGenerateAllTeams && availableTeams.length > 1 && (
+              <Button variant="outline" onClick={handleGenerateAllTeams}>
+                <Layers className="mr-2 h-4 w-4" />
+                Todas Equipes
+              </Button>
+            )}
+
             {onOpenHistory && (
               <Button variant="outline" onClick={onOpenHistory}>
                 <History className="mr-2 h-4 w-4" />
