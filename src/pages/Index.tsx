@@ -127,6 +127,13 @@ const Index = () => {
   const [quickCreateClientId, setQuickCreateClientId] = useState<string>("");
   const [quickCreateBrandKit, setQuickCreateBrandKit] = useState<any>(null);
   const [visibleCount, setVisibleCount] = useState(50);
+  // Completion dialog state
+  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
+  const [completionTeam, setCompletionTeam] = useState<string | undefined>();
+  const [completionType, setCompletionType] = useState<"art" | "video" | "">("");
+  const [completionTemplateId, setCompletionTemplateId] = useState("");
+  const [artTemplates, setArtTemplates] = useState<{ id: string; name: string }[]>([]);
+  const [videoTemplates, setVideoTemplates] = useState<{ id: string; name: string }[]>([]);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
