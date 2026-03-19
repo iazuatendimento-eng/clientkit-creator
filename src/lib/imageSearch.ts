@@ -160,6 +160,10 @@ export const searchPexelsVideos = async (query: string, perPage: number = 5, pag
   // Sanitize query: remove newlines, trim, and limit to first 80 chars (3-5 words)
   const sanitized = query.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
   const shortQuery = sanitized.split(/\s+/).slice(0, 5).join(' ').substring(0, 80);
+  if (!shortQuery) {
+    console.warn('[Pexels Video] Empty query after sanitization');
+    return [];
+  }
   console.log(`[Pexels Video] Searching: "${shortQuery}"`);
 
   try {

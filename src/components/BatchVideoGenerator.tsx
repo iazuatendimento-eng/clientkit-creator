@@ -2087,6 +2087,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const existingImages = video.searchedImages || [];
         const searchedImages: string[] = [];
         const pexelsVideoUrls: (string | null)[] = [];
+        const videoResultsCache = new Map<string, Awaited<ReturnType<typeof searchVideos>>>();
+
+        const fetchVideosCached = async (query: string, perPage = 6) => {
+          const key = query.trim().toLowerCase();
+          if (!key) return [] as Awaited<ReturnType<typeof searchVideos>>;
+          const cached = videoResultsCache.get(key);
+          if (cached) return cached;
+          const results = await searchVideos(key, perPage);
+          videoResultsCache.set(key, results);
+          return results;
+        };
 
         for (let pageIdx = 0; pageIdx < video.pageTexts.length; pageIdx++) {
           const text = video.pageTexts[pageIdx];
@@ -2102,22 +2113,42 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
           try {
             // Prioritize imageType and briefing for search context (most relevant for visual content)
-            const fullContext = [video.imageType, video.briefing, video.cardTitle, text].filter(Boolean).join(" ").split(" ").slice(0, 15).join(" ");
-            let searchTerms = translateToEnglishLocal(fullContext);
+            const fullContext = [video.imageType, video.briefing, video.cardTitle, text]
+              .filter(Boolean)
+              .join(" ")
+              .split(" ")
+              .slice(0, 15)
+              .join(" ");
+
+            let searchTerms = translateToEnglishLocal(fullContext).trim();
+            if (!searchTerms) {
+              searchTerms = fullContext
+                .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+                .split(" ")
+                .slice(0, 5)
+                .join(" ");
+            }
+            if (!searchTerms) {
+              searchTerms = "business technology";
+            }
 
             // Search Pexels videos with multiple fallback strategies
             let foundVideo = false;
-            let videos = await searchVideos(searchTerms, 3);
-            if (videos.length === 0) {
+            let videos = await fetchVideosCached(searchTerms, 6);
+            if (videos.length === 0 && searchTerms.includes(" ")) {
               const simpleTerms = searchTerms.split(" ").slice(0, 2).join(" ");
-              videos = await searchVideos(simpleTerms, 3);
+              videos = await fetchVideosCached(simpleTerms, 6);
             }
             if (videos.length === 0) {
-              videos = await searchVideos("business technology", 3);
+              videos = await fetchVideosCached("business technology", 6);
             }
             if (videos.length > 0) {
-              searchedImages.push(videos[0].image);
-              pexelsVideoUrls.push(videos[0].videoUrl);
+              const seed = i * 53 + pageIdx * 17 + (video.clientName?.length || 0) + (text?.length || 0);
+              const selected = videos[Math.abs(seed) % videos.length];
+              searchedImages.push(selected.image);
+              pexelsVideoUrls.push(selected.videoUrl);
               foundVideo = true;
             }
             if (!foundVideo) {
