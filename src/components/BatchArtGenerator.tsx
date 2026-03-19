@@ -547,7 +547,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     if (needsRegen.length > 0) {
       // Run in background – don't block UI
       (async () => {
-        const updatedArts = [...arts];
+        const updatedArts = [...initialArts];
         for (let i = 0; i < updatedArts.length; i++) {
           const a = updatedArts[i];
           if (!a.imageUrl || a.imageUrl.startsWith("data:") || a.imageUrl.startsWith("blob:")) {
