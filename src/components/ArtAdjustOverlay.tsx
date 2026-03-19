@@ -641,8 +641,7 @@ export function ArtAdjustOverlay({
 
       return (
         <div
-          data-overlay-handle="true"
-          className={cn("absolute z-30 touch-none pointer-events-auto flex items-center justify-center", cursor)}
+          className={cn("absolute z-30 touch-none flex items-center justify-center", cursor)}
           style={{ ...style, width: hitSize, height: hitSize }}
           onPointerDown={(e) => {
             e.preventDefault();
@@ -655,22 +654,22 @@ export function ArtAdjustOverlay({
       );
     };
 
-      const baseLayerClass = part === "photo"
-        ? "z-0"
-        : isShapePart(part)
-          ? "z-10"
-          : part === "logo"
-            ? "z-20"
-            : part === "contact"
-              ? "z-30"
-              : "z-40"; // text fica acima para ser clicável
+    const baseLayerClass = part === "photo"
+      ? "z-0"
+      : isShapePart(part)
+        ? "z-10"
+        : part === "logo"
+          ? "z-20"
+          : part === "contact"
+            ? "z-30"
+            : "z-40";
 
-      const zClass = isActive ? "z-50" : baseLayerClass;
+    const zClass = isActive ? "z-50" : baseLayerClass;
 
-      return (
+    return (
       <div
         className={cn(
-          "absolute touch-none cursor-move pointer-events-auto",
+          "absolute touch-none cursor-move",
           zClass
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
@@ -681,7 +680,6 @@ export function ArtAdjustOverlay({
           "absolute inset-0 border-[1.5px]",
           isActive ? "border-primary" : "border-primary/40 hover:border-primary/70"
         )} />
-
 
         {isActive && resizable && (
           <>
@@ -744,44 +742,9 @@ export function ArtAdjustOverlay({
     return lines;
   }, []);
 
-  const getHitPartFromClientPoint = (clientX: number, clientY: number): Part | null => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return null;
-
-    const x = ((clientX - rect.left) / rect.width) * template.width;
-    const y = ((clientY - rect.top) / rect.height) * template.height;
-
-    const contains = (p: Part) => {
-      const r = getRect(p);
-      if (!r) return false;
-      return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-    };
-
-    const shapeParts = els.shapes.map((s) => `shape:${s.id}` as Part);
-    const hitOrder: Part[] = ["text", "contact", "logo", ...shapeParts, "photo"];
-
-    for (const part of hitOrder) {
-      if (contains(part)) return part;
-    }
-
-    return null;
-  };
-
-  const handleContainerPointerDownCapture = (e: React.PointerEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('[data-overlay-handle="true"]')) return;
-
-    const hitPart = getHitPartFromClientPoint(e.clientX, e.clientY);
-    if (!hitPart) return;
-
-    setActive(hitPart);
-    begin(e as unknown as React.PointerEvent, hitPart, "move");
-  };
-
   return (
     <div
       ref={containerRef}
-      onPointerDownCapture={handleContainerPointerDownCapture}
       className="relative mx-auto w-full max-w-md overflow-hidden rounded-lg border bg-muted"
       style={{ aspectRatio: `${template.width} / ${template.height}` }}
     >
@@ -803,8 +766,7 @@ export function ArtAdjustOverlay({
         {gridLines}
       </div>
 
-
-      <div className="absolute inset-0 z-10 pointer-events-auto">
+      <div className="absolute inset-0 z-10">
         <Box part="photo" label="Foto" resizable />
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
