@@ -14,6 +14,7 @@ import {
   Scissors,
   Eraser,
   ArrowDownToLine,
+  Trash2,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,7 @@ interface ArtCardWithOverlayProps {
   onResolveNote: (index: number) => Promise<void>;
   onDropImage?: (index: number, file: File) => void;
   onMoveToEnd?: (index: number) => void;
+  onDelete?: (index: number) => void;
   isRemovingBg?: boolean;
   removeBgProgress?: string;
 }
@@ -107,6 +109,7 @@ export function ArtCardWithOverlay({
   onResolveNote,
   onDropImage,
   onMoveToEnd,
+  onDelete,
   isRemovingBg,
   removeBgProgress,
 }: ArtCardWithOverlayProps) {
@@ -408,6 +411,11 @@ export function ArtCardWithOverlay({
             {onMoveToEnd && (
               <Button size="sm" variant="outline" title="Mover para o final da fila" onClick={() => onMoveToEnd(index)}>
                 <ArrowDownToLine className="h-4 w-4" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button size="sm" variant="outline" title="Remover item" className="text-destructive hover:text-destructive" onClick={() => onDelete(index)}>
+                <Trash2 className="h-4 w-4" />
               </Button>
             )}
             <Button size="sm" variant="destructive" onClick={() => onReject(index)}>

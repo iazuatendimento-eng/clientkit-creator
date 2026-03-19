@@ -2537,6 +2537,14 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   return next;
                 });
               }}
+              onDelete={(idx) => {
+                setClientArts((prev) => {
+                  const next = [...prev];
+                  next.splice(idx, 1);
+                  return next;
+                });
+                toast({ title: "Item removido do lote" });
+              }}
               isRemovingBg={isRemovingBg}
               removeBgProgress={removeBgProgress}
             />
