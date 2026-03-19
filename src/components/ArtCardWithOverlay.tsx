@@ -108,6 +108,7 @@ export function ArtCardWithOverlay({
   onResolveNote,
   onDropImage,
   onMoveToEnd,
+  onDelete,
   isRemovingBg,
   removeBgProgress,
 }: ArtCardWithOverlayProps) {
