@@ -167,6 +167,7 @@ serve(async (req) => {
               from: 'iazu <noreply@contato.iazu.com.br>',
               to: [email],
               subject: subject || `${mediaLabel} - ${clientName}`,
+              text: plainText,
               html: htmlBody,
               attachments,
             }),
