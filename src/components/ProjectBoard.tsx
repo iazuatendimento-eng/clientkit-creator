@@ -1614,7 +1614,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                 <DialogTrigger asChild>
                   <Button variant="gradient" className="glow-effect">
                     <Plus className="mr-2 h-4 w-4" />
-                    Novo Briefing
+                    Novo Texto
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
