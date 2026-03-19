@@ -351,6 +351,14 @@ export function ArtCardWithOverlay({
               setContactY={setContactY}
               setContactScaleX={setContactScaleX}
               setContactScaleY={setContactScaleY}
+              mascotX={mascotX}
+              mascotY={mascotY}
+              mascotScaleX={mascotScaleX}
+              mascotScaleY={mascotScaleY}
+              setMascotX={setMascotX}
+              setMascotY={setMascotY}
+              setMascotScaleX={setMascotScaleX}
+              setMascotScaleY={setMascotScaleY}
               shapeOverrides={shapeOverrides}
               setShapeOverrides={setShapeOverrides}
               onDragEnd={handleDragEnd}
