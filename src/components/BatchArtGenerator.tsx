@@ -302,13 +302,22 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const hasImagePlaceholder = template.elements.some((el) => el.type === "image" && el.placeholder);
 
   const buildDefaultStockQuery = useCallback((art: ClientArt) => {
+    const STOP_WORDS = new Set([
+      "que","para","com","uma","por","como","mais","mas","dos","das",
+      "nos","nas","não","nao","seu","sua","são","sao","tem","foi",
+      "ser","ter","está","esta","isso","esse","essa","ele","ela",
+      "são","nos","nas","aos","pra","pro","sim","dia","ano","vez",
+      "uns","umas","num","numa","sem","sob","até","ate","todo","toda",
+      "cada","pode","deve","seus","suas","muito","muita","sobre",
+    ]);
+
     const tokenize = (value?: string) =>
       (value || "")
         .toLowerCase()
         .replace(/[^\w\s\u00C0-\u024F-]/g, " ")
         .split(/\s+/)
-        .map((token) => token.trim())
-        .filter((token) => token.length >= 3 && !/^\d+$/.test(token));
+        .map((t) => t.trim())
+        .filter((t) => t.length >= 3 && !/^\d+$/.test(t) && !STOP_WORDS.has(t));
 
     const dedupe = (tokens: string[]) => Array.from(new Set(tokens));
 
@@ -323,7 +332,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       ...tokenize(art.clientName),
     ]);
 
-    const rawQuery = (primary.length > 0 ? primary : fallback).slice(0, 10).join(" ").trim();
+    const rawQuery = (primary.length > 0 ? primary : fallback).slice(0, 6).join(" ").trim();
     const translated = translateToEnglishLocal(rawQuery).trim();
 
     return translated || "business marketing";
