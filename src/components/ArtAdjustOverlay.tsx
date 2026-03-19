@@ -756,7 +756,7 @@ export function ArtAdjustOverlay({
       </div>
 
 
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 z-10">
         <Box part="photo" label="Foto" resizable />
         <Box part="logo" label="Logo" resizable />
         <Box part="text" label="Texto" resizable />
