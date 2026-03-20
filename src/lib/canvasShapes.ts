@@ -122,10 +122,25 @@ export function drawNewShape(
     
     // Composite the result onto the main canvas
     ctx.drawImage(tmpCanvas, x - margin, y - margin);
+  } else if (type === "arrow") {
+    // Right-pointing chevron/arrow for carousel "next page" indicator
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+    const armW = width * 0.45;
+    const armH = height * 0.4;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(width, height) * 0.12;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - armW, cy - armH);
+    ctx.lineTo(cx + armW, cy);
+    ctx.lineTo(cx - armW, cy + armH);
+    ctx.stroke();
   } else {
     return false; // Not a new shape
   }
   return true; // Shape was drawn
 }
 
-export const NEW_SHAPE_TYPES = ["heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent"] as const;
+export const NEW_SHAPE_TYPES = ["heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "arrow"] as const;
