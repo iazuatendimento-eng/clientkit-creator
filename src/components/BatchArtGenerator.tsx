@@ -1423,17 +1423,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           const clipShape = (el as any).clipShape || "rect";
           const radius = el.borderRadius || 0;
 
-          if (clipShape === "circle") {
+          const needsClip = clipShape !== "rect" || radius > 0;
+          if (needsClip) {
             ctx.save();
             ctx.beginPath();
-            ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
-            ctx.clip();
-            ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
-            ctx.restore();
-          } else if (radius > 0) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(frameX, frameY, frameW, frameH, radius);
+            applyClipShape(ctx, clipShape, frameX, frameY, frameW, frameH, radius);
             ctx.clip();
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
             ctx.restore();
