@@ -465,7 +465,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     { id: "lightning", icon: Zap, label: "Raio" },
     { id: "shield", icon: Shield, label: "Escudo" },
     { id: "crescent", icon: Moon, label: "Lua" },
-    { id: "arrow", icon: ChevronRight, label: "Seta" },
+    { id: "chevron", icon: ChevronRight, label: "Seta" },
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
   ];
