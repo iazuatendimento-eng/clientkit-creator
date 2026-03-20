@@ -1716,24 +1716,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const boxH = el.height * contactScaleYMult;
             const boxX = el.x + contactOffsetX;
             const boxY = el.y + contactOffsetY;
-            // Cover mode on opaque bounds (trims transparent padding before crop)
-            const bounds = getOpaqueBounds(img);
-            const imgAspect = bounds.sw / bounds.sh;
-            const boxAspect = boxW / boxH;
-            let sx = bounds.sx;
-            let sy = bounds.sy;
-            let sw = bounds.sw;
-            let sh = bounds.sh;
-            if (imgAspect > boxAspect) {
-              sw = bounds.sh * boxAspect;
-              sx = bounds.sx + (bounds.sw - sw) / 2;
-            } else {
-              sh = bounds.sw / boxAspect;
-              sy = bounds.sy + (bounds.sh - sh) / 2;
-            }
+            // Simple stretch to fill the box (matches template design intent)
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
-            ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, boxW, boxH);
+            ctx.drawImage(img, boxX, boxY, boxW, boxH);
           }
         }
       } else if (el.type === "mascot") {
