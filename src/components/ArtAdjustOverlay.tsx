@@ -155,6 +155,8 @@ export function ArtAdjustOverlay({
   setBgOffsetY?: (v: number) => void;
   setBgScale?: (v: number) => void;
   hasBackgroundImage?: boolean;
+  hiddenElements?: string[];
+  setHiddenElements?: (v: string[]) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part | null>(null);
