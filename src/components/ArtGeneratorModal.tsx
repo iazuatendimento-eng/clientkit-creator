@@ -932,26 +932,25 @@ export function ArtGeneratorModal({
         });
       }
 
-      // Regenerate current page
+      // Only regenerate current page for instant feedback
       await regenerateCurrentPage();
 
-      // Regenerate sibling pages with updated overrides
+      // Regenerate siblings in background (parallel, non-blocking)
       if (isCarousel && pages.length > 1) {
         const tmpl = templateRef.current;
         if (!tmpl) return;
-        for (let i = 0; i < pages.length; i++) {
-          if (i === currentPage) continue;
+        const currentOvNow = pageOverrides[currentPage] || {};
+        const layoutKeys: (keyof ElementOverrides)[] = [
+          "logoX", "logoY", "logoScaleX", "logoScaleY",
+          "contactX", "contactY", "contactScaleX", "contactScaleY",
+          "mascotX", "mascotY", "mascotScaleX", "mascotScaleY",
+          "shapes", "bgOffsetX", "bgOffsetY", "bgScale", "hiddenElements",
+          "photoScale", "photoFrame",
+        ];
+        const siblingPromises = pages.map(async (_, i) => {
+          if (i === currentPage) return;
           try {
             const ov = pageOverrides[i] || {};
-            // Apply current layout to sibling
-            const currentOvNow = pageOverrides[currentPage] || {};
-            const layoutKeys: (keyof ElementOverrides)[] = [
-              "logoX", "logoY", "logoScaleX", "logoScaleY",
-              "contactX", "contactY", "contactScaleX", "contactScaleY",
-              "mascotX", "mascotY", "mascotScaleX", "mascotScaleY",
-              "shapes", "bgOffsetX", "bgOffsetY", "bgScale", "hiddenElements",
-              "photoScale", "photoFrame",
-            ];
             const mergedOv = { ...ov };
             for (const key of layoutKeys) {
               if (currentOvNow[key] !== undefined) {
@@ -970,7 +969,8 @@ export function ArtGeneratorModal({
           } catch (err) {
             console.error("Regenerate sibling error:", err);
           }
-        }
+        });
+        Promise.all(siblingPromises); // Fire and forget - don't await
       }
     }, 80);
   }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, brandKit]);
