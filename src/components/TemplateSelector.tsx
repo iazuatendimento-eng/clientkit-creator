@@ -20,6 +20,7 @@ interface TemplateSelectorProps {
   type: "art" | "video";
   onSelect: (index: number) => void;
   onBack: () => void;
+  initialTemplateId?: string;
 }
 
 const PREVIEW_MAX = 160;
