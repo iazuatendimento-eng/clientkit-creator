@@ -185,6 +185,16 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     setSelectedTemplateIndex(0);
   };
 
+  // When auto-triggering from a card, show loading instead of the form
+  if (initialTemplateId && initialText && !isVideoGenOpen && !isArtGenOpen && !showTemplateSelector) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Preparando geração...</p>
+      </div>
+    );
+  }
+
   if (showTemplateSelector) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
