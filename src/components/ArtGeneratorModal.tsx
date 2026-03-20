@@ -529,9 +529,31 @@ async function renderArt(
           if (img) {
             const lx = el.x + (overrides.logoX || 0);
             const ly = el.y + (overrides.logoY || 0);
-            const lw = el.width * ((overrides.logoScaleX || 100) / 100);
-            const lh = el.height * ((overrides.logoScaleY || 100) / 100);
-            ctx.drawImage(img, lx, ly, lw, lh);
+            const boxW = el.width * ((overrides.logoScaleX || 100) / 100);
+            const boxH = el.height * ((overrides.logoScaleY || 100) / 100);
+            // Contain: fit entire logo within box, preserving aspect ratio, centered
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            const natW = img.naturalWidth || img.width;
+            const natH = img.naturalHeight || img.height;
+            const bounds = getOpaqueBounds(img);
+            const trimInfluence = 0.6;
+            const baseSx = bounds.sx * trimInfluence;
+            const baseSy = bounds.sy * trimInfluence;
+            const baseSw = natW - (natW - bounds.sw) * trimInfluence;
+            const baseSh = natH - (natH - bounds.sh) * trimInfluence;
+            const srcAspect = baseSw / baseSh;
+            const boxAspect = boxW / boxH;
+            let drawW = boxW;
+            let drawH = boxH;
+            if (srcAspect > boxAspect) {
+              drawH = boxW / srcAspect;
+            } else {
+              drawW = boxH * srcAspect;
+            }
+            const drawX = lx + (boxW - drawW) / 2;
+            const drawY = ly + (boxH - drawH) / 2;
+            ctx.drawImage(img, baseSx, baseSy, baseSw, baseSh, drawX, drawY, drawW, drawH);
           }
         }
       } else if (el.type === "contact") {
@@ -541,33 +563,47 @@ async function renderArt(
           if (img) {
             const cx = el.x + (overrides.contactX || 0);
             const cy = el.y + (overrides.contactY || 0);
-            const cw = el.width * ((overrides.contactScaleX || 100) / 100);
-            const ch = el.height * ((overrides.contactScaleY || 100) / 100);
-            // Keep proportion (no stretch) and apply a subtle size boost vs full-image cover
+            const boxW = el.width * ((overrides.contactScaleX || 100) / 100);
+            const boxH = el.height * ((overrides.contactScaleY || 100) / 100);
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
             const natW = img.naturalWidth || img.width;
             const natH = img.naturalHeight || img.height;
             const bounds = getOpaqueBounds(img);
-            const trimInfluence = 0.22; // slight boost only
+            const trimInfluence = 1;
             const baseSx = bounds.sx * trimInfluence;
             const baseSy = bounds.sy * trimInfluence;
             const baseSw = natW - (natW - bounds.sw) * trimInfluence;
             const baseSh = natH - (natH - bounds.sh) * trimInfluence;
             const srcAspect = baseSw / baseSh;
-            const boxAspect = cw / ch;
-            let sx = baseSx;
-            let sy = baseSy;
-            let sw = baseSw;
-            let sh = baseSh;
+            const boxAspect = boxW / boxH;
+            let drawW = boxW;
+            let drawH = boxH;
             if (srcAspect > boxAspect) {
-              sw = baseSh * boxAspect;
-              sx = baseSx + (baseSw - sw) / 2;
+              drawH = boxW / srcAspect;
             } else {
-              sh = baseSw / boxAspect;
-              sy = baseSy + (baseSh - sh) / 2;
+              drawW = boxH * srcAspect;
             }
-            ctx.drawImage(img, sx, sy, sw, sh, cx, cy, cw, ch);
+            const contactFitScale = 0.88;
+            drawW *= contactFitScale;
+            drawH *= contactFitScale;
+            const drawX = cx + (boxW - drawW) / 2;
+            const drawY = cy + (boxH - drawH) / 2;
+            ctx.drawImage(img, baseSx, baseSy, baseSw, baseSh, drawX, drawY, drawW, drawH);
+          }
+        }
+      } else if (el.type === "mascot") {
+        const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
+        if (mascotUrl) {
+          const img = await loadImage(mascotUrl);
+          if (img) {
+            const mx = el.x + (overrides.mascotX || 0);
+            const my = el.y + (overrides.mascotY || 0);
+            const mw = el.width * ((overrides.mascotScaleX || 100) / 100);
+            const mh = el.height * ((overrides.mascotScaleY || 100) / 100);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, mx, my, mw, mh);
           }
         }
       } else if (el.type === "diamond") {
