@@ -1642,10 +1642,24 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const contactOffsetY = art.elementOverrides?.contactY || 0;
             const contactScaleXMult = (art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100) / 100;
             const contactScaleYMult = (art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100) / 100;
-            const newWidth = el.width * contactScaleXMult;
-            const newHeight = el.height * contactScaleYMult;
-            // Use step-up scaling for small images to reduce pixelation
-            drawSmoothedImage(ctx, img, el.x + contactOffsetX, el.y + contactOffsetY, newWidth, newHeight);
+            const boxW = el.width * contactScaleXMult;
+            const boxH = el.height * contactScaleYMult;
+            const boxX = el.x + contactOffsetX;
+            const boxY = el.y + contactOffsetY;
+            const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+            const boxAspect = boxW / boxH;
+            let drawW = boxW;
+            let drawH = boxH;
+            let drawX = boxX;
+            let drawY = boxY;
+            if (imgAspect > boxAspect) {
+              drawH = boxW / imgAspect;
+              drawY = boxY + (boxH - drawH) / 2;
+            } else {
+              drawW = boxH * imgAspect;
+              drawX = boxX + (boxW - drawW) / 2;
+            }
+            drawSmoothedImage(ctx, img, drawX, drawY, drawW, drawH);
           }
         }
       } else if (el.type === "mascot") {
