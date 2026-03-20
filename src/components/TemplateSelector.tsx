@@ -129,10 +129,11 @@ function renderMiniPreview(
   }
 }
 
-export function TemplateSelector({ type, onSelect, onBack }: TemplateSelectorProps) {
+export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: TemplateSelectorProps) {
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);
+  const initialAutoSelected = useRef(false);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
 
   useEffect(() => {
