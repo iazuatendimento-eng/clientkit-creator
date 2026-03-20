@@ -209,6 +209,76 @@ const getClientArtKey = (art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex
 
 // Image cache to avoid reloading
 const imageCache = new Map<string, HTMLImageElement>();
+const opaqueBoundsCache = new WeakMap<HTMLImageElement, { sx: number; sy: number; sw: number; sh: number }>();
+
+const getOpaqueBounds = (img: HTMLImageElement) => {
+  const natW = img.naturalWidth || img.width;
+  const natH = img.naturalHeight || img.height;
+  const fallback = { sx: 0, sy: 0, sw: Math.max(1, natW), sh: Math.max(1, natH) };
+
+  const cached = opaqueBoundsCache.get(img);
+  if (cached) return cached;
+  if (!natW || !natH) return fallback;
+
+  const maxScanDim = 1024;
+  const scale = Math.min(1, maxScanDim / Math.max(natW, natH));
+  const scanW = Math.max(1, Math.round(natW * scale));
+  const scanH = Math.max(1, Math.round(natH * scale));
+
+  const scanCanvas = document.createElement("canvas");
+  scanCanvas.width = scanW;
+  scanCanvas.height = scanH;
+  const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
+  if (!scanCtx) return fallback;
+
+  scanCtx.clearRect(0, 0, scanW, scanH);
+  scanCtx.drawImage(img, 0, 0, scanW, scanH);
+
+  let data: Uint8ClampedArray;
+  try {
+    data = scanCtx.getImageData(0, 0, scanW, scanH).data;
+  } catch {
+    opaqueBoundsCache.set(img, fallback);
+    return fallback;
+  }
+
+  let minX = scanW;
+  let minY = scanH;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < scanH; y++) {
+    for (let x = 0; x < scanW; x++) {
+      const alpha = data[(y * scanW + x) * 4 + 3];
+      if (alpha > 8) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) {
+    opaqueBoundsCache.set(img, fallback);
+    return fallback;
+  }
+
+  const invScale = 1 / scale;
+  const sx = Math.max(0, Math.floor(minX * invScale));
+  const sy = Math.max(0, Math.floor(minY * invScale));
+  const ex = Math.min(natW, Math.ceil((maxX + 1) * invScale));
+  const ey = Math.min(natH, Math.ceil((maxY + 1) * invScale));
+
+  const bounds = {
+    sx,
+    sy,
+    sw: Math.max(1, ex - sx),
+    sh: Math.max(1, ey - sy),
+  };
+  opaqueBoundsCache.set(img, bounds);
+  return bounds;
+};
 
 // Resilient image loader: fetch-as-blob (PRIMARY) → CORS → no-CORS (FALLBACK)
 const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | null> => {
