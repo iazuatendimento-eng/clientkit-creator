@@ -97,6 +97,76 @@ interface ArtGeneratorModalProps {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const imageCache = new Map<string, HTMLImageElement>();
+const opaqueBoundsCache = new WeakMap<HTMLImageElement, { sx: number; sy: number; sw: number; sh: number }>();
+
+const getOpaqueBounds = (img: HTMLImageElement) => {
+  const natW = img.naturalWidth || img.width;
+  const natH = img.naturalHeight || img.height;
+  const fallback = { sx: 0, sy: 0, sw: Math.max(1, natW), sh: Math.max(1, natH) };
+
+  const cached = opaqueBoundsCache.get(img);
+  if (cached) return cached;
+  if (!natW || !natH) return fallback;
+
+  const maxScanDim = 1024;
+  const scale = Math.min(1, maxScanDim / Math.max(natW, natH));
+  const scanW = Math.max(1, Math.round(natW * scale));
+  const scanH = Math.max(1, Math.round(natH * scale));
+
+  const scanCanvas = document.createElement("canvas");
+  scanCanvas.width = scanW;
+  scanCanvas.height = scanH;
+  const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
+  if (!scanCtx) return fallback;
+
+  scanCtx.clearRect(0, 0, scanW, scanH);
+  scanCtx.drawImage(img, 0, 0, scanW, scanH);
+
+  let data: Uint8ClampedArray;
+  try {
+    data = scanCtx.getImageData(0, 0, scanW, scanH).data;
+  } catch {
+    opaqueBoundsCache.set(img, fallback);
+    return fallback;
+  }
+
+  let minX = scanW;
+  let minY = scanH;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < scanH; y++) {
+    for (let x = 0; x < scanW; x++) {
+      const alpha = data[(y * scanW + x) * 4 + 3];
+      if (alpha > 8) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) {
+    opaqueBoundsCache.set(img, fallback);
+    return fallback;
+  }
+
+  const invScale = 1 / scale;
+  const sx = Math.max(0, Math.floor(minX * invScale));
+  const sy = Math.max(0, Math.floor(minY * invScale));
+  const ex = Math.min(natW, Math.ceil((maxX + 1) * invScale));
+  const ey = Math.min(natH, Math.ceil((maxY + 1) * invScale));
+
+  const bounds = {
+    sx,
+    sy,
+    sw: Math.max(1, ex - sx),
+    sh: Math.max(1, ey - sy),
+  };
+  opaqueBoundsCache.set(img, bounds);
+  return bounds;
+};
 
 const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   if (!url) return null;
@@ -465,18 +535,20 @@ async function renderArt(
             const cy = el.y + (overrides.contactY || 0);
             const cw = el.width * ((overrides.contactScaleX || 100) / 100);
             const ch = el.height * ((overrides.contactScaleY || 100) / 100);
-            // Cover mode: fill box preserving aspect ratio, crop excess
-            const natW = img.naturalWidth || img.width;
-            const natH = img.naturalHeight || img.height;
-            const imgAspect = natW / natH;
+            // Cover mode on opaque bounds (trims transparent padding before crop)
+            const bounds = getOpaqueBounds(img);
+            const imgAspect = bounds.sw / bounds.sh;
             const boxAspect = cw / ch;
-            let sx = 0, sy = 0, sw = natW, sh = natH;
+            let sx = bounds.sx;
+            let sy = bounds.sy;
+            let sw = bounds.sw;
+            let sh = bounds.sh;
             if (imgAspect > boxAspect) {
-              sw = natH * boxAspect;
-              sx = (natW - sw) / 2;
+              sw = bounds.sh * boxAspect;
+              sx = bounds.sx + (bounds.sw - sw) / 2;
             } else {
-              sh = natW / boxAspect;
-              sy = (natH - sh) / 2;
+              sh = bounds.sw / boxAspect;
+              sy = bounds.sy + (bounds.sh - sh) / 2;
             }
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
