@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as encodeBase64 } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -102,17 +103,48 @@ serve(async (req) => {
       return fallback;
     };
 
+    const inferContentType = (filename: string, fallback: string): string => {
+      const ext = filename.split('.').pop()?.toLowerCase();
+      switch (ext) {
+        case 'mp4': return 'video/mp4';
+        case 'mov': return 'video/quicktime';
+        case 'webm': return 'video/webm';
+        case 'png': return 'image/png';
+        case 'jpg':
+        case 'jpeg': return 'image/jpeg';
+        case 'gif': return 'image/gif';
+        default: return fallback;
+      }
+    };
+
     const fallbackExtension = isVideo ? 'mp4' : 'png';
+    const fallbackContentType = isVideo ? 'video/mp4' : 'image/png';
     const attachmentEntries = allUrls.map((url: string, i: number) => {
       const ext = inferExtensionFromUrl(url, fallbackExtension);
       const filename = allUrls.length > 1 ? `${baseName}_p${i + 1}.${ext}` : `${baseName}.${ext}`;
       return { url, filename };
     });
 
-    const attachments = attachmentEntries.map((entry) => ({
-      filename: entry.filename,
-      path: entry.url,
-    }));
+    const attachments = await Promise.all(
+      attachmentEntries.map(async (entry) => {
+        const fileResponse = await fetch(entry.url);
+        if (!fileResponse.ok) {
+          throw new Error(`Falha ao baixar anexo ${entry.filename} (${fileResponse.status})`);
+        }
+
+        const bytes = new Uint8Array(await fileResponse.arrayBuffer());
+        if (bytes.length === 0) {
+          throw new Error(`Anexo vazio: ${entry.filename}`);
+        }
+
+        const contentTypeHeader = fileResponse.headers.get('content-type')?.split(';')[0]?.trim();
+        return {
+          filename: entry.filename,
+          content: encodeBase64(bytes),
+          content_type: contentTypeHeader || inferContentType(entry.filename, fallbackContentType),
+        };
+      })
+    );
 
     // Fixed download instruction text
     const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
