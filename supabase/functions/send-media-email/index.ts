@@ -125,18 +125,13 @@ serve(async (req) => {
       return { url, filename };
     });
 
-    // For videos use URL path (to avoid memory limit); for images use base64
+    const isVideoFilename = (filename: string) => /\.(mp4|mov|webm|avi)$/i.test(filename);
+    const videoEntries = attachmentEntries.filter((entry) => isVideoFilename(entry.filename));
+    const nonVideoEntries = attachmentEntries.filter((entry) => !isVideoFilename(entry.filename));
+
+    // Keep attachments only for non-video files. Videos are sent as links in body for better deliverability.
     const attachments = await Promise.all(
-      attachmentEntries.map(async (entry) => {
-        const entryIsVideo = /\.(mp4|mov|webm|avi)$/i.test(entry.filename);
-        if (entryIsVideo) {
-          // Use path-based attachment to avoid downloading large files into memory
-          return {
-            filename: entry.filename,
-            path: entry.url,
-          };
-        }
-        // For images, download and encode as base64 (small files)
+      nonVideoEntries.map(async (entry) => {
         const fileResponse = await fetch(entry.url);
         if (!fileResponse.ok) {
           throw new Error(`Falha ao baixar anexo ${entry.filename} (${fileResponse.status})`);
@@ -156,19 +151,40 @@ serve(async (req) => {
       })
     );
 
-    // Fixed download instruction text
-    const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
-    const tipoArquivo = isVideo ? 'MP4' : 'PNG';
-    const downloadInstruction = `SUA ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER A ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`;
-
-    // Build plain text: caption + download instruction only (no cardText)
-    let bodyParts: string[] = [];
+    const bodyParts: string[] = [];
     if (caption) bodyParts.push(caption);
-    bodyParts.push(downloadInstruction);
+
+    if (attachments.length > 0) {
+      const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
+      const tipoArquivo = isVideo ? 'MP4' : 'PNG';
+      bodyParts.push(`SUA ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER A ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`);
+    }
+
+    if (videoEntries.length > 0) {
+      bodyParts.push(
+        `LINK${videoEntries.length > 1 ? 'S' : ''} PARA BAIXAR O VÍDEO:\n${videoEntries
+          .map((entry, idx) => `${idx + 1}. ${entry.url}`)
+          .join('\n')}\n\nOBS: para garantir a entrega, vídeos são enviados por link de download.`
+      );
+    }
+
     const plainText = bodyParts.join('\n\n');
 
-    // Simple HTML version of the same text
-    const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${bodyParts.map(t => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`).join('')}</div>`;
+    const textParagraphs = bodyParts
+      .filter((part) => !part.startsWith('LINK') && !part.startsWith('OBS: para garantir a entrega'));
+
+    const videoLinksHtml = videoEntries.length
+      ? `<div style="margin: 0 0 16px 0;"><p style="color: #333; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">Link${videoEntries.length > 1 ? 's' : ''} para baixar o vídeo:</p><ul style="margin: 0 0 8px 20px; padding: 0;">${videoEntries
+          .map(
+            (entry, idx) =>
+              `<li style="margin: 0 0 6px 0;"><a href="${escapeHtml(entry.url)}" style="color: #0f172a; text-decoration: underline;" target="_blank" rel="noopener noreferrer">Vídeo ${idx + 1}</a></li>`
+          )
+          .join('')}</ul><p style="color: #666; margin: 0; font-size: 12px;">OBS: para garantir a entrega, vídeos são enviados por link de download.</p></div>`
+      : '';
+
+    const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${textParagraphs
+      .map((t) => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`)
+      .join('')}${videoLinksHtml}</div>`;
 
     const results = await Promise.all(
       validEmails.map(async (email: string) => {
