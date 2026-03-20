@@ -123,19 +123,26 @@ export function drawNewShape(
     // Composite the result onto the main canvas
     ctx.drawImage(tmpCanvas, x - margin, y - margin);
   } else if (type === "chevron") {
-    // Right-pointing chevron for carousel "next page" indicator
-    const cx = x + width / 2;
+    // Long-shaft arrow with arrowhead pointing right (→)
     const cy = y + height / 2;
-    const armW = width * 0.45;
-    const armH = height * 0.4;
+    const shaftY = cy;
+    const headSize = Math.min(width * 0.18, height * 0.4);
+    const shaftStart = x + width * 0.1;
+    const shaftEnd = x + width * 0.9;
     ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(width, height) * 0.12;
+    ctx.lineWidth = Math.max(2, Math.min(width, height) * 0.06);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+    // Shaft
     ctx.beginPath();
-    ctx.moveTo(cx - armW, cy - armH);
-    ctx.lineTo(cx + armW, cy);
-    ctx.lineTo(cx - armW, cy + armH);
+    ctx.moveTo(shaftStart, shaftY);
+    ctx.lineTo(shaftEnd, shaftY);
+    ctx.stroke();
+    // Arrowhead
+    ctx.beginPath();
+    ctx.moveTo(shaftEnd - headSize, shaftY - headSize);
+    ctx.lineTo(shaftEnd, shaftY);
+    ctx.lineTo(shaftEnd - headSize, shaftY + headSize);
     ctx.stroke();
   } else {
     return false; // Not a new shape
