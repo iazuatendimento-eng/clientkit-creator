@@ -932,26 +932,25 @@ export function ArtGeneratorModal({
         });
       }
 
-      // Regenerate current page
+      // Only regenerate current page for instant feedback
       await regenerateCurrentPage();
 
-      // Regenerate sibling pages with updated overrides
+      // Regenerate siblings in background (parallel, non-blocking)
       if (isCarousel && pages.length > 1) {
         const tmpl = templateRef.current;
         if (!tmpl) return;
-        for (let i = 0; i < pages.length; i++) {
-          if (i === currentPage) continue;
+        const currentOvNow = pageOverrides[currentPage] || {};
+        const layoutKeys: (keyof ElementOverrides)[] = [
+          "logoX", "logoY", "logoScaleX", "logoScaleY",
+          "contactX", "contactY", "contactScaleX", "contactScaleY",
+          "mascotX", "mascotY", "mascotScaleX", "mascotScaleY",
+          "shapes", "bgOffsetX", "bgOffsetY", "bgScale", "hiddenElements",
+          "photoScale", "photoFrame",
+        ];
+        const siblingPromises = pages.map(async (_, i) => {
+          if (i === currentPage) return;
           try {
             const ov = pageOverrides[i] || {};
-            // Apply current layout to sibling
-            const currentOvNow = pageOverrides[currentPage] || {};
-            const layoutKeys: (keyof ElementOverrides)[] = [
-              "logoX", "logoY", "logoScaleX", "logoScaleY",
-              "contactX", "contactY", "contactScaleX", "contactScaleY",
-              "mascotX", "mascotY", "mascotScaleX", "mascotScaleY",
-              "shapes", "bgOffsetX", "bgOffsetY", "bgScale", "hiddenElements",
-              "photoScale", "photoFrame",
-            ];
             const mergedOv = { ...ov };
             for (const key of layoutKeys) {
               if (currentOvNow[key] !== undefined) {
@@ -970,7 +969,8 @@ export function ArtGeneratorModal({
           } catch (err) {
             console.error("Regenerate sibling error:", err);
           }
-        }
+        });
+        Promise.all(siblingPromises); // Fire and forget - don't await
       }
     }, 80);
   }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, brandKit]);
@@ -1006,48 +1006,39 @@ export function ArtGeneratorModal({
       setTemplate(tmpl);
 
       const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
-      await loadGoogleFont(fontFamily);
 
-      // Load material images from card uploads
-      let matImages: string[] = [];
-      try {
-        const { data: uploads } = await supabase
+      // Parallel: load font + fetch uploads
+      const [, uploadsResult] = await Promise.all([
+        loadGoogleFont(fontFamily),
+        supabase
           .from("card_uploads")
           .select("file_url, file_type")
           .eq("card_id", cardId)
-          .eq("upload_type", "material");
-        matImages = (uploads || [])
-          .filter(u => u.file_type.startsWith("image"))
-          .map(u => u.file_url);
-      } catch { /* ignore */ }
+          .eq("upload_type", "material"),
+      ]);
 
-      // Generate all pages
-      const arts: (string | null)[] = [];
-      const photos: (string | null)[] = [];
-      const overrides: ElementOverrides[] = [];
-      const offsets: { x: number; y: number }[] = [];
+      const matImages = (uploadsResult.data || [])
+        .filter((u: any) => u.file_type.startsWith("image"))
+        .map((u: any) => u.file_url);
 
-      for (let i = 0; i < pages.length; i++) {
-        let photo: string | null = matImages[i] || null;
+      // Parallel: search photos for all pages that need them
+      const photoPromises = pages.map(async (pageText, i) => {
+        if (matImages[i]) return matImages[i];
+        try {
+          const sq = pageText.substring(0, 80);
+          const pexelsResults = await searchPexelsImages(sq, 1);
+          return pexelsResults.length > 0 ? pexelsResults[0].urls.regular : null;
+        } catch { return null; }
+      });
+      const photos = await Promise.all(photoPromises);
 
-        // If no material, search Pexels
-        if (!photo) {
-          try {
-            const sq = pages[i].substring(0, 80);
-            const pexelsResults = await searchPexelsImages(sq, 1);
-            if (pexelsResults.length > 0) {
-              photo = pexelsResults[0].urls.regular;
-            }
-          } catch { /* ignore */ }
-        }
-
-        photos.push(photo);
-        overrides.push({});
-        offsets.push({ x: 0, y: 0 });
-
-        const dataUrl = await renderArt(tmpl, brandKit, pages[i], photo, { x: 0, y: 0 }, {});
-        arts.push(dataUrl);
-      }
+      // Parallel: render all pages
+      const overrides: ElementOverrides[] = pages.map(() => ({}));
+      const offsets = pages.map(() => ({ x: 0, y: 0 }));
+      const artPromises = pages.map((pageText, i) =>
+        renderArt(tmpl, brandKit, pageText, photos[i], { x: 0, y: 0 }, {})
+      );
+      const arts = await Promise.all(artPromises);
 
       setPageArts(arts);
       setPagePhotos(photos);
