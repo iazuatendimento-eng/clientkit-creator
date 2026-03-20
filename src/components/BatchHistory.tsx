@@ -55,7 +55,7 @@ type TeamSendStatus = "pending" | "sending" | "sent" | "error";
 
 interface TeamSendInfo {
   teamName: string;
-  batchId: string;
+  batchIds: string[]; // ALL batches for this team
   status: TeamSendStatus;
   errorMsg?: string;
   itemCount: number;
@@ -189,16 +189,13 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   const openSendAllDialog = () => {
     const list: TeamSendInfo[] = [];
     for (const [teamName, teamBatchList] of teamBatches) {
-      // Use the most recent batch for each team
-      const latestBatch = teamBatchList[0]; // already sorted by created_at desc
       list.push({
         teamName,
-        batchId: latestBatch.id,
+        batchIds: teamBatchList.map(b => b.id),
         status: "pending",
-        itemCount: 0, // will be loaded when sending
+        itemCount: 0,
       });
     }
-    // Sort by team name naturally
     list.sort((a, b) => a.teamName.localeCompare(b.teamName, undefined, { numeric: true }));
     setTeamSendList(list);
     setSendSubject("");
@@ -285,6 +282,18 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     return { success: true };
   };
 
+  const sendAllBatchesForTeam = async (
+    batchIds: string[],
+    subject: string,
+    mediaType: "image" | "video"
+  ): Promise<{ success: boolean; error?: string }> => {
+    for (const batchId of batchIds) {
+      const result = await sendBatchEmail(batchId, subject, mediaType);
+      if (!result.success) return result;
+    }
+    return { success: true };
+  };
+
   const handleSendAllTeams = async () => {
     if (!sendSubject.trim()) {
       toast({ title: "Digite o título do e-mail", variant: "destructive" });
@@ -299,13 +308,13 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
 
     for (let i = 0; i < updatedList.length; i++) {
       if (cancelRef.current) break;
-      if (updatedList[i].status === "sent") continue; // skip already sent
+      if (updatedList[i].status === "sent") continue;
 
       updatedList[i] = { ...updatedList[i], status: "sending" };
       setTeamSendList([...updatedList]);
 
-      const result = await sendBatchEmail(
-        updatedList[i].batchId,
+      const result = await sendAllBatchesForTeam(
+        updatedList[i].batchIds,
         sendSubject.trim(),
         mediaType as "image" | "video"
       );
@@ -347,7 +356,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     updatedList[index] = { ...updatedList[index], status: "sending" };
     setTeamSendList(updatedList);
 
-    const result = await sendBatchEmail(team.batchId, sendSubject.trim(), mediaType as "image" | "video");
+    const result = await sendAllBatchesForTeam(team.batchIds, sendSubject.trim(), mediaType as "image" | "video");
 
     if (result.success) {
       updatedList[index] = { ...updatedList[index], status: "sent" };
