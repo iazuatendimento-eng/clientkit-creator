@@ -1716,18 +1716,29 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const boxH = el.height * contactScaleYMult;
             const boxX = el.x + contactOffsetX;
             const boxY = el.y + contactOffsetY;
-            // Cover mode: preserve aspect ratio, center-crop to fill the box
+            // Keep proportion (no stretch) and apply a subtle size boost vs full-image cover
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
-            const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+            const natW = img.naturalWidth || img.width;
+            const natH = img.naturalHeight || img.height;
+            const bounds = getOpaqueBounds(img);
+            const trimInfluence = 0.22; // slight boost only
+            const baseSx = bounds.sx * trimInfluence;
+            const baseSy = bounds.sy * trimInfluence;
+            const baseSw = natW - (natW - bounds.sw) * trimInfluence;
+            const baseSh = natH - (natH - bounds.sh) * trimInfluence;
+            const srcAspect = baseSw / baseSh;
             const boxAspect = boxW / boxH;
-            let sx = 0, sy = 0, sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
-            if (imgAspect > boxAspect) {
-              sw = sh * boxAspect;
-              sx = ((img.naturalWidth || img.width) - sw) / 2;
+            let sx = baseSx;
+            let sy = baseSy;
+            let sw = baseSw;
+            let sh = baseSh;
+            if (srcAspect > boxAspect) {
+              sw = baseSh * boxAspect;
+              sx = baseSx + (baseSw - sw) / 2;
             } else {
-              sh = sw / boxAspect;
-              sy = ((img.naturalHeight || img.height) - sh) / 2;
+              sh = baseSw / boxAspect;
+              sy = baseSy + (baseSh - sh) / 2;
             }
             ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, boxW, boxH);
           }
