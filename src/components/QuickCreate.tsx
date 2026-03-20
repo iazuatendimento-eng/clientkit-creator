@@ -68,11 +68,31 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!text.trim()) {
       toast.error("Cole o texto primeiro!");
       return;
     }
+
+    // If we already know the template (coming from a card), skip the selector
+    if (initialTemplateId) {
+      // Resolve the index from the DB
+      const table = type === "art" ? "master_templates" : "master_video_templates";
+      const { data } = await supabase
+        .from(table)
+        .select("id")
+        .eq("deleted", false)
+        .order("created_at", { ascending: true });
+
+      if (data) {
+        const idx = data.findIndex((t: any) => t.id === initialTemplateId);
+        if (idx >= 0) {
+          handleTemplateSelected(idx);
+          return;
+        }
+      }
+    }
+
     setShowTemplateSelector(true);
   };
 
