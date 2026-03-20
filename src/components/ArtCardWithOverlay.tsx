@@ -219,6 +219,7 @@ export function ArtCardWithOverlay({
       setBgOffsetX(art.elementOverrides?.bgOffsetX || 0);
       setBgOffsetY(art.elementOverrides?.bgOffsetY || 0);
       setBgScale(art.elementOverrides?.bgScale || 100);
+      setHiddenElements(art.elementOverrides?.hiddenElements || []);
     }
   }, [art]);
 
