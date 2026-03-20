@@ -48,6 +48,7 @@ import {
   Moon,
   MessageCircle,
   Palette,
+  ChevronRight,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
