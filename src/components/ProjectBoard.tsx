@@ -706,6 +706,20 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <Upload className="h-3 w-3 mr-1" />
                 Arquivos
               </Button>
+              {brief.status === "completed" && brief.completionType && onQuickEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickEdit(brief);
+                  }}
+                  className="text-xs px-2 py-1 h-auto w-full"
+                >
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Alterar
+                </Button>
+              )}
               {clientId && (finalArtworks.length > 0 || brief.coverImage || brief.coverVideo) && (
                 <Button
                   variant="outline"
