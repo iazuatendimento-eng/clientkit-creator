@@ -140,15 +140,17 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
         brand_kit_id: brandKit?.id || undefined,
       });
 
-      // Upload materials as card_uploads
-      for (const file of uploadedFiles) {
-        await supabase.from("card_uploads").insert({
-          card_id: brief.id,
-          file_name: file.name,
-          file_url: file.url,
-          file_type: file.fileType,
-          upload_type: "material",
-        });
+      // Upload materials as card_uploads (parallel)
+      if (uploadedFiles.length > 0) {
+        await Promise.all(uploadedFiles.map(file =>
+          supabase.from("card_uploads").insert({
+            card_id: brief.id,
+            file_name: file.name,
+            file_url: file.url,
+            file_type: file.fileType,
+            upload_type: "material",
+          })
+        ));
       }
 
       setCreatedCardId(brief.id);
