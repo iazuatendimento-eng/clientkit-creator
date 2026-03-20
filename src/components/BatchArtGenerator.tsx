@@ -1459,8 +1459,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 height: frameH,
               };
 
-              // fallbackFrame is stored in template-space; convert to preview pixel-space
-              // to avoid disproportion between grid/frame and photo when preview dimensions differ.
               const scaleX = previousPreview.width / Math.max(1, template.width);
               const scaleY = previousPreview.height / Math.max(1, template.height);
 
@@ -1474,17 +1472,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               const srcW = Math.max(1, Math.min(srcWRaw, previousPreview.width - srcX));
               const srcH = Math.max(1, Math.min(srcHRaw, previousPreview.height - srcY));
 
-              if (clipShape === "circle") {
+              const needsClip = clipShape !== "rect" || radius > 0;
+              if (needsClip) {
                 ctx.save();
                 ctx.beginPath();
-                ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
-                ctx.restore();
-              } else if (radius > 0) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.roundRect(frameX, frameY, frameW, frameH, radius);
+                applyClipShape(ctx, clipShape, frameX, frameY, frameW, frameH, radius);
                 ctx.clip();
                 ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
                 ctx.restore();
