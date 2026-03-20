@@ -15,6 +15,7 @@ import {
   Eraser,
   ArrowDownToLine,
   Trash2,
+  Copy,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
