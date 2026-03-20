@@ -33,6 +33,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [selectedTemplateIndex, setSelectedTemplateIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autoTriggeredRef = useRef(false);
 
   // Pregenerate video data when a card is ready
   const { preloadedData } = useVideoPregenerate(
@@ -44,6 +45,15 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     selectedTemplateIndex,
     !!createdCardId && type === "video"
   );
+
+  // Auto-trigger generation when coming from a card (template + text already known)
+  useEffect(() => {
+    if (initialTemplateId && initialText && !autoTriggeredRef.current) {
+      autoTriggeredRef.current = true;
+      // Small delay to ensure handleCreate ref is stable
+      setTimeout(() => handleCreate(), 50);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
