@@ -50,8 +50,24 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   useEffect(() => {
     if (initialTemplateId && initialText && !autoTriggeredRef.current) {
       autoTriggeredRef.current = true;
-      // Small delay to ensure handleCreate ref is stable
-      setTimeout(() => handleCreate(), 50);
+      (async () => {
+        const table = (initialType || type) === "art" ? "master_templates" : "master_video_templates";
+        const { data } = await supabase
+          .from(table)
+          .select("id")
+          .eq("deleted", false)
+          .order("created_at", { ascending: true });
+
+        if (data) {
+          const idx = data.findIndex((t: any) => t.id === initialTemplateId);
+          if (idx >= 0) {
+            handleTemplateSelected(idx);
+            return;
+          }
+        }
+        // Fallback: show selector if template not found
+        setShowTemplateSelector(true);
+      })();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -168,6 +184,16 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     setCreatedCardId(null);
     setSelectedTemplateIndex(0);
   };
+
+  // When auto-triggering from a card, show loading instead of the form
+  if (initialTemplateId && initialText && !isVideoGenOpen && !isArtGenOpen && !showTemplateSelector) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Preparando geração...</p>
+      </div>
+    );
+  }
 
   if (showTemplateSelector) {
     return (
