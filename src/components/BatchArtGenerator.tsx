@@ -1741,13 +1741,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const boxH = el.height * contactScaleYMult;
             const boxX = el.x + contactOffsetX;
             const boxY = el.y + contactOffsetY;
-            // Contain: fit entire contact within box, preserving aspect ratio, centered
+            // Contact normalization: full trim + contain + internal margin
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
             const natW = img.naturalWidth || img.width;
             const natH = img.naturalHeight || img.height;
             const bounds = getOpaqueBounds(img);
-            const trimInfluence = 0.6;
+            const trimInfluence = 1;
             const baseSx = bounds.sx * trimInfluence;
             const baseSy = bounds.sy * trimInfluence;
             const baseSw = natW - (natW - bounds.sw) * trimInfluence;
@@ -1761,6 +1761,9 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             } else {
               drawW = boxH * srcAspect;
             }
+            const contactFitScale = 0.88;
+            drawW *= contactFitScale;
+            drawH *= contactFitScale;
             const drawX = boxX + (boxW - drawW) / 2;
             const drawY = boxY + (boxH - drawH) / 2;
             ctx.drawImage(img, baseSx, baseSy, baseSw, baseSh, drawX, drawY, drawW, drawH);
