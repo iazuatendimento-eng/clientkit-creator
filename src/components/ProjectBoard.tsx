@@ -1109,6 +1109,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
           completionType: (brief as any).completion_type || undefined,
           completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
         }));
         setBriefs(mappedBriefs);
       } catch (error) {
@@ -1279,6 +1280,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1384,6 +1386,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1445,6 +1448,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1498,6 +1502,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
       
@@ -1541,6 +1546,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1597,6 +1603,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
