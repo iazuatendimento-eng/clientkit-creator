@@ -96,6 +96,8 @@ export function ArtAdjustOverlay({
   setBgOffsetY,
   setBgScale,
   hasBackgroundImage,
+  hiddenElements,
+  setHiddenElements,
 }: {
   template: MasterTemplateLike;
   previewUrl: string | null;
