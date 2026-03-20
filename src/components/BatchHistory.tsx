@@ -213,16 +213,19 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
       return { success: false, error: "Lote vazio" };
     }
 
-    // Only send approved items
-    const approvedItems = batch.items.filter(
-      (item: any) => item.status === "approved"
-    );
-    if (approvedItems.length === 0) {
-      // If no approval system, send all
-      const itemsToSend = batch.items;
-      return await sendItemsAsEmails(itemsToSend, subject, mediaType);
+    // Send all items that have content (no approval filter)
+    const itemsToSend = batch.items.filter((item: any) => {
+      // For video: must have previewVideoUrls
+      if (mediaType === "video") {
+        return item.previewVideoUrls?.some((u: string | null) => u);
+      }
+      // For art: must have files
+      return item.files?.length > 0;
+    });
+    if (itemsToSend.length === 0) {
+      return { success: false, error: "Nenhum item com mídia gerada" };
     }
-    return await sendItemsAsEmails(approvedItems, subject, mediaType);
+    return await sendItemsAsEmails(itemsToSend, subject, mediaType);
   };
 
   const sendItemsAsEmails = async (
