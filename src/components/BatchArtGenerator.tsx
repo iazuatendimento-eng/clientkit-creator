@@ -123,6 +123,7 @@ interface ElementOverrides {
   bgOffsetX?: number;
   bgOffsetY?: number;
   bgScale?: number;
+  hiddenElements?: string[]; // Element types/ids hidden per-card
 }
 
 interface ClientArt {
