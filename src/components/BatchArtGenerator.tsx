@@ -394,9 +394,10 @@ interface BatchArtGeneratorProps {
   initialBatch?: import("@/lib/batchHistory").BatchGeneration;
   onBack: () => void;
   onComplete: () => void;
+  autoAdvance?: boolean;
 }
 
-export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete }: BatchArtGeneratorProps) => {
+export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, onBack, onComplete, autoAdvance }: BatchArtGeneratorProps) => {
   const [clientArts, setClientArts] = useState<ClientArt[]>([]);
   const [currentBatchId, _setCurrentBatchId] = useState<string | null>(initialBatch?.id || null);
   const batchIdRef = useRef<string | null>(initialBatch?.id || null);
@@ -1902,6 +1903,15 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, batchIdRef.current || undefined);
           if (savedId) setCurrentBatchId(savedId);
           console.log("Auto-saved batch draft after generation:", savedId);
+
+          if (autoAdvance && savedId) {
+            await clearArtGenerationTags();
+            toast({
+              title: "Rascunho salvo automaticamente",
+              description: `${artsToSave.length} artes salvas. Avançando...`,
+            });
+            onComplete();
+          }
         }
       } catch (autoSaveError) {
         console.error("Auto-save draft failed (non-critical):", autoSaveError);
