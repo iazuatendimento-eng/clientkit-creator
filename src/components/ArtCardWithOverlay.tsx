@@ -145,6 +145,7 @@ export function ArtCardWithOverlay({
   const [bgOffsetX, _setBgOffsetX] = useState(art.elementOverrides?.bgOffsetX || 0);
   const [bgOffsetY, _setBgOffsetY] = useState(art.elementOverrides?.bgOffsetY || 0);
   const [bgScale, _setBgScale] = useState(art.elementOverrides?.bgScale || 100);
+  const [hiddenElements, _setHiddenElements] = useState<string[]>(art.elementOverrides?.hiddenElements || []);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
