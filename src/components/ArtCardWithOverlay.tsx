@@ -293,6 +293,11 @@ export function ArtCardWithOverlay({
       elementOverrides: updatedOverrides,
     });
 
+    // Auto-propagate to all carousel siblings
+    if (onApplyToCarousel && art.totalPages && art.totalPages > 1) {
+      onApplyToCarousel(index, updatedOverrides);
+    }
+
     // Debounce regeneration (latest-only to prevent stale image swaps)
     const requestId = regenerateRequestRef.current + 1;
     regenerateRequestRef.current = requestId;
