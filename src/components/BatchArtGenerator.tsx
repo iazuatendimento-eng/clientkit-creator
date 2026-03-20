@@ -1606,6 +1606,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const contactScaleYMult = (art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100) / 100;
             const newWidth = el.width * contactScaleXMult;
             const newHeight = el.height * contactScaleYMult;
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
             ctx.drawImage(img, el.x + contactOffsetX, el.y + contactOffsetY, newWidth, newHeight);
           }
         }
