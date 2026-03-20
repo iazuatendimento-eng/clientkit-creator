@@ -45,6 +45,7 @@ interface ElementOverrides {
   bgOffsetX?: number;
   bgOffsetY?: number;
   bgScale?: number;
+  hiddenElements?: string[];
 }
 
 interface ClientArt {
