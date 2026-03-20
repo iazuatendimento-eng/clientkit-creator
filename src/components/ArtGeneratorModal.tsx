@@ -535,10 +535,20 @@ async function renderArt(
             const cy = el.y + (overrides.contactY || 0);
             const cw = el.width * ((overrides.contactScaleX || 100) / 100);
             const ch = el.height * ((overrides.contactScaleY || 100) / 100);
-            // Simple stretch to fill the box (matches template design intent)
+            // Cover mode: preserve aspect ratio, center-crop to fill the box
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
-            ctx.drawImage(img, cx, cy, cw, ch);
+            const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+            const boxAspect = cw / ch;
+            let sx = 0, sy = 0, sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+            if (imgAspect > boxAspect) {
+              sw = sh * boxAspect;
+              sx = ((img.naturalWidth || img.width) - sw) / 2;
+            } else {
+              sh = sw / boxAspect;
+              sy = ((img.naturalHeight || img.height) - sh) / 2;
+            }
+            ctx.drawImage(img, sx, sy, sw, sh, cx, cy, cw, ch);
           }
         }
       } else if (el.type === "diamond") {
