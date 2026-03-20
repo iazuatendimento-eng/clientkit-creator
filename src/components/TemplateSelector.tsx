@@ -165,10 +165,17 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
 
   useEffect(() => {
     if (templates.length > 0) {
-      // Small delay to ensure canvas refs are set
+      // Auto-select template by ID if provided
+      if (initialTemplateId && !initialAutoSelected.current) {
+        const idx = templates.findIndex(t => t.id === initialTemplateId);
+        if (idx >= 0) {
+          setSelected(idx);
+          initialAutoSelected.current = true;
+        }
+      }
       requestAnimationFrame(renderPreviews);
     }
-  }, [templates, renderPreviews]);
+  }, [templates, renderPreviews, initialTemplateId]);
 
   if (loading) {
     return (
