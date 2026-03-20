@@ -2041,7 +2041,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
                 )}
 
                 {/* Color Role for shapes */}
-                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "chevron", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
                   <div>
                     <Label className="text-xs">Papel da Cor (Kit de Marca)</Label>
                     <Select
