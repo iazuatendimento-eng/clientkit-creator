@@ -155,6 +155,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
           type={type}
           onSelect={handleTemplateSelected}
           onBack={() => setShowTemplateSelector(false)}
+          initialTemplateId={initialTemplateId}
         />
       </div>
     );
