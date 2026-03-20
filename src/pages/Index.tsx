@@ -1246,7 +1246,7 @@ const Index = () => {
       <Dialog open={isQuickCreateOpen} onOpenChange={(open) => { setIsQuickCreateOpen(open); if (!open) { setQuickCreateClientId(""); setQuickCreateBrandKit(null); } }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Alteração</DialogTitle>
+            <DialogTitle>Criação Rápida</DialogTitle>
           </DialogHeader>
           {!quickCreateClientId ? (
             <QuickCreateClientPicker
