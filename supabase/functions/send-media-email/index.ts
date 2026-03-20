@@ -125,8 +125,18 @@ serve(async (req) => {
       return { url, filename };
     });
 
+    // For videos use URL path (to avoid memory limit); for images use base64
     const attachments = await Promise.all(
       attachmentEntries.map(async (entry) => {
+        const entryIsVideo = /\.(mp4|mov|webm|avi)$/i.test(entry.filename);
+        if (entryIsVideo) {
+          // Use path-based attachment to avoid downloading large files into memory
+          return {
+            filename: entry.filename,
+            path: entry.url,
+          };
+        }
+        // For images, download and encode as base64 (small files)
         const fileResponse = await fetch(entry.url);
         if (!fileResponse.ok) {
           throw new Error(`Falha ao baixar anexo ${entry.filename} (${fileResponse.status})`);
