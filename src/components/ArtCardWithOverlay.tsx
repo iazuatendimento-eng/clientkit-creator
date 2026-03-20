@@ -390,6 +390,8 @@ export function ArtCardWithOverlay({
               setBgOffsetY={setBgOffsetY}
               setBgScale={setBgScale}
               hasBackgroundImage={hasAdjustableBackground}
+              hiddenElements={hiddenElements}
+              setHiddenElements={setHiddenElements}
               onDragEnd={handleDragEnd}
             />
           </div>
