@@ -1863,6 +1863,26 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             ) : null}
           </DragOverlay>
         </DndContext>
+
+        {/* Quick Edit Dialog for completed cards */}
+        <Dialog open={isQuickCreateOpen} onOpenChange={(open) => { setIsQuickCreateOpen(open); if (!open) setQuickEditBrief(null); }}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Alteração</DialogTitle>
+            </DialogHeader>
+            {quickEditBrief && (
+              <QuickCreate
+                key={quickEditBrief.id}
+                clientId={clientId || ""}
+                clientName={clientName || ""}
+                brandKit={getBrandKit(quickEditBrief.brandKitId)}
+                initialText={quickEditBrief.title || quickEditBrief.description || ""}
+                initialType={quickEditBrief.completionType === "Arte" ? "art" : "video"}
+                initialTemplateId={quickEditBrief.completionTemplateId}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
