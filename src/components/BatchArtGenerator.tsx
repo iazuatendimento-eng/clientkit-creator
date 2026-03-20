@@ -69,7 +69,7 @@ interface CanvasElement {
   borderWidth?: number;
   borderColor?: string;
   borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
-  clipShape?: "rect" | "circle";
+  clipShape?: "rect" | "circle" | "triangle" | "diamond" | "hexagon" | "pentagon" | "star";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
@@ -146,6 +146,61 @@ interface ClientArt {
   briefing?: string; // Briefing do cadastro do cliente
   note?: string; // Anotação do operador
   noteRead?: boolean; // Se a anotação foi marcada como lida
+}
+
+// Helper to apply clip shape path on canvas context
+function applyClipShape(
+  ctx: CanvasRenderingContext2D,
+  shape: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  radius = 0
+) {
+  if (shape === "circle") {
+    ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+  } else if (shape === "triangle") {
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+  } else if (shape === "diamond") {
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w, y + h / 2);
+    ctx.lineTo(x + w / 2, y + h);
+    ctx.lineTo(x, y + h / 2);
+    ctx.closePath();
+  } else if (shape === "hexagon") {
+    const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i - Math.PI / 2;
+      if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+  } else if (shape === "pentagon") {
+    const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
+    for (let i = 0; i < 5; i++) {
+      const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+  } else if (shape === "star") {
+    const cx = x + w / 2, cy = y + h / 2, outerR = Math.min(w, h) / 2, innerR = outerR * 0.4;
+    for (let i = 0; i < 10; i++) {
+      const a = (Math.PI / 5) * i - Math.PI / 2;
+      const r = i % 2 === 0 ? outerR : innerR;
+      if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+  } else if (radius > 0) {
+    ctx.roundRect(x, y, w, h, radius);
+  } else {
+    ctx.rect(x, y, w, h);
+  }
 }
 
 const getClientArtKey = (art: Pick<ClientArt, "clientId" | "cardId" | "pageIndex">) =>
@@ -1423,17 +1478,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           const clipShape = (el as any).clipShape || "rect";
           const radius = el.borderRadius || 0;
 
-          if (clipShape === "circle") {
+          const needsClip = clipShape !== "rect" || radius > 0;
+          if (needsClip) {
             ctx.save();
             ctx.beginPath();
-            ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
-            ctx.clip();
-            ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
-            ctx.restore();
-          } else if (radius > 0) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(frameX, frameY, frameW, frameH, radius);
+            applyClipShape(ctx, clipShape, frameX, frameY, frameW, frameH, radius);
             ctx.clip();
             ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
             ctx.restore();
@@ -1465,8 +1514,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 height: frameH,
               };
 
-              // fallbackFrame is stored in template-space; convert to preview pixel-space
-              // to avoid disproportion between grid/frame and photo when preview dimensions differ.
               const scaleX = previousPreview.width / Math.max(1, template.width);
               const scaleY = previousPreview.height / Math.max(1, template.height);
 
@@ -1480,17 +1527,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               const srcW = Math.max(1, Math.min(srcWRaw, previousPreview.width - srcX));
               const srcH = Math.max(1, Math.min(srcHRaw, previousPreview.height - srcY));
 
-              if (clipShape === "circle") {
+              const needsClip = clipShape !== "rect" || radius > 0;
+              if (needsClip) {
                 ctx.save();
                 ctx.beginPath();
-                ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
-                ctx.restore();
-              } else if (radius > 0) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.roundRect(frameX, frameY, frameW, frameH, radius);
+                applyClipShape(ctx, clipShape, frameX, frameY, frameW, frameH, radius);
                 ctx.clip();
                 ctx.drawImage(previousPreview, srcX, srcY, srcW, srcH, frameX, frameY, frameW, frameH);
                 ctx.restore();
