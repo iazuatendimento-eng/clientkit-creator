@@ -1868,53 +1868,65 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       });
 
       // Auto-save as draft immediately after generation
-      try {
-        const artsToSave = updatedArts.filter((a) => a.imageUrl);
-        if (artsToSave.length > 0) {
-          // Save ALL arts preserving order (including ones without images)
-          const batchItems: BatchItem[] = updatedArts.map((art) => ({
-            cardId: art.cardId,
-            clientId: art.clientId,
-            clientName: art.clientName,
-            company: art.company,
-            cardTitle: art.cardTitle,
-            cardText: art.cardText,
-            brandKit: sanitizeBrandKitForStorage(art.brandKit),
-            files: art.imageUrl ? [art.imageUrl] : [],
-            backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
-            photoImage: getEffectivePhotoImage(art),
-            photoOffset: art.photoOffset,
-            elementOverrides: art.elementOverrides,
-            pageIndex: art.pageIndex,
-            totalPages: art.totalPages,
-            imageType: art.imageType,
-            narrationType: art.narrationType,
-            briefing: art.briefing,
-            note: art.note,
-            noteRead: art.noteRead,
-          }));
-          const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
-          let effectiveTeam = initialTeamFilter || null;
-          if (!effectiveTeam && batchItems.length > 0) {
-            const { data: cd } = await supabase.from("client_data").select("team").eq("id", batchItems[0].clientId).single();
-            if (cd?.team) effectiveTeam = cd.team;
-          }
-          const snapshotWithTeam = { ...template, teamFilter: effectiveTeam, hasUnresolvedNotes };
-          const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, batchIdRef.current || undefined);
-          if (savedId) setCurrentBatchId(savedId);
-          console.log("Auto-saved batch draft after generation:", savedId);
+      const artsToSave = updatedArts.filter((a) => a.imageUrl);
+      if (artsToSave.length > 0) {
+        const batchItems: BatchItem[] = updatedArts.map((art) => ({
+          cardId: art.cardId,
+          clientId: art.clientId,
+          clientName: art.clientName,
+          company: art.company,
+          cardTitle: art.cardTitle,
+          cardText: art.cardText,
+          brandKit: sanitizeBrandKitForStorage(art.brandKit),
+          files: art.imageUrl ? [art.imageUrl] : [],
+          backgroundImages: art.backgroundImage ? [art.backgroundImage] : undefined,
+          photoImage: getEffectivePhotoImage(art),
+          photoOffset: art.photoOffset,
+          elementOverrides: art.elementOverrides,
+          pageIndex: art.pageIndex,
+          totalPages: art.totalPages,
+          imageType: art.imageType,
+          narrationType: art.narrationType,
+          briefing: art.briefing,
+          note: art.note,
+          noteRead: art.noteRead,
+        }));
+        const hasUnresolvedNotes = batchItems.some(i => i.note && !i.noteRead);
+        let effectiveTeam = initialTeamFilter || null;
+        if (!effectiveTeam && batchItems.length > 0) {
+          const { data: cd } = await supabase.from("client_data").select("team").eq("id", batchItems[0].clientId).single();
+          if (cd?.team) effectiveTeam = cd.team;
+        }
+        const snapshotWithTeam = { ...template, teamFilter: effectiveTeam, hasUnresolvedNotes };
 
-          if (autoAdvance && savedId) {
-            await clearArtGenerationTags();
-            toast({
-              title: "Rascunho salvo automaticamente",
-              description: `${artsToSave.length} artes salvas. Avançando...`,
+        if (autoAdvance) {
+          // In multi-team mode: advance IMMEDIATELY, save in background
+          const currentBatchIdForSave = batchIdRef.current || undefined;
+          // Fire-and-forget save
+          saveBatchGeneration("art", snapshotWithTeam, batchItems, currentBatchIdForSave)
+            .then((savedId) => {
+              console.log("Background save completed for team:", effectiveTeam, savedId);
+            })
+            .catch((err) => {
+              console.error("Background save failed for team:", effectiveTeam, err);
             });
-            onComplete();
+
+          await clearArtGenerationTags();
+          toast({
+            title: `Equipe ${effectiveTeam} gerada`,
+            description: `${artsToSave.length} artes. Avançando...`,
+          });
+          onComplete();
+        } else {
+          // Normal mode: wait for save to complete
+          try {
+            const savedId = await saveBatchGeneration("art", snapshotWithTeam, batchItems, batchIdRef.current || undefined);
+            if (savedId) setCurrentBatchId(savedId);
+            console.log("Auto-saved batch draft after generation:", savedId);
+          } catch (autoSaveError) {
+            console.error("Auto-save draft failed (non-critical):", autoSaveError);
           }
         }
-      } catch (autoSaveError) {
-        console.error("Auto-save draft failed (non-critical):", autoSaveError);
       }
     } catch (error) {
       console.error("Error generating arts:", error);
