@@ -161,6 +161,7 @@ export function ArtCardWithOverlay({
     mascotX, mascotY, mascotScaleX, mascotScaleY,
     shapeOverrides,
     bgOffsetX, bgOffsetY, bgScale,
+    hiddenElements,
   });
 
   // Wrapped setters that update both React state AND the ref synchronously
