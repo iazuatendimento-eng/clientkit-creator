@@ -535,24 +535,10 @@ async function renderArt(
             const cy = el.y + (overrides.contactY || 0);
             const cw = el.width * ((overrides.contactScaleX || 100) / 100);
             const ch = el.height * ((overrides.contactScaleY || 100) / 100);
-            // Cover mode on opaque bounds (trims transparent padding before crop)
-            const bounds = getOpaqueBounds(img);
-            const imgAspect = bounds.sw / bounds.sh;
-            const boxAspect = cw / ch;
-            let sx = bounds.sx;
-            let sy = bounds.sy;
-            let sw = bounds.sw;
-            let sh = bounds.sh;
-            if (imgAspect > boxAspect) {
-              sw = bounds.sh * boxAspect;
-              sx = bounds.sx + (bounds.sw - sw) / 2;
-            } else {
-              sh = bounds.sw / boxAspect;
-              sy = bounds.sy + (bounds.sh - sh) / 2;
-            }
+            // Simple stretch to fill the box (matches template design intent)
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
-            ctx.drawImage(img, sx, sy, sw, sh, cx, cy, cw, ch);
+            ctx.drawImage(img, cx, cy, cw, ch);
           }
         }
       } else if (el.type === "diamond") {
