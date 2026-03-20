@@ -483,12 +483,125 @@ async function renderArt(
             ctx.drawImage(img, drawX, drawY, drawW, drawH);
           }
         }
-      } else if (el.type === "mascot") {
-        const mascotUrl = brandKit?.pngs?.[2] || brandKit?.mascot;
-        if (mascotUrl) {
-          const img = await loadImage(mascotUrl);
-          if (img) ctx.drawImage(img, x, y, w, h);
+      } else if (el.type === "diamond") {
+        ctx.fillStyle = getFill(el, x, y, w, h, acc2) as string;
+        ctx.beginPath();
+        ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h / 2);
+        ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h / 2);
+        ctx.closePath(); ctx.fill(); drawBorder(el);
+      } else if (el.type === "hexagon") {
+        ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
+        const cx2 = x + w / 2, cy2 = y + h / 2, r2 = Math.min(w, h) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i - Math.PI / 2;
+          const px = cx2 + r2 * Math.cos(a), py = cy2 + r2 * Math.sin(a);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
         }
+        ctx.closePath(); ctx.fill(); drawBorder(el);
+      } else if (el.type === "pentagon") {
+        ctx.fillStyle = getFill(el, x, y, w, h, acc2) as string;
+        const cx2 = x + w / 2, cy2 = y + h / 2, r2 = Math.min(w, h) / 2;
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+          const px = cx2 + r2 * Math.cos(a), py = cy2 + r2 * Math.sin(a);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill(); drawBorder(el);
+      } else if (el.type === "star") {
+        ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
+        const cx2 = x + w / 2, cy2 = y + h / 2;
+        const outerR = Math.min(w, h) / 2, innerR = outerR * 0.4;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const a = (Math.PI / 5) * i - Math.PI / 2;
+          const r2 = i % 2 === 0 ? outerR : innerR;
+          const px = cx2 + r2 * Math.cos(a), py = cy2 + r2 * Math.sin(a);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill(); drawBorder(el);
+      } else if (el.type === "polkaDots") {
+        const color = getColor(el, acc1);
+        const dotRadius = Math.min(w, h) * 0.08;
+        const spacing = dotRadius * 3;
+        const cols = Math.max(1, Math.floor(w / spacing));
+        const rows = Math.max(1, Math.floor(h / spacing));
+        const offX = (w - (cols - 1) * spacing) / 2;
+        const offY = (h - (rows - 1) * spacing) / 2;
+        ctx.fillStyle = color;
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            ctx.beginPath();
+            ctx.arc(x + offX + col * spacing, y + offY + row * spacing, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (el.type === "dotsGrid") {
+        const color = getColor(el, acc2);
+        ctx.fillStyle = color;
+        const seed = x + y + w + h;
+        const random = (i: number) => { const n = Math.sin(seed + i * 9.999) * 10000; return n - Math.floor(n); };
+        for (let i = 0; i < 25; i++) {
+          ctx.beginPath();
+          ctx.arc(x + random(i * 2) * w, y + random(i * 2 + 1) * h, 3 + random(i * 3) * 12, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (el.type === "confetti") {
+        const base = getColor(el, acc1);
+        const palette = [base, acc1, acc2, textColor];
+        const seed = x + y + w + h;
+        const random = (i: number) => { const n = Math.sin(seed + i * 9.999) * 10000; return n - Math.floor(n); };
+        for (let i = 0; i < 30; i++) {
+          const cx2 = x + random(i * 2) * w, cy2 = y + random(i * 2 + 1) * h;
+          const size = 5 + random(i * 3) * 15;
+          const rot = random(i * 4) * Math.PI * 2;
+          ctx.fillStyle = palette[Math.floor(random(i * 5) * palette.length)];
+          ctx.save(); ctx.translate(cx2, cy2); ctx.rotate(rot);
+          const st = Math.floor(random(i * 6) * 3);
+          if (st === 0) ctx.fillRect(-size / 2, -size / 4, size, size / 2);
+          else if (st === 1) { ctx.beginPath(); ctx.arc(0, 0, size / 3, 0, Math.PI * 2); ctx.fill(); }
+          else { ctx.beginPath(); ctx.moveTo(0, -size / 2); ctx.lineTo(size / 2, size / 2); ctx.lineTo(-size / 2, size / 2); ctx.closePath(); ctx.fill(); }
+          ctx.restore();
+        }
+      } else if (el.type === "splatter") {
+        const color = getColor(el, acc2);
+        ctx.fillStyle = color;
+        const seed = x + y + w + h;
+        const random = (i: number) => { const n = Math.sin(seed + i * 9.999) * 10000; return n - Math.floor(n); };
+        const cx2 = x + w / 2, cy2 = y + h / 2, mainR = Math.min(w, h) * 0.28;
+        ctx.beginPath(); ctx.arc(cx2, cy2, mainR, 0, Math.PI * 2); ctx.fill();
+        for (let i = 0; i < 20; i++) {
+          const angle = random(i) * Math.PI * 2;
+          const dist = mainR * (0.8 + random(i + 10) * 1.5);
+          const r2 = 2 + random(i + 20) * 10;
+          ctx.beginPath(); ctx.arc(cx2 + Math.cos(angle) * dist, cy2 + Math.sin(angle) * dist, r2, 0, Math.PI * 2); ctx.fill();
+        }
+      } else if (el.type === "zigzag") {
+        ctx.strokeStyle = getColor(el, acc1);
+        ctx.lineWidth = Math.max(2, h * 0.08);
+        ctx.lineCap = "round";
+        const zigzags = 8, stepX = w / zigzags;
+        ctx.beginPath(); ctx.moveTo(x, y + h / 2);
+        for (let i = 1; i <= zigzags; i++) ctx.lineTo(x + i * stepX, y + (i % 2 === 0 ? h * 0.2 : h * 0.8));
+        ctx.stroke();
+      } else if (el.type === "spiral") {
+        ctx.strokeStyle = getColor(el, acc2);
+        ctx.lineWidth = Math.max(2, Math.min(w, h) * 0.03);
+        ctx.lineCap = "round";
+        const cx2 = x + w / 2, cy2 = y + h / 2, maxR = Math.min(w, h) * 0.45;
+        ctx.beginPath();
+        for (let t = 0; t <= 1; t += 0.02) {
+          const angle = t * 3 * Math.PI * 2, r2 = t * maxR;
+          const px = cx2 + Math.cos(angle) * r2, py = cy2 + Math.sin(angle) * r2;
+          t === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      } else if (el.type === "wave" || el.type === "blob" || el.type === "arch" || el.type === "arrow" || el.type === "badge" || el.type === "ribbon") {
+        // These shapes have dedicated rendering in BatchArtGenerator but use simple rect fallback in quick create
+        ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
+        ctx.fillRect(x, y, w, h);
+        drawBorder(el);
       } else {
         ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
         drawNewShape(ctx, el.type as any, x, y, w, h, ctx.fillStyle as string);
