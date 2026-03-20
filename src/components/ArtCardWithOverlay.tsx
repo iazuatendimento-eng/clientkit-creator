@@ -188,6 +188,7 @@ export function ArtCardWithOverlay({
   const setBgOffsetX = useCallback((v: number) => { latestRef.current.bgOffsetX = v; _setBgOffsetX(v); }, []);
   const setBgOffsetY = useCallback((v: number) => { latestRef.current.bgOffsetY = v; _setBgOffsetY(v); }, []);
   const setBgScale = useCallback((v: number) => { latestRef.current.bgScale = v; _setBgScale(v); }, []);
+  const setHiddenElements = useCallback((v: string[]) => { latestRef.current.hiddenElements = v; _setHiddenElements(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
