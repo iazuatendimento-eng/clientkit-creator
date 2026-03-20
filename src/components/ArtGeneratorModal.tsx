@@ -185,6 +185,8 @@ async function renderArt(
   canvas.width = template.width;
   canvas.height = template.height;
   const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   const bgColor = brandKit?.colors?.[0] || template.backgroundColor;
   const textColor = brandKit?.colors?.[1] || "#000000";

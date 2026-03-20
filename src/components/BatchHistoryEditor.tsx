@@ -185,6 +185,8 @@ export const BatchHistoryEditor = ({
     canvas.width = template.width || (isVideo ? 1080 : 1080);
     canvas.height = template.height || (isVideo ? 1920 : 1350);
     const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     const brandKit = item.brandKit;
     const colors = Array.isArray(brandKit?.colors) ? brandKit.colors : [];
