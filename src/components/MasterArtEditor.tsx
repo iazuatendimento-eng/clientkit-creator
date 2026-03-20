@@ -2063,7 +2063,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
                 )}
 
                 {/* Color picker */}
-                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "chevron", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
                   <div>
                     <Label className="text-xs">Cor {selectedEl.colorRole ? "(preview)" : ""}</Label>
                     <div className="flex gap-2">
