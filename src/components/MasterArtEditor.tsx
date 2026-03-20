@@ -1425,6 +1425,18 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
       addElement({ type: "crescent", x: x - 60, y: y - 60, width: 120, height: 120, color: "#fbbf24" });
     } else if (selectedTool === "chevron") {
       addElement({ type: "chevron", x: x - 100, y: y - 25, width: 200, height: 50, color: "#ffffff" });
+    } else if (selectedTool === "wave") {
+      addElement({ type: "wave", x: x - 100, y: y - 50, width: 200, height: 100, color: "#38bdf8" });
+    } else if (selectedTool === "blob") {
+      addElement({ type: "blob", x: x - 75, y: y - 75, width: 150, height: 150, color: "#a78bfa" });
+    } else if (selectedTool === "arch") {
+      addElement({ type: "arch", x: x - 75, y: y - 75, width: 150, height: 150, color: "#f97316" });
+    } else if (selectedTool === "arrow") {
+      addElement({ type: "arrow", x: x - 75, y: y - 40, width: 150, height: 80, color: "#ffffff" });
+    } else if (selectedTool === "badge") {
+      addElement({ type: "badge", x: x - 60, y: y - 60, width: 120, height: 120, color: "#eab308" });
+    } else if (selectedTool === "ribbon") {
+      addElement({ type: "ribbon", x: x - 100, y: y - 30, width: 200, height: 60, color: "#ef4444" });
     }
   };
 
