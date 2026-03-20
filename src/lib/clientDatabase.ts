@@ -452,7 +452,7 @@ export async function autoTagFirstCardsForAllActiveClients(teamFilter?: string) 
   return tagFirstCardsForArtGeneration(clientIds);
 }
 
-export async function getTaggedCardsForArtGeneration() {
+export async function getTaggedCardsForArtGeneration(teamFilter?: string) {
   const { data, error } = await supabase
     .from("project_briefs")
     .select("*, client:client_data(*)")
@@ -460,10 +460,34 @@ export async function getTaggedCardsForArtGeneration() {
     .eq("status", "todo");
 
   if (error) throw error;
-  return data || [];
+
+  const rows = data || [];
+  if (!teamFilter) return rows;
+  return rows.filter((row: any) => row.client?.team === teamFilter);
 }
 
-export async function clearArtGenerationTags() {
+export async function clearArtGenerationTags(teamFilter?: string) {
+  if (teamFilter) {
+    const { data: clients, error: clientsError } = await supabase
+      .from("client_data")
+      .select("id")
+      .eq("team", teamFilter);
+
+    if (clientsError) throw clientsError;
+
+    const clientIds = (clients || []).map((c: any) => c.id);
+    if (clientIds.length === 0) return;
+
+    const { error } = await supabase
+      .from("project_briefs")
+      .update({ art_generation_selected: false })
+      .eq("art_generation_selected", true)
+      .in("client_id", clientIds);
+
+    if (error) throw error;
+    return;
+  }
+
   const { error } = await supabase
     .from("project_briefs")
     .update({ art_generation_selected: false })
