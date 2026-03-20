@@ -2769,6 +2769,66 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 });
                 toast({ title: "Item removido do lote" });
               }}
+              onApplyToCarousel={async (idx, overrides) => {
+                const sourceArt = clientArts[idx];
+                const siblings = clientArts
+                  .map((a, i) => ({ a, i }))
+                  .filter(({ a, i }) =>
+                    i !== idx &&
+                    a.clientId === sourceArt.clientId &&
+                    a.cardId === sourceArt.cardId
+                  );
+
+                if (siblings.length === 0) return;
+
+                // Apply layout overrides to all sibling pages (preserve photo-specific offsets)
+                const layoutOverrides: Partial<ElementOverrides> = {
+                  logoX: overrides.logoX, logoY: overrides.logoY,
+                  logoScaleX: overrides.logoScaleX, logoScaleY: overrides.logoScaleY,
+                  contactX: overrides.contactX, contactY: overrides.contactY,
+                  contactScaleX: overrides.contactScaleX, contactScaleY: overrides.contactScaleY,
+                  mascotX: overrides.mascotX, mascotY: overrides.mascotY,
+                  mascotScaleX: overrides.mascotScaleX, mascotScaleY: overrides.mascotScaleY,
+                  textX: overrides.textX, textY: overrides.textY, textFontSize: overrides.textFontSize,
+                  shapes: overrides.shapes,
+                  bgOffsetX: overrides.bgOffsetX, bgOffsetY: overrides.bgOffsetY, bgScale: overrides.bgScale,
+                  hiddenElements: overrides.hiddenElements,
+                };
+
+                setClientArts((prev) => {
+                  const next = [...prev];
+                  for (const { i } of siblings) {
+                    next[i] = {
+                      ...next[i],
+                      elementOverrides: {
+                        ...next[i].elementOverrides,
+                        ...layoutOverrides,
+                      },
+                    };
+                  }
+                  return next;
+                });
+
+                // Regenerate all sibling pages
+                for (const { a, i } of siblings) {
+                  const updated = {
+                    ...a,
+                    elementOverrides: { ...a.elementOverrides, ...layoutOverrides },
+                  };
+                  try {
+                    const newUrl = await generateArtForClient(updated);
+                    setClientArts((prev) => {
+                      const next = [...prev];
+                      next[i] = { ...next[i], imageUrl: newUrl, elementOverrides: updated.elementOverrides };
+                      return next;
+                    });
+                  } catch (e) {
+                    console.error("Error regenerating carousel sibling:", e);
+                  }
+                }
+
+                toast({ title: `Ajustes aplicados a ${siblings.length + 1} páginas do carrossel` });
+              }}
               isRemovingBg={isRemovingBg}
               removeBgProgress={removeBgProgress}
             />
