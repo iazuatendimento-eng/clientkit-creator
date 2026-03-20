@@ -76,9 +76,17 @@ interface ElementOverrides {
   contactY?: number;
   contactScaleX?: number;
   contactScaleY?: number;
+  mascotX?: number;
+  mascotY?: number;
+  mascotScaleX?: number;
+  mascotScaleY?: number;
   photoScale?: number;
   photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgScale?: number;
+  hiddenElements?: string[];
 }
 
 interface ArtGeneratorModalProps {
