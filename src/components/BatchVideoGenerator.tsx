@@ -2914,9 +2914,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         );
       }
 
-      // Clean up temp files from storage
+      // IMPORTANT: keep temporary files available for provider-side attachment fetch.
+      // If removed immediately, attachments sent via URL path can fail as "invalid path".
       if (uploadedPaths.length > 0) {
-        await supabase.storage.from("card-uploads").remove(uploadedPaths);
+        console.info(`Arquivos temporários mantidos para entrega do e-mail: ${uploadedPaths.length}`);
       }
 
       // Clear tags
