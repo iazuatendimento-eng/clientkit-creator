@@ -1820,6 +1820,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             onStatusChange={handleStatusChange}
                             onCreateProject={handleCreateProjectFromBrief}
                             onCoverUpdate={handleBriefCoverUpdate}
+                            onQuickEdit={handleQuickEdit}
                             isPublicView={isPublicView}
                             isInactive={isInactive}
                             isFirstInQueue={column.id === "todo" && index === 0}
