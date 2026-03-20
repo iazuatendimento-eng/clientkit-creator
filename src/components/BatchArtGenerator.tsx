@@ -2789,7 +2789,6 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                   contactScaleX: overrides.contactScaleX, contactScaleY: overrides.contactScaleY,
                   mascotX: overrides.mascotX, mascotY: overrides.mascotY,
                   mascotScaleX: overrides.mascotScaleX, mascotScaleY: overrides.mascotScaleY,
-                  textX: overrides.textX, textY: overrides.textY, textFontSize: overrides.textFontSize,
                   shapes: overrides.shapes,
                   bgOffsetX: overrides.bgOffsetX, bgOffsetY: overrides.bgOffsetY, bgScale: overrides.bgScale,
                   hiddenElements: overrides.hiddenElements,
