@@ -173,8 +173,14 @@ export function ArtAdjustOverlay({
     const contactEl = template.elements.find((e) => e.type === "contact");
     const textEl = template.elements.find((e) => e.type === "text");
     const mascotEl = template.elements.find((e) => e.type === "mascot");
+    const shapeTypes: ElementType[] = [
+      "rect", "circle", "triangle", "line", "star", "diamond", "hexagon", "pentagon",
+      "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid",
+      "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud",
+      "speechBubble", "lightning", "shield", "crescent", "chevron",
+    ];
     const shapes = template.elements
-      .filter((e) => (e.type === "rect" || e.type === "circle") && !!e.id)
+      .filter((e) => !!e.id && shapeTypes.includes(e.type))
       .map((e) => ({ ...e, id: e.id as string }));
     return { photoFrame, logoEl, contactEl, textEl, mascotEl, shapes };
   }, [template.elements]);
