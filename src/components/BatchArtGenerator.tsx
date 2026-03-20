@@ -1716,20 +1716,20 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const boxH = el.height * contactScaleYMult;
             const boxX = el.x + contactOffsetX;
             const boxY = el.y + contactOffsetY;
-            // Cover mode: fill box preserving aspect ratio, crop excess
-            const natW = img.naturalWidth || img.width;
-            const natH = img.naturalHeight || img.height;
-            const imgAspect = natW / natH;
+            // Cover mode on opaque bounds (trims transparent padding before crop)
+            const bounds = getOpaqueBounds(img);
+            const imgAspect = bounds.sw / bounds.sh;
             const boxAspect = boxW / boxH;
-            let sx = 0, sy = 0, sw = natW, sh = natH;
+            let sx = bounds.sx;
+            let sy = bounds.sy;
+            let sw = bounds.sw;
+            let sh = bounds.sh;
             if (imgAspect > boxAspect) {
-              // Image wider than box: crop sides
-              sw = natH * boxAspect;
-              sx = (natW - sw) / 2;
+              sw = bounds.sh * boxAspect;
+              sx = bounds.sx + (bounds.sw - sw) / 2;
             } else {
-              // Image taller than box: crop top/bottom
-              sh = natW / boxAspect;
-              sy = (natH - sh) / 2;
+              sh = bounds.sw / boxAspect;
+              sy = bounds.sy + (bounds.sh - sh) / 2;
             }
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
