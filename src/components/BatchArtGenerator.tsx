@@ -1628,7 +1628,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const logoScaleYMult = (art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100) / 100;
             const newWidth = el.width * logoScaleXMult;
             const newHeight = el.height * logoScaleYMult;
-            ctx.drawImage(img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
+            drawSmoothedImage(ctx, img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
           }
         }
       } else if (el.type === "contact") {
