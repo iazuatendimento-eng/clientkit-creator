@@ -1700,7 +1700,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const boxH = el.height * logoScaleYMult;
             const boxX = el.x + logoOffsetX;
             const boxY = el.y + logoOffsetY;
-            // Keep proportion (contain) with slight trim — same logic as contact
+            // Contain: fit entire logo within box, preserving aspect ratio, centered
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
             const natW = img.naturalWidth || img.width;
@@ -1713,18 +1713,18 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const baseSh = natH - (natH - bounds.sh) * trimInfluence;
             const srcAspect = baseSw / baseSh;
             const boxAspect = boxW / boxH;
-            let sx = baseSx;
-            let sy = baseSy;
-            let sw = baseSw;
-            let sh = baseSh;
+            let drawW = boxW;
+            let drawH = boxH;
             if (srcAspect > boxAspect) {
-              sw = baseSh * boxAspect;
-              sx = baseSx + (baseSw - sw) / 2;
+              // Image wider than box: fit by width, center vertically
+              drawH = boxW / srcAspect;
             } else {
-              sh = baseSw / boxAspect;
-              sy = baseSy + (baseSh - sh) / 2;
+              // Image taller than box: fit by height, center horizontally
+              drawW = boxH * srcAspect;
             }
-            ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, boxW, boxH);
+            const drawX = boxX + (boxW - drawW) / 2;
+            const drawY = boxY + (boxH - drawH) / 2;
+            ctx.drawImage(img, baseSx, baseSy, baseSw, baseSh, drawX, drawY, drawW, drawH);
           }
         }
       } else if (el.type === "contact") {
