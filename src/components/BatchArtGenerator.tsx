@@ -1646,7 +1646,24 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const boxH = el.height * contactScaleYMult;
             const boxX = el.x + contactOffsetX;
             const boxY = el.y + contactOffsetY;
-            drawSmoothedImage(ctx, img, boxX, boxY, boxW, boxH);
+            // Cover mode: fill box preserving aspect ratio, crop excess
+            const natW = img.naturalWidth || img.width;
+            const natH = img.naturalHeight || img.height;
+            const imgAspect = natW / natH;
+            const boxAspect = boxW / boxH;
+            let sx = 0, sy = 0, sw = natW, sh = natH;
+            if (imgAspect > boxAspect) {
+              // Image wider than box: crop sides
+              sw = natH * boxAspect;
+              sx = (natW - sw) / 2;
+            } else {
+              // Image taller than box: crop top/bottom
+              sh = natW / boxAspect;
+              sy = (natH - sh) / 2;
+            }
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, boxW, boxH);
           }
         }
       } else if (el.type === "mascot") {

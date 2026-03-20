@@ -465,9 +465,22 @@ async function renderArt(
             const cy = el.y + (overrides.contactY || 0);
             const cw = el.width * ((overrides.contactScaleX || 100) / 100);
             const ch = el.height * ((overrides.contactScaleY || 100) / 100);
+            // Cover mode: fill box preserving aspect ratio, crop excess
+            const natW = img.naturalWidth || img.width;
+            const natH = img.naturalHeight || img.height;
+            const imgAspect = natW / natH;
+            const boxAspect = cw / ch;
+            let sx = 0, sy = 0, sw = natW, sh = natH;
+            if (imgAspect > boxAspect) {
+              sw = natH * boxAspect;
+              sx = (natW - sw) / 2;
+            } else {
+              sh = natW / boxAspect;
+              sy = (natH - sh) / 2;
+            }
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
-            ctx.drawImage(img, cx, cy, cw, ch);
+            ctx.drawImage(img, sx, sy, sw, sh, cx, cy, cw, ch);
           }
         }
       } else if (el.type === "diamond") {
