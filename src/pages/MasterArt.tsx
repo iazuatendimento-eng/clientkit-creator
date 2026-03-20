@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MasterArtEditor } from "@/components/MasterArtEditor";
 import { BatchArtGenerator } from "@/components/BatchArtGenerator";
 import { BatchHistory } from "@/components/BatchHistory";
-import { BatchHistoryEditor } from "@/components/BatchHistoryEditor";
 import { BatchGeneration } from "@/lib/batchHistory";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface MasterTemplate {
   id: string;
@@ -22,21 +22,23 @@ type TeamFilter = string | undefined;
 const MasterArt = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [view, setView] = useState<"editor" | "batch" | "history" | "history-edit">("editor");
+  const [view, setView] = useState<"editor" | "batch" | "history">("editor");
   const [template, setTemplate] = useState<MasterTemplate | null>(null);
   const [teamFilter, setTeamFilter] = useState<TeamFilter>(undefined);
   const [editingBatch, setEditingBatch] = useState<BatchGeneration | null>(null);
 
-  // Multi-team queue state
+  // Multi-team background generation state
   const [teamQueue, setTeamQueue] = useState<string[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [isMultiTeamMode, setIsMultiTeamMode] = useState(false);
+  const [bgGenTemplate, setBgGenTemplate] = useState<MasterTemplate | null>(null);
+  const [bgGenTeamFilter, setBgGenTeamFilter] = useState<string | undefined>(undefined);
+  const [bgGenKey, setBgGenKey] = useState(0);
 
   const handleGenerateBatch = (newTemplate: MasterTemplate, filter: TeamFilter) => {
     setTemplate(newTemplate);
     setTeamFilter(filter);
-    setIsMultiTeamMode(false);
-    setTeamQueue([]);
+    setEditingBatch(null);
     setView("batch");
   };
 
@@ -53,64 +55,49 @@ const MasterArt = () => {
 
     const teamNames = teams.map((t) => t.name).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-    setTemplate(newTemplate);
+    // Start background generation - stay on editor screen
+    setIsMultiTeamMode(true);
     setTeamQueue(teamNames);
     setCurrentTeamIndex(0);
-    setTeamFilter(teamNames[0]);
-    setEditingBatch(null);
-    setIsMultiTeamMode(true);
-    setView("batch");
+    setBgGenTemplate(newTemplate);
+    setBgGenTeamFilter(teamNames[0]);
+    setBgGenKey(Date.now());
 
     toast({
-      title: `Gerando para ${teamNames.length} equipes`,
+      title: `Gerando artes para ${teamNames.length} equipes`,
       description: `Equipe 1/${teamNames.length}: ${teamNames[0]}`,
     });
   };
 
+  const handleBgGenComplete = useCallback(() => {
+    setCurrentTeamIndex((prev) => {
+      const nextIndex = prev + 1;
+      setTeamQueue((queue) => {
+        if (nextIndex < queue.length) {
+          setBgGenTeamFilter(queue[nextIndex]);
+          setBgGenKey(Date.now());
+          toast({
+            title: `Equipe ${nextIndex + 1}/${queue.length}: ${queue[nextIndex]}`,
+            description: `${queue.length - nextIndex - 1} restante(s)`,
+          });
+        } else {
+          // All done
+          setIsMultiTeamMode(false);
+          setBgGenTemplate(null);
+          setBgGenTeamFilter(undefined);
+          toast({
+            title: "Todas as equipes geradas!",
+            description: `${queue.length} equipes processadas. Veja no histórico.`,
+          });
+        }
+        return queue;
+      });
+      return nextIndex;
+    });
+  }, [toast]);
+
   const handleBackToEditor = () => {
     setView("editor");
-    setIsMultiTeamMode(false);
-    setTeamQueue([]);
-  };
-
-  const handleComplete = () => {
-    if (isMultiTeamMode && currentTeamIndex < teamQueue.length - 1) {
-      const nextIndex = currentTeamIndex + 1;
-      setCurrentTeamIndex(nextIndex);
-      setTeamFilter(teamQueue[nextIndex]);
-      setEditingBatch(null);
-      setView("editor");
-      setTimeout(() => {
-        setView("batch");
-        toast({
-          title: `Equipe ${nextIndex + 1}/${teamQueue.length}: ${teamQueue[nextIndex]}`,
-          description: `${teamQueue.length - nextIndex - 1} restante(s)`,
-        });
-      }, 100);
-    } else {
-      setIsMultiTeamMode(false);
-      setTeamQueue([]);
-      navigate("/");
-    }
-  };
-
-  const handleBatchBack = () => {
-    if (isMultiTeamMode && currentTeamIndex < teamQueue.length - 1) {
-      const nextIndex = currentTeamIndex + 1;
-      setCurrentTeamIndex(nextIndex);
-      setTeamFilter(teamQueue[nextIndex]);
-      setEditingBatch(null);
-      setView("editor");
-      setTimeout(() => {
-        setView("batch");
-        toast({
-          title: `Equipe ${nextIndex + 1}/${teamQueue.length}: ${teamQueue[nextIndex]}`,
-          description: `${teamQueue.length - nextIndex - 1} restante(s)`,
-        });
-      }, 100);
-    } else {
-      handleBackToEditor();
-    }
   };
 
   const handleOpenHistory = () => {
@@ -130,7 +117,6 @@ const MasterArt = () => {
     setTemplate(batchTemplate);
     setTeamFilter(snap.teamFilter || undefined);
     setEditingBatch(batch);
-    setIsMultiTeamMode(false);
     setView("batch");
   };
 
@@ -146,37 +132,52 @@ const MasterArt = () => {
 
   if (view === "batch" && template) {
     return (
-      <div className="relative">
-        {isMultiTeamMode && (
-          <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between text-sm">
-            <span className="font-medium">
-              Equipe {currentTeamIndex + 1} de {teamQueue.length}: <strong>{teamQueue[currentTeamIndex]}</strong>
-            </span>
-            <span className="text-muted-foreground">
-              {teamQueue.length - currentTeamIndex - 1} restante(s)
-            </span>
-          </div>
-        )}
-        <BatchArtGenerator
-          key={`${teamFilter}-${currentTeamIndex}`}
-          template={template}
-          initialTeamFilter={teamFilter}
-          initialBatch={editingBatch || undefined}
-          onBack={handleBatchBack}
-          onComplete={handleComplete}
-          autoAdvance={isMultiTeamMode}
-        />
-      </div>
+      <BatchArtGenerator
+        template={template}
+        initialTeamFilter={teamFilter}
+        initialBatch={editingBatch || undefined}
+        onBack={handleBackToEditor}
+        onComplete={() => navigate("/")}
+      />
     );
   }
 
   return (
-    <MasterArtEditor
-      onBack={() => navigate("/")}
-      onGenerateBatch={handleGenerateBatch}
-      onGenerateAllTeams={handleGenerateAllTeams}
-      onOpenHistory={handleOpenHistory}
-    />
+    <>
+      <MasterArtEditor
+        onBack={() => navigate("/")}
+        onGenerateBatch={handleGenerateBatch}
+        onGenerateAllTeams={handleGenerateAllTeams}
+        onOpenHistory={handleOpenHistory}
+      />
+
+      {/* Background generation overlay */}
+      {isMultiTeamMode && (
+        <div className="fixed bottom-4 right-4 z-50 bg-card border border-border rounded-lg shadow-lg px-4 py-3 flex items-center gap-3 max-w-sm">
+          <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium">Gerando artes...</p>
+            <p className="text-muted-foreground">
+              Equipe {Math.min(currentTeamIndex + 1, teamQueue.length)}/{teamQueue.length}: {teamQueue[Math.min(currentTeamIndex, teamQueue.length - 1)]}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden offscreen BatchArtGenerator for background generation */}
+      {isMultiTeamMode && bgGenTemplate && bgGenTeamFilter && (
+        <div className="fixed -left-[9999px] top-0 w-[1080px] h-[1080px] overflow-hidden pointer-events-none" aria-hidden="true">
+          <BatchArtGenerator
+            key={`bg-${bgGenTeamFilter}-${bgGenKey}`}
+            template={bgGenTemplate}
+            initialTeamFilter={bgGenTeamFilter}
+            onBack={() => {}}
+            onComplete={handleBgGenComplete}
+            autoAdvance
+          />
+        </div>
+      )}
+    </>
   );
 };
 
