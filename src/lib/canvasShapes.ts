@@ -122,8 +122,8 @@ export function drawNewShape(
     
     // Composite the result onto the main canvas
     ctx.drawImage(tmpCanvas, x - margin, y - margin);
-  } else if (type === "arrow") {
-    // Right-pointing chevron/arrow for carousel "next page" indicator
+  } else if (type === "chevron") {
+    // Right-pointing chevron for carousel "next page" indicator
     const cx = x + width / 2;
     const cy = y + height / 2;
     const armW = width * 0.45;
@@ -143,4 +143,4 @@ export function drawNewShape(
   return true; // Shape was drawn
 }
 
-export const NEW_SHAPE_TYPES = ["heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "arrow"] as const;
+export const NEW_SHAPE_TYPES = ["heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "chevron"] as const;

@@ -225,7 +225,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
       lightning: "Raio",
       shield: "Escudo",
       crescent: "Lua",
-      arrow: "Seta",
+      chevron: "Seta Carrossel",
     };
     return el.name || typeNames[el.type] || el.type;
   };
