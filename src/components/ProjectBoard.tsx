@@ -150,6 +150,7 @@ interface SortableCardProps {
   onStatusChange: (briefId: string, newStatus: string) => void;
   onCreateProject: (brief: ProjectBrief) => void;
   onCoverUpdate: (briefId: string, coverUrl: string, isVideo?: boolean) => void;
+  onQuickEdit?: (brief: ProjectBrief) => void;
   isPublicView?: boolean;
   isInactive?: boolean;
   isFirstInQueue?: boolean;
@@ -157,7 +158,7 @@ interface SortableCardProps {
   clientId?: string;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue, cardIndex = 0, clientId }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, onQuickEdit, isPublicView, isInactive, isFirstInQueue, cardIndex = 0, clientId }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isVideoGenOpen, setIsVideoGenOpen] = useState(false);
   const [isArtGenOpen, setIsArtGenOpen] = useState(false);
