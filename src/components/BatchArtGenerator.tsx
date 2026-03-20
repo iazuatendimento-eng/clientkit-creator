@@ -1694,8 +1694,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           }
         }
         
-        const imageUrl = await generateArtForClient(updatedArts[i]);
-        updatedArts[i] = { ...updatedArts[i], imageUrl };
+        try {
+          const imageUrl = await generateArtForClient(updatedArts[i]);
+          updatedArts[i] = { ...updatedArts[i], imageUrl };
+        } catch (genErr) {
+          console.error("❌ Art generation failed for:", updatedArts[i].clientName, genErr);
+        }
         setClientArts([...updatedArts]);
       }
 
