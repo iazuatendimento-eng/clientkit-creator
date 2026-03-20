@@ -97,6 +97,7 @@ interface ArtCardWithOverlayProps {
   onDropImage?: (index: number, file: File) => void;
   onMoveToEnd?: (index: number) => void;
   onDelete?: (index: number) => void;
+  onApplyToCarousel?: (index: number, overrides: ElementOverrides) => void;
   isRemovingBg?: boolean;
   removeBgProgress?: string;
 }
