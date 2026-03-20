@@ -1646,20 +1646,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const boxH = el.height * contactScaleYMult;
             const boxX = el.x + contactOffsetX;
             const boxY = el.y + contactOffsetY;
-            const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
-            const boxAspect = boxW / boxH;
-            let drawW = boxW;
-            let drawH = boxH;
-            let drawX = boxX;
-            let drawY = boxY;
-            if (imgAspect > boxAspect) {
-              drawH = boxW / imgAspect;
-              drawY = boxY + (boxH - drawH) / 2;
-            } else {
-              drawW = boxH * imgAspect;
-              drawX = boxX + (boxW - drawW) / 2;
-            }
-            drawSmoothedImage(ctx, img, drawX, drawY, drawW, drawH);
+            drawSmoothedImage(ctx, img, boxX, boxY, boxW, boxH);
           }
         }
       } else if (el.type === "mascot") {
