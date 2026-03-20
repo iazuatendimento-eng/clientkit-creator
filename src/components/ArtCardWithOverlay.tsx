@@ -275,6 +275,7 @@ export function ArtCardWithOverlay({
       bgOffsetX: v.bgOffsetX,
       bgOffsetY: v.bgOffsetY,
       bgScale: v.bgScale,
+      hiddenElements: v.hiddenElements.length > 0 ? v.hiddenElements : undefined,
     };
 
     const updatedArt: ClientArt = {
