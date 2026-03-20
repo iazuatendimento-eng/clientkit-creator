@@ -140,7 +140,7 @@ serve(async (req) => {
         const contentTypeHeader = fileResponse.headers.get('content-type')?.split(';')[0]?.trim();
         return {
           filename: entry.filename,
-          content: encodeBase64(bytes),
+          content: encodeBase64(bytes.buffer),
           content_type: contentTypeHeader || inferContentType(entry.filename, fallbackContentType),
         };
       })
