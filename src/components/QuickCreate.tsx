@@ -50,8 +50,24 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   useEffect(() => {
     if (initialTemplateId && initialText && !autoTriggeredRef.current) {
       autoTriggeredRef.current = true;
-      // Small delay to ensure handleCreate ref is stable
-      setTimeout(() => handleCreate(), 50);
+      (async () => {
+        const table = (initialType || type) === "art" ? "master_templates" : "master_video_templates";
+        const { data } = await supabase
+          .from(table)
+          .select("id")
+          .eq("deleted", false)
+          .order("created_at", { ascending: true });
+
+        if (data) {
+          const idx = data.findIndex((t: any) => t.id === initialTemplateId);
+          if (idx >= 0) {
+            handleTemplateSelected(idx);
+            return;
+          }
+        }
+        // Fallback: show selector if template not found
+        setShowTemplateSelector(true);
+      })();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
