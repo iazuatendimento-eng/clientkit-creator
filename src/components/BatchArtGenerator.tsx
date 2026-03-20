@@ -742,7 +742,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       // Auto-tag first cards of all active clients (with optional team filter)
       await autoTagFirstCardsForAllActiveClients(filter);
       
-      const taggedCards = await getTaggedCardsForArtGeneration();
+      const taggedCards = await getTaggedCardsForArtGeneration(filter);
 
       const arts: ClientArt[] = [];
       

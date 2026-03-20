@@ -1110,7 +1110,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       
       const activeFilter = filterOverride !== undefined ? filterOverride : teamFilter;
       await autoTagFirstCardsForAllActiveClients(activeFilter || undefined);
-      const taggedCards = await getTaggedCardsForArtGeneration();
+      const taggedCards = await getTaggedCardsForArtGeneration(activeFilter || undefined);
 
       const videos: ClientVideo[] = taggedCards.map((card: any) => {
         const fullText = card.title || card.description;
