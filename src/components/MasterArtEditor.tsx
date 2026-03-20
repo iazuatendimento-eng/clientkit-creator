@@ -1423,6 +1423,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
       addElement({ type: "shield", x: x - 60, y: y - 75, width: 120, height: 150, color: "#3b82f6" });
     } else if (selectedTool === "crescent") {
       addElement({ type: "crescent", x: x - 60, y: y - 60, width: 120, height: 120, color: "#fbbf24" });
+    } else if (selectedTool === "chevron") {
+      addElement({ type: "chevron", x: x - 100, y: y - 25, width: 200, height: 50, color: "#ffffff" });
     }
   };
 
