@@ -128,6 +128,7 @@ interface ProjectBrief {
   generatedArtExpiresAt?: string;
   completionType?: string;
   completionTemplateName?: string;
+  completionTemplateId?: string;
 }
 
 interface ProjectBoardProps {
