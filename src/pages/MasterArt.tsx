@@ -164,6 +164,7 @@ const MasterArt = () => {
           initialBatch={editingBatch || undefined}
           onBack={handleBatchBack}
           onComplete={handleComplete}
+          autoAdvance={isMultiTeamMode}
         />
       </div>
     );
