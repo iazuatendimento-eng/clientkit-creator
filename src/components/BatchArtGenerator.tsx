@@ -1741,31 +1741,29 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const boxH = el.height * contactScaleYMult;
             const boxX = el.x + contactOffsetX;
             const boxY = el.y + contactOffsetY;
-            // Keep proportion (no stretch) and apply a subtle size boost vs full-image cover
+            // Contain: fit entire contact within box, preserving aspect ratio, centered
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
             const natW = img.naturalWidth || img.width;
             const natH = img.naturalHeight || img.height;
             const bounds = getOpaqueBounds(img);
-            const trimInfluence = 0.22; // slight boost only
+            const trimInfluence = 0.6;
             const baseSx = bounds.sx * trimInfluence;
             const baseSy = bounds.sy * trimInfluence;
             const baseSw = natW - (natW - bounds.sw) * trimInfluence;
             const baseSh = natH - (natH - bounds.sh) * trimInfluence;
             const srcAspect = baseSw / baseSh;
             const boxAspect = boxW / boxH;
-            let sx = baseSx;
-            let sy = baseSy;
-            let sw = baseSw;
-            let sh = baseSh;
+            let drawW = boxW;
+            let drawH = boxH;
             if (srcAspect > boxAspect) {
-              sw = baseSh * boxAspect;
-              sx = baseSx + (baseSw - sw) / 2;
+              drawH = boxW / srcAspect;
             } else {
-              sh = baseSw / boxAspect;
-              sy = baseSy + (baseSh - sh) / 2;
+              drawW = boxH * srcAspect;
             }
-            ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, boxW, boxH);
+            const drawX = boxX + (boxW - drawW) / 2;
+            const drawY = boxY + (boxH - drawH) / 2;
+            ctx.drawImage(img, baseSx, baseSy, baseSw, baseSh, drawX, drawY, drawW, drawH);
           }
         }
       } else if (el.type === "mascot") {
