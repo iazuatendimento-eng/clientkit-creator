@@ -464,6 +464,33 @@ export function ArtCardWithOverlay({
                 </Button>
               </>
             )}
+            {onApplyToCarousel && art.totalPages && art.totalPages > 1 && (
+              <Button
+                size="sm"
+                variant="outline"
+                title="Aplicar ajustes a todas as páginas do carrossel"
+                onClick={() => {
+                  const v = latestRef.current;
+                  const overrides: ElementOverrides = {
+                    logoX: v.logoX, logoY: v.logoY,
+                    logoScaleX: v.logoScaleX, logoScaleY: v.logoScaleY,
+                    textX: v.textX, textY: v.textY, textFontSize: v.textFontSize,
+                    contactX: v.contactX, contactY: v.contactY,
+                    contactScaleX: v.contactScaleX, contactScaleY: v.contactScaleY,
+                    mascotX: v.mascotX, mascotY: v.mascotY,
+                    mascotScaleX: v.mascotScaleX, mascotScaleY: v.mascotScaleY,
+                    photoScale: v.photoScale,
+                    photoFrame: v.photoFrame || undefined,
+                    shapes: v.shapeOverrides,
+                    bgOffsetX: v.bgOffsetX, bgOffsetY: v.bgOffsetY, bgScale: v.bgScale,
+                    hiddenElements: v.hiddenElements.length > 0 ? v.hiddenElements : undefined,
+                  };
+                  onApplyToCarousel(index, overrides);
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            )}
             {onMoveToEnd && (
               <Button size="sm" variant="outline" title="Mover para o final da fila" onClick={() => onMoveToEnd(index)}>
                 <ArrowDownToLine className="h-4 w-4" />
