@@ -128,6 +128,7 @@ interface ProjectBrief {
   generatedArtExpiresAt?: string;
   completionType?: string;
   completionTemplateName?: string;
+  completionTemplateId?: string;
 }
 
 interface ProjectBoardProps {
@@ -149,6 +150,7 @@ interface SortableCardProps {
   onStatusChange: (briefId: string, newStatus: string) => void;
   onCreateProject: (brief: ProjectBrief) => void;
   onCoverUpdate: (briefId: string, coverUrl: string, isVideo?: boolean) => void;
+  onQuickEdit?: (brief: ProjectBrief) => void;
   isPublicView?: boolean;
   isInactive?: boolean;
   isFirstInQueue?: boolean;
@@ -156,7 +158,7 @@ interface SortableCardProps {
   clientId?: string;
 }
 
-const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, isPublicView, isInactive, isFirstInQueue, cardIndex = 0, clientId }: SortableCardProps) => {
+const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChange, onCreateProject, onCoverUpdate, onQuickEdit, isPublicView, isInactive, isFirstInQueue, cardIndex = 0, clientId }: SortableCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isVideoGenOpen, setIsVideoGenOpen] = useState(false);
   const [isArtGenOpen, setIsArtGenOpen] = useState(false);
@@ -704,6 +706,20 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                 <Upload className="h-3 w-3 mr-1" />
                 Arquivos
               </Button>
+              {brief.status === "completed" && brief.completionType && onQuickEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickEdit(brief);
+                  }}
+                  className="text-xs px-2 py-1 h-auto w-full"
+                >
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Alterar
+                </Button>
+              )}
               {clientId && (finalArtworks.length > 0 || brief.coverImage || brief.coverVideo) && (
                 <Button
                   variant="outline"
@@ -1045,6 +1061,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [quickEditBrief, setQuickEditBrief] = useState<ProjectBrief | null>(null);
   const [multiTextInput, setMultiTextInput] = useState("");
   const [showSplitDialog, setShowSplitDialog] = useState(false); // kept for compatibility
   
@@ -1093,6 +1110,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
           generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
           completionType: (brief as any).completion_type || undefined,
           completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
         }));
         setBriefs(mappedBriefs);
       } catch (error) {
@@ -1263,6 +1281,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1368,6 +1387,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1429,6 +1449,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1482,6 +1503,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
       
@@ -1525,6 +1547,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1542,6 +1565,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     setIsDialogOpen(true);
   };
 
+  const handleQuickEdit = (brief: ProjectBrief) => {
+    setQuickEditBrief(brief);
+    setIsQuickCreateOpen(true);
+  };
 
   const handleCreateProjectFromBrief = (brief: ProjectBrief) => {
     if (brief.brandKitId) {
@@ -1581,6 +1608,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         generatedArtExpiresAt: (brief as any).generated_art_expires_at || undefined,
         completionType: (brief as any).completion_type || undefined,
         completionTemplateName: (brief as any).completion_template_name || undefined,
+          completionTemplateId: (brief as any).completion_template_id || undefined,
       }));
       setBriefs(mappedBriefs);
 
@@ -1792,6 +1820,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                             onStatusChange={handleStatusChange}
                             onCreateProject={handleCreateProjectFromBrief}
                             onCoverUpdate={handleBriefCoverUpdate}
+                            onQuickEdit={handleQuickEdit}
                             isPublicView={isPublicView}
                             isInactive={isInactive}
                             isFirstInQueue={column.id === "todo" && index === 0}
@@ -1834,6 +1863,26 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
             ) : null}
           </DragOverlay>
         </DndContext>
+
+        {/* Quick Edit Dialog for completed cards */}
+        <Dialog open={isQuickCreateOpen} onOpenChange={(open) => { setIsQuickCreateOpen(open); if (!open) setQuickEditBrief(null); }}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Alteração</DialogTitle>
+            </DialogHeader>
+            {quickEditBrief && (
+              <QuickCreate
+                key={quickEditBrief.id}
+                clientId={clientId || ""}
+                clientName={clientName || ""}
+                brandKit={getBrandKit(quickEditBrief.brandKitId)}
+                initialText={quickEditBrief.title || quickEditBrief.description || ""}
+                initialType={quickEditBrief.completionType === "Arte" ? "art" : "video"}
+                initialTemplateId={quickEditBrief.completionTemplateId}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

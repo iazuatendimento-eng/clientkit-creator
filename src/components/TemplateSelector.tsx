@@ -20,6 +20,7 @@ interface TemplateSelectorProps {
   type: "art" | "video";
   onSelect: (index: number) => void;
   onBack: () => void;
+  initialTemplateId?: string;
 }
 
 const PREVIEW_MAX = 160;
@@ -128,10 +129,11 @@ function renderMiniPreview(
   }
 }
 
-export function TemplateSelector({ type, onSelect, onBack }: TemplateSelectorProps) {
+export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: TemplateSelectorProps) {
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);
+  const initialAutoSelected = useRef(false);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
 
   useEffect(() => {
@@ -163,10 +165,17 @@ export function TemplateSelector({ type, onSelect, onBack }: TemplateSelectorPro
 
   useEffect(() => {
     if (templates.length > 0) {
-      // Small delay to ensure canvas refs are set
+      // Auto-select template by ID if provided
+      if (initialTemplateId && !initialAutoSelected.current) {
+        const idx = templates.findIndex(t => t.id === initialTemplateId);
+        if (idx >= 0) {
+          setSelected(idx);
+          initialAutoSelected.current = true;
+        }
+      }
       requestAnimationFrame(renderPreviews);
     }
-  }, [templates, renderPreviews]);
+  }, [templates, renderPreviews, initialTemplateId]);
 
   if (loading) {
     return (
