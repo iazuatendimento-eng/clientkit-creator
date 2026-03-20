@@ -840,6 +840,45 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     []
   );
 
+  // Helper: draw image with multi-step upscaling to reduce pixelation of small images
+  const drawSmoothedImage = (
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement,
+    dx: number, dy: number, dw: number, dh: number
+  ) => {
+    const natW = img.naturalWidth || img.width;
+    const natH = img.naturalHeight || img.height;
+    const scaleRatio = Math.max(dw / natW, dh / natH);
+
+    // If image needs to be upscaled more than 2x, use intermediate canvas steps
+    if (scaleRatio > 2) {
+      const steps = Math.ceil(Math.log2(scaleRatio));
+      let srcCanvas: HTMLCanvasElement | HTMLImageElement = img;
+      let curW = natW;
+      let curH = natH;
+
+      for (let s = 0; s < steps; s++) {
+        const nextW = s === steps - 1 ? Math.round(dw) : Math.round(curW * 2);
+        const nextH = s === steps - 1 ? Math.round(dh) : Math.round(curH * 2);
+        const tmp = document.createElement("canvas");
+        tmp.width = nextW;
+        tmp.height = nextH;
+        const tmpCtx = tmp.getContext("2d")!;
+        tmpCtx.imageSmoothingEnabled = true;
+        tmpCtx.imageSmoothingQuality = "high";
+        tmpCtx.drawImage(srcCanvas, 0, 0, curW, curH, 0, 0, nextW, nextH);
+        srcCanvas = tmp;
+        curW = nextW;
+        curH = nextH;
+      }
+      ctx.drawImage(srcCanvas, 0, 0, curW, curH, dx, dy, dw, dh);
+    } else {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+  };
+
   const generateArtForClient = async (
     art: ClientArt,
     options?: { allowAutoPhotoResolve?: boolean; allowPhotoSearch?: boolean }
