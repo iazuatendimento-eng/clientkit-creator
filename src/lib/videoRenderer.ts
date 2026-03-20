@@ -667,7 +667,24 @@ export async function generateLogoOverlay(
         const ly = isSignature ? (adjustments.sigLogoY ?? adjustments.logoY) : adjustments.logoY;
         const lsx = isSignature ? (adjustments.sigLogoScaleX ?? adjustments.logoScaleX) : adjustments.logoScaleX;
         const lsy = isSignature ? (adjustments.sigLogoScaleY ?? adjustments.logoScaleY) : adjustments.logoScaleY;
-        ctx.drawImage(img, logoEl.x + lx, logoEl.y + ly, logoEl.width * (lsx / 100), logoEl.height * (lsy / 100));
+        const boxW = logoEl.width * (lsx / 100);
+        const boxH = logoEl.height * (lsy / 100);
+        const boxX = logoEl.x + lx;
+        const boxY = logoEl.y + ly;
+        // Contain: keep aspect ratio within the box
+        const natW = img.naturalWidth || img.width;
+        const natH = img.naturalHeight || img.height;
+        const srcAspect = natW / natH;
+        const boxAspect = boxW / boxH;
+        let sx = 0, sy = 0, sw = natW, sh = natH;
+        if (srcAspect > boxAspect) {
+          sw = natH * boxAspect;
+          sx = (natW - sw) / 2;
+        } else {
+          sh = natW / boxAspect;
+          sy = (natH - sh) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, boxW, boxH);
       }
     }
   }

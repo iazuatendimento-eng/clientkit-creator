@@ -1696,9 +1696,35 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             // Use separate X/Y scaling if available
             const logoScaleXMult = (art.elementOverrides?.logoScaleX || art.elementOverrides?.logoScale || 100) / 100;
             const logoScaleYMult = (art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100) / 100;
-            const newWidth = el.width * logoScaleXMult;
-            const newHeight = el.height * logoScaleYMult;
-            drawSmoothedImage(ctx, img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
+            const boxW = el.width * logoScaleXMult;
+            const boxH = el.height * logoScaleYMult;
+            const boxX = el.x + logoOffsetX;
+            const boxY = el.y + logoOffsetY;
+            // Keep proportion (contain) with slight trim — same logic as contact
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            const natW = img.naturalWidth || img.width;
+            const natH = img.naturalHeight || img.height;
+            const bounds = getOpaqueBounds(img);
+            const trimInfluence = 0.22;
+            const baseSx = bounds.sx * trimInfluence;
+            const baseSy = bounds.sy * trimInfluence;
+            const baseSw = natW - (natW - bounds.sw) * trimInfluence;
+            const baseSh = natH - (natH - bounds.sh) * trimInfluence;
+            const srcAspect = baseSw / baseSh;
+            const boxAspect = boxW / boxH;
+            let sx = baseSx;
+            let sy = baseSy;
+            let sw = baseSw;
+            let sh = baseSh;
+            if (srcAspect > boxAspect) {
+              sw = baseSh * boxAspect;
+              sx = baseSx + (baseSw - sw) / 2;
+            } else {
+              sh = baseSw / boxAspect;
+              sy = baseSy + (baseSh - sh) / 2;
+            }
+            ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, boxW, boxH);
           }
         }
       } else if (el.type === "contact") {
