@@ -189,16 +189,13 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   const openSendAllDialog = () => {
     const list: TeamSendInfo[] = [];
     for (const [teamName, teamBatchList] of teamBatches) {
-      // Use the most recent batch for each team
-      const latestBatch = teamBatchList[0]; // already sorted by created_at desc
       list.push({
         teamName,
-        batchId: latestBatch.id,
+        batchIds: teamBatchList.map(b => b.id),
         status: "pending",
-        itemCount: 0, // will be loaded when sending
+        itemCount: 0,
       });
     }
-    // Sort by team name naturally
     list.sort((a, b) => a.teamName.localeCompare(b.teamName, undefined, { numeric: true }));
     setTeamSendList(list);
     setSendSubject("");
