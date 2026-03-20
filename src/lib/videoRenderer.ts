@@ -671,20 +671,21 @@ export async function generateLogoOverlay(
         const boxH = logoEl.height * (lsy / 100);
         const boxX = logoEl.x + lx;
         const boxY = logoEl.y + ly;
-        // Contain: keep aspect ratio within the box
+        // Contain: fit entire logo within box, centered
         const natW = img.naturalWidth || img.width;
         const natH = img.naturalHeight || img.height;
         const srcAspect = natW / natH;
         const boxAspect = boxW / boxH;
-        let sx = 0, sy = 0, sw = natW, sh = natH;
+        let drawW = boxW;
+        let drawH = boxH;
         if (srcAspect > boxAspect) {
-          sw = natH * boxAspect;
-          sx = (natW - sw) / 2;
+          drawH = boxW / srcAspect;
         } else {
-          sh = natW / boxAspect;
-          sy = (natH - sh) / 2;
+          drawW = boxH * srcAspect;
         }
-        ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, boxW, boxH);
+        const drawX = boxX + (boxW - drawW) / 2;
+        const drawY = boxY + (boxH - drawH) / 2;
+        ctx.drawImage(img, 0, 0, natW, natH, drawX, drawY, drawW, drawH);
       }
     }
   }
