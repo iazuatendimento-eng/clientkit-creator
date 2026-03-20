@@ -125,66 +125,56 @@ serve(async (req) => {
       return { url, filename };
     });
 
-    const isVideoFilename = (filename: string) => /\.(mp4|mov|webm|avi)$/i.test(filename);
-    const videoEntries = attachmentEntries.filter((entry) => isVideoFilename(entry.filename));
-    const nonVideoEntries = attachmentEntries.filter((entry) => !isVideoFilename(entry.filename));
+    const MAX_SINGLE_ATTACHMENT_BYTES = 18 * 1024 * 1024; // 18MB per file
+    const MAX_TOTAL_ATTACHMENTS_BYTES = 22 * 1024 * 1024; // 22MB total
 
-    // Keep attachments only for non-video files. Videos are sent as links in body for better deliverability.
-    const attachments = await Promise.all(
-      nonVideoEntries.map(async (entry) => {
-        const fileResponse = await fetch(entry.url);
-        if (!fileResponse.ok) {
-          throw new Error(`Falha ao baixar anexo ${entry.filename} (${fileResponse.status})`);
-        }
+    const attachments: Array<{ filename: string; content: string; content_type: string }> = [];
+    let totalAttachmentBytes = 0;
 
-        const bytes = new Uint8Array(await fileResponse.arrayBuffer());
-        if (bytes.length === 0) {
-          throw new Error(`Anexo vazio: ${entry.filename}`);
-        }
+    for (const entry of attachmentEntries) {
+      const fileResponse = await fetch(entry.url);
+      if (!fileResponse.ok) {
+        throw new Error(`Falha ao baixar anexo ${entry.filename} (${fileResponse.status})`);
+      }
 
-        const contentTypeHeader = fileResponse.headers.get('content-type')?.split(';')[0]?.trim();
-        return {
-          filename: entry.filename,
-          content: encodeBase64(bytes.buffer),
-          content_type: contentTypeHeader || inferContentType(entry.filename, fallbackContentType),
-        };
-      })
-    );
+      const contentLengthHeader = fileResponse.headers.get('content-length');
+      const declaredSize = contentLengthHeader ? Number(contentLengthHeader) : NaN;
+      if (!Number.isNaN(declaredSize) && declaredSize > MAX_SINGLE_ATTACHMENT_BYTES) {
+        throw new Error(`Arquivo muito grande para anexo: ${entry.filename}. Limite por arquivo: 18MB.`);
+      }
+
+      const bytes = new Uint8Array(await fileResponse.arrayBuffer());
+      if (bytes.length === 0) {
+        throw new Error(`Anexo vazio: ${entry.filename}`);
+      }
+      if (bytes.length > MAX_SINGLE_ATTACHMENT_BYTES) {
+        throw new Error(`Arquivo muito grande para anexo: ${entry.filename}. Limite por arquivo: 18MB.`);
+      }
+
+      totalAttachmentBytes += bytes.length;
+      if (totalAttachmentBytes > MAX_TOTAL_ATTACHMENTS_BYTES) {
+        throw new Error('Total de anexos excede o limite de 22MB para envio por e-mail.');
+      }
+
+      const contentTypeHeader = fileResponse.headers.get('content-type')?.split(';')[0]?.trim();
+      attachments.push({
+        filename: entry.filename,
+        content: encodeBase64(bytes.buffer),
+        content_type: contentTypeHeader || inferContentType(entry.filename, fallbackContentType),
+      });
+    }
+
+    const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
+    const tipoArquivo = isVideo ? 'MP4' : 'PNG';
+    const downloadInstruction = `SUA ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER A ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`;
 
     const bodyParts: string[] = [];
     if (caption) bodyParts.push(caption);
-
-    if (attachments.length > 0) {
-      const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
-      const tipoArquivo = isVideo ? 'MP4' : 'PNG';
-      bodyParts.push(`SUA ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER A ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`);
-    }
-
-    if (videoEntries.length > 0) {
-      bodyParts.push(
-        `LINK${videoEntries.length > 1 ? 'S' : ''} PARA BAIXAR O VÍDEO:\n${videoEntries
-          .map((entry, idx) => `${idx + 1}. ${entry.url}`)
-          .join('\n')}\n\nOBS: para garantir a entrega, vídeos são enviados por link de download.`
-      );
-    }
+    bodyParts.push(downloadInstruction);
 
     const plainText = bodyParts.join('\n\n');
 
-    const textParagraphs = bodyParts
-      .filter((part) => !part.startsWith('LINK') && !part.startsWith('OBS: para garantir a entrega'));
-
-    const videoLinksHtml = videoEntries.length
-      ? `<div style="margin: 0 0 16px 0;"><p style="color: #333; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">Link${videoEntries.length > 1 ? 's' : ''} para baixar o vídeo:</p><ul style="margin: 0 0 8px 20px; padding: 0;">${videoEntries
-          .map(
-            (entry, idx) =>
-              `<li style="margin: 0 0 6px 0;"><a href="${escapeHtml(entry.url)}" style="color: #0f172a; text-decoration: underline;" target="_blank" rel="noopener noreferrer">Vídeo ${idx + 1}</a></li>`
-          )
-          .join('')}</ul><p style="color: #666; margin: 0; font-size: 12px;">OBS: para garantir a entrega, vídeos são enviados por link de download.</p></div>`
-      : '';
-
-    const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${textParagraphs
-      .map((t) => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`)
-      .join('')}${videoLinksHtml}</div>`;
+    const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${bodyParts.map(t => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`).join('')}</div>`;
 
     const results = await Promise.all(
       validEmails.map(async (email: string) => {
