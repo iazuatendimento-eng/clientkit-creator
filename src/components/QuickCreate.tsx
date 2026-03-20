@@ -16,11 +16,14 @@ interface QuickCreateProps {
   clientId: string;
   clientName: string;
   brandKit: any;
+  initialText?: string;
+  initialType?: "video" | "art";
+  initialTemplateId?: string;
 }
 
-export const QuickCreate = ({ clientId, clientName, brandKit }: QuickCreateProps) => {
-  const [text, setText] = useState("");
-  const [type, setType] = useState<"video" | "art">("video");
+export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId }: QuickCreateProps) => {
+  const [text, setText] = useState(initialText || "");
+  const [type, setType] = useState<"video" | "art">(initialType || "video");
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<{ name: string; url: string; fileType: string }[]>([]);
   const [creating, setCreating] = useState(false);
