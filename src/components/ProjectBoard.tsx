@@ -1565,6 +1565,10 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     setIsDialogOpen(true);
   };
 
+  const handleQuickEdit = (brief: ProjectBrief) => {
+    setQuickEditBrief(brief);
+    setIsQuickCreateOpen(true);
+  };
 
   const handleCreateProjectFromBrief = (brief: ProjectBrief) => {
     if (brief.brandKitId) {
