@@ -282,6 +282,18 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     return { success: true };
   };
 
+  const sendAllBatchesForTeam = async (
+    batchIds: string[],
+    subject: string,
+    mediaType: "image" | "video"
+  ): Promise<{ success: boolean; error?: string }> => {
+    for (const batchId of batchIds) {
+      const result = await sendBatchEmail(batchId, subject, mediaType);
+      if (!result.success) return result;
+    }
+    return { success: true };
+  };
+
   const handleSendAllTeams = async () => {
     if (!sendSubject.trim()) {
       toast({ title: "Digite o título do e-mail", variant: "destructive" });
@@ -296,13 +308,13 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
 
     for (let i = 0; i < updatedList.length; i++) {
       if (cancelRef.current) break;
-      if (updatedList[i].status === "sent") continue; // skip already sent
+      if (updatedList[i].status === "sent") continue;
 
       updatedList[i] = { ...updatedList[i], status: "sending" };
       setTeamSendList([...updatedList]);
 
-      const result = await sendBatchEmail(
-        updatedList[i].batchId,
+      const result = await sendAllBatchesForTeam(
+        updatedList[i].batchIds,
         sendSubject.trim(),
         mediaType as "image" | "video"
       );
