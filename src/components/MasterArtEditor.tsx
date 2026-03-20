@@ -1455,9 +1455,14 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     const x = (e.clientX - rect.left) / SCALE;
     const y = (e.clientY - rect.top) / SCALE;
 
-    const clickedElement = [...elements].reverse().find((el) => {
-      return x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height;
+    const dblHitPadding = 8;
+    const dblHits = [...elements].reverse().filter((el) => {
+      return x >= el.x - dblHitPadding && x <= el.x + el.width + dblHitPadding &&
+             y >= el.y - dblHitPadding && y <= el.y + el.height + dblHitPadding;
     });
+    const clickedElement = dblHits.length > 1
+      ? dblHits.reduce((best, el) => (el.width * el.height < best.width * best.height ? el : best), dblHits[0])
+      : dblHits[0] || null;
 
     if (!clickedElement) return;
 
