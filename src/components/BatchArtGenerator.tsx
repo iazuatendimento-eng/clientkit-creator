@@ -1384,12 +1384,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
         const rawFrameX = frameOv?.x ?? el.x;
         const rawFrameY = frameOv?.y ?? el.y;
-        const frameX = Number.isFinite(rawFrameX)
-          ? Math.max(0, Math.min(rawFrameX, template.width - frameW))
-          : Math.max(0, Math.min(el.x, template.width - frameW));
-        const frameY = Number.isFinite(rawFrameY)
-          ? Math.max(0, Math.min(rawFrameY, template.height - frameH))
-          : Math.max(0, Math.min(el.y, template.height - frameH));
+        const frameX = Number.isFinite(rawFrameX) ? rawFrameX : el.x;
+        const frameY = Number.isFinite(rawFrameY) ? rawFrameY : el.y;
 
         const directTemplatePhoto = typeof (el as any).imageUrl === "string" ? (el as any).imageUrl : null;
 
