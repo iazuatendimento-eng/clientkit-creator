@@ -55,7 +55,7 @@ type TeamSendStatus = "pending" | "sending" | "sent" | "error";
 
 interface TeamSendInfo {
   teamName: string;
-  batchId: string;
+  batchIds: string[]; // ALL batches for this team
   status: TeamSendStatus;
   errorMsg?: string;
   itemCount: number;
