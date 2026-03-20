@@ -1007,13 +1007,14 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     // Draw elements
     let missingPhotoSource = false;
     const hiddenEls = art.elementOverrides?.hiddenElements || [];
-    const isLastCarouselPage = art.totalPages && art.totalPages > 1 && art.pageIndex === art.totalPages - 1;
+    const isCarousel = art.totalPages && art.totalPages > 1;
+    const isLastCarouselPage = isCarousel && art.pageIndex === art.totalPages! - 1;
     for (const el of template.elements) {
       // Skip hidden elements
       const elKey = el.id || el.type;
       if (hiddenEls.includes(elKey)) { continue; }
-      // Skip chevron (carousel arrow) on the last page
-      if (el.type === "chevron" && isLastCarouselPage) { continue; }
+      // Skip chevron: hide on non-carousel (single page) AND on the last carousel page
+      if (el.type === "chevron" && (!isCarousel || isLastCarouselPage)) { continue; }
       ctx.save();
       try {
         applyElementStyles(el);
