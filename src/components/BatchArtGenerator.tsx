@@ -840,6 +840,45 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     []
   );
 
+  // Helper: draw image with multi-step upscaling to reduce pixelation of small images
+  const drawSmoothedImage = (
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement,
+    dx: number, dy: number, dw: number, dh: number
+  ) => {
+    const natW = img.naturalWidth || img.width;
+    const natH = img.naturalHeight || img.height;
+    const scaleRatio = Math.max(dw / natW, dh / natH);
+
+    // If image needs to be upscaled more than 2x, use intermediate canvas steps
+    if (scaleRatio > 2) {
+      const steps = Math.ceil(Math.log2(scaleRatio));
+      let srcCanvas: HTMLCanvasElement | HTMLImageElement = img;
+      let curW = natW;
+      let curH = natH;
+
+      for (let s = 0; s < steps; s++) {
+        const nextW = s === steps - 1 ? Math.round(dw) : Math.round(curW * 2);
+        const nextH = s === steps - 1 ? Math.round(dh) : Math.round(curH * 2);
+        const tmp = document.createElement("canvas");
+        tmp.width = nextW;
+        tmp.height = nextH;
+        const tmpCtx = tmp.getContext("2d")!;
+        tmpCtx.imageSmoothingEnabled = true;
+        tmpCtx.imageSmoothingQuality = "high";
+        tmpCtx.drawImage(srcCanvas, 0, 0, curW, curH, 0, 0, nextW, nextH);
+        srcCanvas = tmp;
+        curW = nextW;
+        curH = nextH;
+      }
+      ctx.drawImage(srcCanvas, 0, 0, curW, curH, dx, dy, dw, dh);
+    } else {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+  };
+
   const generateArtForClient = async (
     art: ClientArt,
     options?: { allowAutoPhotoResolve?: boolean; allowPhotoSearch?: boolean }
@@ -1589,7 +1628,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const logoScaleYMult = (art.elementOverrides?.logoScaleY || art.elementOverrides?.logoScale || 100) / 100;
             const newWidth = el.width * logoScaleXMult;
             const newHeight = el.height * logoScaleYMult;
-            ctx.drawImage(img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
+            drawSmoothedImage(ctx, img, el.x + logoOffsetX, el.y + logoOffsetY, newWidth, newHeight);
           }
         }
       } else if (el.type === "contact") {
@@ -1601,14 +1640,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           if (img) {
             const contactOffsetX = art.elementOverrides?.contactX || 0;
             const contactOffsetY = art.elementOverrides?.contactY || 0;
-            // Use separate X/Y scaling if available
             const contactScaleXMult = (art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100) / 100;
             const contactScaleYMult = (art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100) / 100;
             const newWidth = el.width * contactScaleXMult;
             const newHeight = el.height * contactScaleYMult;
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = "high";
-            ctx.drawImage(img, el.x + contactOffsetX, el.y + contactOffsetY, newWidth, newHeight);
+            // Use step-up scaling for small images to reduce pixelation
+            drawSmoothedImage(ctx, img, el.x + contactOffsetX, el.y + contactOffsetY, newWidth, newHeight);
           }
         }
       } else if (el.type === "mascot") {
@@ -1624,7 +1661,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const mascotScaleYMult = (art.elementOverrides?.mascotScaleY || 100) / 100;
             const newWidth = el.width * mascotScaleXMult;
             const newHeight = el.height * mascotScaleYMult;
-            ctx.drawImage(img, el.x + mascotOffsetX, el.y + mascotOffsetY, newWidth, newHeight);
+            drawSmoothedImage(ctx, img, el.x + mascotOffsetX, el.y + mascotOffsetY, newWidth, newHeight);
             console.log("[mascot] ✅ Drew mascot at", el.x + mascotOffsetX, el.y + mascotOffsetY, newWidth, newHeight);
           } else {
             console.warn("[mascot] ❌ Image failed to load");
