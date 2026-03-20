@@ -356,7 +356,7 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
     updatedList[index] = { ...updatedList[index], status: "sending" };
     setTeamSendList(updatedList);
 
-    const result = await sendBatchEmail(team.batchId, sendSubject.trim(), mediaType as "image" | "video");
+    const result = await sendAllBatchesForTeam(team.batchIds, sendSubject.trim(), mediaType as "image" | "video");
 
     if (result.success) {
       updatedList[index] = { ...updatedList[index], status: "sent" };
