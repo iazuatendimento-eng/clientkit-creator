@@ -852,6 +852,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     canvas.width = template.width;
     canvas.height = template.height;
     const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     // Color mapping from brand kit:
     // colors[0] = background color
