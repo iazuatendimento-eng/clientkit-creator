@@ -1250,10 +1250,16 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     const y = (e.clientY - rect.top) / SCALE;
 
     if (selectedTool === "move") {
-      // Find clicked element
-      const clickedElement = [...elements].reverse().find((el) => {
-        return x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height;
+      // Find clicked element — prefer smaller elements (shapes on top of backgrounds)
+      const hitPadding = 8; // extra pixels tolerance for small elements
+      const hits = [...elements].reverse().filter((el) => {
+        return x >= el.x - hitPadding && x <= el.x + el.width + hitPadding &&
+               y >= el.y - hitPadding && y <= el.y + el.height + hitPadding;
       });
+      // Prefer the smallest-area element among hits (so small arrows/shapes aren't hidden behind large rects)
+      const clickedElement = hits.length > 1
+        ? hits.reduce((best, el) => (el.width * el.height < best.width * best.height ? el : best), hits[0])
+        : hits[0] || null;
       setSelectedElement(clickedElement?.id || null);
 
       // Single click only selects; double-click opens edit/file picker
