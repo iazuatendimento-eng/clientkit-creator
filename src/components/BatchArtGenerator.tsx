@@ -51,7 +51,7 @@ import { ArtCardWithOverlay } from "./ArtCardWithOverlay";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "chevron";
   x: number;
   y: number;
   width: number;
@@ -1007,10 +1007,13 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     // Draw elements
     let missingPhotoSource = false;
     const hiddenEls = art.elementOverrides?.hiddenElements || [];
+    const isLastCarouselPage = art.totalPages && art.totalPages > 1 && art.pageIndex === art.totalPages - 1;
     for (const el of template.elements) {
       // Skip hidden elements
       const elKey = el.id || el.type;
       if (hiddenEls.includes(elKey)) { continue; }
+      // Skip chevron (carousel arrow) on the last page
+      if (el.type === "chevron" && isLastCarouselPage) { continue; }
       ctx.save();
       try {
         applyElementStyles(el);

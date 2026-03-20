@@ -48,6 +48,7 @@ import {
   Moon,
   MessageCircle,
   Palette,
+  ChevronRight,
 } from "lucide-react";
 import { searchUnsplashImages, UnsplashImage } from "@/lib/unsplash";
 import { useToast } from "@/hooks/use-toast";
@@ -57,7 +58,7 @@ import { ImageEraserModal } from "./ImageEraserModal";
 
 interface CanvasElement {
   id: string;
-  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent";
+  type: "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent" | "chevron";
   x: number;
   y: number;
   width: number;
@@ -225,6 +226,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
       lightning: "Raio",
       shield: "Escudo",
       crescent: "Lua",
+      chevron: "Seta Carrossel",
     };
     return el.name || typeNames[el.type] || el.type;
   };
@@ -463,6 +465,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     { id: "lightning", icon: Zap, label: "Raio" },
     { id: "shield", icon: Shield, label: "Escudo" },
     { id: "crescent", icon: Moon, label: "Lua" },
+    { id: "chevron", icon: ChevronRight, label: "Seta" },
     { id: "text", icon: Type, label: "Texto" },
     { id: "image", icon: ImageIcon, label: "Imagem" },
   ];
@@ -2038,7 +2041,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
                 )}
 
                 {/* Color Role for shapes */}
-                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "triangle", "diamond", "hexagon", "pentagon", "star", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "chevron", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
                   <div>
                     <Label className="text-xs">Papel da Cor (Kit de Marca)</Label>
                     <Select
@@ -2060,7 +2063,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
                 )}
 
                 {/* Color picker */}
-                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
+                {(["rect", "circle", "text", "triangle", "diamond", "hexagon", "pentagon", "star", "line", "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid", "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud", "speechBubble", "lightning", "shield", "crescent", "chevron", "polka-dots", "dots-grid"].includes(selectedEl.type)) && (
                   <div>
                     <Label className="text-xs">Cor {selectedEl.colorRole ? "(preview)" : ""}</Label>
                     <div className="flex gap-2">
