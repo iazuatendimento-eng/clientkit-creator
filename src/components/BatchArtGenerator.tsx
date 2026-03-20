@@ -1706,7 +1706,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const natW = img.naturalWidth || img.width;
             const natH = img.naturalHeight || img.height;
             const bounds = getOpaqueBounds(img);
-            const trimInfluence = 0.22;
+            // Strong trim for logos to normalize files with different transparent paddings
+            const trimInfluence = 1;
             const baseSx = bounds.sx * trimInfluence;
             const baseSy = bounds.sy * trimInfluence;
             const baseSw = natW - (natW - bounds.sw) * trimInfluence;
@@ -1722,6 +1723,10 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               // Image taller than box: fit by height, center horizontally
               drawW = boxH * srcAspect;
             }
+            // Keep a small internal margin for consistent visual weight across logos
+            const logoFitScale = 0.9;
+            drawW *= logoFitScale;
+            drawH *= logoFitScale;
             const drawX = boxX + (boxW - drawW) / 2;
             const drawY = boxY + (boxH - drawH) / 2;
             ctx.drawImage(img, baseSx, baseSy, baseSw, baseSh, drawX, drawY, drawW, drawH);
