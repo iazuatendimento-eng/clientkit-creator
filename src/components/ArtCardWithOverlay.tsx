@@ -45,6 +45,7 @@ interface ElementOverrides {
   bgOffsetX?: number;
   bgOffsetY?: number;
   bgScale?: number;
+  hiddenElements?: string[];
 }
 
 interface ClientArt {
@@ -144,6 +145,7 @@ export function ArtCardWithOverlay({
   const [bgOffsetX, _setBgOffsetX] = useState(art.elementOverrides?.bgOffsetX || 0);
   const [bgOffsetY, _setBgOffsetY] = useState(art.elementOverrides?.bgOffsetY || 0);
   const [bgScale, _setBgScale] = useState(art.elementOverrides?.bgScale || 100);
+  const [hiddenElements, _setHiddenElements] = useState<string[]>(art.elementOverrides?.hiddenElements || []);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,6 +161,7 @@ export function ArtCardWithOverlay({
     mascotX, mascotY, mascotScaleX, mascotScaleY,
     shapeOverrides,
     bgOffsetX, bgOffsetY, bgScale,
+    hiddenElements,
   });
 
   // Wrapped setters that update both React state AND the ref synchronously
@@ -185,6 +188,7 @@ export function ArtCardWithOverlay({
   const setBgOffsetX = useCallback((v: number) => { latestRef.current.bgOffsetX = v; _setBgOffsetX(v); }, []);
   const setBgOffsetY = useCallback((v: number) => { latestRef.current.bgOffsetY = v; _setBgOffsetY(v); }, []);
   const setBgScale = useCallback((v: number) => { latestRef.current.bgScale = v; _setBgScale(v); }, []);
+  const setHiddenElements = useCallback((v: string[]) => { latestRef.current.hiddenElements = v; _setHiddenElements(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
@@ -215,6 +219,7 @@ export function ArtCardWithOverlay({
       setBgOffsetX(art.elementOverrides?.bgOffsetX || 0);
       setBgOffsetY(art.elementOverrides?.bgOffsetY || 0);
       setBgScale(art.elementOverrides?.bgScale || 100);
+      setHiddenElements(art.elementOverrides?.hiddenElements || []);
     }
   }, [art]);
 
@@ -270,6 +275,7 @@ export function ArtCardWithOverlay({
       bgOffsetX: v.bgOffsetX,
       bgOffsetY: v.bgOffsetY,
       bgScale: v.bgScale,
+      hiddenElements: v.hiddenElements.length > 0 ? v.hiddenElements : undefined,
     };
 
     const updatedArt: ClientArt = {
@@ -384,6 +390,8 @@ export function ArtCardWithOverlay({
               setBgOffsetY={setBgOffsetY}
               setBgScale={setBgScale}
               hasBackgroundImage={hasAdjustableBackground}
+              hiddenElements={hiddenElements}
+              setHiddenElements={setHiddenElements}
               onDragEnd={handleDragEnd}
             />
           </div>

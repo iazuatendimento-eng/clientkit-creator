@@ -96,6 +96,8 @@ export function ArtAdjustOverlay({
   setBgOffsetY,
   setBgScale,
   hasBackgroundImage,
+  hiddenElements,
+  setHiddenElements,
 }: {
   template: MasterTemplateLike;
   previewUrl: string | null;
@@ -155,6 +157,8 @@ export function ArtAdjustOverlay({
   setBgOffsetY?: (v: number) => void;
   setBgScale?: (v: number) => void;
   hasBackgroundImage?: boolean;
+  hiddenElements?: string[];
+  setHiddenElements?: (v: string[]) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part | null>(null);
@@ -742,6 +746,37 @@ export function ArtAdjustOverlay({
     pointerTarget.addEventListener("lostpointercapture", onCancel);
   };
 
+  const getElementKey = (part: Part): string => {
+    if (isShapePart(part)) return shapeIdFromPart(part);
+    if (part === "photo") {
+      const el = els.photoFrame;
+      return el?.id || "image";
+    }
+    if (part === "logo") return els.logoEl?.id || "logo";
+    if (part === "contact") return els.contactEl?.id || "contact";
+    if (part === "text") return els.textEl?.id || "text";
+    if (part === "mascot") return els.mascotEl?.id || "mascot";
+    if (part === "bg") return "bg";
+    return part;
+  };
+
+  const isElementHidden = (part: Part) => {
+    const key = getElementKey(part);
+    return (hiddenElements || []).includes(key);
+  };
+
+  const toggleElementHidden = (part: Part) => {
+    if (!setHiddenElements) return;
+    const key = getElementKey(part);
+    const current = hiddenElements || [];
+    const next = current.includes(key)
+      ? current.filter((k) => k !== key)
+      : [...current, key];
+    setHiddenElements(next);
+    // Trigger regeneration
+    setTimeout(() => onDragEndRef.current?.(), 50);
+  };
+
   const Box = ({
     part,
     label,
@@ -761,6 +796,7 @@ export function ArtAdjustOverlay({
     const height = Math.max(1, (rect.h / template.height) * 100);
 
     const isActive = active === part;
+    const hidden = isElementHidden(part);
 
     const HandleDot = ({ h }: { h: Handle }) => {
       // Position handles centered on the border edges/corners
@@ -823,21 +859,46 @@ export function ArtAdjustOverlay({
       <div
         className={cn(
           "absolute touch-none cursor-move",
-          zClass
+          zClass,
+          hidden && "opacity-30"
         )}
         style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
         onPointerDown={(e) => {
           setActive(part);
-          begin(e, part, "move");
+          if (!hidden) begin(e, part, "move");
         }}
       >
         {/* Border lines - Canva style solid */}
         <div className={cn(
           "absolute inset-0 border-[1.5px]",
-          isActive ? "border-primary" : "border-primary/40 hover:border-primary/70"
+          hidden
+            ? "border-destructive/60 border-dashed"
+            : isActive ? "border-primary" : "border-primary/40 hover:border-primary/70"
         )} />
 
-        {isActive && resizable && (
+        {/* Hide/Show toggle button - shown when active */}
+        {isActive && setHiddenElements && (
+          <button
+            className={cn(
+              "absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[10px] font-semibold shadow-md z-50 whitespace-nowrap",
+              hidden
+                ? "bg-primary text-primary-foreground"
+                : "bg-destructive text-destructive-foreground"
+            )}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleElementHidden(part);
+            }}
+          >
+            {hidden ? "👁 Mostrar" : "🚫 Ocultar"}
+          </button>
+        )}
+
+        {isActive && !hidden && resizable && (
           <>
             <HandleDot h="nw" />
             <HandleDot h="ne" />

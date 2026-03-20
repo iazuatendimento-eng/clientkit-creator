@@ -123,6 +123,7 @@ interface ElementOverrides {
   bgOffsetX?: number;
   bgOffsetY?: number;
   bgScale?: number;
+  hiddenElements?: string[]; // Element types/ids hidden per-card
 }
 
 interface ClientArt {
@@ -1003,7 +1004,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     // Draw elements
     let missingPhotoSource = false;
+    const hiddenEls = art.elementOverrides?.hiddenElements || [];
     for (const el of template.elements) {
+      // Skip hidden elements
+      const elKey = el.id || el.type;
+      if (hiddenEls.includes(elKey)) { continue; }
       ctx.save();
       try {
         applyElementStyles(el);
