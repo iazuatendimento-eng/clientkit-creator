@@ -1661,7 +1661,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             const mascotScaleYMult = (art.elementOverrides?.mascotScaleY || 100) / 100;
             const newWidth = el.width * mascotScaleXMult;
             const newHeight = el.height * mascotScaleYMult;
-            ctx.drawImage(img, el.x + mascotOffsetX, el.y + mascotOffsetY, newWidth, newHeight);
+            drawSmoothedImage(ctx, img, el.x + mascotOffsetX, el.y + mascotOffsetY, newWidth, newHeight);
             console.log("[mascot] ✅ Drew mascot at", el.x + mascotOffsetX, el.y + mascotOffsetY, newWidth, newHeight);
           } else {
             console.warn("[mascot] ❌ Image failed to load");
