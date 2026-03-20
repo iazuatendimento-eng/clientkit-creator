@@ -76,9 +76,17 @@ interface ElementOverrides {
   contactY?: number;
   contactScaleX?: number;
   contactScaleY?: number;
+  mascotX?: number;
+  mascotY?: number;
+  mascotScaleX?: number;
+  mascotScaleY?: number;
   photoScale?: number;
   photoFrame?: ShapeOverride;
   shapes?: Record<string, ShapeOverride>;
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgScale?: number;
+  hiddenElements?: string[];
 }
 
 interface ArtGeneratorModalProps {
@@ -860,10 +868,76 @@ export function ArtGeneratorModal({
 
   const handleDragEnd = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      regenerateCurrentPage();
+    debounceTimerRef.current = setTimeout(async () => {
+      // Propagate layout overrides (except text) to all carousel sibling pages
+      if (isCarousel && pages.length > 1) {
+        const currentOvNow = pageOverrides[currentPage] || {};
+        const layoutKeys: (keyof ElementOverrides)[] = [
+          "logoX", "logoY", "logoScaleX", "logoScaleY",
+          "contactX", "contactY", "contactScaleX", "contactScaleY",
+          "mascotX", "mascotY", "mascotScaleX", "mascotScaleY",
+          "shapes", "bgOffsetX", "bgOffsetY", "bgScale", "hiddenElements",
+          "photoScale", "photoFrame",
+        ];
+        setPageOverrides(prev => {
+          const copy = [...prev];
+          for (let i = 0; i < pages.length; i++) {
+            if (i === currentPage) continue;
+            const existing = copy[i] || {};
+            const merged = { ...existing };
+            for (const key of layoutKeys) {
+              if (currentOvNow[key] !== undefined) {
+                (merged as any)[key] = currentOvNow[key];
+              }
+            }
+            copy[i] = merged;
+          }
+          return copy;
+        });
+      }
+
+      // Regenerate current page
+      await regenerateCurrentPage();
+
+      // Regenerate sibling pages with updated overrides
+      if (isCarousel && pages.length > 1) {
+        const tmpl = templateRef.current;
+        if (!tmpl) return;
+        for (let i = 0; i < pages.length; i++) {
+          if (i === currentPage) continue;
+          try {
+            const ov = pageOverrides[i] || {};
+            // Apply current layout to sibling
+            const currentOvNow = pageOverrides[currentPage] || {};
+            const layoutKeys: (keyof ElementOverrides)[] = [
+              "logoX", "logoY", "logoScaleX", "logoScaleY",
+              "contactX", "contactY", "contactScaleX", "contactScaleY",
+              "mascotX", "mascotY", "mascotScaleX", "mascotScaleY",
+              "shapes", "bgOffsetX", "bgOffsetY", "bgScale", "hiddenElements",
+              "photoScale", "photoFrame",
+            ];
+            const mergedOv = { ...ov };
+            for (const key of layoutKeys) {
+              if (currentOvNow[key] !== undefined) {
+                (mergedOv as any)[key] = currentOvNow[key];
+              }
+            }
+            const offset = pagePhotoOffsets[i] || { x: 0, y: 0 };
+            const photo = pagePhotos[i] || null;
+            const text = pages[i] || "";
+            const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, mergedOv);
+            setPageArts(prev => {
+              const copy = [...prev];
+              copy[i] = dataUrl;
+              return copy;
+            });
+          } catch (err) {
+            console.error("Regenerate sibling error:", err);
+          }
+        }
+      }
     }, 80);
-  }, [regenerateCurrentPage]);
+  }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, brandKit]);
 
   const generateArt = useCallback(async () => {
     setStatus("loading");
