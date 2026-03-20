@@ -1601,14 +1601,12 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           if (img) {
             const contactOffsetX = art.elementOverrides?.contactX || 0;
             const contactOffsetY = art.elementOverrides?.contactY || 0;
-            // Use separate X/Y scaling if available
             const contactScaleXMult = (art.elementOverrides?.contactScaleX || art.elementOverrides?.contactScale || 100) / 100;
             const contactScaleYMult = (art.elementOverrides?.contactScaleY || art.elementOverrides?.contactScale || 100) / 100;
             const newWidth = el.width * contactScaleXMult;
             const newHeight = el.height * contactScaleYMult;
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = "high";
-            ctx.drawImage(img, el.x + contactOffsetX, el.y + contactOffsetY, newWidth, newHeight);
+            // Use step-up scaling for small images to reduce pixelation
+            drawSmoothedImage(ctx, img, el.x + contactOffsetX, el.y + contactOffsetY, newWidth, newHeight);
           }
         }
       } else if (el.type === "mascot") {
