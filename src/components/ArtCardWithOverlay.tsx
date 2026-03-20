@@ -119,6 +119,7 @@ export function ArtCardWithOverlay({
   onDropImage,
   onMoveToEnd,
   onDelete,
+  onApplyToCarousel,
   isRemovingBg,
   removeBgProgress,
 }: ArtCardWithOverlayProps) {
