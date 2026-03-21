@@ -132,6 +132,7 @@ const Index = () => {
   const [completionTeam, setCompletionTeam] = useState<string | undefined>();
   const [completionType, setCompletionType] = useState<"art" | "video" | "">("");
   const [completionTemplateId, setCompletionTemplateId] = useState("");
+  const [isCompletionLoading, setIsCompletionLoading] = useState(false);
   const [artTemplates, setArtTemplates] = useState<{ id: string; name: string }[]>([]);
   const [videoTemplates, setVideoTemplates] = useState<{ id: string; name: string }[]>([]);
   const { toast } = useToast();
