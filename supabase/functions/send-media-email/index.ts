@@ -1,42 +1,202 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { encode as encodeBase64 } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+type AttachmentMeta = {
+  filename: string;
+  path: string;
+  estimatedBytes: number;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const sanitizeHttpUrl = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
+
+const inferExtensionFromUrl = (url: string, fallback: string): string => {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    const match = pathname.match(/\.([a-z0-9]+)$/);
+    if (match?.[1]) return match[1];
+  } catch {
+    const normalized = url.toLowerCase().split("?")[0].split("#")[0];
+    const match = normalized.match(/\.([a-z0-9]+)$/);
+    if (match?.[1]) return match[1];
+  }
+  return fallback;
+};
+
+const parseHeaderSize = (raw: string | null): number | null => {
+  if (!raw) return null;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const estimateFileSize = async (url: string): Promise<number | null> => {
+  try {
+    const headRes = await fetch(url, { method: "HEAD" });
+    const headSize = parseHeaderSize(headRes.headers.get("content-length"));
+    if (headSize) return headSize;
+  } catch {
+    // Ignore and continue with ranged GET fallback.
+  }
+
+  try {
+    const rangeRes = await fetch(url, {
+      method: "GET",
+      headers: { Range: "bytes=0-0" },
+    });
+
+    const contentRange = rangeRes.headers.get("content-range");
+    if (contentRange) {
+      const total = contentRange.split("/").pop() || "";
+      const parsed = parseInt(total, 10);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+
+    const rangeSize = parseHeaderSize(rangeRes.headers.get("content-length"));
+    if (rangeSize) return rangeSize;
+  } catch {
+    // Fall through to default estimates.
+  }
+
+  return null;
+};
+
+const estimateBytesFromFilename = (filename: string, isVideo: boolean): number => {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  if (!ext) return isVideo ? 8 * 1024 * 1024 : 2 * 1024 * 1024;
+
+  const fallbackByExt: Record<string, number> = {
+    mp4: 10 * 1024 * 1024,
+    mov: 12 * 1024 * 1024,
+    webm: 8 * 1024 * 1024,
+    png: 2 * 1024 * 1024,
+    jpg: 1 * 1024 * 1024,
+    jpeg: 1 * 1024 * 1024,
+    gif: 3 * 1024 * 1024,
+    webp: 1 * 1024 * 1024,
+  };
+
+  return fallbackByExt[ext] ?? (isVideo ? 8 * 1024 * 1024 : 2 * 1024 * 1024);
+};
+
+const splitAttachmentsIntoChunks = (
+  attachments: AttachmentMeta[],
+  options: { maxBytesPerEmail: number; maxAttachmentsPerEmail: number },
+): AttachmentMeta[][] => {
+  const chunks: AttachmentMeta[][] = [];
+  let current: AttachmentMeta[] = [];
+  let currentBytes = 0;
+
+  for (const attachment of attachments) {
+    const willExceedBytes = current.length > 0 && currentBytes + attachment.estimatedBytes > options.maxBytesPerEmail;
+    const willExceedCount = current.length > 0 && current.length >= options.maxAttachmentsPerEmail;
+
+    if (willExceedBytes || willExceedCount) {
+      chunks.push(current);
+      current = [];
+      currentBytes = 0;
+    }
+
+    current.push(attachment);
+    currentBytes += attachment.estimatedBytes;
+  }
+
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
+};
+
+const readJsonSafe = async (res: Response): Promise<unknown> => {
+  try {
+    return await res.json();
+  } catch {
+    const text = await res.text();
+    return text;
+  }
+};
+
+const sendEmailPartWithRetry = async (
+  apiKey: string,
+  email: string,
+  subject: string,
+  text: string,
+  html: string,
+  attachments: Array<{ filename: string; path: string }>,
+): Promise<{ success: boolean; status: number; payload: unknown }> => {
+  let lastStatus = 0;
+  let lastPayload: unknown = null;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "iazu <noreply@contato.iazu.com.br>",
+        to: [email],
+        subject,
+        text,
+        html,
+        attachments,
+      }),
+    });
+
+    const payload = await readJsonSafe(res);
+    lastStatus = res.status;
+    lastPayload = payload;
+
+    if (res.status === 429 && attempt < 2) {
+      const retryAfter = parseInt(res.headers.get("retry-after") || "2", 10);
+      const waitSec = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 2;
+      await new Promise((r) => setTimeout(r, waitSec * 1000));
+      continue;
+    }
+
+    if (res.ok) {
+      return { success: true, status: res.status, payload };
+    }
+
+    break;
+  }
+
+  return { success: false, status: lastStatus, payload: lastPayload };
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const escapeHtml = (value: string) =>
-    value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-
-  const sanitizeHttpUrl = (value: unknown): string | null => {
-    if (typeof value !== 'string') return null;
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-
-    try {
-      const parsed = new URL(trimmed);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-      return parsed.toString();
-    } catch {
-      return null;
-    }
-  };
-
   try {
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY não configurada');
+      throw new Error("RESEND_API_KEY não configurada");
     }
 
     const {
@@ -46,176 +206,184 @@ serve(async (req) => {
       mediaUrls,
       mediaType,
       clientName,
-      cardText,
       caption,
-      videoCoverUrl,
-      videoCoverUrls,
     } = await req.json();
 
     if (!emails || emails.length === 0) {
-      throw new Error('Nenhum e-mail fornecido');
+      throw new Error("Nenhum e-mail fornecido");
     }
     if (!mediaUrl && (!mediaUrls || mediaUrls.length === 0)) {
-      throw new Error('URL da mídia não fornecida');
+      throw new Error("URL da mídia não fornecida");
     }
 
-    const validEmails = emails.filter((e: string) => e && e.includes('@'));
+    const validEmails = emails.filter((e: string) => e && e.includes("@"));
     if (validEmails.length === 0) {
-      throw new Error('Nenhum e-mail válido encontrado');
+      throw new Error("Nenhum e-mail válido encontrado");
     }
 
-    const isVideo = mediaType === 'video';
-    const mediaLabel = isVideo ? 'Vídeo' : 'Arte';
-    const safeClientName = escapeHtml(clientName || 'Cliente');
+    const isVideo = mediaType === "video";
+    const mediaLabel = isVideo ? "Vídeo" : "Arte";
 
-    const validVideoCoverUrls: string[] = (
-      Array.isArray(videoCoverUrls) && videoCoverUrls.length > 0
-        ? videoCoverUrls
-        : (videoCoverUrl ? [videoCoverUrl] : [])
-    )
-      .map((url: unknown) => sanitizeHttpUrl(url))
-      .filter((url): url is string => !!url);
-
-    // No styled text cards in email
-
-    // Build attachments - support multiple URLs for carousel
     const rawUrls: unknown[] = mediaUrls && mediaUrls.length > 0 ? mediaUrls : [mediaUrl];
     const allUrls: string[] = rawUrls
       .map((url) => sanitizeHttpUrl(url))
       .filter((url): url is string => !!url);
 
     if (allUrls.length === 0) {
-      throw new Error('Nenhuma URL de mídia válida encontrada');
+      throw new Error("Nenhuma URL de mídia válida encontrada");
     }
 
-    const baseName = (clientName || 'cliente').replace(/[^a-zA-Z0-9]/g, '_');
+    const baseName = (clientName || "cliente").replace(/[^a-zA-Z0-9]/g, "_");
+    const fallbackExtension = isVideo ? "mp4" : "png";
 
-    const inferExtensionFromUrl = (url: string, fallback: string): string => {
-      try {
-        const pathname = new URL(url).pathname.toLowerCase();
-        const match = pathname.match(/\.([a-z0-9]+)$/);
-        if (match?.[1]) return match[1];
-      } catch {
-        const normalized = url.toLowerCase().split('?')[0].split('#')[0];
-        const match = normalized.match(/\.([a-z0-9]+)$/);
-        if (match?.[1]) return match[1];
-      }
-      return fallback;
-    };
-
-    const inferContentType = (filename: string, fallback: string): string => {
-      const ext = filename.split('.').pop()?.toLowerCase();
-      switch (ext) {
-        case 'mp4': return 'video/mp4';
-        case 'mov': return 'video/quicktime';
-        case 'webm': return 'video/webm';
-        case 'png': return 'image/png';
-        case 'jpg':
-        case 'jpeg': return 'image/jpeg';
-        case 'gif': return 'image/gif';
-        default: return fallback;
-      }
-    };
-
-    const fallbackExtension = isVideo ? 'mp4' : 'png';
-    const fallbackContentType = isVideo ? 'video/mp4' : 'image/png';
-    const attachmentEntries = allUrls.map((url: string, i: number) => {
+    const seededAttachments = allUrls.map((url: string, i: number) => {
       const ext = inferExtensionFromUrl(url, fallbackExtension);
       const filename = allUrls.length > 1 ? `${baseName}_p${i + 1}.${ext}` : `${baseName}.${ext}`;
       return { url, filename };
     });
 
-    const attachments: Array<{ filename: string; path: string }> = [];
+    const attachmentMeta: AttachmentMeta[] = await Promise.all(
+      seededAttachments.map(async (entry) => {
+        const detectedSize = await estimateFileSize(entry.url);
+        return {
+          filename: entry.filename,
+          path: entry.url,
+          estimatedBytes: detectedSize ?? estimateBytesFromFilename(entry.filename, isVideo),
+        };
+      }),
+    );
 
-    for (const entry of attachmentEntries) {
-      attachments.push({
-        filename: entry.filename,
-        path: entry.url,
-      });
+    // Trello/email gateways tend to drop larger emails. We split into small parts to keep attachments.
+    const maxBytesPerEmail = isVideo ? 18 * 1024 * 1024 : 8 * 1024 * 1024;
+    const maxAttachmentsPerEmail = isVideo ? 1 : 4;
+    const attachmentChunks = splitAttachmentsIntoChunks(attachmentMeta, {
+      maxBytesPerEmail,
+      maxAttachmentsPerEmail,
+    });
+
+    if (attachmentChunks.length === 0) {
+      throw new Error("Nenhum anexo válido para envio");
     }
 
-    console.log(`Preparando envio: ${attachments.length} anexo(s), ${validEmails.length} destinatário(s), assunto="${subject || `${mediaLabel} - ${clientName}`}"`);
+    const baseSubject = subject || `${mediaLabel} - ${clientName}`;
+    console.log(
+      `Preparando envio: ${attachmentMeta.length} anexo(s), ${attachmentChunks.length} parte(s), ${validEmails.length} destinatário(s), assunto="${baseSubject}"`,
+    );
 
-    const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
-    const tipoArquivo = isVideo ? 'MP4' : 'PNG';
+    const tipoMidia = isVideo ? "VÍDEO" : "ARTE";
+    const tipoArquivo = isVideo ? "MP4" : "PNG";
     const downloadInstruction = `SUA ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER A ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`;
 
     const bodyParts: string[] = [];
     if (caption) bodyParts.push(caption);
+    if (attachmentChunks.length > 1) {
+      bodyParts.push(`Os anexos foram divididos em ${attachmentChunks.length} e-mails para garantir a entrega completa.`);
+    }
     bodyParts.push(downloadInstruction);
 
-    const plainText = bodyParts.join('\n\n');
+    const plainText = bodyParts.join("\n\n");
+    const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${bodyParts.map((t) => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`).join("")}</div>`;
 
-    const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${bodyParts.map(t => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`).join('')}</div>`;
+    const results: Array<{
+      email: string;
+      success: boolean;
+      parts: Array<{ part: number; success: boolean; status: number; id?: string; error?: unknown }>;
+      error?: unknown;
+    }> = [];
 
-    const results = [];
     for (let ei = 0; ei < validEmails.length; ei++) {
       const email = validEmails[ei];
-      // Stagger requests: wait 300ms between each email to avoid rate limits
+
       if (ei > 0) {
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 300));
       }
+
       try {
-        let res: Response | null = null;
-        let data: any = null;
-        // Retry up to 3 times on rate limit (429)
-        for (let attempt = 0; attempt < 3; attempt++) {
-          res = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${RESEND_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: 'iazu <noreply@contato.iazu.com.br>',
-              to: [email],
-              subject: subject || `${mediaLabel} - ${clientName}`,
-              text: plainText,
-              attachments,
-            }),
-          });
+        let recipientSuccess = true;
+        const partResults: Array<{ part: number; success: boolean; status: number; id?: string; error?: unknown }> = [];
 
-          data = await res.json();
-          if (res.status === 429) {
-            const retryAfter = parseInt(res.headers.get('retry-after') || '2', 10);
-            console.warn(`Rate limited for ${email}, retrying in ${retryAfter}s (attempt ${attempt + 1})`);
-            await new Promise(r => setTimeout(r, retryAfter * 1000));
-            continue;
+        for (let pi = 0; pi < attachmentChunks.length; pi++) {
+          if (pi > 0) {
+            await new Promise((r) => setTimeout(r, 250));
           }
-          break;
+
+          const currentChunk = attachmentChunks[pi].map(({ filename, path }) => ({ filename, path }));
+          const partSubject =
+            attachmentChunks.length > 1
+              ? `${baseSubject} (Parte ${pi + 1}/${attachmentChunks.length})`
+              : baseSubject;
+
+          const sendResult = await sendEmailPartWithRetry(
+            RESEND_API_KEY,
+            email,
+            partSubject,
+            plainText,
+            htmlBody,
+            currentChunk,
+          );
+
+          if (!sendResult.success) {
+            recipientSuccess = false;
+            const errorDetail = typeof sendResult.payload === "object"
+              ? JSON.stringify(sendResult.payload)
+              : String(sendResult.payload);
+            console.error(`FALHA [${email}] parte=${pi + 1}/${attachmentChunks.length} status=${sendResult.status} body=${errorDetail}`);
+            partResults.push({
+              part: pi + 1,
+              success: false,
+              status: sendResult.status,
+              error: sendResult.payload,
+            });
+          } else {
+            const payloadObj = sendResult.payload as { id?: string } | null;
+            console.log(`OK [${email}] parte=${pi + 1}/${attachmentChunks.length} id=${payloadObj?.id}`);
+            partResults.push({
+              part: pi + 1,
+              success: true,
+              status: sendResult.status,
+              id: payloadObj?.id,
+            });
+          }
         }
 
-        if (!res || !res.ok) {
-          const errorDetail = typeof data === 'object' ? JSON.stringify(data) : String(data);
-          console.error(`FALHA [${email}] status=${res?.status} body=${errorDetail}`);
-          results.push({ email, success: false, error: data });
-        } else {
-          console.log(`OK [${email}] id=${data?.id}`);
-          results.push({ email, success: true, id: data.id });
-        }
+        results.push({
+          email,
+          success: recipientSuccess,
+          parts: partResults,
+          ...(recipientSuccess ? {} : { error: "Falha em uma ou mais partes" }),
+        });
       } catch (err) {
         console.error(`EXCEÇÃO [${email}]: ${String(err)}`);
-        results.push({ email, success: false, error: String(err) });
+        results.push({
+          email,
+          success: false,
+          parts: [],
+          error: String(err),
+        });
       }
     }
 
-    const allSuccess = results.every(r => r.success);
-    const successCount = results.filter(r => r.success).length;
+    const allSuccess = results.every((r) => r.success);
+    const successCount = results.filter((r) => r.success).length;
 
-    return new Response(JSON.stringify({
-      success: allSuccess,
-      message: `${successCount}/${validEmails.length} e-mail(s) enviado(s)`,
-      results,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: allSuccess,
+        message: `${successCount}/${validEmails.length} destinatário(s) com envio concluído em anexo`,
+        partCount: attachmentChunks.length,
+        results,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error: unknown) {
-    console.error('Error in send-media-email:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error("Error in send-media-email:", error);
+    const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
     return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
