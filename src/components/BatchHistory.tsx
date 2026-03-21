@@ -241,7 +241,15 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
       byClient.get(key)!.push(item);
     }
 
-    for (const [clientId, clientItems] of byClient) {
+    const entries = Array.from(byClient.entries());
+    for (let ci = 0; ci < entries.length; ci++) {
+      const [clientId, clientItems] = entries[ci];
+
+      // Rate-limit: wait 1.5s between each email send to avoid 429
+      if (ci > 0) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+
       // Get client emails from DB
       const { data: client } = await supabase
         .from("client_data")
@@ -267,18 +275,22 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
 
       if (mediaUrls.length === 0) continue;
 
-      const { error } = await supabase.functions.invoke("send-media-email", {
-        body: {
-          emails,
-          subject: `${subject} - ${client.company || client.name}`,
-          mediaUrls,
-          mediaType,
-          clientName: client.company || client.name,
-        },
-      });
+      try {
+        const { error } = await supabase.functions.invoke("send-media-email", {
+          body: {
+            emails,
+            subject: `${subject} - ${client.company || client.name}`,
+            mediaUrls,
+            mediaType,
+            clientName: client.company || client.name,
+          },
+        });
 
-      if (error) {
-        return { success: false, error: error.message };
+        if (error) {
+          return { success: false, error: error.message };
+        }
+      } catch (err: any) {
+        return { success: false, error: err?.message || "Erro ao enviar" };
       }
     }
 
