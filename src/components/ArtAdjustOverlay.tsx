@@ -847,9 +847,9 @@ export function ArtAdjustOverlay({
 
     const baseLayerClass = part === "bg"
       ? "z-[1]"
-      : part === "photo"
+      : isShapePart(part)
         ? "z-[2]"
-        : isShapePart(part)
+        : part === "photo"
           ? "z-10"
           : part === "logo"
             ? "z-20"
