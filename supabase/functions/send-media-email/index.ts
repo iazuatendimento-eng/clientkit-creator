@@ -253,9 +253,9 @@ serve(async (req) => {
       }),
     );
 
-    // Trello/email gateways tend to drop larger emails. We split into small parts to keep attachments.
-    const maxBytesPerEmail = isVideo ? 18 * 1024 * 1024 : 8 * 1024 * 1024;
-    const maxAttachmentsPerEmail = isVideo ? 1 : 4;
+    // Only split when truly huge. Resend supports up to 40MB. Most gateways accept ~25MB.
+    const maxBytesPerEmail = isVideo ? 20 * 1024 * 1024 : 25 * 1024 * 1024;
+    const maxAttachmentsPerEmail = isVideo ? 2 : 10;
     const attachmentChunks = splitAttachmentsIntoChunks(attachmentMeta, {
       maxBytesPerEmail,
       maxAttachmentsPerEmail,
