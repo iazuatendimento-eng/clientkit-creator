@@ -125,54 +125,15 @@ serve(async (req) => {
       return { url, filename };
     });
 
-    const MAX_BASE64_BYTES = 8 * 1024 * 1024; // 8MB — safe for base64 in edge function memory
-
-    const attachments: Array<{ filename: string; content?: string; content_type?: string; path?: string }> = [];
+    const attachments: Array<{ filename: string; path: string }> = [];
 
     for (const entry of attachmentEntries) {
-      const entryIsVideo = /\.(mp4|mov|webm|avi)$/i.test(entry.filename);
-
-      if (entryIsVideo) {
-        // Videos: always use Resend's path property (Resend downloads from URL server-side)
-        // This avoids loading the entire file into edge function memory
-        // First verify the URL is reachable with a HEAD request
-        try {
-          const headRes = await fetch(entry.url, { method: 'HEAD' });
-          if (!headRes.ok) {
-            console.error(`Video URL not reachable: ${entry.url} (${headRes.status})`);
-            throw new Error(`URL do vídeo inacessível: ${entry.filename} (${headRes.status})`);
-          }
-        } catch (err) {
-          if (err instanceof Error && err.message.startsWith('URL do vídeo')) throw err;
-          console.error(`Video URL HEAD check failed: ${entry.url}`, err);
-          // If HEAD fails but URL might still work, try anyway
-        }
-        attachments.push({
-          filename: entry.filename,
-          path: entry.url,
-        });
-      } else {
-        // Images: download and encode as base64 (small files)
-        const fileResponse = await fetch(entry.url);
-        if (!fileResponse.ok) {
-          throw new Error(`Falha ao baixar anexo ${entry.filename} (${fileResponse.status})`);
-        }
-
-        const bytes = new Uint8Array(await fileResponse.arrayBuffer());
-        if (bytes.length === 0) {
-          throw new Error(`Anexo vazio: ${entry.filename}`);
-        }
-        if (bytes.length > MAX_BASE64_BYTES) {
-          throw new Error(`Imagem muito grande: ${entry.filename}. Limite: 8MB.`);
-        }
-
-        const contentTypeHeader = fileResponse.headers.get('content-type')?.split(';')[0]?.trim();
-        attachments.push({
-          filename: entry.filename,
-          content: encodeBase64(bytes.buffer),
-          content_type: contentTypeHeader || inferContentType(entry.filename, fallbackContentType),
-        });
-      }
+      // Use Resend's path property for ALL files (images and videos)
+      // Resend downloads from the URL server-side, avoiding edge function memory limits
+      attachments.push({
+        filename: entry.filename,
+        path: entry.url,
+      });
     }
 
     const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
