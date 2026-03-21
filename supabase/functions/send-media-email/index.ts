@@ -186,13 +186,15 @@ serve(async (req) => {
         }
 
         if (!res || !res.ok) {
-          console.error(`Erro ao enviar para ${email}:`, data);
+          const errorDetail = typeof data === 'object' ? JSON.stringify(data) : String(data);
+          console.error(`FALHA [${email}] status=${res?.status} body=${errorDetail}`);
           results.push({ email, success: false, error: data });
         } else {
+          console.log(`OK [${email}] id=${data?.id}`);
           results.push({ email, success: true, id: data.id });
         }
       } catch (err) {
-        console.error(`Erro ao enviar para ${email}:`, err);
+        console.error(`EXCEÇÃO [${email}]: ${String(err)}`);
         results.push({ email, success: false, error: String(err) });
       }
     }
