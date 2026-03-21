@@ -132,6 +132,7 @@ const Index = () => {
   const [completionTeam, setCompletionTeam] = useState<string | undefined>();
   const [completionType, setCompletionType] = useState<"art" | "video" | "">("");
   const [completionTemplateId, setCompletionTemplateId] = useState("");
+  const [isCompletionLoading, setIsCompletionLoading] = useState(false);
   const [artTemplates, setArtTemplates] = useState<{ id: string; name: string }[]>([]);
   const [videoTemplates, setVideoTemplates] = useState<{ id: string; name: string }[]>([]);
   const { toast } = useToast();
@@ -472,6 +473,7 @@ const Index = () => {
   };
 
   const handleConfirmCompletion = async () => {
+    if (isCompletionLoading) return;
     if (!completionType) {
       toast({ title: "Selecione o tipo", description: "Informe se é Arte ou Vídeo.", variant: "destructive" });
       return;
@@ -484,15 +486,13 @@ const Index = () => {
     const templates = completionType === "art" ? artTemplates : videoTemplates;
     const selectedTemplate = templates.find(t => t.id === completionTemplateId);
 
+    setIsCompletionLoading(true);
     try {
       const filteredClients = (completionTeam 
         ? clients.filter(c => (c.team || "").toLowerCase() === completionTeam!.toLowerCase() && c.active)
         : clients.filter(c => c.active));
       
       const clientIds = filteredClients.map(c => c.id);
-      
-      console.log("[Completion] team:", completionTeam, "type:", completionType, "templateId:", completionTemplateId);
-      console.log("[Completion] filteredClients:", filteredClients.length, "clientIds:", clientIds.length);
       
       if (clientIds.length === 0) {
         toast({ title: "Nenhum cliente ativo", description: "Não há clientes ativos para mover.", variant: "destructive" });
@@ -505,8 +505,6 @@ const Index = () => {
         completion_template_name: selectedTemplate?.name || "",
       });
       
-      console.log("[Completion] result:", result);
-      
       window.dispatchEvent(new Event("bulkBriefsUpdated"));
       setIsCompletionDialogOpen(false);
       
@@ -517,6 +515,8 @@ const Index = () => {
     } catch (error) {
       console.error("Error moving cards:", error);
       toast({ title: "Erro ao mover cards", description: "Não foi possível mover os cards.", variant: "destructive" });
+    } finally {
+      setIsCompletionLoading(false);
     }
   };
 
@@ -1318,11 +1318,14 @@ const Index = () => {
             )}
             <Button
               onClick={handleConfirmCompletion}
-              disabled={!completionType || !completionTemplateId}
+              disabled={!completionType || !completionTemplateId || isCompletionLoading}
               className="w-full"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Confirmar
+              {isCompletionLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</>
+              ) : (
+                <><CheckCircle2 className="h-4 w-4 mr-2" /> Confirmar</>
+              )}
             </Button>
           </div>
         </DialogContent>
