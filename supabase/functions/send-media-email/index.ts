@@ -128,13 +128,13 @@ serve(async (req) => {
     const attachments: Array<{ filename: string; path: string }> = [];
 
     for (const entry of attachmentEntries) {
-      // Use Resend's path property for ALL files (images and videos)
-      // Resend downloads from the URL server-side, avoiding edge function memory limits
       attachments.push({
         filename: entry.filename,
         path: entry.url,
       });
     }
+
+    console.log(`Preparando envio: ${attachments.length} anexo(s), ${validEmails.length} destinatário(s), assunto="${subject || `${mediaLabel} - ${clientName}`}"`);
 
     const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
     const tipoArquivo = isVideo ? 'MP4' : 'PNG';
