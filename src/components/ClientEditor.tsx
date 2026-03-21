@@ -89,6 +89,9 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
   const [brandFont, setBrandFont] = useState<string>(
     client?.brand_kit?.font || ""
   );
+  const [brandBackgroundPng, setBrandBackgroundPng] = useState<string>(
+    client?.brand_kit?.backgroundPng || ""
+  );
 
   useEffect(() => {
     if (client?.brand_kit) {
@@ -99,6 +102,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
         client.brand_kit.mascot || "",
       ]);
       setBrandFont(client.brand_kit.font || "");
+      setBrandBackgroundPng(client.brand_kit.backgroundPng || "");
     }
   }, [client?.brand_kit]);
 
@@ -262,6 +266,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       logo: brandPngs[0] || undefined,
       contactInfo: brandPngs[1] || undefined,
       mascot: brandPngs[2] || undefined,
+      backgroundPng: brandBackgroundPng || undefined,
     };
 
     const clientData: Client = {
@@ -300,6 +305,21 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
           newPngs[index] = result;
           return newPngs;
         });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBackgroundPngUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Arquivo muito grande. Máximo 5MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setBrandBackgroundPng(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -611,6 +631,45 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Background PNG */}
+              <div className="space-y-2">
+                <Label>PNG de Fundo (opcional)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Imagem usada como fundo no lugar da cor de fundo para este cliente.
+                </p>
+                <div className="border border-dashed border-border rounded-lg p-3 text-center min-h-[100px] flex flex-col items-center justify-center gap-2">
+                  {brandBackgroundPng ? (
+                    <>
+                      <img
+                        src={brandBackgroundPng}
+                        alt="Fundo"
+                        className="max-h-24 object-contain rounded"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setBrandBackgroundPng("")}
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Remover
+                      </Button>
+                    </>
+                  ) : (
+                    <label className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                      <Upload className="h-6 w-6 mx-auto mb-1" />
+                      Carregar PNG de Fundo
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={handleBackgroundPngUpload}
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
 
