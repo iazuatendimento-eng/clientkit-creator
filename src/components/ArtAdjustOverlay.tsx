@@ -710,11 +710,9 @@ export function ArtAdjustOverlay({
           newY = startRect.y + (startRect.height - newH);
         }
 
-        // Clamp to canvas bounds (soft)
-        newX = clamp(newX, 0, template.width - minSize);
-        newY = clamp(newY, 0, template.height - minSize);
-        newW = clamp(newW, minSize, template.width);
-        newH = clamp(newH, minSize, template.height);
+        // No canvas-bound clamping — allow free positioning
+        newW = Math.max(minSize, newW);
+        newH = Math.max(minSize, newH);
 
         setShapeOverrides({ ...(shapeOverrides || {}), [id]: { x: newX, y: newY, width: newW, height: newH } });
         return;
