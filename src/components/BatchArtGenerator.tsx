@@ -690,6 +690,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             mascot: c.mascot || "",
             pngs: [c.logo || "", c.contact_info || "", c.mascot || ""],
             colors: c.colors || {},
+            backgroundPng: c.background_png || "",
           };
         });
 
@@ -1092,8 +1093,20 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       photoResolveCacheRef.current.set(artKey, { url: resolvedPhotoImage, ts: Date.now() });
     }
 
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, template.width, template.height);
+    // Draw background: use backgroundPng from brand kit if available, otherwise solid color
+    const brandBgPng = art.brandKit?.backgroundPng;
+    if (brandBgPng) {
+      const bgPngImg = await loadImage(brandBgPng);
+      if (bgPngImg) {
+        ctx.drawImage(bgPngImg, 0, 0, template.width, template.height);
+      } else {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, template.width, template.height);
+      }
+    } else {
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, template.width, template.height);
+    }
 
     // Draw background image if set — but only as full-canvas background when
     // no image placeholder exists, otherwise it will be drawn inside the frame.

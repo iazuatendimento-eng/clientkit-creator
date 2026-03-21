@@ -542,6 +542,7 @@ export type Database = {
       get_client_brand_kit_urls: {
         Args: { client_ids: string[] }
         Returns: {
+          background_png: string
           briefing: string
           colors: Json
           contact_info: string
