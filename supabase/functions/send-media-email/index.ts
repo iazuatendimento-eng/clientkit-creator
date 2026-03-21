@@ -139,6 +139,20 @@ const readJsonSafe = async (res: Response): Promise<unknown> => {
   }
 };
 
+const isLikelyAttachmentSizeError = (status: number, payload: unknown): boolean => {
+  if (status === 413 || status === 422) return true;
+  const text = typeof payload === "string" ? payload : JSON.stringify(payload ?? {});
+  const lowered = text.toLowerCase();
+  return (
+    lowered.includes("too large") ||
+    lowered.includes("payload") ||
+    lowered.includes("attachment") ||
+    lowered.includes("size") ||
+    lowered.includes("content-length") ||
+    lowered.includes("exceed")
+  );
+};
+
 const sendEmailPartWithRetry = async (
   apiKey: string,
   email: string,
@@ -186,6 +200,34 @@ const sendEmailPartWithRetry = async (
   }
 
   return { success: false, status: lastStatus, payload: lastPayload };
+};
+
+const sendChunkWithAutoSplit = async (
+  apiKey: string,
+  email: string,
+  subject: string,
+  text: string,
+  html: string,
+  attachments: Array<{ filename: string; path: string }>,
+): Promise<Array<{ success: boolean; status: number; payload: unknown; attachmentCount: number }>> => {
+  const attempt = await sendEmailPartWithRetry(apiKey, email, subject, text, html, attachments);
+
+  if (attempt.success) {
+    return [{ ...attempt, attachmentCount: attachments.length }];
+  }
+
+  if (attachments.length <= 1 || !isLikelyAttachmentSizeError(attempt.status, attempt.payload)) {
+    return [{ ...attempt, attachmentCount: attachments.length }];
+  }
+
+  const half = Math.ceil(attachments.length / 2);
+  const left = attachments.slice(0, half);
+  const right = attachments.slice(half);
+
+  const leftResults = await sendChunkWithAutoSplit(apiKey, email, subject, text, html, left);
+  const rightResults = await sendChunkWithAutoSplit(apiKey, email, subject, text, html, right);
+
+  return [...leftResults, ...rightResults];
 };
 
 serve(async (req) => {
@@ -302,47 +344,55 @@ serve(async (req) => {
         let recipientSuccess = true;
         const partResults: Array<{ part: number; success: boolean; status: number; id?: string; error?: unknown }> = [];
 
+        let partCounter = 0;
         for (let pi = 0; pi < attachmentChunks.length; pi++) {
           if (pi > 0) {
             await new Promise((r) => setTimeout(r, 250));
           }
 
           const currentChunk = attachmentChunks[pi].map(({ filename, path }) => ({ filename, path }));
-          const partSubject =
+          const chunkSubject =
             attachmentChunks.length > 1
               ? `${baseSubject} (Parte ${pi + 1}/${attachmentChunks.length})`
               : baseSubject;
 
-          const sendResult = await sendEmailPartWithRetry(
+          const adaptiveResults = await sendChunkWithAutoSplit(
             RESEND_API_KEY,
             email,
-            partSubject,
+            chunkSubject,
             plainText,
             htmlBody,
             currentChunk,
           );
 
-          if (!sendResult.success) {
-            recipientSuccess = false;
-            const errorDetail = typeof sendResult.payload === "object"
-              ? JSON.stringify(sendResult.payload)
-              : String(sendResult.payload);
-            console.error(`FALHA [${email}] parte=${pi + 1}/${attachmentChunks.length} status=${sendResult.status} body=${errorDetail}`);
-            partResults.push({
-              part: pi + 1,
-              success: false,
-              status: sendResult.status,
-              error: sendResult.payload,
-            });
-          } else {
-            const payloadObj = sendResult.payload as { id?: string } | null;
-            console.log(`OK [${email}] parte=${pi + 1}/${attachmentChunks.length} id=${payloadObj?.id}`);
-            partResults.push({
-              part: pi + 1,
-              success: true,
-              status: sendResult.status,
-              id: payloadObj?.id,
-            });
+          for (const sendResult of adaptiveResults) {
+            partCounter += 1;
+            if (!sendResult.success) {
+              recipientSuccess = false;
+              const errorDetail = typeof sendResult.payload === "object"
+                ? JSON.stringify(sendResult.payload)
+                : String(sendResult.payload);
+              console.error(
+                `FALHA [${email}] parte=${partCounter} status=${sendResult.status} anexos=${sendResult.attachmentCount} body=${errorDetail}`,
+              );
+              partResults.push({
+                part: partCounter,
+                success: false,
+                status: sendResult.status,
+                error: sendResult.payload,
+              });
+            } else {
+              const payloadObj = sendResult.payload as { id?: string } | null;
+              console.log(
+                `OK [${email}] parte=${partCounter} id=${payloadObj?.id} anexos=${sendResult.attachmentCount}`,
+              );
+              partResults.push({
+                part: partCounter,
+                success: true,
+                status: sendResult.status,
+                id: payloadObj?.id,
+              });
+            }
           }
         }
 
@@ -366,10 +416,15 @@ serve(async (req) => {
     const allSuccess = results.every((r) => r.success);
     const successCount = results.filter((r) => r.success).length;
 
+    const failedRecipients = results
+      .filter((r) => !r.success)
+      .map((r) => r.email);
+
     return new Response(
       JSON.stringify({
         success: allSuccess,
         message: `${successCount}/${validEmails.length} destinatário(s) com envio concluído em anexo`,
+        ...(allSuccess ? {} : { error: `Falha no envio para: ${failedRecipients.join(", ")}` }),
         partCount: attachmentChunks.length,
         results,
       }),
