@@ -281,11 +281,9 @@ export async function bulkUpdateBriefStatus(
 
   if (error) throw error;
 
-  // When completing, delete material uploads for those briefs
+  // When completing, delete material uploads for those briefs (in parallel)
   if (newStatus === "completed") {
-    for (const briefId of briefIdsToUpdate) {
-      await deleteCardUploadsByCardId(briefId);
-    }
+    await Promise.all(briefIdsToUpdate.map(briefId => deleteCardUploadsByCardId(briefId)));
   }
 
   return data || [];
