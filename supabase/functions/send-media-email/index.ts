@@ -128,13 +128,13 @@ serve(async (req) => {
     const attachments: Array<{ filename: string; path: string }> = [];
 
     for (const entry of attachmentEntries) {
-      // Use Resend's path property for ALL files (images and videos)
-      // Resend downloads from the URL server-side, avoiding edge function memory limits
       attachments.push({
         filename: entry.filename,
         path: entry.url,
       });
     }
+
+    console.log(`Preparando envio: ${attachments.length} anexo(s), ${validEmails.length} destinatário(s), assunto="${subject || `${mediaLabel} - ${clientName}`}"`);
 
     const tipoMidia = isVideo ? 'VÍDEO' : 'ARTE';
     const tipoArquivo = isVideo ? 'MP4' : 'PNG';
@@ -186,13 +186,15 @@ serve(async (req) => {
         }
 
         if (!res || !res.ok) {
-          console.error(`Erro ao enviar para ${email}:`, data);
+          const errorDetail = typeof data === 'object' ? JSON.stringify(data) : String(data);
+          console.error(`FALHA [${email}] status=${res?.status} body=${errorDetail}`);
           results.push({ email, success: false, error: data });
         } else {
+          console.log(`OK [${email}] id=${data?.id}`);
           results.push({ email, success: true, id: data.id });
         }
       } catch (err) {
-        console.error(`Erro ao enviar para ${email}:`, err);
+        console.error(`EXCEÇÃO [${email}]: ${String(err)}`);
         results.push({ email, success: false, error: String(err) });
       }
     }
