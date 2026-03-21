@@ -1096,7 +1096,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     }
 
     // Draw background: use backgroundPng from brand kit if available, otherwise solid color
-    const brandBgPng = art.brandKit?.backgroundPng;
+    const brandBgPng = art.brandKit?.backgroundPng || art.brandKit?.background_png;
     if (brandBgPng) {
       const bgPngImg = await loadImage(brandBgPng);
       if (bgPngImg) {
@@ -1129,6 +1129,25 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       }
     }
 
+    const shouldSkipBackgroundShape = (el: CanvasElement) => {
+      if (!brandBgPng) return false;
+
+      const ov = art.elementOverrides?.shapes?.[el.id];
+      const x = ov?.x ?? el.x ?? 0;
+      const y = ov?.y ?? el.y ?? 0;
+      const w = ov?.width ?? el.width ?? 0;
+      const h = ov?.height ?? el.height ?? 0;
+
+      const coversMostCanvas =
+        w * h >= template.width * template.height * 0.65 &&
+        x <= template.width * 0.2 &&
+        y <= template.height * 0.2 &&
+        x + w >= template.width * 0.8 &&
+        y + h >= template.height * 0.8;
+
+      return coversMostCanvas && (el.colorRole === "background" || el.color === bgColor);
+    };
+
     // Draw elements
     let missingPhotoSource = false;
     const hiddenEls = art.elementOverrides?.hiddenElements || [];
@@ -1140,6 +1159,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       if (hiddenEls.includes(elKey)) { continue; }
       // Skip chevron: hide on non-carousel (single page) AND on the last carousel page
       if (el.type === "chevron" && (!isCarousel || isLastCarouselPage)) { continue; }
+      // Skip large background-colored shapes when client has PNG background
+      if (shouldSkipBackgroundShape(el)) { continue; }
       ctx.save();
       try {
         applyElementStyles(el);
