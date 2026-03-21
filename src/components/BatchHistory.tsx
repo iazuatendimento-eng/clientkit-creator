@@ -14,11 +14,6 @@ import {
   Search,
   Users,
   MessageSquareWarning,
-  Send,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Mail,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -31,14 +26,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getBatchGenerations, getBatchById, deleteBatch, deleteBatchItem, BatchGeneration, BatchItem } from "@/lib/batchHistory";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,16 +38,6 @@ interface BatchHistoryProps {
   filterType?: "art" | "video";
 }
 
-type TeamSendStatus = "pending" | "sending" | "sent" | "error";
-
-interface TeamSendInfo {
-  teamName: string;
-  batchIds: string[]; // ALL batches for this team
-  status: TeamSendStatus;
-  errorMsg?: string;
-  itemCount: number;
-}
-
 export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryProps) => {
   const [batches, setBatches] = useState<BatchGeneration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,14 +48,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
   const [expandedItems, setExpandedItems] = useState<BatchItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [deletingItemIdx, setDeletingItemIdx] = useState<number | null>(null);
-
-  // Send All Teams state
-  const [showSendAllDialog, setShowSendAllDialog] = useState(false);
-  const [sendSubject, setSendSubject] = useState("");
-  const [teamSendList, setTeamSendList] = useState<TeamSendInfo[]>([]);
-  const [isSendingAll, setIsSendingAll] = useState(false);
-  const [sendingTeamSingle, setSendingTeamSingle] = useState<string | null>(null);
-  const cancelRef = useRef(false);
 
   const { toast } = useToast();
 
@@ -108,18 +77,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
       );
     });
   }, [batches, searchQuery]);
-
-  // Get all unique teams from batches
-  const teamBatches = useMemo(() => {
-    const map = new Map<string, BatchGeneration[]>();
-    for (const batch of batches) {
-      const snap = batch.template_snapshot as any;
-      const team = snap?.teamFilter || "Sem equipe";
-      if (!map.has(team)) map.set(team, []);
-      map.get(team)!.push(batch);
-    }
-    return map;
-  }, [batches]);
 
   const handleToggleExpand = async (batchId: string) => {
     if (expandedBatchId === batchId) {
@@ -186,215 +143,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
 
   // ─── Send All Teams logic ─────────────────────────────────────────
 
-  const openSendAllDialog = () => {
-    const list: TeamSendInfo[] = [];
-    for (const [teamName, teamBatchList] of teamBatches) {
-      list.push({
-        teamName,
-        batchIds: teamBatchList.map(b => b.id),
-        status: "pending",
-        itemCount: 0,
-      });
-    }
-    list.sort((a, b) => a.teamName.localeCompare(b.teamName, undefined, { numeric: true }));
-    setTeamSendList(list);
-    setSendSubject("");
-    cancelRef.current = false;
-    setShowSendAllDialog(true);
-  };
-
-  const sendBatchEmail = async (
-    batchId: string,
-    subject: string,
-    mediaType: "image" | "video"
-  ): Promise<{ success: boolean; error?: string }> => {
-    const batch = await getBatchById(batchId);
-    if (!batch || !batch.items.length) {
-      return { success: false, error: "Lote vazio" };
-    }
-
-    // Send all items that have content (no approval filter)
-    const itemsToSend = batch.items.filter((item: any) => {
-      // For video: must have previewVideoUrls
-      if (mediaType === "video") {
-        return item.previewVideoUrls?.some((u: string | null) => u);
-      }
-      // For art: must have files
-      return item.files?.length > 0;
-    });
-    if (itemsToSend.length === 0) {
-      return { success: false, error: "Nenhum item com mídia gerada" };
-    }
-    return await sendItemsAsEmails(itemsToSend, subject, mediaType);
-  };
-
-  const sendItemsAsEmails = async (
-    items: BatchItem[],
-    subject: string,
-    mediaType: "image" | "video"
-  ): Promise<{ success: boolean; error?: string }> => {
-    // Group items by clientId (carousel pages go in same email)
-    const byClient = new Map<string, BatchItem[]>();
-    for (const item of items) {
-      const key = item.clientId;
-      if (!byClient.has(key)) byClient.set(key, []);
-      byClient.get(key)!.push(item);
-    }
-
-    const entries = Array.from(byClient.entries());
-    for (let ci = 0; ci < entries.length; ci++) {
-      const [clientId, clientItems] = entries[ci];
-
-      // Rate-limit: wait 1.5s between each email send to avoid 429
-      if (ci > 0) {
-        await new Promise((r) => setTimeout(r, 1500));
-      }
-
-      // Get client emails from DB
-      const { data: client } = await supabase
-        .from("client_data")
-        .select("email, email_2, email_3, name, company")
-        .eq("id", clientId)
-        .maybeSingle();
-
-      if (!client) continue;
-
-      const emails = [client.email, client.email_2, client.email_3].filter(
-        (e): e is string => !!e && e.includes("@")
-      );
-
-      if (emails.length === 0) continue;
-
-      // Collect all file URLs (art images or video previews)
-      const mediaUrls: string[] = [];
-      for (const item of clientItems) {
-        if (item.files && item.files.length > 0) {
-          mediaUrls.push(...item.files.filter((f) => f && f.startsWith("http")));
-        }
-      }
-
-      if (mediaUrls.length === 0) continue;
-
-      try {
-        const { error } = await supabase.functions.invoke("send-media-email", {
-          body: {
-            emails,
-            subject: `${subject} - ${client.company || client.name}`,
-            mediaUrls,
-            mediaType,
-            clientName: client.company || client.name,
-          },
-        });
-
-        if (error) {
-          return { success: false, error: error.message };
-        }
-      } catch (err: any) {
-        return { success: false, error: err?.message || "Erro ao enviar" };
-      }
-    }
-
-    return { success: true };
-  };
-
-  const sendAllBatchesForTeam = async (
-    batchIds: string[],
-    subject: string,
-    mediaType: "image" | "video"
-  ): Promise<{ success: boolean; error?: string }> => {
-    for (const batchId of batchIds) {
-      const result = await sendBatchEmail(batchId, subject, mediaType);
-      if (!result.success) return result;
-    }
-    return { success: true };
-  };
-
-  const handleSendAllTeams = async () => {
-    if (!sendSubject.trim()) {
-      toast({ title: "Digite o título do e-mail", variant: "destructive" });
-      return;
-    }
-
-    setIsSendingAll(true);
-    cancelRef.current = false;
-    const mediaType = filterType === "video" ? "video" : "image";
-
-    const updatedList = [...teamSendList];
-
-    for (let i = 0; i < updatedList.length; i++) {
-      if (cancelRef.current) break;
-      if (updatedList[i].status === "sent") continue;
-
-      updatedList[i] = { ...updatedList[i], status: "sending" };
-      setTeamSendList([...updatedList]);
-
-      const result = await sendAllBatchesForTeam(
-        updatedList[i].batchIds,
-        sendSubject.trim(),
-        mediaType as "image" | "video"
-      );
-
-      if (result.success) {
-        updatedList[i] = { ...updatedList[i], status: "sent" };
-      } else {
-        updatedList[i] = {
-          ...updatedList[i],
-          status: "error",
-          errorMsg: result.error,
-        };
-      }
-      setTeamSendList([...updatedList]);
-    }
-
-    setIsSendingAll(false);
-
-    const sentCount = updatedList.filter((t) => t.status === "sent").length;
-    const errorCount = updatedList.filter((t) => t.status === "error").length;
-
-    toast({
-      title: `Envio concluído`,
-      description: `${sentCount} equipe(s) enviada(s)${errorCount > 0 ? `, ${errorCount} com erro` : ""}`,
-    });
-  };
-
-  const handleSendSingleTeam = async (index: number) => {
-    if (!sendSubject.trim()) {
-      toast({ title: "Digite o título do e-mail", variant: "destructive" });
-      return;
-    }
-
-    const team = teamSendList[index];
-    setSendingTeamSingle(team.teamName);
-    const mediaType = filterType === "video" ? "video" : "image";
-
-    const updatedList = [...teamSendList];
-    updatedList[index] = { ...updatedList[index], status: "sending" };
-    setTeamSendList(updatedList);
-
-    const result = await sendAllBatchesForTeam(team.batchIds, sendSubject.trim(), mediaType as "image" | "video");
-
-    if (result.success) {
-      updatedList[index] = { ...updatedList[index], status: "sent" };
-    } else {
-      updatedList[index] = { ...updatedList[index], status: "error", errorMsg: result.error };
-    }
-    setTeamSendList([...updatedList]);
-    setSendingTeamSingle(null);
-  };
-
-  const statusIcon = (status: TeamSendStatus) => {
-    switch (status) {
-      case "pending":
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
-      case "sending":
-        return <Loader2 className="h-4 w-4 animate-spin text-primary" />;
-      case "sent":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case "error":
-        return <XCircle className="h-4 w-4 text-destructive" />;
-    }
-  };
-
   // ─── Render ───────────────────────────────────────────────────────
 
   if (isLoading) {
@@ -422,12 +170,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
               </p>
             </div>
           </div>
-          {batches.length > 0 && (
-            <Button onClick={openSendAllDialog} className="gap-2">
-              <Mail className="h-4 w-4" />
-              Enviar Todas Equipes
-            </Button>
-          )}
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -591,102 +333,6 @@ export const BatchHistory = ({ onBack, onEditBatch, filterType }: BatchHistoryPr
         )}
       </ScrollArea>
 
-      {/* Send All Teams Dialog */}
-      <Dialog open={showSendAllDialog} onOpenChange={(open) => {
-        if (!isSendingAll) setShowSendAllDialog(open);
-      }}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Enviar para Todas as Equipes
-            </DialogTitle>
-            <DialogDescription>
-              Envie os e-mails de {filterType === "art" ? "artes" : "vídeos"} para todas as equipes de uma vez.
-              Um único título será usado para todos.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-            {/* Subject input */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Título do E-mail</label>
-              <Input
-                placeholder="Ex: Post Março 2026"
-                value={sendSubject}
-                onChange={(e) => setSendSubject(e.target.value)}
-                disabled={isSendingAll}
-              />
-            </div>
-
-            {/* Team list */}
-            <div className="text-sm font-medium">
-              {teamSendList.length} equipe(s) • {teamSendList.filter(t => t.status === "sent").length} enviada(s)
-            </div>
-            <ScrollArea className="flex-1 min-h-0 max-h-[40vh]">
-              <div className="space-y-2 pr-2">
-                {teamSendList.map((team, idx) => (
-                  <div
-                    key={team.teamName}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-                  >
-                    {statusIcon(team.status)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{team.teamName}</p>
-                      {team.status === "error" && team.errorMsg && (
-                        <p className="text-xs text-destructive truncate">{team.errorMsg}</p>
-                      )}
-                    </div>
-                    {team.status !== "sent" && team.status !== "sending" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSendSingleTeam(idx)}
-                        disabled={isSendingAll || sendingTeamSingle !== null || !sendSubject.trim()}
-                        className="shrink-0"
-                      >
-                        {sendingTeamSingle === team.teamName ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            {isSendingAll ? (
-              <Button
-                variant="destructive"
-                onClick={() => { cancelRef.current = true; }}
-              >
-                Cancelar Envio
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSendAllDialog(false)}
-                >
-                  Fechar
-                </Button>
-                <Button
-                  onClick={handleSendAllTeams}
-                  disabled={!sendSubject.trim() || teamSendList.every(t => t.status === "sent")}
-                  className="gap-2"
-                >
-                  <Send className="h-4 w-4" />
-                  Enviar Todas ({teamSendList.filter(t => t.status !== "sent").length})
-                </Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
