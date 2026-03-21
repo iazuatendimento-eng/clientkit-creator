@@ -616,6 +616,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       const logo = itemBk?.pngs?.[0] || itemBk?.logo || latestBk?.pngs?.[0] || latestBk?.logo || "";
       const contact = itemBk?.pngs?.[1] || itemBk?.contactInfo || latestBk?.pngs?.[1] || latestBk?.contactInfo || "";
       const mascot = itemBk?.pngs?.[2] || itemBk?.mascot || latestBk?.pngs?.[2] || latestBk?.mascot || "";
+      const backgroundPng = itemBk?.backgroundPng || itemBk?.background_png || latestBk?.backgroundPng || latestBk?.background_png || "";
 
       return {
         ...latestBk,
@@ -624,6 +625,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         contactInfo: contact,
         mascot,
         pngs: [logo, contact, mascot],
+        backgroundPng,
       };
     };
 
