@@ -52,6 +52,8 @@ const parseHeaderSize = (raw: string | null): number | null => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const estimateFileSize = async (url: string): Promise<number | null> => {
   try {
     const headRes = await fetch(url, { method: "HEAD" });
@@ -153,6 +155,90 @@ const isLikelyAttachmentSizeError = (status: number, payload: unknown): boolean 
   );
 };
 
+const extractEmailId = (payload: unknown): string | null => {
+  if (!payload || typeof payload !== "object") return null;
+  const id = (payload as { id?: unknown }).id;
+  return typeof id === "string" && id.length > 0 ? id : null;
+};
+
+type DeliveryCheck = {
+  state: "ok" | "failed" | "unknown";
+  lastEvent?: string;
+  payload?: unknown;
+};
+
+const FAILURE_EVENTS = new Set([
+  "bounced",
+  "failed",
+  "complained",
+  "canceled",
+  "cancelled",
+  "delivery_failed",
+]);
+
+const SUCCESS_EVENTS = new Set([
+  "queued",
+  "sent",
+  "delivered",
+  "opened",
+  "clicked",
+  "scheduled",
+]);
+
+const checkDeliveryStatus = async (
+  apiKey: string,
+  emailId: string,
+): Promise<DeliveryCheck> => {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`https://api.resend.com/emails/${emailId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      const payload = await readJsonSafe(res);
+
+      if (!res.ok) {
+        if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+          await sleep(400 * (attempt + 1));
+          continue;
+        }
+        return { state: "unknown", payload };
+      }
+
+      const lastEventRaw = typeof payload === "object" && payload !== null
+        ? (payload as { last_event?: unknown }).last_event
+        : undefined;
+      const lastEvent = typeof lastEventRaw === "string" ? lastEventRaw.toLowerCase() : undefined;
+
+      if (lastEvent && FAILURE_EVENTS.has(lastEvent)) {
+        return { state: "failed", lastEvent, payload };
+      }
+
+      if (lastEvent && SUCCESS_EVENTS.has(lastEvent)) {
+        return { state: "ok", lastEvent, payload };
+      }
+
+      if (attempt < 2) {
+        await sleep(500 * (attempt + 1));
+        continue;
+      }
+
+      return { state: "unknown", lastEvent, payload };
+    } catch (err) {
+      if (attempt < 2) {
+        await sleep(350 * (attempt + 1));
+        continue;
+      }
+      return { state: "unknown", payload: String(err) };
+    }
+  }
+
+  return { state: "unknown" };
+};
+
 const sendEmailPartWithRetry = async (
   apiKey: string,
   email: string,
@@ -165,38 +251,75 @@ const sendEmailPartWithRetry = async (
   let lastPayload: unknown = null;
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "iazu <noreply@contato.iazu.com.br>",
-        to: [email],
-        subject,
-        text,
-        html,
-        attachments,
-      }),
-    });
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "iazu <noreply@contato.iazu.com.br>",
+          to: [email],
+          subject,
+          text,
+          html,
+          attachments,
+        }),
+      });
 
-    const payload = await readJsonSafe(res);
-    lastStatus = res.status;
-    lastPayload = payload;
+      const payload = await readJsonSafe(res);
+      lastStatus = res.status;
+      lastPayload = payload;
 
-    if (res.status === 429 && attempt < 2) {
-      const retryAfter = parseInt(res.headers.get("retry-after") || "2", 10);
-      const waitSec = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 2;
-      await new Promise((r) => setTimeout(r, waitSec * 1000));
-      continue;
-    }
+      if (res.status === 429 && attempt < 2) {
+        const retryAfter = parseInt(res.headers.get("retry-after") || "2", 10);
+        const waitSec = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 2;
+        await sleep(waitSec * 1000);
+        continue;
+      }
 
-    if (res.ok) {
+      if (!res.ok) {
+        if ((res.status >= 500 || res.status === 408) && attempt < 2) {
+          await sleep(500 * (attempt + 1));
+          continue;
+        }
+        break;
+      }
+
+      const emailId = extractEmailId(payload);
+      if (emailId) {
+        const delivery = await checkDeliveryStatus(apiKey, emailId);
+        if (delivery.state === "failed") {
+          lastStatus = 422;
+          lastPayload = {
+            message: "Email aceito pelo provedor, mas marcado como falha na entrega",
+            id: emailId,
+            last_event: delivery.lastEvent,
+            detail: delivery.payload,
+          };
+
+          if (attempt < 2) {
+            await sleep(700 * (attempt + 1));
+            continue;
+          }
+
+          break;
+        }
+      }
+
       return { success: true, status: res.status, payload };
-    }
+    } catch (err) {
+      lastStatus = 0;
+      lastPayload = String(err);
 
-    break;
+      if (attempt < 2) {
+        await sleep(500 * (attempt + 1));
+        continue;
+      }
+
+      break;
+    }
   }
 
   return { success: false, status: lastStatus, payload: lastPayload };
@@ -258,7 +381,13 @@ serve(async (req) => {
       throw new Error("URL da mídia não fornecida");
     }
 
-    const validEmails = emails.filter((e: string) => e && e.includes("@"));
+    const validEmails = Array.from(
+      new Set(
+        emails
+          .map((e: unknown) => (typeof e === "string" ? e.trim() : ""))
+          .filter((e: string) => e.length > 0 && e.includes("@")),
+      ),
+    );
     if (validEmails.length === 0) {
       throw new Error("Nenhum e-mail válido encontrado");
     }
