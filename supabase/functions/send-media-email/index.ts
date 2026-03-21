@@ -177,19 +177,26 @@ const FAILURE_EVENTS = new Set([
 ]);
 
 const SUCCESS_EVENTS = new Set([
-  "queued",
-  "sent",
   "delivered",
   "opened",
   "clicked",
+]);
+
+const PENDING_EVENTS = new Set([
+  "queued",
+  "sent",
   "scheduled",
+  "processing",
+  "accepted",
 ]);
 
 const checkDeliveryStatus = async (
   apiKey: string,
   emailId: string,
 ): Promise<DeliveryCheck> => {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const maxAttempts = 12;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       const res = await fetch(`https://api.resend.com/emails/${emailId}`, {
         method: "GET",
@@ -201,7 +208,7 @@ const checkDeliveryStatus = async (
       const payload = await readJsonSafe(res);
 
       if (!res.ok) {
-        if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+        if ((res.status === 429 || res.status >= 500) && attempt < maxAttempts - 1) {
           await sleep(400 * (attempt + 1));
           continue;
         }
@@ -221,8 +228,9 @@ const checkDeliveryStatus = async (
         return { state: "ok", lastEvent, payload };
       }
 
-      if (attempt < 2) {
-        await sleep(500 * (attempt + 1));
+      if (lastEvent && PENDING_EVENTS.has(lastEvent) && attempt < maxAttempts - 1) {
+        const waitMs = Math.min(2000 + attempt * 350, 4500);
+        await sleep(waitMs);
         continue;
       }
 
@@ -306,6 +314,33 @@ const sendEmailPartWithRetry = async (
 
           break;
         }
+
+        if (delivery.state === "unknown") {
+          lastStatus = 424;
+          lastPayload = {
+            message: "Status de entrega inconclusivo após polling",
+            id: emailId,
+            last_event: delivery.lastEvent,
+            detail: delivery.payload,
+          };
+
+          if (attempt < 2) {
+            await sleep(900 * (attempt + 1));
+            continue;
+          }
+
+          break;
+        }
+      } else {
+        lastStatus = 502;
+        lastPayload = { message: "Provedor não retornou id do e-mail" };
+
+        if (attempt < 2) {
+          await sleep(600 * (attempt + 1));
+          continue;
+        }
+
+        break;
       }
 
       return { success: true, status: res.status, payload };
