@@ -1318,11 +1318,14 @@ const Index = () => {
             )}
             <Button
               onClick={handleConfirmCompletion}
-              disabled={!completionType || !completionTemplateId}
+              disabled={!completionType || !completionTemplateId || isCompletionLoading}
               className="w-full"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Confirmar
+              {isCompletionLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</>
+              ) : (
+                <><CheckCircle2 className="h-4 w-4 mr-2" /> Confirmar</>
+              )}
             </Button>
           </div>
         </DialogContent>
