@@ -187,10 +187,19 @@ serve(async (req) => {
 
     const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${bodyParts.map(t => `<p style="color: #333; margin: 0 0 16px 0; white-space: pre-wrap; font-size: 14px;">${escapeHtml(t)}</p>`).join('')}</div>`;
 
-    const results = await Promise.all(
-      validEmails.map(async (email: string) => {
-        try {
-          const res = await fetch('https://api.resend.com/emails', {
+    const results = [];
+    for (let ei = 0; ei < validEmails.length; ei++) {
+      const email = validEmails[ei];
+      // Stagger requests: wait 300ms between each email to avoid rate limits
+      if (ei > 0) {
+        await new Promise(r => setTimeout(r, 300));
+      }
+      try {
+        let res: Response | null = null;
+        let data: any = null;
+        // Retry up to 3 times on rate limit (429)
+        for (let attempt = 0; attempt < 3; attempt++) {
+          res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -205,18 +214,27 @@ serve(async (req) => {
             }),
           });
 
-          const data = await res.json();
-          if (!res.ok) {
-            console.error(`Erro ao enviar para ${email}:`, data);
-            return { email, success: false, error: data };
+          data = await res.json();
+          if (res.status === 429) {
+            const retryAfter = parseInt(res.headers.get('retry-after') || '2', 10);
+            console.warn(`Rate limited for ${email}, retrying in ${retryAfter}s (attempt ${attempt + 1})`);
+            await new Promise(r => setTimeout(r, retryAfter * 1000));
+            continue;
           }
-          return { email, success: true, id: data.id };
-        } catch (err) {
-          console.error(`Erro ao enviar para ${email}:`, err);
-          return { email, success: false, error: String(err) };
+          break;
         }
-      })
-    );
+
+        if (!res || !res.ok) {
+          console.error(`Erro ao enviar para ${email}:`, data);
+          results.push({ email, success: false, error: data });
+        } else {
+          results.push({ email, success: true, id: data.id });
+        }
+      } catch (err) {
+        console.error(`Erro ao enviar para ${email}:`, err);
+        results.push({ email, success: false, error: String(err) });
+      }
+    }
 
     const allSuccess = results.every(r => r.success);
     const successCount = results.filter(r => r.success).length;
