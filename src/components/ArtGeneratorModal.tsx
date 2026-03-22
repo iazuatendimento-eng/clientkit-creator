@@ -906,6 +906,8 @@ export function ArtGeneratorModal({
   const [pagePhotos, setPagePhotos] = useState<(string | null)[]>([]);
   const [pageOverrides, setPageOverrides] = useState<ElementOverrides[]>([]);
   const [pagePhotoOffsets, setPagePhotoOffsets] = useState<{ x: number; y: number }[]>([]);
+  const [pageCustomOverlays, setPageCustomOverlays] = useState<CustomOverlay[][]>([]);
+  const overlayInputRef = useRef<HTMLInputElement>(null);
 
   // Current page shortcuts
   const artDataUrl = pageArts[currentPage] || null;
