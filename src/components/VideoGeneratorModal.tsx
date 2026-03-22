@@ -234,12 +234,19 @@ export function VideoGeneratorModal({
   const [adjustments, setAdjustments] = useState<ElementAdjustments>({ ...defaultAdjustments });
   const [pageTextAdjustments, setPageTextAdjustments] = useState<PageTextAdjustment[]>([]);
   const [pageImageAdjustments, setPageImageAdjustments] = useState<PageImageAdjustment[]>([]);
+  const adjustmentsRef = useRef<ElementAdjustments>({ ...defaultAdjustments });
+  const pageTextAdjustmentsRef = useRef<PageTextAdjustment[]>([]);
+  const pageImageAdjustmentsRef = useRef<PageImageAdjustment[]>([]);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<"1" | "2" | "none">("1");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailProgress, setEmailProgress] = useState(0);
   const [emailSubject, setEmailSubject] = useState("");
   const [customOverlays, setCustomOverlays] = useState<Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]>>({});
+
+  useEffect(() => { adjustmentsRef.current = adjustments; }, [adjustments]);
+  useEffect(() => { pageTextAdjustmentsRef.current = pageTextAdjustments; }, [pageTextAdjustments]);
+  useEffect(() => { pageImageAdjustmentsRef.current = pageImageAdjustments; }, [pageImageAdjustments]);
 
   const currentPageOverlays = customOverlays[currentEditPage] || [];
   const setCurrentPageOverlays = useCallback((overlays: typeof currentPageOverlays) => {
