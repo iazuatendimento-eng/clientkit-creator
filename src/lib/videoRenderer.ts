@@ -872,6 +872,7 @@ export async function generateAllVideoPages(
   const frameOverlayPages: string[] = [];
   const preImageOverlayPages: string[] = [];
   const logoOverlayPages: string[] = [];
+  const fullPages: string[] = [];
 
   const buildPageSet = async (
     elements: CanvasElement[],
