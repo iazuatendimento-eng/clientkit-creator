@@ -483,7 +483,6 @@ const CardCoverPreview = memo(({
     const pgHasVideo = !!pgActiveUrl && !videoFailed[pageIdx];
     const pgOverlay = video.overlayPages?.[pageIdx];
     const pgFrame = video.frameOverlayPages?.[pageIdx];
-    console.log(`[VideoCard] ${video.clientName} page ${pageIdx}: pgFrame=${pgFrame ? `YES(${pgFrame.substring(0,30)}...)` : 'EMPTY'}, pgOverlay=${pgOverlay ? 'YES' : 'EMPTY'}, frameOverlayPages length=${video.frameOverlayPages?.length || 0}`);
     const effectiveFrameOverlay = (pgFrame && pgFrame !== "")
       ? pgFrame
       : ((pgOverlay && pgOverlay !== "") ? pgOverlay : "");
