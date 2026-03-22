@@ -1252,6 +1252,8 @@ export function ArtGeneratorModal({
                   setContactScaleY={syncSetContactScaleY}
                   shapeOverrides={shapeOverrides}
                   setShapeOverrides={syncSetShapeOverrides}
+                  hiddenElements={hiddenElements}
+                  setHiddenElements={syncSetHiddenElements}
                 />
               </div>
 
