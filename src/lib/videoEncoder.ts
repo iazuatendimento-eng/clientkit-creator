@@ -1874,6 +1874,19 @@ export async function encodeVideoSimple(
     ctx.globalAlpha = 1;
   };
 
+  const drawSimpleCustomOverlays = (pageIdx: number) => {
+    const ovs = customOverlayPages?.[pageIdx];
+    const imgs = simpleCustomOvImgs[pageIdx];
+    if (!ovs || !imgs) return;
+    let imgIdx = 0;
+    for (const ov of ovs) {
+      if (ov.isVideo) continue;
+      const img = imgs[imgIdx++];
+      if (!img) continue;
+      ctx.drawImage(img, ov.x, ov.y, ov.width, ov.height);
+    }
+  };
+
   // Pure rendering function for a single frame (no side effects)
   const renderFrameToCanvas = (frameNum: number) => {
     const pageIdx = Math.floor(frameNum / framesPerPage);
