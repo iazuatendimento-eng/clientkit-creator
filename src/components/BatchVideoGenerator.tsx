@@ -3828,12 +3828,37 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         }}
                         aria-label={`Abrir página ${idx + 1}`}
                       >
-                        <img
-                          src={selectedVideo.fullPages?.[idx] || page}
-                          alt={`Miniatura da página ${idx + 1}`}
-                          className="h-12 w-8 object-cover"
-                          loading="lazy"
-                        />
+                        <div className="relative h-14 w-8 bg-muted/40">
+                          {selectedVideo.fullPages?.[idx] ? (
+                            <img
+                              src={selectedVideo.fullPages[idx]}
+                              alt={`Miniatura da página ${idx + 1}`}
+                              className="h-full w-full object-contain"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <>
+                              <img
+                                src={page}
+                                alt={`Miniatura da página ${idx + 1}`}
+                                className="absolute inset-0 h-full w-full object-contain"
+                                loading="lazy"
+                              />
+                              {selectedVideo.preImageOverlayPages?.[idx] && (
+                                <img src={selectedVideo.preImageOverlayPages[idx]} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none" loading="lazy" />
+                              )}
+                              {selectedVideo.frameOverlayPages?.[idx] && (
+                                <img src={selectedVideo.frameOverlayPages[idx]} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none" loading="lazy" />
+                              )}
+                              {selectedVideo.overlayPages?.[idx] && (
+                                <img src={selectedVideo.overlayPages[idx]} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none" loading="lazy" />
+                              )}
+                              {selectedVideo.logoOverlayPages?.[idx] && (
+                                <img src={selectedVideo.logoOverlayPages[idx]} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none" loading="lazy" />
+                              )}
+                            </>
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
