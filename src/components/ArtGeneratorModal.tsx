@@ -1090,9 +1090,10 @@ export function ArtGeneratorModal({
   }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, pages, brandKit]);
 
   // Re-render canvas when custom overlays change
+  const prevOverlayCountRef = useRef(0);
   useEffect(() => {
-    if (pendingOverlayRegenRef.current) {
-      pendingOverlayRegenRef.current = false;
+    if (overlayCountRef.current !== prevOverlayCountRef.current) {
+      prevOverlayCountRef.current = overlayCountRef.current;
       regenerateCurrentPage();
     }
   }, [pageCustomOverlays, regenerateCurrentPage]);
