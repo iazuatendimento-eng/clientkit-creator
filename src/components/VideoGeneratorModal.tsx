@@ -381,28 +381,34 @@ export function VideoGeneratorModal({
     }
   };
 
-  // Adjustment helpers
-  const updateAdj = (key: keyof ElementAdjustments, value: number) => {
-    setAdjustments(prev => ({ ...prev, [key]: value }));
-  };
+  // Adjustment helpers (sync refs first so onCommit always sees latest value)
+  const updateAdj = useCallback((key: keyof ElementAdjustments, value: number) => {
+    const nextAdj = { ...adjustmentsRef.current, [key]: value };
+    adjustmentsRef.current = nextAdj;
+    setAdjustments(nextAdj);
+  }, []);
 
-  const updatePageTextAdj = (pageIdx: number, key: keyof PageTextAdjustment, value: number) => {
-    setPageTextAdjustments(prev => {
-      const next = [...prev];
-      while (next.length <= pageIdx) next.push({ ...defaultPageTextAdjustment });
-      next[pageIdx] = { ...next[pageIdx], [key]: value };
-      return next;
-    });
-  };
+  const setShapeOverridesLocal = useCallback((next: Record<string, { x: number; y: number; width: number; height: number }>) => {
+    const nextAdj = { ...adjustmentsRef.current, shapeOverrides: next };
+    adjustmentsRef.current = nextAdj;
+    setAdjustments(nextAdj);
+  }, []);
 
-  const updatePageImageAdj = (pageIdx: number, key: keyof PageImageAdjustment, value: number) => {
-    setPageImageAdjustments(prev => {
-      const next = [...prev];
-      while (next.length <= pageIdx) next.push({ ...defaultPageImageAdjustment });
-      next[pageIdx] = { ...next[pageIdx], [key]: value };
-      return next;
-    });
-  };
+  const updatePageTextAdj = useCallback((pageIdx: number, key: keyof PageTextAdjustment, value: number) => {
+    const next = [...pageTextAdjustmentsRef.current];
+    while (next.length <= pageIdx) next.push({ ...defaultPageTextAdjustment });
+    next[pageIdx] = { ...next[pageIdx], [key]: value };
+    pageTextAdjustmentsRef.current = next;
+    setPageTextAdjustments(next);
+  }, []);
+
+  const updatePageImageAdj = useCallback((pageIdx: number, key: keyof PageImageAdjustment, value: number) => {
+    const next = [...pageImageAdjustmentsRef.current];
+    while (next.length <= pageIdx) next.push({ ...defaultPageImageAdjustment });
+    next[pageIdx] = { ...next[pageIdx], [key]: value };
+    pageImageAdjustmentsRef.current = next;
+    setPageImageAdjustments(next);
+  }, []);
 
   // Extract animation settings from template
   const getTextAnimation = (t: VideoTemplateData): TextAnimation => {
