@@ -438,9 +438,43 @@ async function renderArt(
     }
   };
 
-  // Background
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, template.width, template.height);
+  // Background — check for brand kit background PNG
+  const templateBgColor = template.backgroundColor;
+  const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png || "";
+  const hasLargeBgShape = (() => {
+    if (!brandBgPng) return false;
+    for (const el of template.elements) {
+      const isBackgroundRole = el.colorRole === "background";
+      const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
+      if (!isBackgroundRole && !matchesTemplateBg) continue;
+      const ov = overrides.shapes?.[el.id];
+      const ex = ov?.x ?? el.x ?? 0;
+      const ey = ov?.y ?? el.y ?? 0;
+      const ew = ov?.width ?? el.width ?? 0;
+      const eh = ov?.height ?? el.height ?? 0;
+      if (
+        ew * eh >= template.width * template.height * 0.65 &&
+        ex <= template.width * 0.2 &&
+        ey <= template.height * 0.2 &&
+        ex + ew >= template.width * 0.8 &&
+        ey + eh >= template.height * 0.8
+      ) return true;
+    }
+    return false;
+  })();
+
+  if (brandBgPng && hasLargeBgShape) {
+    const bgPngImg = await loadImage(brandBgPng);
+    if (bgPngImg) {
+      ctx.drawImage(bgPngImg, 0, 0, template.width, template.height);
+    } else {
+      ctx.fillStyle = templateBgColor;
+      ctx.fillRect(0, 0, template.width, template.height);
+    }
+  } else {
+    ctx.fillStyle = templateBgColor;
+    ctx.fillRect(0, 0, template.width, template.height);
+  }
 
   const hiddenSet = new Set(overrides.hiddenElements || []);
   const isCarousel = options.isCarousel === true;
