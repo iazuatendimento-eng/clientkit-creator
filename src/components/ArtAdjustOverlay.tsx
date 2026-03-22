@@ -112,6 +112,7 @@ export function ArtAdjustOverlay({
   setHiddenElements,
   customOverlays,
   setCustomOverlays,
+  photoInteractionMode = "content",
 }: {
   template: MasterTemplateLike;
   previewUrl: string | null;
@@ -126,6 +127,7 @@ export function ArtAdjustOverlay({
   setPhotoOffsetY: (v: number) => void;
   setPhotoScale: (v: number) => void;
   setPhotoFrame?: (v: ShapeOverride | null) => void;
+  photoInteractionMode?: "content" | "frame";
 
   logoX: number;
   logoY: number;
