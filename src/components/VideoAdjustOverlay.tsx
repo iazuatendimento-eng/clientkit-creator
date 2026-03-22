@@ -1010,7 +1010,7 @@ export function VideoAdjustOverlay({
             />
           )}
           {/* Pre-image overlay (shapes before image) */}
-          {preImageOverlayUrl && preImageOverlayUrl !== "" && (
+          {preImageOverlayUrl && preImageOverlayUrl !== "" && !forceSignatureClientBg && (
             <img src={preImageOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
           )}
           {/* Static text/logo overlays hidden — content rendered inside interactive boxes instead */}

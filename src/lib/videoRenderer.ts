@@ -486,7 +486,7 @@ export async function generatePageImage(
     // On signature pages, skip ANY large shape covering the canvas when PNG is active
     if (isSignature && coversMostCanvas) return true;
 
-    if (!isBackgroundRole && !matchesTemplateBg) return false;
+    if (!isBackgroundRole && !isElement1Role && !matchesTemplateBg && !matchesBrandBg) return false;
     return coversMostCanvas;
   };
 
@@ -503,8 +503,8 @@ export async function generatePageImage(
     if (shapeFilter === "before-image" && imageElIndex >= 0 && elIdx >= imageElIndex) continue;
     if (shapeFilter === "after-image" && imageElIndex >= 0 && elIdx <= imageElIndex) continue;
     if (!transparentBackground && el.gradient?.fadeMode) continue;
-    // Skip large background shapes when PNG background is active
-    if (!transparentBackground && shouldSkipBackgroundShape(el)) continue;
+    // Skip large background shapes when PNG background is active (base and transparent overlays)
+    if (shouldSkipBackgroundShape(el)) continue;
 
     if (transparentBackground && renderAllNonImage) {
       if (el.type === "image") {
