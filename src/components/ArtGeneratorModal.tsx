@@ -347,8 +347,14 @@ async function renderArt(
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, template.width, template.height);
 
+  const hiddenSet = new Set(overrides.hiddenElements || []);
+
   for (const el of template.elements) {
     try {
+      // Skip hidden elements
+      const elKey = el.type === "logo" ? "logo" : el.type === "contact" ? "contact" : el.type === "mascot" ? "mascot" : el.type === "text" ? "text" : el.id || "";
+      if (hiddenSet.has(elKey)) { continue; }
+
       ctx.save();
       applyStyles(el);
 
