@@ -1002,7 +1002,7 @@ export function ArtGeneratorModal({
         copy[currentPage] = [...(copy[currentPage] || []), newOverlay];
         return copy;
       });
-      pendingOverlayRegenRef.current = true;
+      overlayCountRef.current += 1;
     };
     reader.readAsDataURL(file);
   }, [currentPage]);
