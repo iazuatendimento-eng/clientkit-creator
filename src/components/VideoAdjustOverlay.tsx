@@ -888,7 +888,7 @@ export function VideoAdjustOverlay({
           type="button"
           aria-label={`Redimensionar ${label}`}
           className={cn(
-            "absolute z-20 h-3.5 w-3.5 rounded-sm border-2 border-background",
+            "absolute z-20 h-5 w-5 rounded border-[3px] border-background shadow-md",
             pos,
             cursor,
             t.handle
