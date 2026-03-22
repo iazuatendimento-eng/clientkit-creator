@@ -2209,6 +2209,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
                             <SelectContent>
                               <SelectItem value="none">Cor fixa (não muda)</SelectItem>
                               <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                              <SelectItem value="element1">Elemento (Cor 1)</SelectItem>
                               <SelectItem value="text">Texto (Cor 2)</SelectItem>
                               <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
                               <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
