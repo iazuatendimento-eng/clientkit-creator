@@ -53,6 +53,8 @@ const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
 
 const isShapePart = (p: Part): p is ShapePart => typeof p === "string" && p.startsWith("shape:");
 const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
+const isOverlayPart = (p: Part): p is OverlayPart => typeof p === "string" && p.startsWith("overlay:");
+const overlayIndexFromPart = (p: OverlayPart) => parseInt(p.slice("overlay:".length), 10);
 
 
 const toneClasses = (tone: Tone) => {
