@@ -900,6 +900,7 @@ export function ArtGeneratorModal({
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [template, setTemplate] = useState<ArtTemplate | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [photoInteractionMode, setPhotoInteractionMode] = useState<"content" | "frame">("content");
 
   // Per-page state
   const [pageArts, setPageArts] = useState<(string | null)[]>([]);
@@ -1488,11 +1489,21 @@ export function ArtGeneratorModal({
                   setHiddenElements={syncSetHiddenElements}
                   customOverlays={currentOverlays}
                   setCustomOverlays={syncSetCustomOverlays}
+                  photoInteractionMode={photoInteractionMode}
                 />
               </div>
 
-              {/* Add overlay button */}
-              <div className="flex items-center gap-2">
+              {/* Interaction mode + add overlay */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant={photoInteractionMode === "content" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPhotoInteractionMode((prev) => (prev === "content" ? "frame" : "content"))}
+                  className="gap-1.5"
+                >
+                  {photoInteractionMode === "content" ? "Zoom da foto: ativo" : "Mover moldura: ativo"}
+                </Button>
+
                 <input
                   ref={overlayInputRef}
                   type="file"
