@@ -1666,6 +1666,7 @@ export async function encodeVideoSimple(
     pageImageAdjustments,
     imageClipShape,
     audioUrl,
+    customOverlayPages,
     onProgress
   } = options;
 
