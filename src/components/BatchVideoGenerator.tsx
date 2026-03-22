@@ -609,6 +609,34 @@ const CardCoverPreview = memo(({
           <img src={pgLogo} alt="" className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`} draggable={false} />
         )}
 
+        {/* Custom overlay extras (PNG/MP4) */}
+        {video.customOverlayPages?.[pageIdx]?.map((ov, oi) => {
+          const tw = templateWidth || 1080;
+          const th = templateHeight || 1920;
+          const left = (ov.x / tw) * 100;
+          const top = (ov.y / th) * 100;
+          const width = (ov.width / tw) * 100;
+          const height = (ov.height / th) * 100;
+          return ov.isVideo ? (
+            <video
+              key={`ov-${pageIdx}-${oi}`}
+              src={ov.url}
+              className="absolute z-[6] pointer-events-none object-contain"
+              style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
+              muted loop autoPlay playsInline draggable={false}
+            />
+          ) : (
+            <img
+              key={`ov-${pageIdx}-${oi}`}
+              src={ov.url}
+              alt=""
+              className="absolute z-[6] pointer-events-none object-contain"
+              style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
+              draggable={false}
+            />
+          );
+        })}
+
         {/* Drag-over indicator */}
         {isDragOver && isCurrentPage && (
           <div className="absolute inset-0 z-[8] bg-primary/20 border-2 border-dashed border-primary flex items-center justify-center pointer-events-none">
