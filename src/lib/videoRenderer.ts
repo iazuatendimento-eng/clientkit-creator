@@ -309,7 +309,7 @@ export async function generatePageImage(
   const accessoryColor2 = ensureColor(colors[3], "#aaaaaa");
 
   const getElementColor = (el: CanvasElement, defaultColor: string): string => {
-    if (el.colorRole === "background") return brandBgColor;
+    if (el.colorRole === "background" || el.colorRole === "element1") return brandBgColor;
     if (el.colorRole === "text") return textColor;
     if (el.colorRole === "accessory1") return accessoryColor1;
     if (el.colorRole === "accessory2") return accessoryColor2;
@@ -317,7 +317,7 @@ export async function generatePageImage(
   };
 
   const getBorderColor = (el: CanvasElement): string => {
-    if (el.borderColorRole === "background") return brandBgColor;
+    if (el.borderColorRole === "background" || el.borderColorRole === "element1") return brandBgColor;
     if (el.borderColorRole === "text") return textColor;
     if (el.borderColorRole === "accessory1") return accessoryColor1;
     if (el.borderColorRole === "accessory2") return accessoryColor2;
