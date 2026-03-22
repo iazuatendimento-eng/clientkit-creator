@@ -185,9 +185,15 @@ export function VideoPreviewPlayer({
   const showVideoBackground = hasVideoForPage(currentPage);
   const currentOverlay = overlayPages?.[currentPage];
   const currentFrameOverlay = frameOverlayPages?.[currentPage];
+  const effectiveFrameOverlay = (currentFrameOverlay && currentFrameOverlay !== "")
+    ? currentFrameOverlay
+    : ((currentOverlay && currentOverlay !== "") ? currentOverlay : "");
+  const effectiveTextOverlay = (currentOverlay && currentOverlay !== "" && currentOverlay !== effectiveFrameOverlay)
+    ? currentOverlay
+    : "";
   const currentLogoOverlay = logoOverlayPages?.[currentPage];
-  const hasOverlay = currentOverlay && currentOverlay !== "";
-  const hasFrameOverlay = currentFrameOverlay && currentFrameOverlay !== "";
+  const hasOverlay = !!effectiveTextOverlay;
+  const hasFrameOverlay = !!effectiveFrameOverlay;
   const hasLogoOverlay = currentLogoOverlay && currentLogoOverlay !== "";
 
   const getClipPathCSS = (shape?: string): string | undefined => {
@@ -261,7 +267,7 @@ export function VideoPreviewPlayer({
           {hasFrameOverlay && (
             <img
               key={`frame-${currentPage}`}
-              src={currentFrameOverlay}
+              src={effectiveFrameOverlay}
               alt=""
               className="absolute inset-0 w-full h-full object-contain z-[2] pointer-events-none"
               draggable={false}
@@ -272,7 +278,7 @@ export function VideoPreviewPlayer({
           {hasOverlay && (
             <img
               key={`overlay-${currentPage}-${pageStartTime}`}
-              src={currentOverlay}
+              src={effectiveTextOverlay}
               alt=""
               className={cn("absolute inset-0 w-full h-full object-contain z-[3]", getTextAnimClass())}
               style={{ animationDuration: `${textAnimDuration}s` }}

@@ -482,6 +482,12 @@ const CardCoverPreview = memo(({
     const pgHasVideo = !!pgActiveUrl && !videoFailed[pageIdx];
     const pgOverlay = video.overlayPages?.[pageIdx];
     const pgFrame = video.frameOverlayPages?.[pageIdx];
+    const effectiveFrameOverlay = (pgFrame && pgFrame !== "")
+      ? pgFrame
+      : ((pgOverlay && pgOverlay !== "") ? pgOverlay : "");
+    const effectiveTextOverlay = (pgOverlay && pgOverlay !== "" && pgOverlay !== effectiveFrameOverlay)
+      ? pgOverlay
+      : "";
     const pgPreImage = video.preImageOverlayPages?.[pageIdx];
     const pgLogo = video.logoOverlayPages?.[pageIdx];
     const isDragOver = dragOverPage === pageIdx;
@@ -623,11 +629,11 @@ const CardCoverPreview = memo(({
           );
         })()}
 
-        {pgFrame && pgFrame !== "" && (
-          <img src={pgFrame} alt="" className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`} style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined} draggable={false} />
+        {effectiveFrameOverlay && (
+          <img src={effectiveFrameOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`} style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined} draggable={false} />
         )}
-        {pgOverlay && pgOverlay !== "" && (
-          <img src={pgOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`} style={{ animationDuration: `${textAnimDuration}s` }} draggable={false} />
+        {effectiveTextOverlay && (
+          <img src={effectiveTextOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`} style={{ animationDuration: `${textAnimDuration}s` }} draggable={false} />
         )}
         {pgLogo && pgLogo !== "" && (
           <img src={pgLogo} alt="" className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`} draggable={false} />
