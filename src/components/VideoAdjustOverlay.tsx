@@ -339,6 +339,19 @@ export function VideoAdjustOverlay({
       };
     }
 
+    if (isShapePart(part)) {
+      const id = shapeIdFromPart(part);
+      const base = els.shapes.find((s) => s.id === id);
+      if (!base) return null;
+      const ov = shapeOverrides?.[id];
+      return {
+        x: ov?.x ?? base.x,
+        y: ov?.y ?? base.y,
+        w: ov?.width ?? base.width,
+        h: ov?.height ?? base.height,
+      };
+    }
+
     return null;
   };
 
@@ -379,6 +392,7 @@ export function VideoAdjustOverlay({
           imageScale: number;
           imageW: number;
           imageH: number;
+          shapeRect?: ShapeOverride;
         };
       }
   >(null);
