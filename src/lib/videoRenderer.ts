@@ -243,6 +243,24 @@ export function getImagePlaceholderRect(elements: CanvasElement[], tw: number, t
   if (!el) return null;
   return { left: (el.x / tw) * 100, top: (el.y / th) * 100, width: (el.width / tw) * 100, height: (el.height / th) * 100 };
 }
+export function getImagePlaceholderRectWithOverrides(elements: CanvasElement[], tw: number, th: number, shapeOverrides?: Record<string, ShapeOverride>) {
+  const el = elements.find(e => e.type === "image");
+  if (!el) return null;
+  const ov = shapeOverrides?.[el.id];
+  const x = ov?.x ?? el.x;
+  const y = ov?.y ?? el.y;
+  const w = ov?.width ?? el.width;
+  const h = ov?.height ?? el.height;
+  return { left: (x / tw) * 100, top: (y / th) * 100, width: (w / tw) * 100, height: (h / th) * 100 };
+}
+
+export function getImageElSizeWithOverrides(elements: CanvasElement[], shapeOverrides?: Record<string, ShapeOverride>) {
+  const el = elements.find(e => e.type === "image");
+  if (!el) return null;
+  const ov = shapeOverrides?.[el.id];
+  return { width: ov?.width ?? el.width, height: ov?.height ?? el.height };
+}
+
 export function getImageElSize(elements: CanvasElement[]) {
   const el = elements.find(e => e.type === "image");
   return el ? { width: el.width, height: el.height } : null;
@@ -468,7 +486,7 @@ export async function generatePageImage(
     let el = elements[elIdx];
 
     // Apply shape override if available
-    if (el.id && shapeOverrides[el.id] && !["image", "text", "contact", "logo", "mascot"].includes(el.type)) {
+    if (el.id && shapeOverrides[el.id] && !["text", "contact", "logo", "mascot"].includes(el.type)) {
       const ov = shapeOverrides[el.id];
       el = { ...el, x: ov.x, y: ov.y, width: ov.width, height: ov.height };
     }

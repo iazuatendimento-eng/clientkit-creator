@@ -175,6 +175,7 @@ export function VideoAdjustOverlay({
   setCustomOverlays,
   onAddOverlay,
   onDeleteOverlay,
+  photoInteractionMode = "content",
 }: {
   template: VideoTemplateLike;
   previewUrl: string | null;
@@ -245,6 +246,7 @@ export function VideoAdjustOverlay({
   setCustomOverlays?: (v: VideoCustomOverlay[]) => void;
   onAddOverlay?: (file: File) => void;
   onDeleteOverlay?: (idx: number) => void;
+  photoInteractionMode?: "content" | "frame";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayInputRef = useRef<HTMLInputElement>(null);
@@ -363,7 +365,12 @@ export function VideoAdjustOverlay({
 
     if (part === "image") {
       if (!els.imageEl) return null;
-      // Fixed frame matching the template element - zoom/pan happens to content inside
+      // Check for shape override on image element (frame mode)
+      const imgId = els.imageEl.id || "__image__";
+      const imgOv = shapeOverrides?.[imgId];
+      if (imgOv) {
+        return { x: imgOv.x, y: imgOv.y, w: imgOv.width, h: imgOv.height };
+      }
       return {
         x: els.imageEl.x,
         y: els.imageEl.y,
@@ -468,6 +475,10 @@ export function VideoAdjustOverlay({
     let shapeRect: ShapeOverride | undefined;
     if (isShapePart(part)) {
       const r = getRect(part);
+      if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    }
+    if (part === "image") {
+      const r = getRect("image");
       if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
     }
 
@@ -673,24 +684,62 @@ export function VideoAdjustOverlay({
       }
 
       if (s.part === "image" && setImageX && setImageY && setImageScale) {
+        const isFrameMode = photoInteractionMode === "frame";
+
         if (s.mode === "move") {
-          // Drag = pan the image inside the fixed frame
-          setImageX(s.start.imageX + dx);
-          setImageY(s.start.imageY + dy);
+          if (isFrameMode && setShapeOverrides) {
+            const imgId = els.imageEl?.id || "__image__";
+            const startRect = s.start.shapeRect || {
+              x: els.imageEl?.x || 0,
+              y: els.imageEl?.y || 0,
+              width: els.imageEl?.width || 100,
+              height: els.imageEl?.height || 100,
+            };
+            setShapeOverrides({
+              ...(shapeOverrides || {}),
+              [imgId]: {
+                x: startRect.x + dx,
+                y: startRect.y + dy,
+                width: startRect.width,
+                height: startRect.height,
+              },
+            });
+          } else {
+            setImageX(s.start.imageX + dx);
+            setImageY(s.start.imageY + dy);
+          }
           return;
         }
 
-        // Resize handles = zoom the image content (frame stays fixed)
-        const h = s.handle as Handle;
-        const signedDx = handleSignX(h) * dx;
-        const signedDy = handleSignY(h) * dy;
-        const delta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
-        const imgElW = els.imageEl?.width || template.width;
-        
-        // Scale relative to the element size
-        const scaleDelta = (delta / imgElW) * 100;
-        const newScale = clamp(s.start.imageScale + scaleDelta, 50, 300);
-        setImageScale(newScale);
+        if (isFrameMode && setShapeOverrides) {
+          const imgId = els.imageEl?.id || "__image__";
+          const startRect = s.start.shapeRect || {
+            x: els.imageEl?.x || 0,
+            y: els.imageEl?.y || 0,
+            width: els.imageEl?.width || 100,
+            height: els.imageEl?.height || 100,
+          };
+          const h = s.handle as Handle;
+          const minSize = 50;
+          let newX = startRect.x;
+          let newY = startRect.y;
+          let newW = startRect.width;
+          let newH = startRect.height;
+          if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+          if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+          if (handleHasW(h)) { newW = Math.max(minSize, startRect.width - dx); newX = startRect.x + (startRect.width - newW); }
+          if (handleHasN(h)) { newH = Math.max(minSize, startRect.height - dy); newY = startRect.y + (startRect.height - newH); }
+          setShapeOverrides({ ...(shapeOverrides || {}), [imgId]: { x: newX, y: newY, width: newW, height: newH } });
+        } else {
+          const h = s.handle as Handle;
+          const signedDx = handleSignX(h) * dx;
+          const signedDy = handleSignY(h) * dy;
+          const delta = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+          const imgElW = els.imageEl?.width || template.width;
+          const scaleDelta = (delta / imgElW) * 100;
+          const newScale = clamp(s.start.imageScale + scaleDelta, 50, 300);
+          setImageScale(newScale);
+        }
       }
 
       if (isShapePart(s.part) && setShapeOverrides) {
