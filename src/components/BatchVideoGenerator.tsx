@@ -479,6 +479,9 @@ const CardCoverPreview = memo(({
 
   const renderSinglePage = (pageIdx: number, skipAspectRatio = false) => {
     const isSignature = pageIdx === allPages - 1 && allPages > 1;
+    const signatureFullPage = isSignature ? (video.fullPages?.[pageIdx] || "") : "";
+    const useSignatureComposite = !!signatureFullPage;
+    const pageBaseImage = useSignatureComposite ? signatureFullPage : (video.pages[pageIdx] || "");
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
     const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
@@ -529,9 +532,9 @@ const CardCoverPreview = memo(({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {video.pages[pageIdx] ? (
+        {pageBaseImage ? (
           <img
-            src={video.pages[pageIdx]}
+            src={pageBaseImage}
             alt={video.clientName}
             className="absolute inset-0 w-full h-full object-contain z-0"
           />
@@ -541,7 +544,7 @@ const CardCoverPreview = memo(({
           </div>
         )}
 
-        {pgPreImage && pgPreImage !== "" && (
+        {!useSignatureComposite && pgPreImage && pgPreImage !== "" && (
           <img
             src={pgPreImage}
             alt=""
@@ -632,13 +635,13 @@ const CardCoverPreview = memo(({
           );
         })()}
 
-        {effectiveFrameOverlay && (
+        {!useSignatureComposite && effectiveFrameOverlay && (
           <img src={effectiveFrameOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`} style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined} draggable={false} />
         )}
-        {effectiveTextOverlay && (
+        {!useSignatureComposite && effectiveTextOverlay && (
           <img src={effectiveTextOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`} style={{ animationDuration: `${textAnimDuration}s` }} draggable={false} />
         )}
-        {pgLogo && pgLogo !== "" && (
+        {!useSignatureComposite && pgLogo && pgLogo !== "" && (
           <img src={pgLogo} alt="" className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`} draggable={false} />
         )}
 
@@ -1187,6 +1190,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               frameOverlayPages: results[j].frameOverlayPages,
               preImageOverlayPages: results[j].preImageOverlayPages,
               logoOverlayPages: results[j].logoOverlayPages,
+              fullPages: results[j].fullPages,
             };
           }
           setGenerationStatus(`Reconstruindo... (${Math.min(start + BATCH_SIZE, updatedVideos.length)}/${updatedVideos.length})`);
@@ -3756,10 +3760,26 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     logoUrl={selectedVideo.brandKit?.pngs?.[0] || selectedVideo.brandKit?.logo || ""}
                     contactUrl={selectedVideo.brandKit?.pngs?.[1] || selectedVideo.brandKit?.contactInfo || ""}
                     mascotUrl={selectedVideo.brandKit?.pngs?.[2] || selectedVideo.brandKit?.mascot || ""}
-                    frameOverlayUrl={selectedVideo.frameOverlayPages?.[currentPreviewPage] || ""}
-                    textOverlayUrl={selectedVideo.overlayPages?.[currentPreviewPage] || ""}
-                    logoOverlayUrl={selectedVideo.logoOverlayPages?.[currentPreviewPage] || ""}
-                    preImageOverlayUrl={selectedVideo.preImageOverlayPages?.[currentPreviewPage] || ""}
+                    frameOverlayUrl={
+                      currentPreviewPage === selectedVideo.pages.length - 1
+                        ? ""
+                        : (selectedVideo.frameOverlayPages?.[currentPreviewPage] || "")
+                    }
+                    textOverlayUrl={
+                      currentPreviewPage === selectedVideo.pages.length - 1
+                        ? ""
+                        : (selectedVideo.overlayPages?.[currentPreviewPage] || "")
+                    }
+                    logoOverlayUrl={
+                      currentPreviewPage === selectedVideo.pages.length - 1
+                        ? ""
+                        : (selectedVideo.logoOverlayPages?.[currentPreviewPage] || "")
+                    }
+                    preImageOverlayUrl={
+                      currentPreviewPage === selectedVideo.pages.length - 1
+                        ? ""
+                        : (selectedVideo.preImageOverlayPages?.[currentPreviewPage] || "")
+                    }
                     backgroundImageUrl={selectedVideo.searchedImages?.[currentPreviewPage] || ""}
                     backgroundVideoUrl={selectedVideo.previewVideoUrls?.[currentPreviewPage] || (currentPreviewPage < selectedVideo.pages.length - 1 ? (selectedVideo.previewVideoUrls?.find(v => v && v !== "") || "") : "")}
                     backgroundPngUrl={(
