@@ -763,9 +763,9 @@ export function ArtGeneratorModal({
   clientId,
   onExported,
 }: ArtGeneratorModalProps) {
-  // Split text by ";" for carousel pages
-  const pages = (cardText || cardTitle || clientName).split(";").map(p => p.trim()).filter(Boolean);
-  const isCarousel = pages.length > 1;
+  // Single page only — carousel is handled by BatchArtGenerator
+  const pages = [cardText || cardTitle || clientName];
+  const isCarousel = false;
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [template, setTemplate] = useState<ArtTemplate | null>(null);
