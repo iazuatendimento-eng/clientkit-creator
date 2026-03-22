@@ -1834,6 +1834,19 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       }
     }
 
+    // Draw custom overlay PNGs on top of everything
+    if (art.customOverlays && art.customOverlays.length > 0) {
+      for (const overlayUrl of art.customOverlays) {
+        try {
+          const overlayImg = await loadImage(overlayUrl);
+          if (overlayImg) {
+            ctx.drawImage(overlayImg, 0, 0, canvas.width, canvas.height);
+          }
+        } catch (e) {
+          console.warn("[customOverlay] Failed to draw overlay:", e);
+        }
+      }
+    }
 
     const renderedDataUrl = canvas.toDataURL("image/png");
 
