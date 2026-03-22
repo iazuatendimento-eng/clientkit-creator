@@ -184,7 +184,13 @@ export function ArtAdjustOverlay({
   useEffect(() => { onDragEndRef.current = onDragEnd; });
 
   const els = useMemo(() => {
-    const photoFrame = template.elements.find((e) => e.type === "image" && e.placeholder);
+    const imageElements = template.elements.filter((e) => e.type === "image");
+    const placeholderEl = imageElements.find((e) => e.placeholder);
+    const largestImageEl = imageElements.reduce<typeof template.elements[0] | null>((largest, current) => {
+      if (!largest) return current;
+      return current.width * current.height > largest.width * largest.height ? current : largest;
+    }, null);
+    const photoFrame = placeholderEl || largestImageEl;
     const logoEl = template.elements.find((e) => e.type === "logo");
     const contactEl = template.elements.find((e) => e.type === "contact");
     const textEl = template.elements.find((e) => e.type === "text");
