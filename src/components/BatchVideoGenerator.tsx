@@ -175,6 +175,7 @@ interface ElementAdjustments {
   textScale: number;
   textX: number;
   textY: number;
+  shapeOverrides?: Record<string, { x: number; y: number; width: number; height: number }>;
 }
 
 const defaultAdjustments: ElementAdjustments = {
@@ -3668,6 +3669,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     setImageX={(v) => updatePageImageAdjustment(currentPreviewPage, "imageX", v)}
                     setImageY={(v) => updatePageImageAdjustment(currentPreviewPage, "imageY", v)}
                     setImageScale={(v) => updatePageImageAdjustment(currentPreviewPage, "imageScale", v)}
+                    shapeOverrides={selectedVideo.adjustments.shapeOverrides || {}}
+                    setShapeOverrides={(next) => {
+                      const current = selectedVideoRef.current;
+                      if (!current) return;
+                      const updatedAdj = { ...current.adjustments, shapeOverrides: next };
+                      selectedVideoRef.current = { ...current, adjustments: updatedAdj };
+                      setSelectedVideo((prev) => prev ? { ...prev, adjustments: updatedAdj } : prev);
+                      setClientVideos((prev) => prev.map((v) => v.cardId === current.cardId ? { ...v, adjustments: updatedAdj } : v));
+                    }}
                   />
 
                   <p className="text-center text-[10px] text-muted-foreground">

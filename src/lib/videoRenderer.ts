@@ -115,6 +115,8 @@ export interface CanvasElement {
   animLoop?: boolean;
 }
 
+export type ShapeOverride = { x: number; y: number; width: number; height: number };
+
 export interface ElementAdjustments {
   logoScaleX: number; logoScaleY: number; logoX: number; logoY: number;
   contactScaleX: number; contactScaleY: number; contactX: number; contactY: number;
@@ -123,6 +125,7 @@ export interface ElementAdjustments {
   sigContactScaleX: number; sigContactScaleY: number; sigContactX: number; sigContactY: number;
   sigMascotScaleX: number; sigMascotScaleY: number; sigMascotX: number; sigMascotY: number;
   textScale: number; textX: number; textY: number;
+  shapeOverrides?: Record<string, ShapeOverride>;
 }
 
 export const defaultAdjustments: ElementAdjustments = {
@@ -396,8 +399,17 @@ export async function generatePageImage(
     }
   };
 
+  // Apply shape overrides from adjustments
+  const shapeOverrides = adjustments.shapeOverrides || {};
+
   for (let elIdx = 0; elIdx < elements.length; elIdx++) {
-    const el = elements[elIdx];
+    let el = elements[elIdx];
+
+    // Apply shape override if available
+    if (el.id && shapeOverrides[el.id] && !["image", "text", "contact", "logo", "mascot"].includes(el.type)) {
+      const ov = shapeOverrides[el.id];
+      el = { ...el, x: ov.x, y: ov.y, width: ov.width, height: ov.height };
+    }
 
     // Shape filter
     if (shapeFilter === "before-image" && imageElIndex >= 0 && elIdx >= imageElIndex) continue;

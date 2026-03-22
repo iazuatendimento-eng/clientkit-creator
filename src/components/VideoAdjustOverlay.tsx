@@ -22,17 +22,27 @@ interface VideoTemplateLike {
   signatureElements: CanvasElement[];
 }
 
+type ShapeOverride = { x: number; y: number; width: number; height: number };
+
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
-type Part = "logo" | "contact" | "mascot" | "text" | "image";
+type BasePart = "logo" | "contact" | "mascot" | "text" | "image";
+type ShapePart = `shape:${string}`;
+type Part = BasePart | ShapePart;
 type Tone = "primary" | "secondary" | "accent" | "muted" | "warning";
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
 const handleHasW = (h: Handle) => h === "nw" || h === "sw" || h === "w";
+const handleHasE = (h: Handle) => h === "ne" || h === "se" || h === "e";
 const handleHasN = (h: Handle) => h === "nw" || h === "ne" || h === "n";
+const handleHasS = (h: Handle) => h === "sw" || h === "se" || h === "s";
 
 const handleSignX = (h: Handle) => (handleHasW(h) ? -1 : 1);
 const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
+
+const isShapePart = (p: Part): p is ShapePart => typeof p === "string" && p.startsWith("shape:");
+const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
+
 
 const toneClasses = (tone: Tone) => {
   if (tone === "primary") {
@@ -141,6 +151,9 @@ export function VideoAdjustOverlay({
   setImageX,
   setImageY,
   setImageScale,
+
+  shapeOverrides,
+  setShapeOverrides,
 }: {
   template: VideoTemplateLike;
   previewUrl: string | null;
@@ -200,9 +213,19 @@ export function VideoAdjustOverlay({
   setImageX?: (v: number) => void;
   setImageY?: (v: number) => void;
   setImageScale?: (v: number) => void;
+
+  shapeOverrides?: Record<string, ShapeOverride>;
+  setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part>("logo");
+
+  const shapeTypes: ElementType[] = [
+    "rect", "circle", "triangle", "line", "star", "diamond", "hexagon", "pentagon",
+    "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid",
+    "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud",
+    "speechBubble", "lightning", "shield", "crescent", "chevron",
+  ];
 
   const els = useMemo(() => {
     const currentElements = isContentPage ? template.contentElements : template.signatureElements;
@@ -212,7 +235,10 @@ export function VideoAdjustOverlay({
     const textEl = currentElements.find((e) => e.type === "text");
     // Image placeholder comes from contentElements always
     const imageEl = template.contentElements.find((e) => e.type === "image");
-    return { logoEl, contactEl, mascotEl, textEl, imageEl };
+    const shapes = currentElements
+      .filter((e) => !!e.id && shapeTypes.includes(e.type))
+      .map((e) => ({ ...e, id: e.id as string }));
+    return { logoEl, contactEl, mascotEl, textEl, imageEl, shapes };
   }, [template.contentElements, template.signatureElements, isContentPage]);
 
   const getRect = (part: Part) => {
@@ -316,6 +342,19 @@ export function VideoAdjustOverlay({
       };
     }
 
+    if (isShapePart(part)) {
+      const id = shapeIdFromPart(part);
+      const base = els.shapes.find((s) => s.id === id);
+      if (!base) return null;
+      const ov = shapeOverrides?.[id];
+      return {
+        x: ov?.x ?? base.x,
+        y: ov?.y ?? base.y,
+        w: ov?.width ?? base.width,
+        h: ov?.height ?? base.height,
+      };
+    }
+
     return null;
   };
 
@@ -356,6 +395,7 @@ export function VideoAdjustOverlay({
           imageScale: number;
           imageW: number;
           imageH: number;
+          shapeRect?: ShapeOverride;
         };
       }
   >(null);
@@ -386,6 +426,12 @@ export function VideoAdjustOverlay({
     const imgElH = els.imageEl?.height || template.height;
     const imageW = imgElW * (currentImageScale / 100);
     const imageH = imgElH * (currentImageScale / 100);
+
+    let shapeRect: ShapeOverride | undefined;
+    if (isShapePart(part)) {
+      const r = getRect(part);
+      if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    }
 
     setActive(part);
     startRef.current = {
@@ -423,6 +469,7 @@ export function VideoAdjustOverlay({
         imageScale: currentImageScale,
         imageW,
         imageH,
+        shapeRect,
       },
     };
 
@@ -599,6 +646,44 @@ export function VideoAdjustOverlay({
         const scaleDelta = (delta / imgElW) * 100;
         const newScale = clamp(s.start.imageScale + scaleDelta, 50, 300);
         setImageScale(newScale);
+      }
+
+      if (isShapePart(s.part) && setShapeOverrides) {
+        const id = shapeIdFromPart(s.part);
+        const startRect = s.start.shapeRect;
+        if (!startRect) return;
+
+        const minSize = 20;
+
+        if (s.mode === "move") {
+          const next: ShapeOverride = {
+            x: startRect.x + dx,
+            y: startRect.y + dy,
+            width: startRect.width,
+            height: startRect.height,
+          };
+          setShapeOverrides({ ...(shapeOverrides || {}), [id]: next });
+          return;
+        }
+
+        const h = s.handle || "se";
+        let newX = startRect.x;
+        let newY = startRect.y;
+        let newW = startRect.width;
+        let newH = startRect.height;
+
+        if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+        if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+        if (handleHasW(h)) {
+          newW = Math.max(minSize, startRect.width - dx);
+          newX = startRect.x + (startRect.width - newW);
+        }
+        if (handleHasN(h)) {
+          newH = Math.max(minSize, startRect.height - dy);
+          newY = startRect.y + (startRect.height - newH);
+        }
+
+        setShapeOverrides({ ...(shapeOverrides || {}), [id]: { x: newX, y: newY, width: newW, height: newH } });
       }
     };
 
@@ -837,6 +922,26 @@ export function VideoAdjustOverlay({
             {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-contain" draggable={false} />}
           </Box>
         )}
+        {/* Decorative shapes */}
+        {els.shapes.map((s, idx) => {
+          const shapeLabels: Record<string, string> = {
+            rect: "Retângulo", circle: "Círculo", triangle: "Triângulo", line: "Linha",
+            star: "Estrela", diamond: "Losango", hexagon: "Hexágono", pentagon: "Pentágono",
+            wave: "Onda", blob: "Blob", arch: "Arco", arrow: "Seta", badge: "Badge",
+            ribbon: "Fita", polkaDots: "Bolinhas", dotsGrid: "Pontos", confetti: "Confeti",
+            splatter: "Splatter", zigzag: "Zigzag", spiral: "Espiral", heart: "Coração",
+            cross: "Cruz", cloud: "Nuvem", speechBubble: "Balão", lightning: "Raio",
+            shield: "Escudo", crescent: "Lua", chevron: "Seta",
+          };
+          return (
+            <Box
+              key={s.id}
+              part={`shape:${s.id}`}
+              label={`${shapeLabels[s.type] || s.type} ${idx + 1}`}
+              tone="muted"
+            />
+          );
+        })}
       </div>
 
       {isBusy && (
