@@ -920,10 +920,6 @@ export function VideoAdjustOverlay({
           {preImageOverlayUrl && preImageOverlayUrl !== "" && (
             <img src={preImageOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
           )}
-          {/* Frame overlay layer */}
-          {frameOverlayUrl && (
-            <img src={frameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
-          )}
           {/* Static text/logo overlays hidden — content rendered inside interactive boxes instead */}
         </>
       ) : (
@@ -949,7 +945,7 @@ export function VideoAdjustOverlay({
         };
         return (
           <div
-            className="absolute overflow-hidden z-[0] pointer-events-none"
+            className="absolute overflow-hidden z-[2] pointer-events-none"
             style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
           >
             <div className="absolute inset-0" style={mediaStyle}>
@@ -970,6 +966,11 @@ export function VideoAdjustOverlay({
           </div>
         );
       })()}
+
+      {/* Frame overlay layer (must stay above image/video media) */}
+      {previewUrl && frameOverlayUrl && (
+        <img src={frameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[3]" draggable={false} />
+      )}
 
       <div className="absolute inset-0 z-[5]">
         {/* Render all elements in template order */}
