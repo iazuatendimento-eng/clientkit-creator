@@ -28,6 +28,48 @@ export interface PreloadedVideoData {
   materialImages: string[];
 }
 
+type CachedClientMeta = {
+  imageType: string;
+  narrationType: string;
+  briefing: string;
+};
+
+const clientMetaCache = new Map<string, CachedClientMeta>();
+const pexelsSearchPromiseCache = new Map<string, Promise<Array<{ videoUrl: string }>>>();
+
+async function getClientMetaCached(clientName: string): Promise<CachedClientMeta> {
+  if (!clientName) return { imageType: "", narrationType: "", briefing: "" };
+  const cached = clientMetaCache.get(clientName);
+  if (cached) return cached;
+
+  const { data } = await supabase
+    .from("client_data")
+    .select("image_type, narration_type, briefing")
+    .eq("name", clientName)
+    .maybeSingle();
+
+  const next = {
+    imageType: data?.image_type || "",
+    narrationType: data?.narration_type || "",
+    briefing: data?.briefing || "",
+  };
+  clientMetaCache.set(clientName, next);
+  return next;
+}
+
+async function searchPexelsVideosCached(query: string, minResults: number): Promise<Array<{ videoUrl: string }>> {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return [];
+  const key = `${normalized}::${Math.max(minResults, 3)}`;
+
+  const cached = pexelsSearchPromiseCache.get(key);
+  if (cached) return cached;
+
+  const promise = searchPexelsVideos(normalized, Math.max(minResults, 3)).catch(() => []);
+  pexelsSearchPromiseCache.set(key, promise);
+  return promise;
+}
+
 export function useVideoPregenerate(
   cardId: string,
   cardText: string,
@@ -71,22 +113,18 @@ export function useVideoPregenerate(
           audioUrl2: raw.audio_url_2 || undefined,
         };
 
-        // Fetch client metadata for better search context
+        // Fetch client metadata for better search context (cached)
         let clientImageType = "";
         let clientNarrationType = "";
         let clientBriefing = "";
         try {
-          const { data: clientMeta } = await supabase
-            .from("client_data")
-            .select("image_type, narration_type, briefing")
-            .eq("name", clientName)
-            .maybeSingle();
-          if (clientMeta) {
-            clientImageType = clientMeta.image_type || "";
-            clientNarrationType = clientMeta.narration_type || "";
-            clientBriefing = clientMeta.briefing || "";
-          }
-        } catch { /* ignore */ }
+          const clientMeta = await getClientMetaCached(clientName);
+          clientImageType = clientMeta.imageType;
+          clientNarrationType = clientMeta.narrationType;
+          clientBriefing = clientMeta.briefing;
+        } catch {
+          /* ignore */
+        }
 
         const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
         await loadGoogleFont(fontFamily);
