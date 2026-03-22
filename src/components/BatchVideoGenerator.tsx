@@ -47,6 +47,7 @@ import {
   Mail,
   EyeOff,
   Eye,
+  Move,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
