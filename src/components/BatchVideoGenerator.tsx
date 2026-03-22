@@ -56,7 +56,7 @@ import { generateAllVideoPages } from "@/lib/videoRenderer";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import { encodeVideoToMP4, loadFFmpeg, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
-import { VideoAdjustOverlay } from "./VideoAdjustOverlay";
+import { VideoAdjustOverlay, type VideoCustomOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
   Dialog,
@@ -269,6 +269,7 @@ interface ClientVideo {
   selectedAudio?: 1 | 2;
   note?: string;
   noteRead?: boolean;
+  customOverlayPages?: Record<number, VideoCustomOverlay[]>;
   
 }
 
@@ -2097,6 +2098,69 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     );
   }, []);
 
+  const setCurrentPageOverlays = useCallback((overlays: VideoCustomOverlay[]) => {
+    const current = selectedVideoRef.current;
+    if (!current) return;
+
+    const updatedCustomOverlayPages = {
+      ...(current.customOverlayPages || {}),
+      [currentPreviewPage]: overlays,
+    };
+
+    selectedVideoRef.current = {
+      ...current,
+      customOverlayPages: updatedCustomOverlayPages,
+    };
+
+    setSelectedVideo((prev) =>
+      prev ? { ...prev, customOverlayPages: updatedCustomOverlayPages } : prev
+    );
+
+    setClientVideos((prev) =>
+      prev.map((v) =>
+        v.cardId === current.cardId
+          ? { ...v, customOverlayPages: updatedCustomOverlayPages }
+          : v
+      )
+    );
+  }, [currentPreviewPage]);
+
+  const handleAddVideoOverlay = useCallback((file: File) => {
+    const reader = new FileReader();
+    const isVideo = file.type.startsWith("video");
+
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      if (!url) return;
+
+      const newOverlay: VideoCustomOverlay = {
+        url,
+        x: template.width / 4,
+        y: template.height / 4,
+        width: template.width / 2,
+        height: template.height / 2,
+        isVideo,
+      };
+
+      const current = selectedVideoRef.current;
+      if (!current) return;
+
+      const pageOverlays = current.customOverlayPages?.[currentPreviewPage] || [];
+      setCurrentPageOverlays([...pageOverlays, newOverlay]);
+    };
+
+    reader.readAsDataURL(file);
+  }, [currentPreviewPage, setCurrentPageOverlays, template.height, template.width]);
+
+  const handleDeleteVideoOverlay = useCallback((idx: number) => {
+    const current = selectedVideoRef.current;
+    if (!current) return;
+
+    const updated = [...(current.customOverlayPages?.[currentPreviewPage] || [])];
+    updated.splice(idx, 1);
+    setCurrentPageOverlays(updated);
+  }, [currentPreviewPage, setCurrentPageOverlays]);
+
   const applyAdjustments = useCallback(
     async (override?: ClientVideo) => {
       const base = override ?? selectedVideoRef.current;
@@ -2809,6 +2873,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
             imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
             pageImageAdjustments: video.pageImageAdjustments,
+            customOverlayPages: video.customOverlayPages || undefined,
             audioUrl,
             requireEmailSafePreview: true,
             onProgress: (p: number) => {
@@ -3678,6 +3743,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       setSelectedVideo((prev) => prev ? { ...prev, adjustments: updatedAdj } : prev);
                       setClientVideos((prev) => prev.map((v) => v.cardId === current.cardId ? { ...v, adjustments: updatedAdj } : v));
                     }}
+                    customOverlays={selectedVideo.customOverlayPages?.[currentPreviewPage] || []}
+                    setCustomOverlays={setCurrentPageOverlays}
+                    onAddOverlay={handleAddVideoOverlay}
+                    onDeleteOverlay={handleDeleteVideoOverlay}
                   />
 
                   <p className="text-center text-[10px] text-muted-foreground">
