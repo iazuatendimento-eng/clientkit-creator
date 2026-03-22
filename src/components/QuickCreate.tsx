@@ -47,8 +47,11 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   );
 
   // Auto-trigger generation when coming from a card (template + text already known)
+  // If no template is saved, show template selector immediately
   useEffect(() => {
-    if (initialTemplateId && initialText && !autoTriggeredRef.current) {
+    if (autoTriggeredRef.current) return;
+    
+    if (initialText && initialTemplateId) {
       autoTriggeredRef.current = true;
       (async () => {
         const table = (initialType || type) === "art" ? "master_templates" : "master_video_templates";
@@ -68,6 +71,10 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
         // Fallback: show selector if template not found
         setShowTemplateSelector(true);
       })();
+    } else if (initialText && !initialTemplateId && initialType) {
+      // Card has text and type but no template — ask user to pick one
+      autoTriggeredRef.current = true;
+      setShowTemplateSelector(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
