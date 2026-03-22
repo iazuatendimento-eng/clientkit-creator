@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check, Mail } from "lucide-react";
+import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check, Mail, Move } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -238,6 +238,7 @@ export function VideoGeneratorModal({
   const pageTextAdjustmentsRef = useRef<PageTextAdjustment[]>([]);
   const pageImageAdjustmentsRef = useRef<PageImageAdjustment[]>([]);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
+  const [photoInteractionMode, setPhotoInteractionMode] = useState<"content" | "frame">("content");
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<"1" | "2" | "none">("1");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailProgress, setEmailProgress] = useState(0);
@@ -804,8 +805,22 @@ export function VideoGeneratorModal({
                       onDeleteOverlay={handleDeleteVideoOverlay}
                       shapeOverrides={adjustments.shapeOverrides || {}}
                       setShapeOverrides={setShapeOverridesLocal}
-                      photoInteractionMode="content"
+                      photoInteractionMode={photoInteractionMode}
                     />
+                    {/* Photo interaction mode toggle */}
+                    {isContentPage && (
+                      <div className="absolute top-2 left-2 z-20">
+                        <Button
+                          variant={photoInteractionMode === "content" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPhotoInteractionMode((prev) => (prev === "content" ? "frame" : "content"))}
+                          className="gap-1.5 shadow-lg text-xs h-7"
+                        >
+                          <Move className="h-3 w-3" />
+                          {photoInteractionMode === "content" ? "Zoom da foto" : "Mover moldura"}
+                        </Button>
+                      </div>
+                    )}
                     {/* Page navigation in edit mode */}
                     {videoPages.pages.length > 1 && (
                       <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-20">
