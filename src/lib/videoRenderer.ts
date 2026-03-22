@@ -984,12 +984,13 @@ export async function generateAllVideoPages(
       );
     }
 
-    const missingAnyTopLayer =
-      (hasTextLayer && !textOverlay) ||
-      (hasFrameLayer && !frameOverlay) ||
-      (hasLogoLayer && !logoOverlay);
+    const missingText = hasTextLayer && !textOverlay;
+    const missingFrame = hasFrameLayer && !frameOverlay;
+    const missingLogo = hasLogoLayer && !logoOverlay;
+    const missingAnyTopLayer = missingText || missingFrame || missingLogo;
 
     if (missingAnyTopLayer) {
+      // Only generate combined fallback for layers that actually failed
       const combinedTopOverlay = await generatePageImage(
         tw,
         th,
@@ -1010,13 +1011,12 @@ export async function generateAllVideoPages(
       );
 
       if (combinedTopOverlay) {
-        // Only clear layers that were already empty/missing — keep successful ones
-        if (!textOverlay) textOverlay = combinedTopOverlay;
-        // If frame overlay was successfully generated, keep it; otherwise merge into combined
-        if (!frameOverlay) frameOverlay = "";
-        if (!logoOverlay) logoOverlay = "";
-        // If text was the only missing one, combined already has it
-        // If frame was missing too, it's now in the combined text overlay
+        // Use combined overlay for text (which includes all layers)
+        // but preserve individually-generated overlays that succeeded
+        textOverlay = combinedTopOverlay;
+        // Only clear frame/logo if they were already missing
+        if (missingFrame) frameOverlay = "";
+        if (missingLogo) logoOverlay = "";
       }
     }
 
