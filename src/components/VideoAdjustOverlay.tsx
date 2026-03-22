@@ -427,6 +427,12 @@ export function VideoAdjustOverlay({
     const imageW = imgElW * (currentImageScale / 100);
     const imageH = imgElH * (currentImageScale / 100);
 
+    let shapeRect: ShapeOverride | undefined;
+    if (isShapePart(part)) {
+      const r = getRect(part);
+      if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    }
+
     setActive(part);
     startRef.current = {
       mode,
@@ -463,6 +469,7 @@ export function VideoAdjustOverlay({
         imageScale: currentImageScale,
         imageW,
         imageH,
+        shapeRect,
       },
     };
 
