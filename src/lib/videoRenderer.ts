@@ -468,9 +468,7 @@ export async function generatePageImage(
     // Raw color match against template/fallback brand color for older templates without explicit role
     const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
     const matchesBrandBg = !el.colorRole && el.color === brandBgColor;
-    // On signature pages, also allow large Elemento (Cor 1) blocks to be replaced by PNG
-    const isSignatureBgCandidate = isSignature && (isElement1Role || matchesBrandBg);
-    if (!isBackgroundRole && !matchesTemplateBg && !isSignatureBgCandidate) return false;
+
     const ov = shapeOverrides[el.id || ""];
     const ex = ov?.x ?? el.x ?? 0;
     const ey = ov?.y ?? el.y ?? 0;
@@ -482,6 +480,11 @@ export async function generatePageImage(
       ey <= templateHeight * 0.2 &&
       ex + ew >= templateWidth * 0.8 &&
       ey + eh >= templateHeight * 0.8;
+
+    // On signature pages, skip ANY large shape covering the canvas when PNG is active
+    if (isSignature && coversMostCanvas) return true;
+
+    if (!isBackgroundRole && !matchesTemplateBg) return false;
     return coversMostCanvas;
   };
 
