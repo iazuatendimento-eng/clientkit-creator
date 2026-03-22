@@ -37,7 +37,8 @@ type ShapeOverride = { x: number; y: number; width: number; height: number };
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 type BasePart = "logo" | "contact" | "mascot" | "text" | "image";
 type ShapePart = `shape:${string}`;
-type Part = BasePart | ShapePart;
+type OverlayPart = `overlay:${number}`;
+type Part = BasePart | ShapePart | OverlayPart;
 type Tone = "primary" | "secondary" | "accent" | "muted" | "warning";
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
