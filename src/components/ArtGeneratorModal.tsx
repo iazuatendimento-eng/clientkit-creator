@@ -441,12 +441,17 @@ async function renderArt(
   // Background — check for brand kit background PNG
   const templateBgColor = template.backgroundColor;
   const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png || "";
+  // Check if any element is explicitly marked as background
+  const hasExplicitBgRole = template.elements.some(el => el.colorRole === "background");
   const hasLargeBgShape = (() => {
     if (!brandBgPng) return false;
     for (const el of template.elements) {
-      const isBackgroundRole = el.colorRole === "background";
-      const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
-      if (!isBackgroundRole && !matchesTemplateBg) continue;
+      // If explicit roles exist, ONLY consider those; otherwise fallback to color match
+      if (hasExplicitBgRole) {
+        if (el.colorRole !== "background") continue;
+      } else {
+        if (el.color !== templateBgColor) continue;
+      }
       const ov = overrides.shapes?.[el.id];
       const ex = ov?.x ?? el.x ?? 0;
       const ey = ov?.y ?? el.y ?? 0;
