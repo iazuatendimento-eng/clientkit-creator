@@ -838,7 +838,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     return false;
   })();
 
-
+  const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
   const [textAnimation, setTextAnimation] = useState<TextAnimation>(getTemplateTextAnimation);
   const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>(getTemplateLogoAnimation);
