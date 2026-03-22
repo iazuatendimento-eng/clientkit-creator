@@ -2318,19 +2318,41 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const textAdj = video.pageTextAdjustments[currentPreviewPage] || { textX: 0, textY: 0, textScale: 100 };
         const imageAdj = video.pageImageAdjustments[currentPreviewPage] || { imageX: 0, imageY: 0, imageScale: 100 };
 
-        const frameOverlay = await generatePageImageFromRenderer(
-          template.width, template.height, template.backgroundColor,
-          elements, "", video.brandKit, isSignature, undefined,
-          video.adjustments, textAdj, imageAdj,
-          true, true, true, "after-image"
-        );
+        // Use half resolution for faster preview rendering (~4x faster)
+        const scale = 0.5;
+        const pw = Math.round(template.width * scale);
+        const ph = Math.round(template.height * scale);
+        const scaledElements = elements.map((el: any) => ({
+          ...el,
+          x: (el.x || 0) * scale,
+          y: (el.y || 0) * scale,
+          width: (el.width || 0) * scale,
+          height: (el.height || 0) * scale,
+          fontSize: el.fontSize ? el.fontSize * scale : undefined,
+          borderWidth: el.borderWidth ? el.borderWidth * scale : undefined,
+        }));
+        const scaledOverrides: Record<string, any> = {};
+        if (video.adjustments.shapeOverrides) {
+          for (const [id, ov] of Object.entries(video.adjustments.shapeOverrides)) {
+            scaledOverrides[id] = { x: ov.x * scale, y: ov.y * scale, width: ov.width * scale, height: ov.height * scale };
+          }
+        }
+        const scaledAdj = { ...video.adjustments, shapeOverrides: scaledOverrides };
 
-        const preImageOverlay = await generatePageImageFromRenderer(
-          template.width, template.height, template.backgroundColor,
-          elements, "", video.brandKit, isSignature, undefined,
-          video.adjustments, textAdj, imageAdj,
-          true, true, true, "before-image"
-        );
+        const [frameOverlay, preImageOverlay] = await Promise.all([
+          generatePageImageFromRenderer(
+            pw, ph, template.backgroundColor,
+            scaledElements, "", video.brandKit, isSignature, undefined,
+            scaledAdj, textAdj, imageAdj,
+            true, true, true, "after-image"
+          ),
+          generatePageImageFromRenderer(
+            pw, ph, template.backgroundColor,
+            scaledElements, "", video.brandKit, isSignature, undefined,
+            scaledAdj, textAdj, imageAdj,
+            true, true, true, "before-image"
+          ),
+        ]);
 
         setSelectedVideo((prev) => {
           if (!prev) return prev;
@@ -2345,7 +2367,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       } catch (err) {
         console.error("Frame overlay regeneration error:", err);
       }
-    }, 100);
+    }, 50);
 
     return () => clearTimeout(timer);
   }, [shapeOverridesJson, currentPreviewPage]);
