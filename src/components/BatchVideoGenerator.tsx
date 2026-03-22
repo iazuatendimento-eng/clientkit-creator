@@ -3650,8 +3650,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     frameOverlayUrl={selectedVideo.frameOverlayPages?.[currentPreviewPage] || ""}
                     textOverlayUrl={selectedVideo.overlayPages?.[currentPreviewPage] || ""}
                     logoOverlayUrl={selectedVideo.logoOverlayPages?.[currentPreviewPage] || ""}
+                    preImageOverlayUrl={selectedVideo.preImageOverlayPages?.[currentPreviewPage] || ""}
                     backgroundImageUrl={selectedVideo.searchedImages?.[currentPreviewPage] || ""}
                     backgroundVideoUrl={selectedVideo.previewVideoUrls?.[currentPreviewPage] || (currentPreviewPage < selectedVideo.pages.length - 1 ? (selectedVideo.previewVideoUrls?.find(v => v && v !== "") || "") : "")}
+                    backgroundPngUrl={selectedVideo.brandKit?.backgroundPng || selectedVideo.brandKit?.background_png || ""}
                     logoX={currentPreviewPage < selectedVideo.pages.length - 1 
                       ? selectedVideo.adjustments.logoX 
                       : (selectedVideo.adjustments.sigLogoX ?? selectedVideo.adjustments.logoX)}
