@@ -1,8 +1,16 @@
 import { useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
-type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent" | "chevron";
+export interface VideoCustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isVideo?: boolean;
+}
 
 interface CanvasElement {
   id?: string;
