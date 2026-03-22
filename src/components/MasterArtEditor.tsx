@@ -285,7 +285,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
         .from('master_templates')
         .select('*')
         .eq('deleted', false)
-        .order('updated_at', { ascending: false });
+        .order('name', { ascending: true });
 
       if (error) throw error;
       const templates = (data || []).map(t => ({
