@@ -975,7 +975,7 @@ export async function generateAllVideoPages(
       true,
       true,
       true,
-      "all"
+      "after-image"
     );
 
     let logoOverlay = await generateLogoOverlay(tw, th, elements, brandKit, isSignature, adjustments);
