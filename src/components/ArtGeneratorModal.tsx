@@ -1007,13 +1007,6 @@ export function ArtGeneratorModal({
     reader.readAsDataURL(file);
   }, [currentPage]);
 
-  // Re-render canvas when overlays change
-  useEffect(() => {
-    if (pendingOverlayRegenRef.current) {
-      pendingOverlayRegenRef.current = false;
-      regenerateCurrentPage();
-    }
-  }, [pageCustomOverlays, regenerateCurrentPage]);
 
 
   // Photo search
