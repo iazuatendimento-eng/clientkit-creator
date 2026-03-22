@@ -194,7 +194,7 @@ function AnimatedTemplateCard({
     let elements = page.elements as any[];
 
     // Apply brand colors if available
-    if (brand && type === "video") {
+    if (brand) {
       elements = elements.map(el => applyBrandToElement(el, brand));
     }
 
@@ -294,7 +294,6 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
 
   // Fetch sample client brand kit for realistic preview
   useEffect(() => {
-    if (type !== "video") return;
 
     const fetchBrand = async () => {
       try {
