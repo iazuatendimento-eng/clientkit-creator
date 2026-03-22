@@ -981,12 +981,7 @@ export function VideoAdjustOverlay({
   );
 
   const hideBakedBasePreview = Boolean(
-    forceSignatureClientBg || (
-      isContentPage &&
-      setImageX &&
-      els.imageEl &&
-      ((backgroundImageUrl && backgroundImageUrl !== "") || (backgroundVideoUrl && backgroundVideoUrl !== ""))
-    )
+    forceSignatureClientBg
   );
 
   return (
