@@ -43,11 +43,6 @@ const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
 const isShapePart = (p: Part): p is ShapePart => typeof p === "string" && p.startsWith("shape:");
 const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
 
-const handleHasW = (h: Handle) => h === "nw" || h === "sw" || h === "w";
-const handleHasN = (h: Handle) => h === "nw" || h === "ne" || h === "n";
-
-const handleSignX = (h: Handle) => (handleHasW(h) ? -1 : 1);
-const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
 
 const toneClasses = (tone: Tone) => {
   if (tone === "primary") {
