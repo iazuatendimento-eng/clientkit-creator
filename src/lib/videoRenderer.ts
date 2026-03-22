@@ -1,5 +1,75 @@
 import { drawNewShape } from "@/lib/canvasShapes";
 
+// ─── Trim + Contain helper ──────────────────────────────────────
+const opaqueBoundsCache = new WeakMap<HTMLImageElement, { sx: number; sy: number; sw: number; sh: number }>();
+
+function getOpaqueBounds(img: HTMLImageElement) {
+  const natW = img.naturalWidth || img.width;
+  const natH = img.naturalHeight || img.height;
+  const fallback = { sx: 0, sy: 0, sw: Math.max(1, natW), sh: Math.max(1, natH) };
+  const cached = opaqueBoundsCache.get(img);
+  if (cached) return cached;
+  if (!natW || !natH) return fallback;
+  const maxScanDim = 1024;
+  const scale = Math.min(1, maxScanDim / Math.max(natW, natH));
+  const scanW = Math.max(1, Math.round(natW * scale));
+  const scanH = Math.max(1, Math.round(natH * scale));
+  const scanCanvas = document.createElement("canvas");
+  scanCanvas.width = scanW;
+  scanCanvas.height = scanH;
+  const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
+  if (!scanCtx) return fallback;
+  scanCtx.clearRect(0, 0, scanW, scanH);
+  scanCtx.drawImage(img, 0, 0, scanW, scanH);
+  let data: Uint8ClampedArray;
+  try { data = scanCtx.getImageData(0, 0, scanW, scanH).data; } catch { opaqueBoundsCache.set(img, fallback); return fallback; }
+  let minX = scanW, minY = scanH, maxX = -1, maxY = -1;
+  for (let y = 0; y < scanH; y++) {
+    for (let x = 0; x < scanW; x++) {
+      if (data[(y * scanW + x) * 4 + 3] > 8) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0 || maxY < 0) { opaqueBoundsCache.set(img, fallback); return fallback; }
+  const invScale = 1 / scale;
+  const sx = Math.max(0, Math.floor(minX * invScale));
+  const sy = Math.max(0, Math.floor(minY * invScale));
+  const ex = Math.min(natW, Math.ceil((maxX + 1) * invScale));
+  const ey = Math.min(natH, Math.ceil((maxY + 1) * invScale));
+  const result = { sx, sy, sw: ex - sx, sh: ey - sy };
+  opaqueBoundsCache.set(img, result);
+  return result;
+}
+
+function drawTrimContain(
+  ctx: CanvasRenderingContext2D, img: HTMLImageElement,
+  boxX: number, boxY: number, boxW: number, boxH: number,
+  trimInfluence: number, fitScale = 1
+) {
+  const natW = img.naturalWidth || img.width;
+  const natH = img.naturalHeight || img.height;
+  const bounds = getOpaqueBounds(img);
+  const baseSx = bounds.sx * trimInfluence;
+  const baseSy = bounds.sy * trimInfluence;
+  const baseSw = natW - (natW - bounds.sw) * trimInfluence;
+  const baseSh = natH - (natH - bounds.sh) * trimInfluence;
+  const srcAspect = baseSw / baseSh;
+  const boxAspect = boxW / boxH;
+  let drawW = boxW, drawH = boxH;
+  if (srcAspect > boxAspect) { drawH = boxW / srcAspect; } else { drawW = boxH * srcAspect; }
+  drawW *= fitScale;
+  drawH *= fitScale;
+  const drawX = boxX + (boxW - drawW) / 2;
+  const drawY = boxY + (boxH - drawH) / 2;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, baseSx, baseSy, baseSw, baseSh, drawX, drawY, drawW, drawH);
+}
+
 // ─── Types ───────────────────────────────────────────────────────
 
 export interface CanvasElement {
@@ -587,7 +657,7 @@ export async function generatePageImage(
           const ly = isSignature ? (adjustments.sigLogoY ?? adjustments.logoY) : adjustments.logoY;
           const lsx = isSignature ? (adjustments.sigLogoScaleX ?? adjustments.logoScaleX) : adjustments.logoScaleX;
           const lsy = isSignature ? (adjustments.sigLogoScaleY ?? adjustments.logoScaleY) : adjustments.logoScaleY;
-          ctx.drawImage(img, el.x + lx, el.y + ly, el.width * (lsx / 100), el.height * (lsy / 100));
+          drawTrimContain(ctx, img, el.x + lx, el.y + ly, el.width * (lsx / 100), el.height * (lsy / 100), 0.6);
         }
       } else {
         ctx.fillStyle = "rgba(59, 130, 246, 0.3)";
@@ -602,7 +672,7 @@ export async function generatePageImage(
           const cy2 = isSignature ? (adjustments.sigContactY ?? adjustments.contactY) : adjustments.contactY;
           const csx = isSignature ? (adjustments.sigContactScaleX ?? adjustments.contactScaleX) : adjustments.contactScaleX;
           const csy = isSignature ? (adjustments.sigContactScaleY ?? adjustments.contactScaleY) : adjustments.contactScaleY;
-          ctx.drawImage(img, el.x + cx2, el.y + cy2, el.width * (csx / 100), el.height * (csy / 100));
+          drawTrimContain(ctx, img, el.x + cx2, el.y + cy2, el.width * (csx / 100), el.height * (csy / 100), 1.0, 0.88);
         }
       }
     } else if (el.type === "mascot") {
@@ -614,7 +684,7 @@ export async function generatePageImage(
           const my = isSignature ? (adjustments.sigMascotY ?? adjustments.mascotY) : adjustments.mascotY;
           const msx = isSignature ? (adjustments.sigMascotScaleX ?? adjustments.mascotScaleX) : adjustments.mascotScaleX;
           const msy = isSignature ? (adjustments.sigMascotScaleY ?? adjustments.mascotScaleY) : adjustments.mascotScaleY;
-          ctx.drawImage(img, el.x + mx, el.y + my, el.width * (msx / 100), el.height * (msy / 100));
+          drawTrimContain(ctx, img, el.x + mx, el.y + my, el.width * (msx / 100), el.height * (msy / 100), 0.6);
         }
       }
     }
@@ -671,21 +741,7 @@ export async function generateLogoOverlay(
         const boxH = logoEl.height * (lsy / 100);
         const boxX = logoEl.x + lx;
         const boxY = logoEl.y + ly;
-        // Contain: fit entire logo within box, centered
-        const natW = img.naturalWidth || img.width;
-        const natH = img.naturalHeight || img.height;
-        const srcAspect = natW / natH;
-        const boxAspect = boxW / boxH;
-        let drawW = boxW;
-        let drawH = boxH;
-        if (srcAspect > boxAspect) {
-          drawH = boxW / srcAspect;
-        } else {
-          drawW = boxH * srcAspect;
-        }
-        const drawX = boxX + (boxW - drawW) / 2;
-        const drawY = boxY + (boxH - drawH) / 2;
-        ctx.drawImage(img, 0, 0, natW, natH, drawX, drawY, drawW, drawH);
+        drawTrimContain(ctx, img, boxX, boxY, boxW, boxH, 0.6);
       }
     }
   }
@@ -699,7 +755,7 @@ export async function generateLogoOverlay(
         const my = isSignature ? (adjustments.sigMascotY ?? adjustments.mascotY) : adjustments.mascotY;
         const msx = isSignature ? (adjustments.sigMascotScaleX ?? adjustments.mascotScaleX) : adjustments.mascotScaleX;
         const msy = isSignature ? (adjustments.sigMascotScaleY ?? adjustments.mascotScaleY) : adjustments.mascotScaleY;
-        ctx.drawImage(img, mascotEl.x + mx, mascotEl.y + my, mascotEl.width * (msx / 100), mascotEl.height * (msy / 100));
+        drawTrimContain(ctx, img, mascotEl.x + mx, mascotEl.y + my, mascotEl.width * (msx / 100), mascotEl.height * (msy / 100), 0.6);
       }
     }
   }
