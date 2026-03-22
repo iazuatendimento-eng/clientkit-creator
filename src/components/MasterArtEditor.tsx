@@ -73,12 +73,12 @@ interface CanvasElement {
   imageUrl?: string;
   placeholder?: boolean;
   rotation?: number;
-  colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  colorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   opacity?: number; // 0-100
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
-  borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
+  borderColorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
@@ -2078,7 +2078,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Cor fixa (não muda)</SelectItem>
-                        <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                        <SelectItem value="background">Fundo (Cor 1) — usa PNG</SelectItem>
+                        <SelectItem value="element1">Elemento (Cor 1)</SelectItem>
                         <SelectItem value="text">Texto (Cor 2)</SelectItem>
                         <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
                         <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>
@@ -2208,6 +2209,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
                             <SelectContent>
                               <SelectItem value="none">Cor fixa (não muda)</SelectItem>
                               <SelectItem value="background">Fundo (Cor 1)</SelectItem>
+                              <SelectItem value="element1">Elemento (Cor 1)</SelectItem>
                               <SelectItem value="text">Texto (Cor 2)</SelectItem>
                               <SelectItem value="accessory1">Acessório 1 (Cor 3)</SelectItem>
                               <SelectItem value="accessory2">Acessório 2 (Cor 4)</SelectItem>

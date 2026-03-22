@@ -80,12 +80,12 @@ interface CanvasElement {
   imageUrl?: string;
   placeholder?: boolean;
   rotation?: number;
-  colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  colorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   opacity?: number;
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
-  borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
+  borderColorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
@@ -1369,7 +1369,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Helper to get color based on colorRole
     const getElementColor = (el: CanvasElement, defaultColor: string): string => {
-      if (el.colorRole === "background") return bgColor;
+      if (el.colorRole === "background" || el.colorRole === "element1") return bgColor;
       if (el.colorRole === "text") return textColor;
       if (el.colorRole === "accessory1") return accessoryColor1;
       if (el.colorRole === "accessory2") return accessoryColor2;
@@ -1378,7 +1378,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     // Helper to get border color based on borderColorRole
     const getBorderColor = (el: CanvasElement): string => {
-      if (el.borderColorRole === "background") return bgColor;
+      if (el.borderColorRole === "background" || el.borderColorRole === "element1") return bgColor;
       if (el.borderColorRole === "text") return textColor;
       if (el.borderColorRole === "accessory1") return accessoryColor1;
       if (el.borderColorRole === "accessory2") return accessoryColor2;
