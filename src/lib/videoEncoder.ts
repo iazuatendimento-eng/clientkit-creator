@@ -27,6 +27,7 @@ export interface VideoEncoderOptions {
   imageClipShape?: string; // Geometric clip shape for image placeholder (circle, triangle, diamond, etc.)
   audioUrl?: string; // URL of background audio to mix into the video
   requireEmailSafePreview?: boolean; // Force FFmpeg compatibility pass (H.264 baseline + AAC) for email preview clients
+  customOverlayPages?: Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]>;
   onProgress?: (progress: number) => void;
 }
 
@@ -1179,7 +1180,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     motionEffect = "ken-burns", transitionEffect = "fade",
     textAnimation = "none", logoAnimation = "none", textAnimDuration,
     backgroundVideoUrls, frameOverlayPages, overlayPages, logoOverlayPages,
-    imageRect, pageImageAdjustments, imageClipShape, audioUrl, onProgress,
+    imageRect, pageImageAdjustments, imageClipShape, audioUrl, customOverlayPages, onProgress,
   } = options;
 
   const fps = Math.min(rawFps, 20);
@@ -1273,6 +1274,17 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     loadList(overlayPages), loadList(frameOverlayPages), loadList(logoOverlayPages),
   ]);
   console.log("[WebCodecs] Overlays loaded, starting encode...");
+
+  // Load custom overlay images per page
+  const customOvImgs: Record<number, HTMLImageElement[]> = {};
+  if (customOverlayPages) {
+    await Promise.all(Object.entries(customOverlayPages).map(async ([pageIdxStr, ovs]) => {
+      const pageIdx = parseInt(pageIdxStr, 10);
+      const imgs = await Promise.all(ovs.filter(o => !o.isVideo).map(o => loadImg(o.url)));
+      customOvImgs[pageIdx] = imgs.filter(Boolean) as HTMLImageElement[];
+    }));
+  }
+
   onProgress?.(0.20);
 
   const canvas = document.createElement("canvas");
@@ -1326,6 +1338,19 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     ctx.drawImage(logoImg, 0, 0, width, height);
     ctx.restore();
     ctx.globalAlpha = 1;
+  };
+
+  const drawCustomOverlays = (pageIdx: number) => {
+    const ovs = customOverlayPages?.[pageIdx];
+    const imgs = customOvImgs[pageIdx];
+    if (!ovs || !imgs) return;
+    let imgIdx = 0;
+    for (const ov of ovs) {
+      if (ov.isVideo) continue; // video overlays not supported in encoder
+      const img = imgs[imgIdx++];
+      if (!img) continue;
+      ctx.drawImage(img, ov.x, ov.y, ov.width, ov.height);
+    }
   };
 
   const renderFrame = async (frameNum: number) => {
@@ -1386,6 +1411,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
         const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
         const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
+        drawCustomOverlays(pageIdx);
       } catch {
         drawSource(img, true, pageProgress);
       }
@@ -1394,6 +1420,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
       const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
       const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
+      drawCustomOverlays(pageIdx);
     }
   };
 
@@ -1639,6 +1666,7 @@ export async function encodeVideoSimple(
     pageImageAdjustments,
     imageClipShape,
     audioUrl,
+    customOverlayPages,
     onProgress
   } = options;
 
@@ -1773,6 +1801,23 @@ export async function encodeVideoSimple(
     })
   );
 
+  // Load custom overlay images per page
+  const simpleCustomOvImgs: Record<number, HTMLImageElement[]> = {};
+  if (customOverlayPages) {
+    await Promise.all(Object.entries(customOverlayPages).map(async ([pageIdxStr, ovs]) => {
+      const pageIdx = parseInt(pageIdxStr, 10);
+      const imgs = await Promise.all(ovs.filter(o => !o.isVideo).map(async (o) => {
+        try {
+          return await new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image(); img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img); img.onerror = reject; img.src = o.url;
+          });
+        } catch { return null; }
+      }));
+      simpleCustomOvImgs[pageIdx] = imgs.filter(Boolean) as HTMLImageElement[];
+    }));
+  }
+
   const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
   const totalFrames = framesPerPage * images.length;
@@ -1827,6 +1872,19 @@ export async function encodeVideoSimple(
     ctx.drawImage(logoImg, 0, 0, width, height);
     ctx.restore();
     ctx.globalAlpha = 1;
+  };
+
+  const drawSimpleCustomOverlays = (pageIdx: number) => {
+    const ovs = customOverlayPages?.[pageIdx];
+    const imgs = simpleCustomOvImgs[pageIdx];
+    if (!ovs || !imgs) return;
+    let imgIdx = 0;
+    for (const ov of ovs) {
+      if (ov.isVideo) continue;
+      const img = imgs[imgIdx++];
+      if (!img) continue;
+      ctx.drawImage(img, ov.x, ov.y, ov.width, ov.height);
+    }
   };
 
   // Pure rendering function for a single frame (no side effects)
@@ -1905,6 +1963,7 @@ export async function encodeVideoSimple(
         if (overlay) drawOverlay(overlay, pageProgress);
         const logoOverlay = logoOverlayImages[pageIdx];
         if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+        drawSimpleCustomOverlays(pageIdx);
       } catch (e) {
         console.warn("[VideoEncoder] Video frame draw failed, using static:", e);
         drawSource(img, true, pageProgress);
@@ -1917,6 +1976,7 @@ export async function encodeVideoSimple(
       if (overlay) drawOverlay(overlay, pageProgress);
       const logoOverlay = logoOverlayImages[pageIdx];
       if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+      drawSimpleCustomOverlays(pageIdx);
     }
   };
 

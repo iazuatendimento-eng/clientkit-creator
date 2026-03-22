@@ -327,6 +327,7 @@ export function VideoGeneratorModal({
         imageRect,
         imageClipShape,
         pageImageAdjustments,
+        customOverlayPages: customOverlays,
         audioUrl: stripAudio ? undefined : (
           selectedAudioTrack === "1" ? (template.audioUrl1 || template.audioUrl2 || undefined) :
           selectedAudioTrack === "2" ? (template.audioUrl2 || template.audioUrl1 || undefined) :
@@ -615,6 +616,7 @@ export function VideoGeneratorModal({
         imageRect,
         imageClipShape,
         pageImageAdjustments,
+        customOverlayPages: customOverlays,
         audioUrl: stripAudio ? undefined : (
           selectedAudioTrack === "1" ? (template.audioUrl1 || template.audioUrl2 || undefined) :
           selectedAudioTrack === "2" ? (template.audioUrl2 || template.audioUrl1 || undefined) :
@@ -837,6 +839,9 @@ export function VideoGeneratorModal({
                     imageElSize={getImageElSize(template.contentElements)}
                     imageClipShape={getImageClipShape(template.contentElements)}
                     pageImageAdjustments={pageImageAdjustments}
+                    customOverlays={customOverlays}
+                    templateWidth={template.width}
+                    templateHeight={template.height}
                     className="h-full w-auto aspect-[9/16]"
                   />
                 )}
