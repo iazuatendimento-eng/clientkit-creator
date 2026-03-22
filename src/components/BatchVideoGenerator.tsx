@@ -3738,7 +3738,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           setIsPlayingPreview(false);
         }}
       >
-        <DialogContent className="w-[96vw] max-w-5xl max-h-[94vh] overflow-y-auto">
+        <DialogContent className="w-[92vw] max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedVideo?.clientName}</DialogTitle>
           </DialogHeader>
