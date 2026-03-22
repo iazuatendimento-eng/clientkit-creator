@@ -431,6 +431,7 @@ export function ArtAdjustOverlay({
         textW,
         textH,
         shapeRect,
+        overlayRect,
         bgOffsetX: bgOffsetX ?? 0,
         bgOffsetY: bgOffsetY ?? 0,
         bgScale: bgScale ?? 100,
