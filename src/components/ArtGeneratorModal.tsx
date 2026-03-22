@@ -1089,6 +1089,14 @@ export function ArtGeneratorModal({
     }
   }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, pages, brandKit]);
 
+  // Re-render canvas when custom overlays change
+  useEffect(() => {
+    if (pendingOverlayRegenRef.current) {
+      pendingOverlayRegenRef.current = false;
+      regenerateCurrentPage();
+    }
+  }, [pageCustomOverlays, regenerateCurrentPage]);
+
   const handleDragEnd = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(async () => {
