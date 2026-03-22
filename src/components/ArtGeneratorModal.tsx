@@ -1125,9 +1125,14 @@ export function ArtGeneratorModal({
   const handleDragEnd = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(async () => {
+      const currentOverrides = pageOverridesRef.current;
+      const currentOffsets = pagePhotoOffsetsRef.current;
+      const currentPhotos = pagePhotosRef.current;
+      const currentCustomOverlays = pageCustomOverlaysRef.current;
+
       // Propagate layout overrides (except text) to all carousel sibling pages
       if (isCarousel && pages.length > 1) {
-        const currentOvNow = pageOverrides[currentPage] || {};
+        const currentOvNow = currentOverrides[currentPage] || {};
         const layoutKeys: (keyof ElementOverrides)[] = [
           "logoX", "logoY", "logoScaleX", "logoScaleY",
           "contactX", "contactY", "contactScaleX", "contactScaleY",
@@ -1159,7 +1164,7 @@ export function ArtGeneratorModal({
       if (isCarousel && pages.length > 1) {
         const tmpl = templateRef.current;
         if (!tmpl) return;
-        const currentOvNow = pageOverrides[currentPage] || {};
+        const currentOvNow = currentOverrides[currentPage] || {};
         const layoutKeys: (keyof ElementOverrides)[] = [
           "logoX", "logoY", "logoScaleX", "logoScaleY",
           "contactX", "contactY", "contactScaleX", "contactScaleY",
@@ -1170,20 +1175,20 @@ export function ArtGeneratorModal({
         const siblingPromises = pages.map(async (_, i) => {
           if (i === currentPage) return;
           try {
-            const ov = pageOverrides[i] || {};
+            const ov = currentOverrides[i] || {};
             const mergedOv = { ...ov };
             for (const key of layoutKeys) {
               if (currentOvNow[key] !== undefined) {
                 (mergedOv as any)[key] = currentOvNow[key];
               }
             }
-            const offset = pagePhotoOffsets[i] || { x: 0, y: 0 };
-            const photo = pagePhotos[i] || null;
+            const offset = currentOffsets[i] || { x: 0, y: 0 };
+            const photo = currentPhotos[i] || null;
             const text = pages[i] || "";
             const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, mergedOv, {
               isCarousel,
               isLastCarouselPage: isCarousel && i === pages.length - 1,
-              customOverlays: pageCustomOverlays[i] || [],
+              customOverlays: currentCustomOverlays[i] || [],
             });
             setPageArts(prev => {
               const copy = [...prev];
@@ -1194,10 +1199,10 @@ export function ArtGeneratorModal({
             console.error("Regenerate sibling error:", err);
           }
         });
-        Promise.all(siblingPromises); // Fire and forget - don't await
+        Promise.all(siblingPromises);
       }
     }, 80);
-  }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, brandKit]);
+  }, [regenerateCurrentPage, isCarousel, pages, currentPage, brandKit]);
 
   const generateArt = useCallback(async () => {
     setStatus("loading");
