@@ -424,6 +424,7 @@ export function ArtCardWithOverlay({
               customOverlays={localOverlays}
               setCustomOverlays={setLocalOverlays}
               onDragEnd={handleDragEnd}
+              photoInteractionMode={photoInteractionMode}
             />
           </div>
         ) : art.imageUrl ? (
