@@ -190,8 +190,10 @@ export function VideoAdjustOverlay({
   frameOverlayUrl?: string;
   textOverlayUrl?: string;
   logoOverlayUrl?: string;
+  preImageOverlayUrl?: string;
   backgroundImageUrl?: string;
   backgroundVideoUrl?: string;
+  backgroundPngUrl?: string;
 
   logoX: number;
   logoY: number;
