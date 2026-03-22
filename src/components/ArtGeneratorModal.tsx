@@ -1083,7 +1083,7 @@ export function ArtGeneratorModal({
     } finally {
       setIsRegenerating(false);
     }
-  }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pages, brandKit]);
+  }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, pages, brandKit]);
 
   const handleDragEnd = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
