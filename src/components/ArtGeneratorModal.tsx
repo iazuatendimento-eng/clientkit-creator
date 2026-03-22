@@ -1160,7 +1160,7 @@ export function ArtGeneratorModal({
         Promise.all(siblingPromises); // Fire and forget - don't await
       }
     }, 80);
-  }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, brandKit]);
+  }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, brandKit]);
 
   const generateArt = useCallback(async () => {
     setStatus("loading");
