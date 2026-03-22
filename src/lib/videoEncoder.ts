@@ -1180,7 +1180,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     motionEffect = "ken-burns", transitionEffect = "fade",
     textAnimation = "none", logoAnimation = "none", textAnimDuration,
     backgroundVideoUrls, frameOverlayPages, overlayPages, logoOverlayPages,
-    imageRect, pageImageAdjustments, imageClipShape, audioUrl, onProgress,
+    imageRect, pageImageAdjustments, imageClipShape, audioUrl, customOverlayPages, onProgress,
   } = options;
 
   const fps = Math.min(rawFps, 20);
