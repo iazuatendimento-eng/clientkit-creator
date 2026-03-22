@@ -900,7 +900,7 @@ export function VideoAdjustOverlay({
     <div
       ref={containerRef}
       className="relative mx-auto w-full aspect-[9/16] overflow-hidden rounded-lg border bg-muted touch-none"
-      style={{ containerType: "size" }}
+      style={{ containerType: "size", ...(backgroundPngUrl ? { backgroundImage: `url(${backgroundPngUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : {}) }}
     >
       {previewUrl ? (
         <>
@@ -914,6 +914,10 @@ export function VideoAdjustOverlay({
             )}
             draggable={false}
           />
+          {/* Pre-image overlay (shapes before image) */}
+          {preImageOverlayUrl && preImageOverlayUrl !== "" && (
+            <img src={preImageOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
+          )}
           {/* Frame overlay layer */}
           {frameOverlayUrl && (
             <img src={frameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
