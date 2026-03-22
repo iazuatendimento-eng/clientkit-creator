@@ -495,45 +495,45 @@ export function VideoGeneratorModal({
         setMaterialImages(matImages);
       } catch { /* ignore */ }
 
-      // Use material images as background images for pages, or search for videos
+      // Use material images as background images
       const bgImages: string[] = texts.map((_, idx) => matImages[idx % Math.max(matImages.length, 1)] || "");
       setSearchedImages(bgImages);
 
+      // Open fast with pages first; fill stock videos in background if needed
       let bgVideoUrls: (string | null)[] = texts.map(() => null);
-      if (matImages.length === 0) {
-        // No material uploads — search for stock videos
-        try {
-          const searchContext = fullText.split(" ").slice(0, 12).join(" ");
-          let searchTerms = translateToEnglishLocal(searchContext).trim();
-          if (!searchTerms) {
-            searchTerms = searchContext
-              .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-              .replace(/\s+/g, " ")
-              .trim()
-              .split(" ")
-              .slice(0, 6)
-              .join(" ");
-          }
-          if (!searchTerms) {
-            searchTerms = "business technology";
-          }
-
-          let results = await searchVideos(searchTerms, Math.max(texts.length, 3));
-
-          if (results.length > 0) {
-            bgVideoUrls = texts.map((_, idx) => results[idx % results.length]?.videoUrl || null);
-          }
-        } catch (err) {
-          console.error("Video search error:", err);
-        }
-      }
       setVideoUrls(bgVideoUrls);
 
       const useAdj = adj || adjustments;
       const pages = await generateAllVideoPages(tmpl, texts, brandKit, matImages.length > 0 ? bgImages : [], useAdj, ptAdj, piAdj);
       setVideoPages(pages);
-      setVideoPages(pages);
       setStatus("ready");
+
+      if (matImages.length === 0) {
+        void (async () => {
+          try {
+            const searchContext = fullText.split(" ").slice(0, 12).join(" ");
+            let searchTerms = translateToEnglishLocal(searchContext).trim();
+            if (!searchTerms) {
+              searchTerms = searchContext
+                .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+                .split(" ")
+                .slice(0, 6)
+                .join(" ");
+            }
+            if (!searchTerms) searchTerms = "business technology";
+
+            const results = await searchVideos(searchTerms, Math.max(texts.length, 3));
+            if (results.length === 0) return;
+
+            bgVideoUrls = texts.map((_, idx) => results[idx % results.length]?.videoUrl || null);
+            setVideoUrls(bgVideoUrls);
+          } catch (err) {
+            console.error("Video search error:", err);
+          }
+        })();
+      }
     } catch (err) {
       console.error("Video generation error:", err);
       toast.error("Erro ao gerar vídeo");
