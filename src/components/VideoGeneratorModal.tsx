@@ -773,10 +773,13 @@ export function VideoGeneratorModal({
                       setImageX={(v) => updatePageImageAdj(currentEditPage, "imageX", v)}
                       setImageY={(v) => updatePageImageAdj(currentEditPage, "imageY", v)}
                       setImageScale={(v) => updatePageImageAdj(currentEditPage, "imageScale", v)}
-                      customOverlays={currentPageOverlays}
+                       customOverlays={currentPageOverlays}
                       setCustomOverlays={setCurrentPageOverlays}
                       onAddOverlay={handleAddVideoOverlay}
                       onDeleteOverlay={handleDeleteVideoOverlay}
+                      shapeOverrides={adjustments.shapeOverrides || {}}
+                      setShapeOverrides={(next) => setAdjustments(prev => ({ ...prev, shapeOverrides: next }))}
+                      photoInteractionMode="content"
                     />
                     {/* Page navigation in edit mode */}
                     {videoPages.pages.length > 1 && (
