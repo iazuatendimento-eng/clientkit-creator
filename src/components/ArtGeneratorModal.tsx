@@ -192,7 +192,10 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   }
 
   try {
-    const resp = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
     if (resp.ok) {
       const blob = await resp.blob();
       const objUrl = URL.createObjectURL(blob);
@@ -1026,7 +1029,10 @@ export function ArtGeneratorModal({
         if (matImages[i]) return matImages[i];
         try {
           const sq = pageText.substring(0, 80);
-          const pexelsResults = await searchPexelsImages(sq, 1);
+          const pexelsResults = await Promise.race([
+            searchPexelsImages(sq, 1),
+            new Promise<SearchImage[]>((resolve) => setTimeout(() => resolve([]), 10000)),
+          ]);
           return pexelsResults.length > 0 ? pexelsResults[0].urls.regular : null;
         } catch { return null; }
       });
@@ -1035,8 +1041,17 @@ export function ArtGeneratorModal({
       // Parallel: render all pages
       const overrides: ElementOverrides[] = pages.map(() => ({}));
       const offsets = pages.map(() => ({ x: 0, y: 0 }));
-      const artPromises = pages.map((pageText, i) =>
-        renderArt(tmpl, brandKit, pageText, photos[i], { x: 0, y: 0 }, {})
+      const artPromises = pages.map(async (pageText, i) => {
+        try {
+          return await Promise.race([
+            renderArt(tmpl, brandKit, pageText, photos[i], { x: 0, y: 0 }, {}),
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error("render timeout")), 30000)),
+          ]);
+        } catch (err) {
+          console.error(`renderArt page ${i} failed:`, err);
+          return "";
+        }
+      }
       );
       const arts = await Promise.all(artPromises);
 
