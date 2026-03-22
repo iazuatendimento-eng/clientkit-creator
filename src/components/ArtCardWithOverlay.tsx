@@ -70,6 +70,7 @@ interface ClientArt {
   briefing?: string;
   note?: string;
   noteRead?: boolean;
+  customOverlays?: string[];
 }
 
 interface MasterTemplate {

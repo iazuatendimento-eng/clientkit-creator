@@ -147,6 +147,7 @@ interface ClientArt {
   briefing?: string; // Briefing do cadastro do cliente
   note?: string; // Anotação do operador
   noteRead?: boolean; // Se a anotação foi marcada como lida
+  customOverlays?: string[]; // URLs de PNGs extras sobrepostos na arte
 }
 
 // Helper to apply clip shape path on canvas context
