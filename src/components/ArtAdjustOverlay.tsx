@@ -1083,6 +1083,14 @@ export function ArtAdjustOverlay({
             resizable
           />
         ))}
+        {customOverlays?.map((_, idx) => (
+          <Box
+            key={`overlay-${idx}`}
+            part={`overlay:${idx}` as OverlayPart}
+            label={`PNG ${idx + 1}`}
+            resizable
+          />
+        ))}
       </div>
     </div>
   );
