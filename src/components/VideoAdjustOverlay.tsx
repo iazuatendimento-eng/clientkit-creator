@@ -1046,48 +1046,47 @@ export function VideoAdjustOverlay({
             )}
           </Box>
         ))}
-      </div>
-
-      {/* Add overlay button */}
-      {onAddOverlay && (
-        <div className="absolute top-2 right-2 z-30 flex gap-1.5">
-          <input
-            ref={overlayInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,video/mp4"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                onAddOverlay(file);
-                e.target.value = "";
-              }
-            }}
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-8 gap-1.5 rounded-full shadow-lg border border-border px-3 text-xs font-medium"
-            title="Adicionar PNG/MP4 extra"
-            onClick={() => overlayInputRef.current?.click()}
-          >
-            <Plus className="h-4 w-4" />
-            Extra
-          </Button>
-          {active && isOverlayPart(active) && onDeleteOverlay && (
+        {/* Add overlay button inside page */}
+        {onAddOverlay && (
+          <div className="absolute bottom-3 right-3 flex gap-1.5" style={{ zIndex: 50 }}>
+            <input
+              ref={overlayInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,video/mp4"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  onAddOverlay(file);
+                  e.target.value = "";
+                }
+              }}
+            />
             <Button
               size="sm"
-              variant="destructive"
-              className="h-8 rounded-full shadow-lg px-3 text-xs font-medium gap-1"
-              title="Remover overlay selecionado"
-              onClick={() => onDeleteOverlay(overlayIndexFromPart(active))}
+              variant="secondary"
+              className="h-8 gap-1.5 rounded-full shadow-lg border border-border px-3 text-xs font-medium"
+              title="Adicionar PNG/MP4 extra"
+              onClick={() => overlayInputRef.current?.click()}
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              Remover
+              <Plus className="h-4 w-4" />
+              Extra
             </Button>
-          )}
-        </div>
-      )}
+            {active && isOverlayPart(active) && onDeleteOverlay && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-8 rounded-full shadow-lg px-3 text-xs font-medium gap-1"
+                title="Remover overlay selecionado"
+                onClick={() => onDeleteOverlay(overlayIndexFromPart(active))}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Remover
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
 
       {isBusy && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/20 pointer-events-none">
