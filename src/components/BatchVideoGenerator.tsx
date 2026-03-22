@@ -567,9 +567,23 @@ const CardCoverPreview = memo(({
           } else if (shape === "diamond") {
             cardClipPath = `polygon(${cx}% ${imageRect.top}%, ${imageRect.left + imageRect.width}% ${cy}%, ${cx}% ${imageRect.top + imageRect.height}%, ${imageRect.left}% ${cy}%)`;
           }
+          const searchedImg = video.searchedImages?.[pageIdx] || "";
           if (cardClipPath) {
             return (
               <div className="absolute inset-0 z-[2]" style={{ clipPath: cardClipPath }}>
+                {searchedImg && (
+                  <img
+                    src={searchedImg}
+                    alt=""
+                    className="absolute object-cover"
+                    style={{
+                      left: `${imageRect.left}%`, top: `${imageRect.top}%`,
+                      width: `${imageRect.width}%`, height: `${imageRect.height}%`,
+                      ...videoTransform,
+                    }}
+                    draggable={false}
+                  />
+                )}
                 <video
                   src={pgActiveUrl!}
                   className="absolute object-cover"
@@ -589,10 +603,19 @@ const CardCoverPreview = memo(({
               left: `${imageRect.left}%`, top: `${imageRect.top}%`,
               width: `${imageRect.width}%`, height: `${imageRect.height}%`,
             }}>
+              {searchedImg && (
+                <img
+                  src={searchedImg}
+                  alt=""
+                  className="w-full h-full object-cover absolute inset-0"
+                  style={videoTransform}
+                  draggable={false}
+                />
+              )}
               <video
                 src={pgActiveUrl!}
                 className="w-full h-full object-cover"
-                style={videoTransform}
+                style={{ ...videoTransform, position: 'relative' as const }}
                 muted loop autoPlay playsInline
                 onError={() => setVideoFailed(prev => ({ ...prev, [pageIdx]: true }))}
               />

@@ -940,7 +940,7 @@ export function VideoAdjustOverlay({
         const panXPx = imageX ?? 0;
         const panYPx = imageY ?? 0;
         const mediaStyle: React.CSSProperties = {
-          transform: `translate(${panXPx}px, ${panYPx}px) scale(${scale})`,
+          transform: `scale(${scale}) translate(${(panXPx / els.imageEl.width) * 100}%, ${(panYPx / els.imageEl.height) * 100}%)`,
           transformOrigin: "center center",
         };
         return (
