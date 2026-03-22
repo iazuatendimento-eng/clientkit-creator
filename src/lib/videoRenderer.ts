@@ -421,7 +421,7 @@ export async function generatePageImage(
       }
     }
     if (!bgPngLoaded) {
-      ctx.fillStyle = bgColor;
+      ctx.fillStyle = brandBgColor;
       ctx.fillRect(0, 0, w, h);
     }
   }
