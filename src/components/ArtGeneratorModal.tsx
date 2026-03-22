@@ -968,6 +968,42 @@ export function ArtGeneratorModal({
   const syncSetShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => updateOverride("shapes", v), [updateOverride]);
   const syncSetHiddenElements = useCallback((v: string[]) => updateOverride("hiddenElements", v), [updateOverride]);
 
+  const currentOverlays = pageCustomOverlays[currentPage] || [];
+  const syncSetCustomOverlays = useCallback((v: CustomOverlay[]) => {
+    setPageCustomOverlays(prev => {
+      const copy = [...prev];
+      copy[currentPage] = v;
+      return copy;
+    });
+  }, [currentPage]);
+
+  const handleOverlayUpload = useCallback(async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target?.result as string;
+      if (!base64) return;
+      // Upload to storage for persistence
+      const ext = file.name.split(".").pop() || "png";
+      const path = `overlay-extras/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("card-uploads").upload(path, file);
+      const url = error ? base64 : supabase.storage.from("card-uploads").getPublicUrl(path).data.publicUrl;
+      
+      const newOverlay: CustomOverlay = {
+        url,
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 200,
+      };
+      setPageCustomOverlays(prev => {
+        const copy = [...prev];
+        copy[currentPage] = [...(copy[currentPage] || []), newOverlay];
+        return copy;
+      });
+    };
+    reader.readAsDataURL(file);
+  }, [currentPage]);
+
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
