@@ -16,6 +16,7 @@ import {
   ArrowDownToLine,
   Trash2,
   Copy,
+  Plus,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
@@ -100,6 +101,7 @@ interface ArtCardWithOverlayProps {
   onMoveToEnd?: (index: number) => void;
   onDelete?: (index: number) => void;
   onApplyToCarousel?: (index: number, overrides: ElementOverrides) => void;
+  onAddOverlay?: (index: number, file: File) => void;
   isRemovingBg?: boolean;
   removeBgProgress?: string;
 }
@@ -122,6 +124,7 @@ export function ArtCardWithOverlay({
   onMoveToEnd,
   onDelete,
   onApplyToCarousel,
+  onAddOverlay,
   isRemovingBg,
   removeBgProgress,
 }: ArtCardWithOverlayProps) {
