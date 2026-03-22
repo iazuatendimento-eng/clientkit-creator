@@ -151,6 +151,9 @@ export function VideoAdjustOverlay({
   setImageX,
   setImageY,
   setImageScale,
+
+  shapeOverrides,
+  setShapeOverrides,
 }: {
   template: VideoTemplateLike;
   previewUrl: string | null;
