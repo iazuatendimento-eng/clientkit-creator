@@ -63,12 +63,12 @@ interface CanvasElement {
   lineHeight?: number;
   imageUrl?: string;
   placeholder?: boolean;
-  colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  colorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   opacity?: number;
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
-  borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
+  borderColorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   clipShape?: "rect" | "circle" | "triangle" | "diamond" | "hexagon" | "pentagon" | "star";
   shadowBlur?: number;
   shadowColor?: string;
@@ -82,8 +82,8 @@ interface CanvasElement {
     opacity2?: number;
     angle?: number;
     fadeMode?: boolean;
-    color1Role?: "background" | "text" | "accessory1" | "accessory2";
-    color2Role?: "background" | "text" | "accessory1" | "accessory2";
+    color1Role?: "background" | "element1" | "text" | "accessory1" | "accessory2";
+    color2Role?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   };
 }
 

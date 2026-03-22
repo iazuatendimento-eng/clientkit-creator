@@ -28,12 +28,12 @@ interface CanvasElement {
   lineHeight?: number;
   imageUrl?: string;
   placeholder?: boolean;
-  colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  colorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   opacity?: number;
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
-  borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
+  borderColorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   clipShape?: "rect" | "circle" | "triangle" | "diamond" | "hexagon" | "pentagon" | "star";
   shadowBlur?: number;
   shadowColor?: string;
@@ -370,7 +370,7 @@ async function renderArt(
   const acc2 = brandKit?.colors?.[3] || "#aaaaaa";
 
   const getColor = (el: CanvasElement, def: string) => {
-    if (el.colorRole === "background") return bgColor;
+    if (el.colorRole === "background" || el.colorRole === "element1") return bgColor;
     if (el.colorRole === "text") return textColor;
     if (el.colorRole === "accessory1") return acc1;
     if (el.colorRole === "accessory2") return acc2;
@@ -378,7 +378,7 @@ async function renderArt(
   };
 
   const getBorderColor = (el: CanvasElement) => {
-    if (el.borderColorRole === "background") return bgColor;
+    if (el.borderColorRole === "background" || el.borderColorRole === "element1") return bgColor;
     if (el.borderColorRole === "text") return textColor;
     if (el.borderColorRole === "accessory1") return acc1;
     if (el.borderColorRole === "accessory2") return acc2;
