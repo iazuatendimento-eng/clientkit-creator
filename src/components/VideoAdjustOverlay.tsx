@@ -898,6 +898,11 @@ export function VideoAdjustOverlay({
     );
   };
 
+  const effectiveFrameOverlayUrl =
+    (frameOverlayUrl && frameOverlayUrl !== "")
+      ? frameOverlayUrl
+      : ((textOverlayUrl && textOverlayUrl !== "") ? textOverlayUrl : "");
+
   return (
     <div
       ref={containerRef}
@@ -968,8 +973,8 @@ export function VideoAdjustOverlay({
       })()}
 
       {/* Frame overlay layer (must stay above image/video media) */}
-      {previewUrl && frameOverlayUrl && (
-        <img src={frameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[3]" draggable={false} />
+      {previewUrl && effectiveFrameOverlayUrl && (
+        <img src={effectiveFrameOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[3]" draggable={false} />
       )}
 
       <div className="absolute inset-0 z-[5]">
