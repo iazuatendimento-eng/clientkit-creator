@@ -1050,7 +1050,7 @@ export function VideoAdjustOverlay({
 
       {/* Add overlay button */}
       {onAddOverlay && (
-        <div className="absolute bottom-2 right-2 z-30 flex gap-1.5">
+        <div className="absolute top-2 right-2 z-30 flex gap-1.5">
           <input
             ref={overlayInputRef}
             type="file"
