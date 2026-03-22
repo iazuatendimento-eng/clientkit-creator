@@ -719,6 +719,42 @@ export function VideoAdjustOverlay({
 
         setShapeOverrides({ ...(shapeOverrides || {}), [id]: { x: newX, y: newY, width: newW, height: newH } });
       }
+
+      if (isOverlayPart(s.part) && setCustomOverlays && customOverlays) {
+        const idx = overlayIndexFromPart(s.part as OverlayPart);
+        const startRect = s.start.overlayRect;
+        if (!startRect) return;
+
+        const minSize = 30;
+
+        if (s.mode === "move") {
+          const updated = [...customOverlays];
+          updated[idx] = { ...updated[idx], x: startRect.x + dx, y: startRect.y + dy };
+          setCustomOverlays(updated);
+          return;
+        }
+
+        const h = s.handle || "se";
+        let newX = startRect.x;
+        let newY = startRect.y;
+        let newW = startRect.width;
+        let newH = startRect.height;
+
+        if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+        if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+        if (handleHasW(h)) {
+          newW = Math.max(minSize, startRect.width - dx);
+          newX = startRect.x + (startRect.width - newW);
+        }
+        if (handleHasN(h)) {
+          newH = Math.max(minSize, startRect.height - dy);
+          newY = startRect.y + (startRect.height - newH);
+        }
+
+        const updated = [...customOverlays];
+        updated[idx] = { ...updated[idx], x: newX, y: newY, width: newW, height: newH };
+        setCustomOverlays(updated);
+      }
     };
 
     const cleanup = () => {
