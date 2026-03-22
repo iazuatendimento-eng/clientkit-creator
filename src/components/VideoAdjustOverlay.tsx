@@ -210,9 +210,19 @@ export function VideoAdjustOverlay({
   setImageX?: (v: number) => void;
   setImageY?: (v: number) => void;
   setImageScale?: (v: number) => void;
+
+  shapeOverrides?: Record<string, ShapeOverride>;
+  setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part>("logo");
+
+  const shapeTypes: ElementType[] = [
+    "rect", "circle", "triangle", "line", "star", "diamond", "hexagon", "pentagon",
+    "wave", "blob", "arch", "arrow", "badge", "ribbon", "polkaDots", "dotsGrid",
+    "confetti", "splatter", "zigzag", "spiral", "heart", "cross", "cloud",
+    "speechBubble", "lightning", "shield", "crescent", "chevron",
+  ];
 
   const els = useMemo(() => {
     const currentElements = isContentPage ? template.contentElements : template.signatureElements;
@@ -222,7 +232,10 @@ export function VideoAdjustOverlay({
     const textEl = currentElements.find((e) => e.type === "text");
     // Image placeholder comes from contentElements always
     const imageEl = template.contentElements.find((e) => e.type === "image");
-    return { logoEl, contactEl, mascotEl, textEl, imageEl };
+    const shapes = currentElements
+      .filter((e) => !!e.id && shapeTypes.includes(e.type))
+      .map((e) => ({ ...e, id: e.id as string }));
+    return { logoEl, contactEl, mascotEl, textEl, imageEl, shapes };
   }, [template.contentElements, template.signatureElements, isContentPage]);
 
   const getRect = (part: Part) => {
