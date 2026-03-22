@@ -254,6 +254,7 @@ interface ClientVideo {
   frameOverlayPages?: string[]; // Array of page images (base64) - decorative shapes AFTER image element (above video)
   preImageOverlayPages?: string[]; // Array of page images (base64) - decorative shapes BEFORE image element (below video)
   logoOverlayPages?: string[]; // Array of page images (base64) - logo only for separate animation
+  fullPages?: string[]; // Full composite pages for thumbnail display
   videoUrl: string | null;
   status: "pending" | "approved" | "rejected";
   backgroundImages?: string[];
@@ -2012,7 +2013,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     video: ClientVideo,
     searchedImages: string[],
     _videoUrls?: (string | null)[]
-  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[] }> => {
+  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[]; fullPages: string[] }> => {
     const normalizedSearchedImages = video.pageTexts.map((_, idx) => searchedImages[idx] || "");
 
     return generateAllVideoPages(
@@ -2039,7 +2040,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
   const regenerateSingleVideo = async (
     video: ClientVideo
-  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[] }> => {
+  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[]; fullPages: string[] }> => {
     const normalizedSearchedImages = video.pageTexts.map((_, idx) => video.searchedImages?.[idx] || "");
 
     return generateAllVideoPages(
@@ -2228,7 +2229,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           await Promise.all(urls.map(u => loadImage(u, 3)));
         }
         const result = await regenerateSingleVideo(base);
-        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages };
+        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages };
 
         selectedVideoRef.current = updatedVideo;
 
@@ -2386,7 +2387,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
         console.log(`[BatchVideo] ${video.clientName}: searchedImages=${searchedImages.map(s => s ? 'OK' : 'EMPTY').join(',')}, videoUrls=${pexelsVideoUrls.map(v => v ? 'OK' : 'NULL').join(',')}`);
         const result = await generateVideoForClient(video, searchedImages, pexelsVideoUrls);
-        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
+        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
         setClientVideos([...updatedVideos]);
       }
 
@@ -2489,7 +2490,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       };
       
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages };
 
       setClientVideos((prev) =>
         prev.map((v, i) => (i === index ? finalVideo : v))
@@ -2637,7 +2638,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsApplyingAdjustments(true);
     try {
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -2752,7 +2753,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsApplyingAdjustments(true);
     try {
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -3423,7 +3424,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                            overlayPages: result.overlayPages,
                            frameOverlayPages: result.frameOverlayPages,
                            preImageOverlayPages: result.preImageOverlayPages,
-                           logoOverlayPages: result.logoOverlayPages,
+                           logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages,
                          };
 
                          setClientVideos((prev) => prev.map((v, i) => (i === index ? updatedVideo : v)));
@@ -3816,7 +3817,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       <button
                         key={idx}
                         type="button"
-                        className={`shrink-0 rounded-md border overflow-hidden transition-colors relative ${
+                        className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
                           currentPreviewPage === idx
                             ? "border-primary ring-2 ring-primary/30"
                             : "border-border"
@@ -3827,26 +3828,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         }}
                         aria-label={`Abrir página ${idx + 1}`}
                       >
-                        <div className="relative h-12 w-8">
-                          <img
-                            src={page}
-                            alt={`Miniatura da página ${idx + 1}`}
-                            className="absolute inset-0 h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                          {selectedVideo.preImageOverlayPages?.[idx] && (
-                            <img src={selectedVideo.preImageOverlayPages[idx]} className="absolute inset-0 h-full w-full object-cover pointer-events-none" alt="" />
-                          )}
-                          {selectedVideo.frameOverlayPages?.[idx] && (
-                            <img src={selectedVideo.frameOverlayPages[idx]} className="absolute inset-0 h-full w-full object-cover pointer-events-none" alt="" />
-                          )}
-                          {selectedVideo.overlayPages?.[idx] && (
-                            <img src={selectedVideo.overlayPages[idx]} className="absolute inset-0 h-full w-full object-cover pointer-events-none" alt="" />
-                          )}
-                          {selectedVideo.logoOverlayPages?.[idx] && (
-                            <img src={selectedVideo.logoOverlayPages[idx]} className="absolute inset-0 h-full w-full object-cover pointer-events-none" alt="" />
-                          )}
-                        </div>
+                        <img
+                          src={selectedVideo.fullPages?.[idx] || page}
+                          alt={`Miniatura da página ${idx + 1}`}
+                          className="h-12 w-8 object-cover"
+                          loading="lazy"
+                        />
                       </button>
                     ))}
                   </div>

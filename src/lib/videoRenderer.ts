@@ -393,8 +393,9 @@ export async function generatePageImage(
   if (!transparentBackground) {
     const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png;
     let bgPngLoaded = false;
+    const hasLargeBg = hasLargeBackgroundShape();
     // Only use PNG background if there's a large background-role shape to replace
-    if (brandBgPng && hasLargeBackgroundShape()) {
+    if (brandBgPng && hasLargeBg) {
       const bgPngImg = await loadImage(brandBgPng);
       if (bgPngImg) {
         ctx.drawImage(bgPngImg, 0, 0, w, h);
@@ -846,6 +847,7 @@ export interface VideoPages {
   frameOverlayPages: string[];
   preImageOverlayPages: string[];
   logoOverlayPages: string[];
+  fullPages: string[];
 }
 
 export async function generateAllVideoPages(
@@ -870,6 +872,7 @@ export async function generateAllVideoPages(
   const frameOverlayPages: string[] = [];
   const preImageOverlayPages: string[] = [];
   const logoOverlayPages: string[] = [];
+  const fullPages: string[] = [];
 
   const buildPageSet = async (
     elements: CanvasElement[],
@@ -1013,7 +1016,14 @@ export async function generateAllVideoPages(
       }
     }
 
-    return { basePage, textOverlay, preImageOverlay, frameOverlay, logoOverlay };
+    // Generate full composite for thumbnail display
+    const fullPage = await generatePageImage(
+      tw, th, bgColor, elements, text, brandKit, isSignature,
+      bgImage, adjustments, textAdj, imageAdj,
+      false, false, false
+    );
+
+    return { basePage, textOverlay, preImageOverlay, frameOverlay, logoOverlay, fullPage };
   };
 
   for (let i = 0; i < pageTexts.length; i++) {
@@ -1029,6 +1039,7 @@ export async function generateAllVideoPages(
     preImageOverlayPages.push(result.preImageOverlay);
     frameOverlayPages.push(result.frameOverlay);
     logoOverlayPages.push(result.logoOverlay);
+    fullPages.push(result.fullPage);
   }
 
   const signatureResult = await buildPageSet(
@@ -1045,6 +1056,7 @@ export async function generateAllVideoPages(
   preImageOverlayPages.push(signatureResult.preImageOverlay);
   frameOverlayPages.push(signatureResult.frameOverlay);
   logoOverlayPages.push(signatureResult.logoOverlay);
+  fullPages.push(signatureResult.fullPage);
 
-  return { pages, overlayPages, frameOverlayPages, preImageOverlayPages, logoOverlayPages };
+  return { pages, overlayPages, frameOverlayPages, preImageOverlayPages, logoOverlayPages, fullPages };
 }
