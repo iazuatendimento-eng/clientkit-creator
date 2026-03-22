@@ -200,6 +200,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     setUploadedFiles([]);
     setCreatedCardId(null);
     setSelectedTemplateIndex(0);
+    setModalClosed(true);
   };
 
   // When auto-triggering from a card, show loading instead of the form
