@@ -466,6 +466,14 @@ export function ArtCardWithOverlay({
 
         {art.imageUrl && (
           <div className="flex flex-wrap gap-2 mt-3">
+            <Button
+              size="sm"
+              variant={photoInteractionMode === "frame" ? "default" : "outline"}
+              title={photoInteractionMode === "content" ? "Ativar: Mover moldura" : "Ativar: Zoom da foto"}
+              onClick={() => setPhotoInteractionMode(prev => prev === "content" ? "frame" : "content")}
+            >
+              <Move className="h-4 w-4" />
+            </Button>
             <Button size="sm" variant="outline" title="Trocar foto" onClick={() => onOpenImageDialog(art, index)}>
               <ImageIcon className="h-4 w-4" />
             </Button>
