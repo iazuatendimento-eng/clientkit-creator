@@ -387,6 +387,12 @@ export function ArtAdjustOverlay({
       if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
     }
 
+    let overlayRect: ShapeOverride | undefined;
+    if (isOverlayPart(part)) {
+      const r = getRect(part);
+      if (r) overlayRect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    }
+
     setActive(part);
     startRef.current = {
       mode,
