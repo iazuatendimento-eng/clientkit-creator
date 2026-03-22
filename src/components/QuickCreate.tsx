@@ -19,9 +19,10 @@ interface QuickCreateProps {
   initialText?: string;
   initialType?: "video" | "art";
   initialTemplateId?: string;
+  existingCardId?: string;
 }
 
-export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId }: QuickCreateProps) => {
+export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId, existingCardId }: QuickCreateProps) => {
   const [text, setText] = useState(initialText || "");
   const [type, setType] = useState<"video" | "art">(initialType || "video");
   const [uploading, setUploading] = useState(false);
