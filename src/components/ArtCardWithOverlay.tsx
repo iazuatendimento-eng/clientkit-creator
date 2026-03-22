@@ -17,6 +17,7 @@ import {
   Trash2,
   Copy,
   Plus,
+  Move,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
@@ -163,6 +164,7 @@ export function ArtCardWithOverlay({
   const [hiddenElements, _setHiddenElements] = useState<string[]>(art.elementOverrides?.hiddenElements || []);
   const [localOverlays, _setLocalOverlays] = useState<CustomOverlay[]>(art.customOverlays || []);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [photoInteractionMode, setPhotoInteractionMode] = useState<"content" | "frame">("content");
   const overlayInputRef = useRef<HTMLInputElement>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
