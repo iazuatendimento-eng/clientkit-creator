@@ -496,9 +496,12 @@ async function renderArt(
   // Helper to skip large background shapes when PNG background is active
   const shouldSkipBackgroundShape = (el: CanvasElement) => {
     if (!brandBgPng || !hasLargeBgShape) return false;
-    const isBackgroundRole = el.colorRole === "background";
-    const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
-    if (!isBackgroundRole && !matchesTemplateBg) return false;
+    // Only skip elements that match the background criteria used above
+    if (hasExplicitBgRole) {
+      if (el.colorRole !== "background") return false;
+    } else {
+      if (el.color !== templateBgColor) return false;
+    }
     const ov = overrides.shapes?.[el.id];
     const ex = ov?.x ?? el.x ?? 0;
     const ey = ov?.y ?? el.y ?? 0;
