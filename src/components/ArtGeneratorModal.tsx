@@ -900,6 +900,7 @@ export function ArtGeneratorModal({
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [template, setTemplate] = useState<ArtTemplate | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [photoInteractionMode, setPhotoInteractionMode] = useState<"content" | "frame">("content");
 
   // Per-page state
   const [pageArts, setPageArts] = useState<(string | null)[]>([]);
