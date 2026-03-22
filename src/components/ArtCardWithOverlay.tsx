@@ -18,6 +18,7 @@ import {
   Copy,
   Plus,
   Move,
+  Paperclip,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
@@ -81,6 +82,7 @@ interface ClientArt {
   note?: string;
   noteRead?: boolean;
   customOverlays?: CustomOverlay[];
+  hasMaterial?: boolean;
 }
 
 interface MasterTemplate {
@@ -458,7 +460,12 @@ export function ArtCardWithOverlay({
 
       {/* Info & Actions */}
       <div className="p-3">
-        <h3 className="font-semibold truncate">{art.company}</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="font-semibold truncate">{art.company}</h3>
+          {art.hasMaterial && (
+            <Paperclip className="h-3.5 w-3.5 text-amber-400 shrink-0" title="Card possui material anexado" />
+          )}
+        </div>
         <p className="text-sm text-muted-foreground truncate">{art.cardText}</p>
         {art.imageType && (
           <p className="text-xs text-primary/70 truncate mt-0.5">{art.imageType}</p>
