@@ -1340,6 +1340,19 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     ctx.globalAlpha = 1;
   };
 
+  const drawCustomOverlays = (pageIdx: number) => {
+    const ovs = customOverlayPages?.[pageIdx];
+    const imgs = customOvImgs[pageIdx];
+    if (!ovs || !imgs) return;
+    let imgIdx = 0;
+    for (const ov of ovs) {
+      if (ov.isVideo) continue; // video overlays not supported in encoder
+      const img = imgs[imgIdx++];
+      if (!img) continue;
+      ctx.drawImage(img, ov.x, ov.y, ov.width, ov.height);
+    }
+  };
+
   const renderFrame = async (frameNum: number) => {
     const pageIdx = Math.floor(frameNum / framesPerPage);
     const frameInPage = frameNum - (pageIdx * framesPerPage);
