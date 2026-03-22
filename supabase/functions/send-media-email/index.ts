@@ -295,54 +295,7 @@ const sendEmailPartWithRetry = async (
         break;
       }
 
-      const emailId = extractEmailId(payload);
-      if (emailId) {
-        const delivery = await checkDeliveryStatus(apiKey, emailId);
-        if (delivery.state === "failed") {
-          lastStatus = 422;
-          lastPayload = {
-            message: "Email aceito pelo provedor, mas marcado como falha na entrega",
-            id: emailId,
-            last_event: delivery.lastEvent,
-            detail: delivery.payload,
-          };
-
-          if (attempt < 2) {
-            await sleep(700 * (attempt + 1));
-            continue;
-          }
-
-          break;
-        }
-
-        if (delivery.state === "unknown") {
-          lastStatus = 424;
-          lastPayload = {
-            message: "Status de entrega inconclusivo após polling",
-            id: emailId,
-            last_event: delivery.lastEvent,
-            detail: delivery.payload,
-          };
-
-          if (attempt < 2) {
-            await sleep(900 * (attempt + 1));
-            continue;
-          }
-
-          break;
-        }
-      } else {
-        lastStatus = 502;
-        lastPayload = { message: "Provedor não retornou id do e-mail" };
-
-        if (attempt < 2) {
-          await sleep(600 * (attempt + 1));
-          continue;
-        }
-
-        break;
-      }
-
+      // Send accepted by provider — treat as success immediately (no polling)
       return { success: true, status: res.status, payload };
     } catch (err) {
       lastStatus = 0;
