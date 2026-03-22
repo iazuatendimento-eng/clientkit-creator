@@ -1398,6 +1398,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
         const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
         const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
+        drawCustomOverlays(pageIdx);
       } catch {
         drawSource(img, true, pageProgress);
       }
@@ -1406,6 +1407,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
       const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
       const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
+      drawCustomOverlays(pageIdx);
     }
   };
 
