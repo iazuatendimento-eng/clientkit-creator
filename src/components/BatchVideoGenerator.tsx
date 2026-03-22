@@ -3682,10 +3682,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     backgroundImageUrl={selectedVideo.searchedImages?.[currentPreviewPage] || ""}
                     backgroundVideoUrl={selectedVideo.previewVideoUrls?.[currentPreviewPage] || (currentPreviewPage < selectedVideo.pages.length - 1 ? (selectedVideo.previewVideoUrls?.find(v => v && v !== "") || "") : "")}
                     backgroundPngUrl={selectedVideo.brandKit?.backgroundPng || selectedVideo.brandKit?.background_png || ""}
-                    backgroundColor={(() => {
-                      const colors = Array.isArray(selectedVideo.brandKit?.colors) ? selectedVideo.brandKit.colors : [];
-                      return colors[0] || template.backgroundColor || "#1a1a2e";
-                    })()}
+                    backgroundColor={template.backgroundColor || "#1a1a2e"}
                     logoX={currentPreviewPage < selectedVideo.pages.length - 1 
                       ? selectedVideo.adjustments.logoX 
                       : (selectedVideo.adjustments.sigLogoX ?? selectedVideo.adjustments.logoX)}
