@@ -12,6 +12,8 @@ export interface VideoCustomOverlay {
   isVideo?: boolean;
 }
 
+type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent" | "chevron";
+
 interface CanvasElement {
   id?: string;
   type: ElementType;
