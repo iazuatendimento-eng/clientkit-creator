@@ -52,7 +52,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
-import { generateAllVideoPages } from "@/lib/videoRenderer";
+import { generateAllVideoPages, type VideoPages } from "@/lib/videoRenderer";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import { encodeVideoToMP4, loadFFmpeg, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
@@ -2013,7 +2013,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     video: ClientVideo,
     searchedImages: string[],
     _videoUrls?: (string | null)[]
-  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[]; fullPages: string[] }> => {
+  ): Promise<VideoPages> => {
     const normalizedSearchedImages = video.pageTexts.map((_, idx) => searchedImages[idx] || "");
 
     return generateAllVideoPages(
@@ -2040,7 +2040,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
   const regenerateSingleVideo = async (
     video: ClientVideo
-  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[]; fullPages: string[] }> => {
+  ): Promise<VideoPages> => {
     const normalizedSearchedImages = video.pageTexts.map((_, idx) => video.searchedImages?.[idx] || "");
 
     return generateAllVideoPages(
