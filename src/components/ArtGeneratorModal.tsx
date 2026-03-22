@@ -1354,6 +1354,7 @@ export function ArtGeneratorModal({
       const dataUrl = await renderArt(template, brandKit, text, imageUrl, offset, ov, {
         isCarousel,
         isLastCarouselPage: isCarousel && currentPage === pages.length - 1,
+        customOverlays: pageCustomOverlays[currentPage] || [],
       });
       setPageArts(prev => {
         const copy = [...prev];
