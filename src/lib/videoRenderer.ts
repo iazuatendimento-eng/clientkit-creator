@@ -468,7 +468,7 @@ export async function generatePageImage(
     let el = elements[elIdx];
 
     // Apply shape override if available
-    if (el.id && shapeOverrides[el.id] && !["image", "text", "contact", "logo", "mascot"].includes(el.type)) {
+    if (el.id && shapeOverrides[el.id] && !["text", "contact", "logo", "mascot"].includes(el.type)) {
       const ov = shapeOverrides[el.id];
       el = { ...el, x: ov.x, y: ov.y, width: ov.width, height: ov.height };
     }
