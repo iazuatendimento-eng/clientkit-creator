@@ -147,7 +147,15 @@ interface ClientArt {
   briefing?: string; // Briefing do cadastro do cliente
   note?: string; // Anotação do operador
   noteRead?: boolean; // Se a anotação foi marcada como lida
-  customOverlays?: string[]; // URLs de PNGs extras sobrepostos na arte
+  customOverlays?: CustomOverlay[]; // PNGs extras sobrepostos na arte com posição/tamanho
+}
+
+interface CustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 // Helper to apply clip shape path on canvas context
@@ -1836,11 +1844,11 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     // Draw custom overlay PNGs on top of everything
     if (art.customOverlays && art.customOverlays.length > 0) {
-      for (const overlayUrl of art.customOverlays) {
+      for (const overlay of art.customOverlays) {
         try {
-          const overlayImg = await loadImage(overlayUrl);
+          const overlayImg = await loadImage(overlay.url);
           if (overlayImg) {
-            ctx.drawImage(overlayImg, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(overlayImg, overlay.x, overlay.y, overlay.width, overlay.height);
           }
         } catch (e) {
           console.warn("[customOverlay] Failed to draw overlay:", e);
@@ -3076,19 +3084,33 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 reader.onload = async (ev) => {
                   const base64 = ev.target?.result as string;
                   if (!base64) return;
-                  const art = clientArts[idx];
-                  const overlays = [...(art.customOverlays || []), base64];
-                  const updatedArt = { ...art, customOverlays: overlays };
-                  const updatedArts = [...clientArts];
-                  updatedArts[idx] = updatedArt;
-                  setClientArts(updatedArts);
-                  const newImageUrl = await generateArtForClient(updatedArt);
-                  setClientArts((prev) => {
-                    const next = [...prev];
-                    next[idx] = { ...next[idx], imageUrl: newImageUrl };
-                    return next;
-                  });
-                  toast({ title: "PNG adicionado à arte!" });
+                  // Load image to get natural dimensions for default size
+                  const img = new Image();
+                  img.onload = async () => {
+                    const art = clientArts[idx];
+                    // Default: center the overlay at 50% of canvas size, preserving aspect ratio
+                    const maxDim = Math.min(template.width, template.height) * 0.5;
+                    const ratio = img.naturalWidth / img.naturalHeight;
+                    let ow = maxDim;
+                    let oh = maxDim / ratio;
+                    if (oh > maxDim) { oh = maxDim; ow = maxDim * ratio; }
+                    const ox = (template.width - ow) / 2;
+                    const oy = (template.height - oh) / 2;
+                    const newOverlay: CustomOverlay = { url: base64, x: ox, y: oy, width: ow, height: oh };
+                    const overlays = [...(art.customOverlays || []), newOverlay];
+                    const updatedArt = { ...art, customOverlays: overlays };
+                    const updatedArts = [...clientArts];
+                    updatedArts[idx] = updatedArt;
+                    setClientArts(updatedArts);
+                    const newImageUrl = await generateArtForClient(updatedArt);
+                    setClientArts((prev) => {
+                      const next = [...prev];
+                      next[idx] = { ...next[idx], imageUrl: newImageUrl };
+                      return next;
+                    });
+                    toast({ title: "PNG adicionado à arte!" });
+                  };
+                  img.src = base64;
                 };
                 reader.readAsDataURL(file);
               }}

@@ -23,6 +23,14 @@ import { cn } from "@/lib/utils";
 
 type ShapeOverride = { x: number; y: number; width: number; height: number };
 
+interface CustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface ElementOverrides {
   logoX?: number;
   logoY?: number;
@@ -71,7 +79,7 @@ interface ClientArt {
   briefing?: string;
   note?: string;
   noteRead?: boolean;
-  customOverlays?: string[];
+  customOverlays?: CustomOverlay[];
 }
 
 interface MasterTemplate {
@@ -153,6 +161,7 @@ export function ArtCardWithOverlay({
   const [bgOffsetY, _setBgOffsetY] = useState(art.elementOverrides?.bgOffsetY || 0);
   const [bgScale, _setBgScale] = useState(art.elementOverrides?.bgScale || 100);
   const [hiddenElements, _setHiddenElements] = useState<string[]>(art.elementOverrides?.hiddenElements || []);
+  const [localOverlays, _setLocalOverlays] = useState<CustomOverlay[]>(art.customOverlays || []);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const overlayInputRef = useRef<HTMLInputElement>(null);
 
@@ -170,6 +179,7 @@ export function ArtCardWithOverlay({
     shapeOverrides,
     bgOffsetX, bgOffsetY, bgScale,
     hiddenElements,
+    localOverlays,
   });
 
   // Wrapped setters that update both React state AND the ref synchronously
@@ -197,6 +207,7 @@ export function ArtCardWithOverlay({
   const setBgOffsetY = useCallback((v: number) => { latestRef.current.bgOffsetY = v; _setBgOffsetY(v); }, []);
   const setBgScale = useCallback((v: number) => { latestRef.current.bgScale = v; _setBgScale(v); }, []);
   const setHiddenElements = useCallback((v: string[]) => { latestRef.current.hiddenElements = v; _setHiddenElements(v); }, []);
+  const setLocalOverlays = useCallback((v: CustomOverlay[]) => { latestRef.current.localOverlays = v; _setLocalOverlays(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
@@ -228,6 +239,7 @@ export function ArtCardWithOverlay({
       setBgOffsetY(art.elementOverrides?.bgOffsetY || 0);
       setBgScale(art.elementOverrides?.bgScale || 100);
       setHiddenElements(art.elementOverrides?.hiddenElements || []);
+      setLocalOverlays(art.customOverlays || []);
     }
   }, [art]);
 
@@ -290,12 +302,14 @@ export function ArtCardWithOverlay({
       ...art,
       photoOffset: { x: v.photoOffsetX, y: v.photoOffsetY },
       elementOverrides: updatedOverrides,
+      customOverlays: v.localOverlays.length > 0 ? v.localOverlays : undefined,
     };
 
     // Update parent state
     onArtUpdate(index, {
       photoOffset: updatedArt.photoOffset,
       elementOverrides: updatedOverrides,
+      customOverlays: updatedArt.customOverlays,
     });
 
     // Auto-propagate to all carousel siblings
@@ -405,6 +419,8 @@ export function ArtCardWithOverlay({
               hasBackgroundImage={hasAdjustableBackground}
               hiddenElements={hiddenElements}
               setHiddenElements={setHiddenElements}
+              customOverlays={localOverlays}
+              setCustomOverlays={setLocalOverlays}
               onDragEnd={handleDragEnd}
             />
           </div>

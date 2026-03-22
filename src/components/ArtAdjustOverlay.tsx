@@ -21,13 +21,23 @@ interface MasterTemplateLike {
 
 type ShapeOverride = { x: number; y: number; width: number; height: number };
 
+interface CustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
 type BasePart = "photo" | "logo" | "text" | "contact" | "mascot" | "bg";
 
 type ShapePart = `shape:${string}`;
 
-type Part = BasePart | ShapePart;
+type OverlayPart = `overlay:${number}`;
+
+type Part = BasePart | ShapePart | OverlayPart;
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
@@ -43,6 +53,8 @@ const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
 
 const isShapePart = (p: Part): p is ShapePart => typeof p === "string" && p.startsWith("shape:");
 const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
+const isOverlayPart = (p: Part): p is OverlayPart => typeof p === "string" && p.startsWith("overlay:");
+const overlayIndexFromPart = (p: OverlayPart) => parseInt(p.slice("overlay:".length), 10);
 
 export function ArtAdjustOverlay({
   template,
@@ -98,6 +110,8 @@ export function ArtAdjustOverlay({
   hasBackgroundImage,
   hiddenElements,
   setHiddenElements,
+  customOverlays,
+  setCustomOverlays,
 }: {
   template: MasterTemplateLike;
   previewUrl: string | null;
@@ -159,6 +173,8 @@ export function ArtAdjustOverlay({
   hasBackgroundImage?: boolean;
   hiddenElements?: string[];
   setHiddenElements?: (v: string[]) => void;
+  customOverlays?: CustomOverlay[];
+  setCustomOverlays?: (v: CustomOverlay[]) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part | null>(null);
@@ -274,6 +290,13 @@ export function ArtAdjustOverlay({
       };
     }
 
+    if (isOverlayPart(part)) {
+      const idx = overlayIndexFromPart(part);
+      const ov = customOverlays?.[idx];
+      if (!ov) return null;
+      return { x: ov.x, y: ov.y, w: ov.width, h: ov.height };
+    }
+
     return null;
   };
 
@@ -316,6 +339,7 @@ export function ArtAdjustOverlay({
           textW: number;
           textH: number;
           shapeRect?: ShapeOverride;
+          overlayRect?: ShapeOverride;
           bgOffsetX: number;
           bgOffsetY: number;
           bgScale: number;
@@ -363,6 +387,12 @@ export function ArtAdjustOverlay({
       if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
     }
 
+    let overlayRect: ShapeOverride | undefined;
+    if (isOverlayPart(part)) {
+      const r = getRect(part);
+      if (r) overlayRect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    }
+
     setActive(part);
     startRef.current = {
       mode,
@@ -401,6 +431,7 @@ export function ArtAdjustOverlay({
         textW,
         textH,
         shapeRect,
+        overlayRect,
         bgOffsetX: bgOffsetX ?? 0,
         bgOffsetY: bgOffsetY ?? 0,
         bgScale: bgScale ?? 100,
@@ -727,6 +758,46 @@ export function ArtAdjustOverlay({
         setShapeOverrides({ ...(shapeOverrides || {}), [id]: { x: newX, y: newY, width: newW, height: newH } });
         return;
       }
+
+      if (isOverlayPart(s.part) && setCustomOverlays && customOverlays) {
+        const idx = overlayIndexFromPart(s.part as OverlayPart);
+        const startRect = s.start.overlayRect;
+        if (!startRect) return;
+
+        const minSize = 20;
+
+        if (s.mode === "move") {
+          const updated = [...customOverlays];
+          updated[idx] = { ...updated[idx], x: startRect.x + dx, y: startRect.y + dy };
+          setCustomOverlays(updated);
+          return;
+        }
+
+        const h = s.handle || "se";
+        let newX = startRect.x;
+        let newY = startRect.y;
+        let newW = startRect.width;
+        let newH = startRect.height;
+
+        if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+        if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+        if (handleHasW(h)) {
+          newW = Math.max(minSize, startRect.width - dx);
+          newX = startRect.x + (startRect.width - newW);
+        }
+        if (handleHasN(h)) {
+          newH = Math.max(minSize, startRect.height - dy);
+          newY = startRect.y + (startRect.height - newH);
+        }
+
+        newW = Math.max(minSize, newW);
+        newH = Math.max(minSize, newH);
+
+        const updated = [...customOverlays];
+        updated[idx] = { ...updated[idx], x: newX, y: newY, width: newW, height: newH };
+        setCustomOverlays(updated);
+        return;
+      }
     };
 
     const finishDrag = () => {
@@ -771,6 +842,7 @@ export function ArtAdjustOverlay({
     if (part === "text") return els.textEl?.id || "text";
     if (part === "mascot") return els.mascotEl?.id || "mascot";
     if (part === "bg") return "bg";
+    if (isOverlayPart(part)) return `overlay-${overlayIndexFromPart(part)}`;
     return part;
   };
 
@@ -857,15 +929,17 @@ export function ArtAdjustOverlay({
       ? "z-[1]"
       : isShapePart(part)
         ? "z-[2]"
-        : part === "photo"
-          ? "z-10"
-          : part === "logo"
-            ? "z-20"
-            : part === "mascot"
-              ? "z-25"
-              : part === "contact"
-                ? "z-30"
-                : "z-40";
+        : isOverlayPart(part)
+          ? "z-[45]"
+          : part === "photo"
+            ? "z-10"
+            : part === "logo"
+              ? "z-20"
+              : part === "mascot"
+                ? "z-25"
+                : part === "contact"
+                  ? "z-30"
+                  : "z-40";
 
     const zClass = baseLayerClass;
 
@@ -1009,6 +1083,14 @@ export function ArtAdjustOverlay({
             key={s.id}
             part={`shape:${s.id}`}
             label={s.type === "circle" ? `Círculo ${idx + 1}` : `Retângulo ${idx + 1}`}
+            resizable
+          />
+        ))}
+        {customOverlays?.map((_, idx) => (
+          <Box
+            key={`overlay-${idx}`}
+            part={`overlay:${idx}` as OverlayPart}
+            label={`PNG ${idx + 1}`}
             resizable
           />
         ))}
