@@ -204,7 +204,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   };
 
   // When auto-triggering from a card, show loading instead of the form
-  if (initialTemplateId && initialText && !isVideoGenOpen && !isArtGenOpen && !showTemplateSelector) {
+  if (initialTemplateId && initialText && !isVideoGenOpen && !isArtGenOpen && !showTemplateSelector && !modalClosed) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
