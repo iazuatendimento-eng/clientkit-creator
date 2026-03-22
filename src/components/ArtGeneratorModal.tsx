@@ -977,7 +977,7 @@ export function ArtGeneratorModal({
     });
   }, [currentPage]);
 
-  const overlayCountRef = useRef(0);
+  const overlayVersionRef = useRef(0);
 
   const handleOverlayUpload = useCallback(async (file: File) => {
     const reader = new FileReader();
