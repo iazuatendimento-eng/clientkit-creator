@@ -842,6 +842,7 @@ export function ArtAdjustOverlay({
     if (part === "text") return els.textEl?.id || "text";
     if (part === "mascot") return els.mascotEl?.id || "mascot";
     if (part === "bg") return "bg";
+    if (isOverlayPart(part)) return `overlay-${overlayIndexFromPart(part)}`;
     return part;
   };
 
