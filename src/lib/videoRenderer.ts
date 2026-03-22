@@ -415,9 +415,16 @@ export async function generatePageImage(
   const shapeOverrides = adjustments.shapeOverrides || {};
 
   // Smart Layering: skip large background-colored shapes when client has PNG background
+  // ONLY skip shapes that are truly background: colorRole === "background" OR
+  // the shape's raw color matches the TEMPLATE's original background color
   const brandBgPngForSkip = brandKit?.backgroundPng || brandKit?.background_png;
   const shouldSkipBackgroundShape = (el: CanvasElement) => {
     if (!brandBgPngForSkip) return false;
+    // Only skip shapes bound to the background role
+    const isBackgroundRole = el.colorRole === "background";
+    // Or shapes whose raw color matches the template's original background (not brand kit substituted)
+    const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
+    if (!isBackgroundRole && !matchesTemplateBg) return false;
     const ov = shapeOverrides[el.id || ""];
     const ex = ov?.x ?? el.x ?? 0;
     const ey = ov?.y ?? el.y ?? 0;
@@ -429,7 +436,7 @@ export async function generatePageImage(
       ey <= templateHeight * 0.2 &&
       ex + ew >= templateWidth * 0.8 &&
       ey + eh >= templateHeight * 0.8;
-    return coversMostCanvas && (el.colorRole === "background" || el.color === bgColor);
+    return coversMostCanvas;
   };
 
   for (let elIdx = 0; elIdx < elements.length; elIdx++) {
