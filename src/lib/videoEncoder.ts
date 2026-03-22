@@ -1963,6 +1963,7 @@ export async function encodeVideoSimple(
         if (overlay) drawOverlay(overlay, pageProgress);
         const logoOverlay = logoOverlayImages[pageIdx];
         if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+        drawSimpleCustomOverlays(pageIdx);
       } catch (e) {
         console.warn("[VideoEncoder] Video frame draw failed, using static:", e);
         drawSource(img, true, pageProgress);
@@ -1975,6 +1976,7 @@ export async function encodeVideoSimple(
       if (overlay) drawOverlay(overlay, pageProgress);
       const logoOverlay = logoOverlayImages[pageIdx];
       if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+      drawSimpleCustomOverlays(pageIdx);
     }
   };
 
