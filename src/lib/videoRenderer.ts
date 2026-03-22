@@ -847,6 +847,7 @@ export interface VideoPages {
   frameOverlayPages: string[];
   preImageOverlayPages: string[];
   logoOverlayPages: string[];
+  fullPages: string[];
 }
 
 export async function generateAllVideoPages(
