@@ -121,8 +121,10 @@ export function VideoAdjustOverlay({
   frameOverlayUrl,
   textOverlayUrl,
   logoOverlayUrl,
+  preImageOverlayUrl,
   backgroundImageUrl,
   backgroundVideoUrl,
+  backgroundPngUrl,
 
   logoX,
   logoY,
