@@ -833,9 +833,9 @@ export function VideoGeneratorModal({
                       </div>
                     )}
                     {/* Page navigation in edit mode */}
-                    {videoPages.pages.length > 2 && (
+                    {videoPages.pages.length > 1 && (
                       <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-20">
-                        {videoPages.pages.slice(0, -1).map((_, idx) => (
+                        {videoPages.pages.map((_, idx) => (
                           <button
                             key={idx}
                             onClick={() => setCurrentEditPage(idx)}
