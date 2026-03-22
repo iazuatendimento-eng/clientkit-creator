@@ -148,6 +148,7 @@ interface ClientArt {
   note?: string; // Anotação do operador
   noteRead?: boolean; // Se a anotação foi marcada como lida
   customOverlays?: CustomOverlay[]; // PNGs extras sobrepostos na arte com posição/tamanho
+  hasMaterial?: boolean; // Card possui material anexado (card_uploads)
 }
 
 interface CustomOverlay {
