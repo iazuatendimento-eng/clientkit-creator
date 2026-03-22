@@ -580,7 +580,15 @@ export function VideoGeneratorModal({
     if (!template) return;
     setIsApplyingAdjustments(true);
     try {
-      const pages = await generateAllVideoPages(template, pageTexts, brandKit, searchedImages, adjustments, pageTextAdjustments, pageImageAdjustments);
+      const pages = await generateAllVideoPages(
+        template,
+        pageTexts,
+        brandKit,
+        searchedImages,
+        adjustmentsRef.current,
+        pageTextAdjustmentsRef.current,
+        pageImageAdjustmentsRef.current
+      );
       setVideoPages(pages);
       toast.success("Ajustes aplicados!");
     } catch (err) {
@@ -791,7 +799,7 @@ export function VideoGeneratorModal({
                       onAddOverlay={handleAddVideoOverlay}
                       onDeleteOverlay={handleDeleteVideoOverlay}
                       shapeOverrides={adjustments.shapeOverrides || {}}
-                      setShapeOverrides={(next) => setAdjustments(prev => ({ ...prev, shapeOverrides: next }))}
+                      setShapeOverrides={setShapeOverridesLocal}
                       photoInteractionMode="content"
                     />
                     {/* Page navigation in edit mode */}
