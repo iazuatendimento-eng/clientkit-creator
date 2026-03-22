@@ -2229,7 +2229,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           await Promise.all(urls.map(u => loadImage(u, 3)));
         }
         const result = await regenerateSingleVideo(base);
-        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages };
+        const updatedVideo = { ...base, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages };
 
         selectedVideoRef.current = updatedVideo;
 
@@ -2387,7 +2387,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
         console.log(`[BatchVideo] ${video.clientName}: searchedImages=${searchedImages.map(s => s ? 'OK' : 'EMPTY').join(',')}, videoUrls=${pexelsVideoUrls.map(v => v ? 'OK' : 'NULL').join(',')}`);
         const result = await generateVideoForClient(video, searchedImages, pexelsVideoUrls);
-        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
+        updatedVideos[i] = { ...video, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages, searchedImages, previewVideoUrls: pexelsVideoUrls };
         setClientVideos([...updatedVideos]);
       }
 
@@ -2490,7 +2490,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       };
       
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages };
 
       setClientVideos((prev) =>
         prev.map((v, i) => (i === index ? finalVideo : v))
@@ -2638,7 +2638,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsApplyingAdjustments(true);
     try {
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -2753,7 +2753,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setIsApplyingAdjustments(true);
     try {
       const result = await regenerateSingleVideo(updatedVideo);
-      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages };
+      const finalVideo = { ...updatedVideo, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages };
       selectedVideoRef.current = finalVideo;
       setSelectedVideo(finalVideo);
       setClientVideos((prev) =>
@@ -3424,7 +3424,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                            overlayPages: result.overlayPages,
                            frameOverlayPages: result.frameOverlayPages,
                            preImageOverlayPages: result.preImageOverlayPages,
-                           logoOverlayPages: result.logoOverlayPages,
+                           logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages,
                          };
 
                          setClientVideos((prev) => prev.map((v, i) => (i === index ? updatedVideo : v)));
