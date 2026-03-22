@@ -16,6 +16,7 @@ import {
   ArrowDownToLine,
   Trash2,
   Copy,
+  Plus,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ interface ClientArt {
   briefing?: string;
   note?: string;
   noteRead?: boolean;
+  customOverlays?: string[];
 }
 
 interface MasterTemplate {
@@ -99,6 +101,7 @@ interface ArtCardWithOverlayProps {
   onMoveToEnd?: (index: number) => void;
   onDelete?: (index: number) => void;
   onApplyToCarousel?: (index: number, overrides: ElementOverrides) => void;
+  onAddOverlay?: (index: number, file: File) => void;
   isRemovingBg?: boolean;
   removeBgProgress?: string;
 }
@@ -121,6 +124,7 @@ export function ArtCardWithOverlay({
   onMoveToEnd,
   onDelete,
   onApplyToCarousel,
+  onAddOverlay,
   isRemovingBg,
   removeBgProgress,
 }: ArtCardWithOverlayProps) {
@@ -150,6 +154,7 @@ export function ArtCardWithOverlay({
   const [bgScale, _setBgScale] = useState(art.elementOverrides?.bgScale || 100);
   const [hiddenElements, _setHiddenElements] = useState<string[]>(art.elementOverrides?.hiddenElements || []);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const overlayInputRef = useRef<HTMLInputElement>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regenerateRequestRef = useRef(0);
@@ -505,6 +510,26 @@ export function ArtCardWithOverlay({
               <Button size="sm" variant="outline" title="Remover item" className="text-destructive hover:text-destructive" onClick={() => onDelete(index)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
+            )}
+            {onAddOverlay && (
+              <>
+                <input
+                  ref={overlayInputRef}
+                  type="file"
+                  accept="image/png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      onAddOverlay(index, file);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <Button size="sm" variant="outline" title="Adicionar PNG extra" onClick={() => overlayInputRef.current?.click()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </>
             )}
             <Popover>
               <PopoverTrigger asChild>

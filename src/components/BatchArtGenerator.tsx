@@ -147,6 +147,7 @@ interface ClientArt {
   briefing?: string; // Briefing do cadastro do cliente
   note?: string; // Anotação do operador
   noteRead?: boolean; // Se a anotação foi marcada como lida
+  customOverlays?: string[]; // URLs de PNGs extras sobrepostos na arte
 }
 
 // Helper to apply clip shape path on canvas context
@@ -1833,6 +1834,19 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       }
     }
 
+    // Draw custom overlay PNGs on top of everything
+    if (art.customOverlays && art.customOverlays.length > 0) {
+      for (const overlayUrl of art.customOverlays) {
+        try {
+          const overlayImg = await loadImage(overlayUrl);
+          if (overlayImg) {
+            ctx.drawImage(overlayImg, 0, 0, canvas.width, canvas.height);
+          }
+        } catch (e) {
+          console.warn("[customOverlay] Failed to draw overlay:", e);
+        }
+      }
+    }
 
     const renderedDataUrl = canvas.toDataURL("image/png");
 
@@ -3056,6 +3070,27 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
                 }
 
                 toast({ title: `Ajustes aplicados a ${siblings.length + 1} páginas do carrossel` });
+              }}
+              onAddOverlay={async (idx, file) => {
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                  const base64 = ev.target?.result as string;
+                  if (!base64) return;
+                  const art = clientArts[idx];
+                  const overlays = [...(art.customOverlays || []), base64];
+                  const updatedArt = { ...art, customOverlays: overlays };
+                  const updatedArts = [...clientArts];
+                  updatedArts[idx] = updatedArt;
+                  setClientArts(updatedArts);
+                  const newImageUrl = await generateArtForClient(updatedArt);
+                  setClientArts((prev) => {
+                    const next = [...prev];
+                    next[idx] = { ...next[idx], imageUrl: newImageUrl };
+                    return next;
+                  });
+                  toast({ title: "PNG adicionado à arte!" });
+                };
+                reader.readAsDataURL(file);
               }}
               isRemovingBg={isRemovingBg}
               removeBgProgress={removeBgProgress}
