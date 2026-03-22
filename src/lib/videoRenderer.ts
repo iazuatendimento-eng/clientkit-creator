@@ -1039,6 +1039,7 @@ export async function generateAllVideoPages(
     preImageOverlayPages.push(result.preImageOverlay);
     frameOverlayPages.push(result.frameOverlay);
     logoOverlayPages.push(result.logoOverlay);
+    fullPages.push(result.fullPage);
   }
 
   const signatureResult = await buildPageSet(
@@ -1055,6 +1056,7 @@ export async function generateAllVideoPages(
   preImageOverlayPages.push(signatureResult.preImageOverlay);
   frameOverlayPages.push(signatureResult.frameOverlay);
   logoOverlayPages.push(signatureResult.logoOverlay);
+  fullPages.push(signatureResult.fullPage);
 
-  return { pages, overlayPages, frameOverlayPages, preImageOverlayPages, logoOverlayPages };
+  return { pages, overlayPages, frameOverlayPages, preImageOverlayPages, logoOverlayPages, fullPages };
 }
