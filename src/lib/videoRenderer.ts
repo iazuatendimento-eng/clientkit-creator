@@ -302,7 +302,8 @@ export async function generatePageImage(
   const h = canvas.height;
 
   const colors = Array.isArray(brandKit?.colors) ? brandKit.colors : [];
-  const bgColor = ensureColor(colors[0], templateBgColor || "#1a1a2e");
+  const brandBgColor = ensureColor(colors[0], templateBgColor || "#1a1a2e");
+  const bgColor = templateBgColor || "#1a1a2e"; // Canvas fill always uses template's original color
   const textColor = ensureColor(colors[1], "#ffffff");
   const accessoryColor1 = ensureColor(colors[2], "#cccccc");
   const accessoryColor2 = ensureColor(colors[3], "#aaaaaa");
