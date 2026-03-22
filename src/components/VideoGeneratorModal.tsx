@@ -745,7 +745,7 @@ export function VideoGeneratorModal({
               {/* Preview or Edit mode */}
               <div
                 className="rounded-lg overflow-hidden border bg-black flex justify-center items-center"
-                style={{ height: isEditing ? 'min(78vh, 780px)' : 'min(55vh, 600px)' }}
+                style={{ height: isEditing ? 'min(60vh, 550px)' : 'min(45vh, 450px)' }}
               >
                 {isEditing ? (
                   <div className="relative h-full" style={{ aspectRatio: `${template.width}/${template.height}` }}>
