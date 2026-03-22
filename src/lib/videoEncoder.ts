@@ -1801,6 +1801,23 @@ export async function encodeVideoSimple(
     })
   );
 
+  // Load custom overlay images per page
+  const simpleCustomOvImgs: Record<number, HTMLImageElement[]> = {};
+  if (customOverlayPages) {
+    await Promise.all(Object.entries(customOverlayPages).map(async ([pageIdxStr, ovs]) => {
+      const pageIdx = parseInt(pageIdxStr, 10);
+      const imgs = await Promise.all(ovs.filter(o => !o.isVideo).map(async (o) => {
+        try {
+          return await new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image(); img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img); img.onerror = reject; img.src = o.url;
+          });
+        } catch { return null; }
+      }));
+      simpleCustomOvImgs[pageIdx] = imgs.filter(Boolean) as HTMLImageElement[];
+    }));
+  }
+
   const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
   const totalFrames = framesPerPage * images.length;
