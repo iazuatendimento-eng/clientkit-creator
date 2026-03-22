@@ -366,12 +366,35 @@ export async function generatePageImage(
     }
   };
 
+  // Helper: check if template has a large background-role shape that warrants PNG replacement
+  const hasLargeBackgroundShape = () => {
+    const shapeOvr = adjustments.shapeOverrides || {};
+    for (const el of elements) {
+      const isBackgroundRole = el.colorRole === "background";
+      const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
+      if (!isBackgroundRole && !matchesTemplateBg) continue;
+      const ov = shapeOvr[el.id || ""];
+      const ex = ov?.x ?? el.x ?? 0;
+      const ey = ov?.y ?? el.y ?? 0;
+      const ew = ov?.width ?? el.width ?? 0;
+      const eh = ov?.height ?? el.height ?? 0;
+      if (
+        ew * eh >= templateWidth * templateHeight * 0.65 &&
+        ex <= templateWidth * 0.2 &&
+        ey <= templateHeight * 0.2 &&
+        ex + ew >= templateWidth * 0.8 &&
+        ey + eh >= templateHeight * 0.8
+      ) return true;
+    }
+    return false;
+  };
+
   // Draw background
   if (!transparentBackground) {
-    // Use backgroundPng from brand kit if available, otherwise solid color
     const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png;
     let bgPngLoaded = false;
-    if (brandBgPng) {
+    // Only use PNG background if there's a large background-role shape to replace
+    if (brandBgPng && hasLargeBackgroundShape()) {
       const bgPngImg = await loadImage(brandBgPng);
       if (bgPngImg) {
         ctx.drawImage(bgPngImg, 0, 0, w, h);
