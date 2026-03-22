@@ -503,6 +503,7 @@ export function VideoAdjustOverlay({
         imageW,
         imageH,
         shapeRect,
+        overlayRect,
       },
     };
 
