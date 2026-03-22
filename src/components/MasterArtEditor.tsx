@@ -1913,26 +1913,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
             </div>
           </div>
 
-          <div>
-            <Label className="text-sm font-medium mb-2 block">Cor de Fundo</Label>
-            <div className="flex gap-2">
-              <Input
-                type="color"
-                value={backgroundColor}
-                onChange={(e) => setBackgroundColor(e.target.value)}
-                className="w-12 h-10 p-1 cursor-pointer"
-              />
-              <Input
-                type="text"
-                value={backgroundColor}
-                onChange={(e) => setBackgroundColor(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Será substituído pela cor do cliente
-            </p>
-          </div>
+
 
           {selectedEl && (
             <ScrollArea className="flex-1">
