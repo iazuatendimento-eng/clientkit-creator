@@ -756,7 +756,7 @@ export function VideoGeneratorModal({
                         contentElements: template.contentElements as any[],
                         signatureElements: template.signatureElements as any[],
                       }}
-                      previewUrl={videoPages.pages[currentEditPage] || null}
+                      previewUrl={(!isContentPage && videoPages.fullPages?.[currentEditPage]) ? videoPages.fullPages[currentEditPage] : (videoPages.pages[currentEditPage] || null)}
                       isBusy={isApplyingAdjustments}
                       onCommit={applyAdjustments}
                       isContentPage={isContentPage}
