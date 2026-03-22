@@ -690,7 +690,27 @@ const CardCoverPreview = memo(({
                   style={{ aspectRatio: `${templateWidth || 1080} / ${templateHeight || 1920}` }}
                 >
                   {video.pages[i] ? (
-                    <img src={video.pages[i]} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                    <div className="absolute inset-0 bg-muted/40">
+                      {video.fullPages?.[i] ? (
+                        <img src={video.fullPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                      ) : (
+                        <>
+                          <img src={video.pages[i]} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                          {video.preImageOverlayPages?.[i] && (
+                            <img src={video.preImageOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                          )}
+                          {video.frameOverlayPages?.[i] && (
+                            <img src={video.frameOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                          )}
+                          {video.overlayPages?.[i] && (
+                            <img src={video.overlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                          )}
+                          {video.logoOverlayPages?.[i] && (
+                            <img src={video.logoOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                          )}
+                        </>
+                      )}
+                    </div>
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
