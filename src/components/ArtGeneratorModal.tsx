@@ -977,6 +977,8 @@ export function ArtGeneratorModal({
     });
   }, [currentPage]);
 
+  const pendingOverlayRegenRef = useRef(false);
+
   const handleOverlayUpload = useCallback(async (file: File) => {
     const reader = new FileReader();
     reader.onload = async (ev) => {
@@ -1000,9 +1002,18 @@ export function ArtGeneratorModal({
         copy[currentPage] = [...(copy[currentPage] || []), newOverlay];
         return copy;
       });
+      pendingOverlayRegenRef.current = true;
     };
     reader.readAsDataURL(file);
   }, [currentPage]);
+
+  // Re-render canvas when overlays change
+  useEffect(() => {
+    if (pendingOverlayRegenRef.current) {
+      pendingOverlayRegenRef.current = false;
+      regenerateCurrentPage();
+    }
+  }, [pageCustomOverlays, regenerateCurrentPage]);
 
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
