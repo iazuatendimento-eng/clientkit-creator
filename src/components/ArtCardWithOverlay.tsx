@@ -301,12 +301,14 @@ export function ArtCardWithOverlay({
       ...art,
       photoOffset: { x: v.photoOffsetX, y: v.photoOffsetY },
       elementOverrides: updatedOverrides,
+      customOverlays: v.localOverlays.length > 0 ? v.localOverlays : undefined,
     };
 
     // Update parent state
     onArtUpdate(index, {
       photoOffset: updatedArt.photoOffset,
       elementOverrides: updatedOverrides,
+      customOverlays: updatedArt.customOverlays,
     });
 
     // Auto-propagate to all carousel siblings
