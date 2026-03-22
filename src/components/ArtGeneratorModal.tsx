@@ -981,17 +981,13 @@ export function ArtGeneratorModal({
 
   const handleOverlayUpload = useCallback(async (file: File) => {
     const reader = new FileReader();
-    reader.onload = async (ev) => {
+    reader.onload = (ev) => {
       const base64 = ev.target?.result as string;
       if (!base64) return;
-      // Upload to storage for persistence
-      const ext = file.name.split(".").pop() || "png";
-      const path = `overlay-extras/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("card-uploads").upload(path, file);
-      const url = error ? base64 : supabase.storage.from("card-uploads").getPublicUrl(path).data.publicUrl;
       
+      // Use base64 immediately for instant display
       const newOverlay: CustomOverlay = {
-        url,
+        url: base64,
         x: 100,
         y: 100,
         width: 200,
@@ -1003,6 +999,23 @@ export function ArtGeneratorModal({
         return copy;
       });
       overlayVersionRef.current += 1;
+
+      // Upload to storage in background for persistence (replace base64 with URL)
+      const ext = file.name.split(".").pop() || "png";
+      const path = `overlay-extras/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      supabase.storage.from("card-uploads").upload(path, file).then(({ error }) => {
+        if (!error) {
+          const url = supabase.storage.from("card-uploads").getPublicUrl(path).data.publicUrl;
+          setPageCustomOverlays(prev => {
+            const copy = [...prev];
+            const arr = copy[currentPage] || [];
+            // Find the overlay with this base64 and replace URL
+            const updated = arr.map(o => o.url === base64 ? { ...o, url } : o);
+            copy[currentPage] = updated;
+            return copy;
+          });
+        }
+      });
     };
     reader.readAsDataURL(file);
   }, [currentPage]);
@@ -1059,23 +1072,31 @@ export function ArtGeneratorModal({
     }
   };
 
-  // Refs for current page regeneration
+  // Refs for current page regeneration (always up-to-date)
   const templateRef = useRef(template);
   useEffect(() => { templateRef.current = template; });
+  const pageCustomOverlaysRef = useRef(pageCustomOverlays);
+  useEffect(() => { pageCustomOverlaysRef.current = pageCustomOverlays; });
+  const pageOverridesRef = useRef(pageOverrides);
+  useEffect(() => { pageOverridesRef.current = pageOverrides; });
+  const pagePhotoOffsetsRef = useRef(pagePhotoOffsets);
+  useEffect(() => { pagePhotoOffsetsRef.current = pagePhotoOffsets; });
+  const pagePhotosRef = useRef(pagePhotos);
+  useEffect(() => { pagePhotosRef.current = pagePhotos; });
 
   const regenerateCurrentPage = useCallback(async () => {
     const tmpl = templateRef.current;
     if (!tmpl) return;
     setIsRegenerating(true);
     try {
-      const ov = pageOverrides[currentPage] || {};
-      const offset = pagePhotoOffsets[currentPage] || { x: 0, y: 0 };
-      const photo = pagePhotos[currentPage] || null;
+      const ov = pageOverridesRef.current[currentPage] || {};
+      const offset = pagePhotoOffsetsRef.current[currentPage] || { x: 0, y: 0 };
+      const photo = pagePhotosRef.current[currentPage] || null;
       const text = pages[currentPage] || "";
       const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, ov, {
         isCarousel,
         isLastCarouselPage: isCarousel && currentPage === pages.length - 1,
-        customOverlays: pageCustomOverlays[currentPage] || [],
+        customOverlays: pageCustomOverlaysRef.current[currentPage] || [],
       });
       setPageArts(prev => {
         const copy = [...prev];
@@ -1087,7 +1108,7 @@ export function ArtGeneratorModal({
     } finally {
       setIsRegenerating(false);
     }
-  }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, pages, brandKit]);
+  }, [currentPage, pages, brandKit, isCarousel]);
 
   // Re-render canvas when custom overlays change (any addition)
   const overlayJsonRef = useRef("");
@@ -1104,9 +1125,14 @@ export function ArtGeneratorModal({
   const handleDragEnd = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(async () => {
+      const currentOverrides = pageOverridesRef.current;
+      const currentOffsets = pagePhotoOffsetsRef.current;
+      const currentPhotos = pagePhotosRef.current;
+      const currentCustomOverlays = pageCustomOverlaysRef.current;
+
       // Propagate layout overrides (except text) to all carousel sibling pages
       if (isCarousel && pages.length > 1) {
-        const currentOvNow = pageOverrides[currentPage] || {};
+        const currentOvNow = currentOverrides[currentPage] || {};
         const layoutKeys: (keyof ElementOverrides)[] = [
           "logoX", "logoY", "logoScaleX", "logoScaleY",
           "contactX", "contactY", "contactScaleX", "contactScaleY",
@@ -1138,7 +1164,7 @@ export function ArtGeneratorModal({
       if (isCarousel && pages.length > 1) {
         const tmpl = templateRef.current;
         if (!tmpl) return;
-        const currentOvNow = pageOverrides[currentPage] || {};
+        const currentOvNow = currentOverrides[currentPage] || {};
         const layoutKeys: (keyof ElementOverrides)[] = [
           "logoX", "logoY", "logoScaleX", "logoScaleY",
           "contactX", "contactY", "contactScaleX", "contactScaleY",
@@ -1149,20 +1175,20 @@ export function ArtGeneratorModal({
         const siblingPromises = pages.map(async (_, i) => {
           if (i === currentPage) return;
           try {
-            const ov = pageOverrides[i] || {};
+            const ov = currentOverrides[i] || {};
             const mergedOv = { ...ov };
             for (const key of layoutKeys) {
               if (currentOvNow[key] !== undefined) {
                 (mergedOv as any)[key] = currentOvNow[key];
               }
             }
-            const offset = pagePhotoOffsets[i] || { x: 0, y: 0 };
-            const photo = pagePhotos[i] || null;
+            const offset = currentOffsets[i] || { x: 0, y: 0 };
+            const photo = currentPhotos[i] || null;
             const text = pages[i] || "";
             const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, mergedOv, {
               isCarousel,
               isLastCarouselPage: isCarousel && i === pages.length - 1,
-              customOverlays: pageCustomOverlays[i] || [],
+              customOverlays: currentCustomOverlays[i] || [],
             });
             setPageArts(prev => {
               const copy = [...prev];
@@ -1173,10 +1199,10 @@ export function ArtGeneratorModal({
             console.error("Regenerate sibling error:", err);
           }
         });
-        Promise.all(siblingPromises); // Fire and forget - don't await
+        Promise.all(siblingPromises);
       }
     }, 80);
-  }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, brandKit]);
+  }, [regenerateCurrentPage, isCarousel, pages, currentPage, brandKit]);
 
   const generateArt = useCallback(async () => {
     setStatus("loading");
