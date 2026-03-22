@@ -21,13 +21,23 @@ interface MasterTemplateLike {
 
 type ShapeOverride = { x: number; y: number; width: number; height: number };
 
+interface CustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
 type BasePart = "photo" | "logo" | "text" | "contact" | "mascot" | "bg";
 
 type ShapePart = `shape:${string}`;
 
-type Part = BasePart | ShapePart;
+type OverlayPart = `overlay:${number}`;
+
+type Part = BasePart | ShapePart | OverlayPart;
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
@@ -43,6 +53,8 @@ const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
 
 const isShapePart = (p: Part): p is ShapePart => typeof p === "string" && p.startsWith("shape:");
 const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
+const isOverlayPart = (p: Part): p is OverlayPart => typeof p === "string" && p.startsWith("overlay:");
+const overlayIndexFromPart = (p: OverlayPart) => parseInt(p.slice("overlay:".length), 10);
 
 export function ArtAdjustOverlay({
   template,
