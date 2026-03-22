@@ -2013,7 +2013,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     video: ClientVideo,
     searchedImages: string[],
     _videoUrls?: (string | null)[]
-  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[] }> => {
+  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[]; fullPages: string[] }> => {
     const normalizedSearchedImages = video.pageTexts.map((_, idx) => searchedImages[idx] || "");
 
     return generateAllVideoPages(
