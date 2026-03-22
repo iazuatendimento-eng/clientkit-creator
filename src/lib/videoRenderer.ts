@@ -87,12 +87,12 @@ export interface CanvasElement {
   imageUrl?: string;
   placeholder?: boolean;
   rotation?: number;
-  colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  colorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   opacity?: number;
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
-  borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
+  borderColorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
@@ -106,8 +106,8 @@ export interface CanvasElement {
     opacity2?: number;
     angle?: number;
     fadeMode?: boolean;
-    color1Role?: "background" | "text" | "accessory1" | "accessory2";
-    color2Role?: "background" | "text" | "accessory1" | "accessory2";
+    color1Role?: "background" | "element1" | "text" | "accessory1" | "accessory2";
+    color2Role?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   };
   animated?: boolean;
   animationType?: string;
@@ -309,7 +309,7 @@ export async function generatePageImage(
   const accessoryColor2 = ensureColor(colors[3], "#aaaaaa");
 
   const getElementColor = (el: CanvasElement, defaultColor: string): string => {
-    if (el.colorRole === "background") return brandBgColor;
+    if (el.colorRole === "background" || el.colorRole === "element1") return brandBgColor;
     if (el.colorRole === "text") return textColor;
     if (el.colorRole === "accessory1") return accessoryColor1;
     if (el.colorRole === "accessory2") return accessoryColor2;
@@ -317,7 +317,7 @@ export async function generatePageImage(
   };
 
   const getBorderColor = (el: CanvasElement): string => {
-    if (el.borderColorRole === "background") return brandBgColor;
+    if (el.borderColorRole === "background" || el.borderColorRole === "element1") return brandBgColor;
     if (el.borderColorRole === "text") return textColor;
     if (el.borderColorRole === "accessory1") return accessoryColor1;
     if (el.borderColorRole === "accessory2") return accessoryColor2;
@@ -335,8 +335,8 @@ export async function generatePageImage(
       } else {
         gradient = ctx.createRadialGradient(x + elW / 2, y + elH / 2, 0, x + elW / 2, y + elH / 2, Math.max(elW, elH) / 2);
       }
-      const color1 = el.gradient.color1Role === "background" ? brandBgColor : el.gradient.color1Role === "text" ? textColor : el.gradient.color1Role === "accessory1" ? accessoryColor1 : el.gradient.color1Role === "accessory2" ? accessoryColor2 : el.gradient.color1;
-      const color2Raw = el.gradient.color2Role === "background" ? brandBgColor : el.gradient.color2Role === "text" ? textColor : el.gradient.color2Role === "accessory1" ? accessoryColor1 : el.gradient.color2Role === "accessory2" ? accessoryColor2 : el.gradient.color2;
+      const color1 = (el.gradient.color1Role === "background" || el.gradient.color1Role === "element1") ? brandBgColor : el.gradient.color1Role === "text" ? textColor : el.gradient.color1Role === "accessory1" ? accessoryColor1 : el.gradient.color1Role === "accessory2" ? accessoryColor2 : el.gradient.color1;
+      const color2Raw = (el.gradient.color2Role === "background" || el.gradient.color2Role === "element1") ? brandBgColor : el.gradient.color2Role === "text" ? textColor : el.gradient.color2Role === "accessory1" ? accessoryColor1 : el.gradient.color2Role === "accessory2" ? accessoryColor2 : el.gradient.color2;
       const color2 = el.gradient.fadeMode ? color1 : color2Raw;
       const op1 = el.gradient.opacity1 ?? 100;
       const op2 = el.gradient.opacity2 ?? (el.gradient.fadeMode ? 0 : 100);
@@ -984,12 +984,13 @@ export async function generateAllVideoPages(
       );
     }
 
-    const missingAnyTopLayer =
-      (hasTextLayer && !textOverlay) ||
-      (hasFrameLayer && !frameOverlay) ||
-      (hasLogoLayer && !logoOverlay);
+    const missingText = hasTextLayer && !textOverlay;
+    const missingFrame = hasFrameLayer && !frameOverlay;
+    const missingLogo = hasLogoLayer && !logoOverlay;
+    const missingAnyTopLayer = missingText || missingFrame || missingLogo;
 
     if (missingAnyTopLayer) {
+      // Only generate combined fallback for layers that actually failed
       const combinedTopOverlay = await generatePageImage(
         tw,
         th,
@@ -1010,9 +1011,12 @@ export async function generateAllVideoPages(
       );
 
       if (combinedTopOverlay) {
+        // Use combined overlay for text (which includes all layers)
+        // but preserve individually-generated overlays that succeeded
         textOverlay = combinedTopOverlay;
-        frameOverlay = "";
-        logoOverlay = "";
+        // Only clear frame/logo if they were already missing
+        if (missingFrame) frameOverlay = "";
+        if (missingLogo) logoOverlay = "";
       }
     }
 
