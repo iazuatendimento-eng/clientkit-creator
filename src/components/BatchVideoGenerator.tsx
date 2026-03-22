@@ -2040,7 +2040,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
   const regenerateSingleVideo = async (
     video: ClientVideo
-  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[] }> => {
+  ): Promise<{ pages: string[]; overlayPages: string[]; frameOverlayPages: string[]; preImageOverlayPages: string[]; logoOverlayPages: string[]; fullPages: string[] }> => {
     const normalizedSearchedImages = video.pageTexts.map((_, idx) => video.searchedImages?.[idx] || "");
 
     return generateAllVideoPages(
