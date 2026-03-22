@@ -61,7 +61,7 @@ const PT_EN: Record<string, string> = {
   // ── Food & Beverage ──
   comida: "food", alimento: "food", alimentação: "nutrition", alimentacao: "nutrition",
   restaurante: "restaurant",
-  cozinha: "kitchen", receita: "recipe", saudável: "healthy", saudavel: "healthy",
+  cozinha: "kitchen", saudável: "healthy", saudavel: "healthy",
   fruta: "fruit", legume: "vegetable", carne: "meat", peixe: "fish",
   pizza: "pizza", hambúrguer: "hamburger", hamburguer: "hamburger", lanche: "snack",
   padaria: "bakery", confeitaria: "pastry", doce: "sweet", bolo: "cake",
