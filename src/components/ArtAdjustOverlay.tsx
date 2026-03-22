@@ -339,6 +339,7 @@ export function ArtAdjustOverlay({
           textW: number;
           textH: number;
           shapeRect?: ShapeOverride;
+          overlayRect?: ShapeOverride;
           bgOffsetX: number;
           bgOffsetY: number;
           bgScale: number;
