@@ -1,6 +1,16 @@
 import { useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+
+export interface VideoCustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isVideo?: boolean;
+}
 
 type ElementType = "rect" | "circle" | "text" | "image" | "logo" | "contact" | "mascot" | "triangle" | "line" | "star" | "diamond" | "hexagon" | "pentagon" | "polkaDots" | "dotsGrid" | "confetti" | "splatter" | "zigzag" | "spiral" | "wave" | "blob" | "arch" | "arrow" | "badge" | "ribbon" | "heart" | "cross" | "cloud" | "speechBubble" | "lightning" | "shield" | "crescent" | "chevron";
 
@@ -27,7 +37,8 @@ type ShapeOverride = { x: number; y: number; width: number; height: number };
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 type BasePart = "logo" | "contact" | "mascot" | "text" | "image";
 type ShapePart = `shape:${string}`;
-type Part = BasePart | ShapePart;
+type OverlayPart = `overlay:${number}`;
+type Part = BasePart | ShapePart | OverlayPart;
 type Tone = "primary" | "secondary" | "accent" | "muted" | "warning";
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
@@ -42,6 +53,8 @@ const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
 
 const isShapePart = (p: Part): p is ShapePart => typeof p === "string" && p.startsWith("shape:");
 const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
+const isOverlayPart = (p: Part): p is OverlayPart => typeof p === "string" && p.startsWith("overlay:");
+const overlayIndexFromPart = (p: OverlayPart) => parseInt(p.slice("overlay:".length), 10);
 
 
 const toneClasses = (tone: Tone) => {
@@ -154,6 +167,11 @@ export function VideoAdjustOverlay({
 
   shapeOverrides,
   setShapeOverrides,
+
+  customOverlays,
+  setCustomOverlays,
+  onAddOverlay,
+  onDeleteOverlay,
 }: {
   template: VideoTemplateLike;
   previewUrl: string | null;
@@ -216,8 +234,14 @@ export function VideoAdjustOverlay({
 
   shapeOverrides?: Record<string, ShapeOverride>;
   setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
+
+  customOverlays?: VideoCustomOverlay[];
+  setCustomOverlays?: (v: VideoCustomOverlay[]) => void;
+  onAddOverlay?: (file: File) => void;
+  onDeleteOverlay?: (idx: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const overlayInputRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<Part>("logo");
 
   const shapeTypes: ElementType[] = [
@@ -355,6 +379,13 @@ export function VideoAdjustOverlay({
       };
     }
 
+    if (isOverlayPart(part)) {
+      const idx = overlayIndexFromPart(part);
+      const ov = customOverlays?.[idx];
+      if (!ov) return null;
+      return { x: ov.x, y: ov.y, w: ov.width, h: ov.height };
+    }
+
     return null;
   };
 
@@ -396,6 +427,7 @@ export function VideoAdjustOverlay({
           imageW: number;
           imageH: number;
           shapeRect?: ShapeOverride;
+          overlayRect?: { x: number; y: number; width: number; height: number };
         };
       }
   >(null);
@@ -431,6 +463,12 @@ export function VideoAdjustOverlay({
     if (isShapePart(part)) {
       const r = getRect(part);
       if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    }
+
+    let overlayRect: { x: number; y: number; width: number; height: number } | undefined;
+    if (isOverlayPart(part)) {
+      const r = getRect(part);
+      if (r) overlayRect = { x: r.x, y: r.y, width: r.w, height: r.h };
     }
 
     setActive(part);
@@ -470,6 +508,7 @@ export function VideoAdjustOverlay({
         imageW,
         imageH,
         shapeRect,
+        overlayRect,
       },
     };
 
@@ -684,6 +723,42 @@ export function VideoAdjustOverlay({
         }
 
         setShapeOverrides({ ...(shapeOverrides || {}), [id]: { x: newX, y: newY, width: newW, height: newH } });
+      }
+
+      if (isOverlayPart(s.part) && setCustomOverlays && customOverlays) {
+        const idx = overlayIndexFromPart(s.part as OverlayPart);
+        const startRect = s.start.overlayRect;
+        if (!startRect) return;
+
+        const minSize = 30;
+
+        if (s.mode === "move") {
+          const updated = [...customOverlays];
+          updated[idx] = { ...updated[idx], x: startRect.x + dx, y: startRect.y + dy };
+          setCustomOverlays(updated);
+          return;
+        }
+
+        const h = s.handle || "se";
+        let newX = startRect.x;
+        let newY = startRect.y;
+        let newW = startRect.width;
+        let newH = startRect.height;
+
+        if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+        if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+        if (handleHasW(h)) {
+          newW = Math.max(minSize, startRect.width - dx);
+          newX = startRect.x + (startRect.width - newW);
+        }
+        if (handleHasN(h)) {
+          newH = Math.max(minSize, startRect.height - dy);
+          newY = startRect.y + (startRect.height - newH);
+        }
+
+        const updated = [...customOverlays];
+        updated[idx] = { ...updated[idx], x: newX, y: newY, width: newW, height: newH };
+        setCustomOverlays(updated);
       }
     };
 
@@ -955,7 +1030,62 @@ export function VideoAdjustOverlay({
             return null;
           });
         })()}
+
+        {/* Custom overlay boxes */}
+        {customOverlays?.map((ov, idx) => (
+          <Box
+            key={`overlay-${idx}`}
+            part={`overlay:${idx}` as OverlayPart}
+            label={`Extra ${idx + 1}${ov.isVideo ? " (MP4)" : ""}`}
+            tone="warning"
+          >
+            {ov.isVideo ? (
+              <video src={ov.url} className="w-full h-full object-contain" muted loop autoPlay playsInline draggable={false} />
+            ) : (
+              <img src={ov.url} alt={`Extra ${idx + 1}`} className="w-full h-full object-contain" draggable={false} />
+            )}
+          </Box>
+        ))}
       </div>
+
+      {/* Add overlay button */}
+      {onAddOverlay && (
+        <div className="absolute top-2 right-2 z-30 flex gap-1">
+          <input
+            ref={overlayInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,video/mp4"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                onAddOverlay(file);
+                e.target.value = "";
+              }
+            }}
+          />
+          <Button
+            size="icon"
+            variant="secondary"
+            className="h-7 w-7 rounded-full shadow-md"
+            title="Adicionar PNG/MP4 extra"
+            onClick={() => overlayInputRef.current?.click()}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          {active && isOverlayPart(active) && onDeleteOverlay && (
+            <Button
+              size="icon"
+              variant="destructive"
+              className="h-7 w-7 rounded-full shadow-md"
+              title="Remover overlay selecionado"
+              onClick={() => onDeleteOverlay(overlayIndexFromPart(active))}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      )}
 
       {isBusy && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/20 pointer-events-none">

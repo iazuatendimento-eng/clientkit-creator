@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Download, Film, Volume2, VolumeX, Pencil, RotateCcw, Upload, Search, Check, Mail } from "lucide-react";
@@ -239,6 +239,32 @@ export function VideoGeneratorModal({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailProgress, setEmailProgress] = useState(0);
   const [emailSubject, setEmailSubject] = useState("");
+  const [customOverlays, setCustomOverlays] = useState<Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]>>({});
+
+  const currentPageOverlays = customOverlays[currentEditPage] || [];
+  const setCurrentPageOverlays = useCallback((overlays: typeof currentPageOverlays) => {
+    setCustomOverlays(prev => ({ ...prev, [currentEditPage]: overlays }));
+  }, [currentEditPage]);
+
+  const handleAddVideoOverlay = useCallback((file: File) => {
+    const reader = new FileReader();
+    const isVideo = file.type.startsWith("video");
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      if (!url || !template) return;
+      const newOv = { url, x: template.width / 4, y: template.height / 4, width: template.width / 2, height: template.height / 2, isVideo };
+      setCustomOverlays(prev => ({ ...prev, [currentEditPage]: [...(prev[currentEditPage] || []), newOv] }));
+    };
+    reader.readAsDataURL(file);
+  }, [currentEditPage, template]);
+
+  const handleDeleteVideoOverlay = useCallback((idx: number) => {
+    setCustomOverlays(prev => {
+      const updated = [...(prev[currentEditPage] || [])];
+      updated.splice(idx, 1);
+      return { ...prev, [currentEditPage]: updated };
+    });
+  }, [currentEditPage]);
 
   const handleSendEmail = async (videoUrl: string, videoCoverUrl?: string) => {
     if (!clientId) return;
@@ -770,6 +796,10 @@ export function VideoGeneratorModal({
                       setImageX={(v) => updatePageImageAdj(currentEditPage, "imageX", v)}
                       setImageY={(v) => updatePageImageAdj(currentEditPage, "imageY", v)}
                       setImageScale={(v) => updatePageImageAdj(currentEditPage, "imageScale", v)}
+                      customOverlays={currentPageOverlays}
+                      setCustomOverlays={setCurrentPageOverlays}
+                      onAddOverlay={handleAddVideoOverlay}
+                      onDeleteOverlay={handleDeleteVideoOverlay}
                     />
                     {/* Page navigation in edit mode */}
                     {videoPages.pages.length > 1 && (
