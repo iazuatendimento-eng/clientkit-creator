@@ -167,6 +167,11 @@ export function VideoAdjustOverlay({
 
   shapeOverrides,
   setShapeOverrides,
+
+  customOverlays,
+  setCustomOverlays,
+  onAddOverlay,
+  onDeleteOverlay,
 }: {
   template: VideoTemplateLike;
   previewUrl: string | null;
