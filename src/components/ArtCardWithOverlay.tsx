@@ -463,7 +463,9 @@ export function ArtCardWithOverlay({
         <div className="flex items-center gap-1.5">
           <h3 className="font-semibold truncate">{art.company}</h3>
           {art.hasMaterial && (
-            <Paperclip className="h-3.5 w-3.5 text-amber-400 shrink-0" title="Card possui material anexado" />
+            <span className="shrink-0" aria-label="Card possui material anexado">
+              <Paperclip className="h-3.5 w-3.5 text-primary" />
+            </span>
           )}
         </div>
         <p className="text-sm text-muted-foreground truncate">{art.cardText}</p>
