@@ -171,6 +171,8 @@ export function ArtAdjustOverlay({
   hasBackgroundImage?: boolean;
   hiddenElements?: string[];
   setHiddenElements?: (v: string[]) => void;
+  customOverlays?: CustomOverlay[];
+  setCustomOverlays?: (v: CustomOverlay[]) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<Part | null>(null);
