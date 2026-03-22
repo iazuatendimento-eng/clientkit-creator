@@ -234,12 +234,19 @@ export function VideoGeneratorModal({
   const [adjustments, setAdjustments] = useState<ElementAdjustments>({ ...defaultAdjustments });
   const [pageTextAdjustments, setPageTextAdjustments] = useState<PageTextAdjustment[]>([]);
   const [pageImageAdjustments, setPageImageAdjustments] = useState<PageImageAdjustment[]>([]);
+  const adjustmentsRef = useRef<ElementAdjustments>({ ...defaultAdjustments });
+  const pageTextAdjustmentsRef = useRef<PageTextAdjustment[]>([]);
+  const pageImageAdjustmentsRef = useRef<PageImageAdjustment[]>([]);
   const [isApplyingAdjustments, setIsApplyingAdjustments] = useState(false);
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<"1" | "2" | "none">("1");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailProgress, setEmailProgress] = useState(0);
   const [emailSubject, setEmailSubject] = useState("");
   const [customOverlays, setCustomOverlays] = useState<Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]>>({});
+
+  useEffect(() => { adjustmentsRef.current = adjustments; }, [adjustments]);
+  useEffect(() => { pageTextAdjustmentsRef.current = pageTextAdjustments; }, [pageTextAdjustments]);
+  useEffect(() => { pageImageAdjustmentsRef.current = pageImageAdjustments; }, [pageImageAdjustments]);
 
   const currentPageOverlays = customOverlays[currentEditPage] || [];
   const setCurrentPageOverlays = useCallback((overlays: typeof currentPageOverlays) => {
@@ -374,28 +381,34 @@ export function VideoGeneratorModal({
     }
   };
 
-  // Adjustment helpers
-  const updateAdj = (key: keyof ElementAdjustments, value: number) => {
-    setAdjustments(prev => ({ ...prev, [key]: value }));
-  };
+  // Adjustment helpers (sync refs first so onCommit always sees latest value)
+  const updateAdj = useCallback((key: keyof ElementAdjustments, value: number) => {
+    const nextAdj = { ...adjustmentsRef.current, [key]: value };
+    adjustmentsRef.current = nextAdj;
+    setAdjustments(nextAdj);
+  }, []);
 
-  const updatePageTextAdj = (pageIdx: number, key: keyof PageTextAdjustment, value: number) => {
-    setPageTextAdjustments(prev => {
-      const next = [...prev];
-      while (next.length <= pageIdx) next.push({ ...defaultPageTextAdjustment });
-      next[pageIdx] = { ...next[pageIdx], [key]: value };
-      return next;
-    });
-  };
+  const setShapeOverridesLocal = useCallback((next: Record<string, { x: number; y: number; width: number; height: number }>) => {
+    const nextAdj = { ...adjustmentsRef.current, shapeOverrides: next };
+    adjustmentsRef.current = nextAdj;
+    setAdjustments(nextAdj);
+  }, []);
 
-  const updatePageImageAdj = (pageIdx: number, key: keyof PageImageAdjustment, value: number) => {
-    setPageImageAdjustments(prev => {
-      const next = [...prev];
-      while (next.length <= pageIdx) next.push({ ...defaultPageImageAdjustment });
-      next[pageIdx] = { ...next[pageIdx], [key]: value };
-      return next;
-    });
-  };
+  const updatePageTextAdj = useCallback((pageIdx: number, key: keyof PageTextAdjustment, value: number) => {
+    const next = [...pageTextAdjustmentsRef.current];
+    while (next.length <= pageIdx) next.push({ ...defaultPageTextAdjustment });
+    next[pageIdx] = { ...next[pageIdx], [key]: value };
+    pageTextAdjustmentsRef.current = next;
+    setPageTextAdjustments(next);
+  }, []);
+
+  const updatePageImageAdj = useCallback((pageIdx: number, key: keyof PageImageAdjustment, value: number) => {
+    const next = [...pageImageAdjustmentsRef.current];
+    while (next.length <= pageIdx) next.push({ ...defaultPageImageAdjustment });
+    next[pageIdx] = { ...next[pageIdx], [key]: value };
+    pageImageAdjustmentsRef.current = next;
+    setPageImageAdjustments(next);
+  }, []);
 
   // Extract animation settings from template
   const getTextAnimation = (t: VideoTemplateData): TextAnimation => {
@@ -567,7 +580,15 @@ export function VideoGeneratorModal({
     if (!template) return;
     setIsApplyingAdjustments(true);
     try {
-      const pages = await generateAllVideoPages(template, pageTexts, brandKit, searchedImages, adjustments, pageTextAdjustments, pageImageAdjustments);
+      const pages = await generateAllVideoPages(
+        template,
+        pageTexts,
+        brandKit,
+        searchedImages,
+        adjustmentsRef.current,
+        pageTextAdjustmentsRef.current,
+        pageImageAdjustmentsRef.current
+      );
       setVideoPages(pages);
       toast.success("Ajustes aplicados!");
     } catch (err) {
@@ -778,7 +799,7 @@ export function VideoGeneratorModal({
                       onAddOverlay={handleAddVideoOverlay}
                       onDeleteOverlay={handleDeleteVideoOverlay}
                       shapeOverrides={adjustments.shapeOverrides || {}}
-                      setShapeOverrides={(next) => setAdjustments(prev => ({ ...prev, shapeOverrides: next }))}
+                      setShapeOverrides={setShapeOverridesLocal}
                       photoInteractionMode="content"
                     />
                     {/* Page navigation in edit mode */}
