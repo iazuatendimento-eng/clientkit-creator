@@ -23,6 +23,14 @@ import { cn } from "@/lib/utils";
 
 type ShapeOverride = { x: number; y: number; width: number; height: number };
 
+interface CustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface ElementOverrides {
   logoX?: number;
   logoY?: number;
@@ -71,7 +79,7 @@ interface ClientArt {
   briefing?: string;
   note?: string;
   noteRead?: boolean;
-  customOverlays?: string[];
+  customOverlays?: CustomOverlay[];
 }
 
 interface MasterTemplate {
