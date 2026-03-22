@@ -454,10 +454,20 @@ export function ArtAdjustOverlay({
         const base = els.photoFrame;
         if (!base) return;
 
-        // Move = pan the photo inside the frame
+        // Move = move the entire frame freely
         if (s.mode === "move") {
-          setPhotoOffsetX(s.start.photoOffsetX + dx);
-          setPhotoOffsetY(s.start.photoOffsetY + dy);
+          if (setPhotoFrame && s.start.photoRect) {
+            setPhotoFrame({
+              x: s.start.photoRect.x + dx,
+              y: s.start.photoRect.y + dy,
+              width: s.start.photoRect.width,
+              height: s.start.photoRect.height,
+            });
+          } else {
+            // Fallback: pan photo inside frame
+            setPhotoOffsetX(s.start.photoOffsetX + dx);
+            setPhotoOffsetY(s.start.photoOffsetY + dy);
+          }
           return;
         }
 
