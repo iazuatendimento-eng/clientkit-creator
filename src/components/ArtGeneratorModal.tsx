@@ -858,6 +858,20 @@ async function renderArt(
     }
   }
 
+  // Draw custom overlays on top
+  if (options.customOverlays && options.customOverlays.length > 0) {
+    for (const overlay of options.customOverlays) {
+      try {
+        const overlayImg = await loadImage(overlay.url);
+        if (overlayImg) {
+          ctx.drawImage(overlayImg, overlay.x, overlay.y, overlay.width, overlay.height);
+        }
+      } catch (e) {
+        console.warn("[customOverlay] Failed to draw overlay:", e);
+      }
+    }
+  }
+
   return canvas.toDataURL("image/png");
 }
 
