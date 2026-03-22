@@ -437,6 +437,14 @@ async function renderArt(
   const isCarousel = options.isCarousel === true;
   const isLastCarouselPage = options.isLastCarouselPage === true;
 
+  const imageElements = template.elements.filter((element): element is CanvasElement => element.type === "image");
+  const placeholderElement = imageElements.find((element) => element.placeholder);
+  const largestImageElement = imageElements.reduce<CanvasElement | null>((largest, current) => {
+    if (!largest) return current;
+    return current.width * current.height > largest.width * largest.height ? current : largest;
+  }, null);
+  const photoTargetElement = placeholderElement || largestImageElement;
+
   for (const el of template.elements) {
     try {
       // Skip hidden elements
