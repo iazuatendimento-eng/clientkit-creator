@@ -23,17 +23,42 @@ interface TemplateSelectorProps {
   initialTemplateId?: string;
 }
 
+interface BrandColors {
+  primary: string;
+  secondary: string;
+  bg: string;
+  text: string;
+  logoUrl?: string;
+  bgPngUrl?: string;
+}
+
 const PREVIEW_MAX = 160;
+const CYCLE_MS = 2200;
+const SAMPLE_CLIENT = "IAZU Digital Brasil";
+
+function applyBrandToElement(el: any, brand: BrandColors): any {
+  const clone = { ...el };
+  if (clone.type === "text") {
+    clone.color = brand.text;
+    if (clone.content === "{{text}}" || clone.content === "Texto") {
+      clone.content = "Transforme sua marca";
+    }
+  } else if (clone.type === "rect" || clone.type === "circle") {
+    // Use brand colors for shapes
+    const isAccent = (clone.color || "").toLowerCase().includes("fff") || clone.opacity < 0.5;
+    clone.color = isAccent ? brand.secondary : brand.primary;
+  }
+  return clone;
+}
 
 function renderMiniPreview(
   canvas: HTMLCanvasElement,
   tmpl: TemplateRecord,
-  type: "art" | "video"
+  type: "art" | "video",
+  elements: any[],
+  bgColor?: string,
+  bgImage?: HTMLImageElement | null,
 ) {
-  const elements = type === "art"
-    ? (tmpl.elements || [])
-    : (tmpl.content_elements || []);
-
   const scale = Math.min(PREVIEW_MAX / tmpl.width, PREVIEW_MAX / tmpl.height);
   const w = Math.round(tmpl.width * scale);
   const h = Math.round(tmpl.height * scale);
@@ -44,11 +69,16 @@ function renderMiniPreview(
   if (!ctx) return;
 
   // Background
-  ctx.fillStyle = tmpl.background_color || "#ffffff";
+  ctx.fillStyle = bgColor || tmpl.background_color || "#ffffff";
   ctx.fillRect(0, 0, w, h);
 
-  // Render elements as simplified shapes
-  for (const el of elements as any[]) {
+  // Background PNG if available
+  if (bgImage && bgImage.complete && bgImage.naturalWidth > 0) {
+    ctx.drawImage(bgImage, 0, 0, w, h);
+  }
+
+  // Render elements
+  for (const el of elements) {
     const ex = (el.x || 0) * scale;
     const ey = (el.y || 0) * scale;
     const ew = (el.width || 100) * scale;
@@ -89,12 +119,10 @@ function renderMiniPreview(
       const tx = el.textAlign === "center" ? ex + ew / 2 : el.textAlign === "right" ? ex + ew : ex;
       ctx.fillText(el.content || el.text || "Texto", tx, ey + fs, ew);
     } else if (el.type === "image" || el.type === "logo" || el.type === "mascot" || el.type === "contact") {
-      // Placeholder rectangle
       ctx.fillStyle = el.type === "logo" ? "#6366f1" : el.type === "mascot" ? "#f59e0b" : "#94a3b8";
       ctx.globalAlpha = 0.3;
       ctx.fillRect(ex, ey, ew, eh);
       ctx.globalAlpha = 1;
-      // Label
       const label = el.type === "logo" ? "L" : el.type === "mascot" ? "M" : el.type === "contact" ? "C" : "I";
       ctx.fillStyle = "#fff";
       ctx.font = `bold ${Math.max(ew * 0.4, 8)}px sans-serif`;
@@ -116,7 +144,6 @@ function renderMiniPreview(
       ctx.lineTo(ex + ew, ey + eh / 2);
       ctx.stroke();
     } else {
-      // Use canvasShapes for decorative shapes
       try {
         drawNewShape(ctx, el.type, ex, ey, ew, eh, color);
       } catch {
@@ -127,6 +154,136 @@ function renderMiniPreview(
 
     ctx.globalAlpha = 1;
   }
+
+  // Page indicator dot
+  return ctx;
+}
+
+function AnimatedTemplateCard({
+  tmpl,
+  type,
+  idx,
+  selected,
+  onSelect,
+  brand,
+  bgImage,
+}: {
+  tmpl: TemplateRecord;
+  type: "art" | "video";
+  idx: number;
+  selected: boolean;
+  onSelect: () => void;
+  brand: BrandColors | null;
+  bgImage: HTMLImageElement | null;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+
+  // For video templates, build pages array: [content, signature]
+  const pages = type === "video"
+    ? [
+        { elements: tmpl.content_elements || [], label: "Conteúdo" },
+        { elements: tmpl.signature_elements || [], label: "Assinatura" },
+      ]
+    : [{ elements: tmpl.elements || [], label: tmpl.name }];
+
+  const renderPage = useCallback((pageIdx: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const page = pages[pageIdx % pages.length];
+    let elements = page.elements as any[];
+
+    // Apply brand colors if available
+    if (brand && type === "video") {
+      elements = elements.map(el => applyBrandToElement(el, brand));
+    }
+
+    const isSignature = type === "video" && pageIdx === 1;
+    const bgCol = brand ? brand.primary : tmpl.background_color;
+
+    renderMiniPreview(
+      canvas,
+      tmpl,
+      type,
+      elements,
+      bgCol,
+      isSignature ? bgImage : null,
+    );
+
+    // Draw page indicator dots for video
+    if (type === "video" && pages.length > 1) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const dotY = canvas.height - 8;
+        const totalW = pages.length * 10;
+        const startX = (canvas.width - totalW) / 2;
+        pages.forEach((_, di) => {
+          ctx.beginPath();
+          ctx.arc(startX + di * 10 + 4, dotY, 3, 0, Math.PI * 2);
+          ctx.fillStyle = di === pageIdx % pages.length ? "#ffffff" : "rgba(255,255,255,0.4)";
+          ctx.fill();
+        });
+      }
+    }
+  }, [tmpl, type, brand, bgImage, pages]);
+
+  // Initial render
+  useEffect(() => {
+    renderPage(0);
+  }, [renderPage]);
+
+  // Cycle pages for video templates
+  useEffect(() => {
+    if (type !== "video" || pages.length <= 1) return;
+
+    intervalRef.current = setInterval(() => {
+      setCurrentPage(prev => {
+        const next = (prev + 1) % pages.length;
+        return next;
+      });
+    }, CYCLE_MS);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [type, pages.length]);
+
+  // Re-render on page change
+  useEffect(() => {
+    renderPage(currentPage);
+  }, [currentPage, renderPage]);
+
+  return (
+    <button
+      onClick={onSelect}
+      className={`relative rounded-lg border-2 p-2 transition-all hover:scale-105 hover:shadow-lg ${
+        selected
+          ? "border-primary ring-2 ring-primary/30 shadow-md"
+          : "border-border hover:border-primary/50"
+      }`}
+    >
+      {selected && (
+        <div className="absolute top-1 right-1 z-10 bg-primary rounded-full p-0.5">
+          <Check className="h-3 w-3 text-primary-foreground" />
+        </div>
+      )}
+      <div className="flex items-center justify-center">
+        <canvas
+          ref={canvasRef}
+          className="rounded border border-border/50"
+          style={{ maxWidth: "100%", height: "auto" }}
+        />
+      </div>
+      <p className="text-xs text-center mt-2 truncate text-foreground/80">
+        {tmpl.name}
+      </p>
+      <p className="text-[10px] text-center text-muted-foreground">
+        {tmpl.width}×{tmpl.height}
+      </p>
+    </button>
+  );
 }
 
 export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: TemplateSelectorProps) {
@@ -134,7 +291,48 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);
   const initialAutoSelected = useRef(false);
-  const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
+  const [brand, setBrand] = useState<BrandColors | null>(null);
+  const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
+
+  // Fetch sample client brand kit for realistic preview
+  useEffect(() => {
+    if (type !== "video") return;
+
+    const fetchBrand = async () => {
+      try {
+        const { data } = await supabase
+          .from("client_data")
+          .select("brand_kit")
+          .eq("name", SAMPLE_CLIENT)
+          .maybeSingle();
+
+        if (data?.brand_kit) {
+          const bk = data.brand_kit as any;
+          const colors = bk.colors || [];
+          const brandData: BrandColors = {
+            primary: colors[0] || "#a225ac",
+            secondary: colors[1] || "#f0b128",
+            bg: colors[0] || "#a225ac",
+            text: "#ffffff",
+            logoUrl: bk.logo || "",
+            bgPngUrl: bk.backgroundPng || "",
+          };
+          setBrand(brandData);
+
+          // Load background PNG
+          if (brandData.bgPngUrl) {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => setBgImage(img);
+            img.src = brandData.bgPngUrl;
+          }
+        }
+      } catch {
+        /* ignore - will use template defaults */
+      }
+    };
+    fetchBrand();
+  }, [type]);
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -154,28 +352,15 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
     fetchTemplates();
   }, [type]);
 
-  const renderPreviews = useCallback(() => {
-    templates.forEach((tmpl, idx) => {
-      const canvas = canvasRefs.current.get(idx);
-      if (canvas) {
-        renderMiniPreview(canvas, tmpl, type);
-      }
-    });
-  }, [templates, type]);
-
   useEffect(() => {
-    if (templates.length > 0) {
-      // Auto-select template by ID if provided
-      if (initialTemplateId && !initialAutoSelected.current) {
-        const idx = templates.findIndex(t => t.id === initialTemplateId);
-        if (idx >= 0) {
-          setSelected(idx);
-          initialAutoSelected.current = true;
-        }
+    if (templates.length > 0 && initialTemplateId && !initialAutoSelected.current) {
+      const idx = templates.findIndex(t => t.id === initialTemplateId);
+      if (idx >= 0) {
+        setSelected(idx);
+        initialAutoSelected.current = true;
       }
-      requestAnimationFrame(renderPreviews);
     }
-  }, [templates, renderPreviews, initialTemplateId]);
+  }, [templates, initialTemplateId]);
 
   if (loading) {
     return (
@@ -212,36 +397,16 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {templates.map((tmpl, idx) => (
-          <button
+          <AnimatedTemplateCard
             key={tmpl.id}
-            onClick={() => setSelected(idx)}
-            className={`relative rounded-lg border-2 p-2 transition-all hover:scale-105 hover:shadow-lg ${
-              selected === idx
-                ? "border-primary ring-2 ring-primary/30 shadow-md"
-                : "border-border hover:border-primary/50"
-            }`}
-          >
-            {selected === idx && (
-              <div className="absolute top-1 right-1 z-10 bg-primary rounded-full p-0.5">
-                <Check className="h-3 w-3 text-primary-foreground" />
-              </div>
-            )}
-            <div className="flex items-center justify-center">
-              <canvas
-                ref={(el) => {
-                  if (el) canvasRefs.current.set(idx, el);
-                }}
-                className="rounded border border-border/50"
-                style={{ maxWidth: "100%", height: "auto" }}
-              />
-            </div>
-            <p className="text-xs text-center mt-2 truncate text-foreground/80">
-              {tmpl.name}
-            </p>
-            <p className="text-[10px] text-center text-muted-foreground">
-              {tmpl.width}×{tmpl.height}
-            </p>
-          </button>
+            tmpl={tmpl}
+            type={type}
+            idx={idx}
+            selected={selected === idx}
+            onSelect={() => setSelected(idx)}
+            brand={brand}
+            bgImage={bgImage}
+          />
         ))}
       </div>
 
