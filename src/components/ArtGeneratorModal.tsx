@@ -1002,7 +1002,7 @@ export function ArtGeneratorModal({
         copy[currentPage] = [...(copy[currentPage] || []), newOverlay];
         return copy;
       });
-      overlayCountRef.current += 1;
+      overlayVersionRef.current += 1;
     };
     reader.readAsDataURL(file);
   }, [currentPage]);
@@ -1089,12 +1089,15 @@ export function ArtGeneratorModal({
     }
   }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, pages, brandKit]);
 
-  // Re-render canvas when custom overlays change
-  const prevOverlayCountRef = useRef(0);
+  // Re-render canvas when custom overlays change (any addition)
+  const overlayJsonRef = useRef("");
   useEffect(() => {
-    if (overlayCountRef.current !== prevOverlayCountRef.current) {
-      prevOverlayCountRef.current = overlayCountRef.current;
+    const json = JSON.stringify(pageCustomOverlays);
+    if (json !== overlayJsonRef.current && overlayJsonRef.current !== "") {
+      overlayJsonRef.current = json;
       regenerateCurrentPage();
+    } else {
+      overlayJsonRef.current = json;
     }
   }, [pageCustomOverlays, regenerateCurrentPage]);
 
