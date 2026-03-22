@@ -87,12 +87,12 @@ export interface CanvasElement {
   imageUrl?: string;
   placeholder?: boolean;
   rotation?: number;
-  colorRole?: "background" | "text" | "accessory1" | "accessory2";
+  colorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   opacity?: number;
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
-  borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
+  borderColorRole?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
