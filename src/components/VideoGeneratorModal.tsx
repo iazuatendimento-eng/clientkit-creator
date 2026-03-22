@@ -327,6 +327,7 @@ export function VideoGeneratorModal({
         imageRect,
         imageClipShape,
         pageImageAdjustments,
+        customOverlayPages: customOverlays,
         audioUrl: stripAudio ? undefined : (
           selectedAudioTrack === "1" ? (template.audioUrl1 || template.audioUrl2 || undefined) :
           selectedAudioTrack === "2" ? (template.audioUrl2 || template.audioUrl1 || undefined) :
