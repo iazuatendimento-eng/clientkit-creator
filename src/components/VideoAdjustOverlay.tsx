@@ -899,6 +899,24 @@ export function VideoAdjustOverlay({
       );
     };
 
+    // Compute z-index from element order in template
+    const elIdx = (() => {
+      const els = isContentPage ? template.contentElements : template.signatureElements;
+      if (part === "image") return els.findIndex(e => e.type === "image");
+      if (part === "text") return els.findIndex(e => e.type === "text");
+      if (part === "logo") return els.findIndex(e => e.type === "logo");
+      if (part === "contact") return els.findIndex(e => e.type === "contact");
+      if (part === "mascot") return els.findIndex(e => e.type === "mascot");
+      if (typeof part === "string" && part.startsWith("shape:")) {
+        const shapeId = part.split(":")[1];
+        return els.findIndex(e => e.id === shapeId);
+      }
+      if (typeof part === "string" && part.startsWith("overlay:")) {
+        return els.length + parseInt(part.split(":")[1], 10);
+      }
+      return 0;
+    })();
+
     return (
       <div
         className={cn(
@@ -910,6 +928,7 @@ export function VideoAdjustOverlay({
           top: `${top}%`,
           width: `${width}%`,
           height: `${height}%`,
+          zIndex: isActive ? 100 : elIdx + 1,
         }}
         onPointerDown={(e) => begin(e, part, "move")}
       >
