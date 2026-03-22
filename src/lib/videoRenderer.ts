@@ -115,6 +115,8 @@ export interface CanvasElement {
   animLoop?: boolean;
 }
 
+export type ShapeOverride = { x: number; y: number; width: number; height: number };
+
 export interface ElementAdjustments {
   logoScaleX: number; logoScaleY: number; logoX: number; logoY: number;
   contactScaleX: number; contactScaleY: number; contactX: number; contactY: number;
@@ -123,6 +125,7 @@ export interface ElementAdjustments {
   sigContactScaleX: number; sigContactScaleY: number; sigContactX: number; sigContactY: number;
   sigMascotScaleX: number; sigMascotScaleY: number; sigMascotX: number; sigMascotY: number;
   textScale: number; textX: number; textY: number;
+  shapeOverrides?: Record<string, ShapeOverride>;
 }
 
 export const defaultAdjustments: ElementAdjustments = {
