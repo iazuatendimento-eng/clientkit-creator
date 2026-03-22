@@ -28,6 +28,48 @@ export interface PreloadedVideoData {
   materialImages: string[];
 }
 
+type CachedClientMeta = {
+  imageType: string;
+  narrationType: string;
+  briefing: string;
+};
+
+const clientMetaCache = new Map<string, CachedClientMeta>();
+const pexelsSearchPromiseCache = new Map<string, Promise<Array<{ videoUrl: string }>>>();
+
+async function getClientMetaCached(clientName: string): Promise<CachedClientMeta> {
+  if (!clientName) return { imageType: "", narrationType: "", briefing: "" };
+  const cached = clientMetaCache.get(clientName);
+  if (cached) return cached;
+
+  const { data } = await supabase
+    .from("client_data")
+    .select("image_type, narration_type, briefing")
+    .eq("name", clientName)
+    .maybeSingle();
+
+  const next = {
+    imageType: data?.image_type || "",
+    narrationType: data?.narration_type || "",
+    briefing: data?.briefing || "",
+  };
+  clientMetaCache.set(clientName, next);
+  return next;
+}
+
+async function searchPexelsVideosCached(query: string, minResults: number): Promise<Array<{ videoUrl: string }>> {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return [];
+  const key = `${normalized}::${Math.max(minResults, 3)}`;
+
+  const cached = pexelsSearchPromiseCache.get(key);
+  if (cached) return cached;
+
+  const promise = searchPexelsVideos(normalized, Math.max(minResults, 3)).catch(() => []);
+  pexelsSearchPromiseCache.set(key, promise);
+  return promise;
+}
+
 export function useVideoPregenerate(
   cardId: string,
   cardText: string,
@@ -71,22 +113,18 @@ export function useVideoPregenerate(
           audioUrl2: raw.audio_url_2 || undefined,
         };
 
-        // Fetch client metadata for better search context
+        // Fetch client metadata for better search context (cached)
         let clientImageType = "";
         let clientNarrationType = "";
         let clientBriefing = "";
         try {
-          const { data: clientMeta } = await supabase
-            .from("client_data")
-            .select("image_type, narration_type, briefing")
-            .eq("name", clientName)
-            .maybeSingle();
-          if (clientMeta) {
-            clientImageType = clientMeta.image_type || "";
-            clientNarrationType = clientMeta.narration_type || "";
-            clientBriefing = clientMeta.briefing || "";
-          }
-        } catch { /* ignore */ }
+          const clientMeta = await getClientMetaCached(clientName);
+          clientImageType = clientMeta.imageType;
+          clientNarrationType = clientMeta.narrationType;
+          clientBriefing = clientMeta.briefing;
+        } catch {
+          /* ignore */
+        }
 
         const fontFamily = brandKit?.font || brandKit?.fontFamily || "Arial";
         await loadGoogleFont(fontFamily);
@@ -136,43 +174,12 @@ export function useVideoPregenerate(
           }
         });
 
-        // Search bank videos only for uncovered pages
-        if (pagesNeedingBankVideo.length > 0) {
-          try {
-            // Use image_type as PRIMARY search term (most relevant)
-            let translatedTerms = "";
-            if (clientImageType?.trim()) {
-              translatedTerms = translateToEnglishLocal(clientImageType).trim();
-              if (!translatedTerms) translatedTerms = clientImageType.trim().split(/\s+/).slice(0, 4).join(" ");
-            }
-            if (!translatedTerms) {
-              const fallbackContext = [fullText, clientBriefing].filter(Boolean).join(" ").split(" ").slice(0, 10).join(" ");
-              translatedTerms = translateToEnglishLocal(fallbackContext).trim();
-              if (!translatedTerms) translatedTerms = fallbackContext.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).slice(0, 5).join(' ');
-            }
-            if (!translatedTerms) translatedTerms = "business professional";
-            console.log(`[Video Search] imageType: "${clientImageType}" → "${translatedTerms}"`);
-
-            let results: Awaited<ReturnType<typeof searchPexelsVideos>> = [];
-            if (translatedTerms.trim()) {
-              results = await searchPexelsVideos(translatedTerms, Math.max(pagesNeedingBankVideo.length, 3));
-              if (results.length === 0) results = await searchPexelsVideos(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
-            }
-            if (results.length === 0) results = await searchPexelsVideos("business professional", 3);
-
-            if (results.length > 0) {
-              pagesNeedingBankVideo.forEach((pageIdx, i) => {
-                bgVideoUrls[pageIdx] = results[i % results.length]?.videoUrl || null;
-              });
-            }
-          } catch { /* ignore */ }
-        }
-
         // Collect material image URLs for the renderer
         const matImageUrls = bgImages.filter(u => u.length > 0);
 
         const pages = await generateAllVideoPages(tmpl, texts, brandKit, bgImages, adj, initPt, initPi);
 
+        // Return immediately with what we already have (fast open)
         setPreloadedData({
           template: tmpl,
           videoPages: pages,
@@ -184,6 +191,57 @@ export function useVideoPregenerate(
           searchedImages: bgImages,
           materialImages: matImageUrls,
         });
+
+        // Fill missing background videos in background (does not block modal opening)
+        if (pagesNeedingBankVideo.length > 0) {
+          void (async () => {
+            try {
+              let translatedTerms = "";
+              if (clientImageType?.trim()) {
+                translatedTerms = translateToEnglishLocal(clientImageType).trim();
+                if (!translatedTerms) translatedTerms = clientImageType.trim().split(/\s+/).slice(0, 4).join(" ");
+              }
+              if (!translatedTerms) {
+                const fallbackContext = [fullText, clientBriefing, clientNarrationType]
+                  .filter(Boolean)
+                  .join(" ")
+                  .split(" ")
+                  .slice(0, 10)
+                  .join(" ");
+                translatedTerms = translateToEnglishLocal(fallbackContext).trim();
+                if (!translatedTerms) {
+                  translatedTerms = fallbackContext
+                    .replace(/[\n\r]+/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .split(/\s+/)
+                    .slice(0, 5)
+                    .join(" ");
+                }
+              }
+              if (!translatedTerms) translatedTerms = "business professional";
+              console.log(`[Video Search] imageType: "${clientImageType}" → "${translatedTerms}"`);
+
+              let results = await searchPexelsVideosCached(translatedTerms, Math.max(pagesNeedingBankVideo.length, 3));
+              if (results.length === 0 && translatedTerms.includes(" ")) {
+                results = await searchPexelsVideosCached(translatedTerms.split(" ").slice(0, 2).join(" "), 3);
+              }
+              if (results.length === 0) {
+                results = await searchPexelsVideosCached("business professional", 3);
+              }
+              if (results.length === 0) return;
+
+              const nextVideoUrls = [...bgVideoUrls];
+              pagesNeedingBankVideo.forEach((pageIdx, i) => {
+                nextVideoUrls[pageIdx] = results[i % results.length]?.videoUrl || null;
+              });
+
+              setPreloadedData((prev) => (prev ? { ...prev, videoUrls: nextVideoUrls } : prev));
+            } catch {
+              /* ignore */
+            }
+          })();
+        }
       } catch (err) {
         console.error("Video pregeneration error:", err);
       } finally {
