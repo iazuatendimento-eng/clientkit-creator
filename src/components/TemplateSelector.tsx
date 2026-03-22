@@ -144,7 +144,7 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
         .from(table)
         .select("*")
         .eq("deleted", false)
-        .order("created_at", { ascending: true });
+        .order("name", { ascending: true });
 
       if (!error && data) {
         setTemplates(data as unknown as TemplateRecord[]);
