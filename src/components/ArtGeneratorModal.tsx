@@ -792,6 +792,7 @@ export function ArtGeneratorModal({
   const contactScaleX = currentOv.contactScaleX || 100;
   const contactScaleY = currentOv.contactScaleY || 100;
   const shapeOverrides = currentOv.shapes || {};
+  const hiddenElements = currentOv.hiddenElements || [];
 
   // Updater helpers
   const updateOverride = useCallback((key: keyof ElementOverrides, value: any) => {
@@ -827,6 +828,7 @@ export function ArtGeneratorModal({
   const syncSetContactScaleX = useCallback((v: number) => updateOverride("contactScaleX", v), [updateOverride]);
   const syncSetContactScaleY = useCallback((v: number) => updateOverride("contactScaleY", v), [updateOverride]);
   const syncSetShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => updateOverride("shapes", v), [updateOverride]);
+  const syncSetHiddenElements = useCallback((v: string[]) => updateOverride("hiddenElements", v), [updateOverride]);
 
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
