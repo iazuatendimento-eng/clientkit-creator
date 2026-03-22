@@ -89,9 +89,18 @@ interface ElementOverrides {
   hiddenElements?: string[];
 }
 
+interface CustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface RenderOptions {
   isCarousel?: boolean;
   isLastCarouselPage?: boolean;
+  customOverlays?: CustomOverlay[];
 }
 
 interface ArtGeneratorModalProps {
