@@ -295,7 +295,9 @@ const imageCache = new Map<string, HTMLImageElement>();
 const loadImage = async (url: string, retries = 2): Promise<HTMLImageElement | null> => {
   if (!url) return null;
   
-  const cacheKey = url.length > 200 ? url.substring(0, 100) + url.length : url;
+  // Use full URL/data URI as cache key to avoid collisions between different assets
+  // with similar prefixes/length (frequent in base64 brand backgrounds).
+  const cacheKey = url;
   const cached = imageCache.get(cacheKey);
   if (cached) return cached;
   

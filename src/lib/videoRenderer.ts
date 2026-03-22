@@ -162,7 +162,9 @@ const imageCache = new Map<string, HTMLImageElement>();
 
 export async function loadImage(url: string, retries = 2): Promise<HTMLImageElement | null> {
   if (!url) return null;
-  const cacheKey = url.length > 200 ? url.substring(0, 100) + url.length : url;
+  // Use full URL/data URI as cache key to prevent collisions between different assets
+  // that may share the same prefix and length (common with base64 PNGs).
+  const cacheKey = url;
   const cached = imageCache.get(cacheKey);
   if (cached) return cached;
 
