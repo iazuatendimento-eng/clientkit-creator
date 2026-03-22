@@ -1425,6 +1425,16 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         newBrief.brandKitId = brandKits[0].id;
       }
 
+      // Shift existing todo cards' sort_order up by 1 to make room at top
+      const existingTodo = briefs.filter(b => b.status === "todo");
+      if (existingTodo.length > 0) {
+        await Promise.all(
+          existingTodo.map((b, i) =>
+            supabase.from("project_briefs").update({ sort_order: i + 2 }).eq("id", b.id)
+          )
+        );
+      }
+
       const briefData = {
         client_id: clientId,
         title: text,
@@ -1432,6 +1442,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         deadline: new Date().toISOString().split('T')[0],
         status: "todo" as const,
         brand_kit_id: newBrief.brandKitId || null,
+        sort_order: 1,
       };
 
       await createProjectBrief(briefData);
