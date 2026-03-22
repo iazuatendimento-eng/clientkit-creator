@@ -953,15 +953,19 @@ export function VideoAdjustOverlay({
             style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
           >
             <div className="absolute inset-0" style={mediaStyle}>
-              {backgroundVideoUrl ? (
+              {/* Always show image as base layer */}
+              {backgroundImageUrl && (
+                <img src={backgroundImageUrl} alt="Fundo" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+              )}
+              {/* Video on top - hides itself on error so image shows through */}
+              {backgroundVideoUrl && (
                 <video
                   src={backgroundVideoUrl}
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
                   muted loop autoPlay playsInline crossOrigin="anonymous" draggable={false}
+                  onError={(e) => { (e.target as HTMLVideoElement).style.display = 'none'; }}
                 />
-              ) : backgroundImageUrl ? (
-                <img src={backgroundImageUrl} alt="Fundo" className="w-full h-full object-cover" draggable={false} />
-              ) : null}
+              )}
             </div>
           </div>
         );
