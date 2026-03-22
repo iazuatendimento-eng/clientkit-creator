@@ -989,7 +989,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     
     // Helper to get color based on colorRole
     const getElementColor = (el: CanvasElement, defaultColor: string): string => {
-      if (el.colorRole === "background") return bgColor;
+      if (el.colorRole === "background" || el.colorRole === "element1") return bgColor;
       if (el.colorRole === "text") return textColor;
       if (el.colorRole === "accessory1") return accessoryColor1;
       if (el.colorRole === "accessory2") return accessoryColor2;
@@ -998,7 +998,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     // Helper to get border color based on borderColorRole
     const getBorderColor = (el: CanvasElement): string => {
-      if (el.borderColorRole === "background") return bgColor;
+      if (el.borderColorRole === "background" || el.borderColorRole === "element1") return bgColor;
       if (el.borderColorRole === "text") return textColor;
       if (el.borderColorRole === "accessory1") return accessoryColor1;
       if (el.borderColorRole === "accessory2") return accessoryColor2;
