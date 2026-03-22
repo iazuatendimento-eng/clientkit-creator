@@ -192,7 +192,10 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   }
 
   try {
-    const resp = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
     if (resp.ok) {
       const blob = await resp.blob();
       const objUrl = URL.createObjectURL(blob);
