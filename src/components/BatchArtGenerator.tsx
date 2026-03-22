@@ -713,6 +713,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           if (b.cover_image) coverImageMap[b.id] = b.cover_image;
         });
 
+        const materialCardIds = new Set((materialsData as any[])?.map((m: any) => m.card_id).filter(Boolean) || []);
+
         setClientArts((prev) =>
           prev.map((art) => ({
             ...art,
@@ -721,6 +723,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             imageType: art.imageType || imageTypeMap[art.clientId] || undefined,
             narrationType: art.narrationType || narrationTypeMap[art.clientId] || undefined,
             briefing: art.briefing || briefingMap[art.clientId] || undefined,
+            hasMaterial: materialCardIds.has(art.cardId),
           }))
         );
       } catch (error) {
