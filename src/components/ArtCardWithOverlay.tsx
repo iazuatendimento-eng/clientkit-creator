@@ -239,6 +239,7 @@ export function ArtCardWithOverlay({
       setBgOffsetY(art.elementOverrides?.bgOffsetY || 0);
       setBgScale(art.elementOverrides?.bgScale || 100);
       setHiddenElements(art.elementOverrides?.hiddenElements || []);
+      setLocalOverlays(art.customOverlays || []);
     }
   }, [art]);
 
@@ -418,6 +419,8 @@ export function ArtCardWithOverlay({
               hasBackgroundImage={hasAdjustableBackground}
               hiddenElements={hiddenElements}
               setHiddenElements={setHiddenElements}
+              customOverlays={localOverlays}
+              setCustomOverlays={setLocalOverlays}
               onDragEnd={handleDragEnd}
             />
           </div>
