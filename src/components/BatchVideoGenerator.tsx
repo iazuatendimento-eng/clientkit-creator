@@ -228,6 +228,7 @@ const mergeBrandKitAssets = (savedBrandKit: any, freshBrandKit: any) => {
   const logo = getCleanAssetUrl(freshPngs[0], fresh.logo, savedPngs[0], saved.logo);
   const contactInfo = getCleanAssetUrl(freshPngs[1], fresh.contactInfo, savedPngs[1], saved.contactInfo);
   const mascot = getCleanAssetUrl(freshPngs[2], fresh.mascot, savedPngs[2], saved.mascot);
+  const backgroundPng = getCleanAssetUrl(fresh.backgroundPng, fresh.background_png, saved.backgroundPng, saved.background_png);
 
   return {
     ...saved,
@@ -236,6 +237,7 @@ const mergeBrandKitAssets = (savedBrandKit: any, freshBrandKit: any) => {
     contactInfo,
     mascot,
     pngs: [logo, contactInfo, mascot],
+    backgroundPng,
   };
 };
 

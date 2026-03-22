@@ -367,8 +367,20 @@ export async function generatePageImage(
 
   // Draw background
   if (!transparentBackground) {
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, w, h);
+    // Use backgroundPng from brand kit if available, otherwise solid color
+    const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png;
+    let bgPngLoaded = false;
+    if (brandBgPng) {
+      const bgPngImg = await loadImage(brandBgPng);
+      if (bgPngImg) {
+        ctx.drawImage(bgPngImg, 0, 0, w, h);
+        bgPngLoaded = true;
+      }
+    }
+    if (!bgPngLoaded) {
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, w, h);
+    }
   }
 
   const imageElIndex = elements.findIndex(e => e.type === "image");
@@ -402,6 +414,24 @@ export async function generatePageImage(
   // Apply shape overrides from adjustments
   const shapeOverrides = adjustments.shapeOverrides || {};
 
+  // Smart Layering: skip large background-colored shapes when client has PNG background
+  const brandBgPngForSkip = brandKit?.backgroundPng || brandKit?.background_png;
+  const shouldSkipBackgroundShape = (el: CanvasElement) => {
+    if (!brandBgPngForSkip) return false;
+    const ov = shapeOverrides[el.id || ""];
+    const ex = ov?.x ?? el.x ?? 0;
+    const ey = ov?.y ?? el.y ?? 0;
+    const ew = ov?.width ?? el.width ?? 0;
+    const eh = ov?.height ?? el.height ?? 0;
+    const coversMostCanvas =
+      ew * eh >= templateWidth * templateHeight * 0.65 &&
+      ex <= templateWidth * 0.2 &&
+      ey <= templateHeight * 0.2 &&
+      ex + ew >= templateWidth * 0.8 &&
+      ey + eh >= templateHeight * 0.8;
+    return coversMostCanvas && (el.colorRole === "background" || el.color === bgColor);
+  };
+
   for (let elIdx = 0; elIdx < elements.length; elIdx++) {
     let el = elements[elIdx];
 
@@ -415,6 +445,8 @@ export async function generatePageImage(
     if (shapeFilter === "before-image" && imageElIndex >= 0 && elIdx >= imageElIndex) continue;
     if (shapeFilter === "after-image" && imageElIndex >= 0 && elIdx <= imageElIndex) continue;
     if (!transparentBackground && el.gradient?.fadeMode) continue;
+    // Skip large background shapes when PNG background is active
+    if (!transparentBackground && shouldSkipBackgroundShape(el)) continue;
 
     if (transparentBackground && renderAllNonImage) {
       if (el.type === "image") {
