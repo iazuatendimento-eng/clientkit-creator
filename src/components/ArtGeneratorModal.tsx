@@ -89,6 +89,11 @@ interface ElementOverrides {
   hiddenElements?: string[];
 }
 
+interface RenderOptions {
+  isCarousel?: boolean;
+  isLastCarouselPage?: boolean;
+}
+
 interface ArtGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -261,6 +266,7 @@ async function renderArt(
   photoImage: string | null,
   photoOffset: { x: number; y: number },
   overrides: ElementOverrides,
+  options: RenderOptions = {},
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = template.width;
@@ -348,15 +354,16 @@ async function renderArt(
   ctx.fillRect(0, 0, template.width, template.height);
 
   const hiddenSet = new Set(overrides.hiddenElements || []);
+  const isCarousel = options.isCarousel === true;
+  const isLastCarouselPage = options.isLastCarouselPage === true;
 
   for (const el of template.elements) {
     try {
       // Skip hidden elements
       const elKey = el.type === "logo" ? "logo" : el.type === "contact" ? "contact" : el.type === "mascot" ? "mascot" : el.type === "text" ? "text" : el.id || "";
       if (hiddenSet.has(elKey)) { continue; }
-      // In "Alterar" modal we always render a single page (non-carousel),
-      // so chevron navigation element must never appear on the art.
-      if (el.type === "chevron") { continue; }
+      // Chevron only appears in carousel and is hidden on the last page.
+      if (el.type === "chevron" && (!isCarousel || isLastCarouselPage)) { continue; }
 
       ctx.save();
       applyStyles(el);
@@ -766,9 +773,13 @@ export function ArtGeneratorModal({
   clientId,
   onExported,
 }: ArtGeneratorModalProps) {
-  // Single page only — carousel is handled by BatchArtGenerator
-  const pages = [cardText || cardTitle || clientName];
-  const isCarousel = false;
+  const rawText = (cardText || cardTitle || clientName || "").trim();
+  const textParts = rawText
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  const pages = textParts.length > 1 ? textParts : [rawText || cardTitle || clientName];
+  const isCarousel = pages.length > 1;
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [template, setTemplate] = useState<ArtTemplate | null>(null);
@@ -903,7 +914,10 @@ export function ArtGeneratorModal({
       const offset = pagePhotoOffsets[currentPage] || { x: 0, y: 0 };
       const photo = pagePhotos[currentPage] || null;
       const text = pages[currentPage] || "";
-      const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, ov);
+      const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, ov, {
+        isCarousel,
+        isLastCarouselPage: isCarousel && currentPage === pages.length - 1,
+      });
       setPageArts(prev => {
         const copy = [...prev];
         copy[currentPage] = dataUrl;
@@ -974,7 +988,10 @@ export function ArtGeneratorModal({
             const offset = pagePhotoOffsets[i] || { x: 0, y: 0 };
             const photo = pagePhotos[i] || null;
             const text = pages[i] || "";
-            const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, mergedOv);
+            const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, mergedOv, {
+              isCarousel,
+              isLastCarouselPage: isCarousel && i === pages.length - 1,
+            });
             setPageArts(prev => {
               const copy = [...prev];
               copy[i] = dataUrl;
@@ -1055,7 +1072,10 @@ export function ArtGeneratorModal({
       const artPromises = pages.map(async (pageText, i) => {
         try {
           return await Promise.race([
-            renderArt(tmpl, brandKit, pageText, photos[i], { x: 0, y: 0 }, {}),
+            renderArt(tmpl, brandKit, pageText, photos[i], { x: 0, y: 0 }, {}, {
+              isCarousel,
+              isLastCarouselPage: isCarousel && i === pages.length - 1,
+            }),
             new Promise<string>((_, reject) => setTimeout(() => reject(new Error("render timeout")), 30000)),
           ]);
         } catch (err) {
@@ -1175,7 +1195,10 @@ export function ArtGeneratorModal({
       const text = pages[currentPage] || "";
       const ov = pageOverrides[currentPage] || {};
       const offset = pagePhotoOffsets[currentPage] || { x: 0, y: 0 };
-      const dataUrl = await renderArt(template, brandKit, text, imageUrl, offset, ov);
+      const dataUrl = await renderArt(template, brandKit, text, imageUrl, offset, ov, {
+        isCarousel,
+        isLastCarouselPage: isCarousel && currentPage === pages.length - 1,
+      });
       setPageArts(prev => {
         const copy = [...prev];
         copy[currentPage] = dataUrl;
