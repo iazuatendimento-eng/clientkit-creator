@@ -3058,6 +3058,27 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
                 toast({ title: `Ajustes aplicados a ${siblings.length + 1} páginas do carrossel` });
               }}
+              onAddOverlay={async (idx, file) => {
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                  const base64 = ev.target?.result as string;
+                  if (!base64) return;
+                  const art = clientArts[idx];
+                  const overlays = [...(art.customOverlays || []), base64];
+                  const updatedArt = { ...art, customOverlays: overlays };
+                  const updatedArts = [...clientArts];
+                  updatedArts[idx] = updatedArt;
+                  setClientArts(updatedArts);
+                  const newImageUrl = await generateArtForClient(updatedArt);
+                  setClientArts((prev) => {
+                    const next = [...prev];
+                    next[idx] = { ...next[idx], imageUrl: newImageUrl };
+                    return next;
+                  });
+                  toast({ title: "PNG adicionado à arte!" });
+                };
+                reader.readAsDataURL(file);
+              }}
               isRemovingBg={isRemovingBg}
               removeBgProgress={removeBgProgress}
             />
