@@ -929,15 +929,17 @@ export function ArtAdjustOverlay({
       ? "z-[1]"
       : isShapePart(part)
         ? "z-[2]"
-        : part === "photo"
-          ? "z-10"
-          : part === "logo"
-            ? "z-20"
-            : part === "mascot"
-              ? "z-25"
-              : part === "contact"
-                ? "z-30"
-                : "z-40";
+        : isOverlayPart(part)
+          ? "z-[45]"
+          : part === "photo"
+            ? "z-10"
+            : part === "logo"
+              ? "z-20"
+              : part === "mascot"
+                ? "z-25"
+                : part === "contact"
+                  ? "z-30"
+                  : "z-40";
 
     const zClass = baseLayerClass;
 
