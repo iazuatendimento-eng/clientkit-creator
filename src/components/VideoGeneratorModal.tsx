@@ -229,7 +229,7 @@ export function VideoGeneratorModal({
   const [materialImages, setMaterialImages] = useState<string[]>([]);
   const [searchedImages, setSearchedImages] = useState<string[]>([]);
   // Editing state
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
   const [currentEditPage, setCurrentEditPage] = useState(0);
   const [adjustments, setAdjustments] = useState<ElementAdjustments>({ ...defaultAdjustments });
   const [pageTextAdjustments, setPageTextAdjustments] = useState<PageTextAdjustment[]>([]);
