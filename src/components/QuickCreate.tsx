@@ -33,6 +33,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   const [isArtGenOpen, setIsArtGenOpen] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [selectedTemplateIndex, setSelectedTemplateIndex] = useState(0);
+  const [modalClosed, setModalClosed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoTriggeredRef = useRef(false);
 
