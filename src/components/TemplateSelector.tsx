@@ -32,7 +32,7 @@ function renderMiniPreview(
 ) {
   const elements = type === "art"
     ? (tmpl.elements || [])
-    : [...(tmpl.content_elements || []), ...(tmpl.signature_elements || [])];
+    : (tmpl.content_elements || []);
 
   const scale = Math.min(PREVIEW_MAX / tmpl.width, PREVIEW_MAX / tmpl.height);
   const w = Math.round(tmpl.width * scale);
