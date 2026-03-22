@@ -1178,7 +1178,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         x + w >= template.width * 0.8 &&
         y + h >= template.height * 0.8;
 
-      return coversMostCanvas && (el.colorRole === "background" || el.color === bgColor);
+      return coversMostCanvas && (el.colorRole === "background" || (!el.colorRole && el.color === templateBgColor));
     };
 
     // Draw elements
