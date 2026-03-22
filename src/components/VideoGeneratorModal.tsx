@@ -796,6 +796,10 @@ export function VideoGeneratorModal({
                       setImageX={(v) => updatePageImageAdj(currentEditPage, "imageX", v)}
                       setImageY={(v) => updatePageImageAdj(currentEditPage, "imageY", v)}
                       setImageScale={(v) => updatePageImageAdj(currentEditPage, "imageScale", v)}
+                      customOverlays={currentPageOverlays}
+                      setCustomOverlays={setCurrentPageOverlays}
+                      onAddOverlay={handleAddVideoOverlay}
+                      onDeleteOverlay={handleDeleteVideoOverlay}
                     />
                     {/* Page navigation in edit mode */}
                     {videoPages.pages.length > 1 && (
