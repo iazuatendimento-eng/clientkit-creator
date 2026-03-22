@@ -439,8 +439,8 @@ export function VideoAdjustOverlay({
 
       if (s.part === "logo") {
         if (s.mode === "move") {
-          setLogoX(clamp(s.start.logoX + dx, -500, 500));
-          setLogoY(clamp(s.start.logoY + dy, -500, 500));
+          setLogoX(s.start.logoX + dx);
+          setLogoY(s.start.logoY + dy);
           return;
         }
 
@@ -455,13 +455,13 @@ export function VideoAdjustOverlay({
           const newW = clamp(s.start.logoW + signedDx, baseW * 0.25, baseW * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setLogoScaleX(newScaleX);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -500, 500));
+          if (handleHasW(h)) setLogoX(s.start.logoX + dx);
         } else if (isVerticalHandle) {
           const signedDy = handleSignY(h) * dy;
           const newH = clamp(s.start.logoH + signedDy, baseH * 0.25, baseH * 3);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setLogoScaleY(newScaleY);
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -500, 500));
+          if (handleHasN(h)) setLogoY(s.start.logoY + dy);
         } else {
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
@@ -471,16 +471,16 @@ export function VideoAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setLogoScaleX(newScaleX);
           setLogoScaleY(newScaleY);
-          if (handleHasW(h)) setLogoX(clamp(s.start.logoX + dx, -500, 500));
-          if (handleHasN(h)) setLogoY(clamp(s.start.logoY + dy, -500, 500));
+          if (handleHasW(h)) setLogoX(s.start.logoX + dx);
+          if (handleHasN(h)) setLogoY(s.start.logoY + dy);
         }
         return;
       }
 
       if (s.part === "contact") {
         if (s.mode === "move") {
-          setContactX(clamp(s.start.contactX + dx, -500, 500));
-          setContactY(clamp(s.start.contactY + dy, -500, 500));
+          setContactX(s.start.contactX + dx);
+          setContactY(s.start.contactY + dy);
           return;
         }
 
@@ -495,13 +495,13 @@ export function VideoAdjustOverlay({
           const newW = clamp(s.start.contactW + signedDx, baseW * 0.25, baseW * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setContactScaleX(newScaleX);
-          if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -500, 500));
+          if (handleHasW(h)) setContactX(s.start.contactX + dx);
         } else if (isVerticalHandle) {
           const signedDy = handleSignY(h) * dy;
           const newH = clamp(s.start.contactH + signedDy, baseH * 0.25, baseH * 3);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setContactScaleY(newScaleY);
-          if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -500, 500));
+          if (handleHasN(h)) setContactY(s.start.contactY + dy);
         } else {
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
@@ -511,16 +511,16 @@ export function VideoAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setContactScaleX(newScaleX);
           setContactScaleY(newScaleY);
-          if (handleHasW(h)) setContactX(clamp(s.start.contactX + dx, -500, 500));
-          if (handleHasN(h)) setContactY(clamp(s.start.contactY + dy, -500, 500));
+          if (handleHasW(h)) setContactX(s.start.contactX + dx);
+          if (handleHasN(h)) setContactY(s.start.contactY + dy);
         }
         return;
       }
 
       if (s.part === "mascot") {
         if (s.mode === "move") {
-          setMascotX(clamp(s.start.mascotX + dx, -500, 500));
-          setMascotY(clamp(s.start.mascotY + dy, -500, 500));
+          setMascotX(s.start.mascotX + dx);
+          setMascotY(s.start.mascotY + dy);
           return;
         }
 
@@ -535,13 +535,13 @@ export function VideoAdjustOverlay({
           const newW = clamp(s.start.mascotW + signedDx, baseW * 0.25, baseW * 3);
           const newScaleX = clamp((newW / baseW) * 100, 25, 300);
           setMascotScaleX(newScaleX);
-          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + dx, -500, 500));
+          if (handleHasW(h)) setMascotX(s.start.mascotX + dx);
         } else if (isVerticalHandle) {
           const signedDy = handleSignY(h) * dy;
           const newH = clamp(s.start.mascotH + signedDy, baseH * 0.25, baseH * 3);
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setMascotScaleY(newScaleY);
-          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + dy, -500, 500));
+          if (handleHasN(h)) setMascotY(s.start.mascotY + dy);
         } else {
           const signedDx = handleSignX(h) * dx;
           const signedDy = handleSignY(h) * dy;
@@ -551,16 +551,16 @@ export function VideoAdjustOverlay({
           const newScaleY = clamp((newH / baseH) * 100, 25, 300);
           setMascotScaleX(newScaleX);
           setMascotScaleY(newScaleY);
-          if (handleHasW(h)) setMascotX(clamp(s.start.mascotX + dx, -500, 500));
-          if (handleHasN(h)) setMascotY(clamp(s.start.mascotY + dy, -500, 500));
+          if (handleHasW(h)) setMascotX(s.start.mascotX + dx);
+          if (handleHasN(h)) setMascotY(s.start.mascotY + dy);
         }
         return;
       }
 
       if (s.part === "text") {
         if (s.mode === "move") {
-          setTextX(clamp(s.start.textX + dx, -500, 500));
-          setTextY(clamp(s.start.textY + dy, -500, 500));
+          setTextX(s.start.textX + dx);
+          setTextY(s.start.textY + dy);
           return;
         }
 
@@ -576,15 +576,15 @@ export function VideoAdjustOverlay({
         const newScale = clamp((newH / baseH) * 100, 25, 300);
         setTextScale(newScale);
         
-        if (handleHasN(h)) setTextY(clamp(s.start.textY + dy, -500, 500));
+        if (handleHasN(h)) setTextY(s.start.textY + dy);
         return;
       }
 
       if (s.part === "image" && setImageX && setImageY && setImageScale) {
         if (s.mode === "move") {
           // Drag = pan the image inside the fixed frame
-          setImageX(clamp(s.start.imageX + dx, -1000, 1000));
-          setImageY(clamp(s.start.imageY + dy, -1000, 1000));
+          setImageX(s.start.imageX + dx);
+          setImageY(s.start.imageY + dy);
           return;
         }
 
