@@ -60,7 +60,7 @@ const PT_EN: Record<string, string> = {
 
   // ── Food & Beverage ──
   comida: "food", alimento: "food", alimentação: "nutrition", alimentacao: "nutrition",
-  restaurante: "restaurant", café: "coffee", cafe: "coffee",
+  restaurante: "restaurant",
   cozinha: "kitchen", receita: "recipe", saudável: "healthy", saudavel: "healthy",
   fruta: "fruit", legume: "vegetable", carne: "meat", peixe: "fish",
   pizza: "pizza", hambúrguer: "hamburger", hamburguer: "hamburger", lanche: "snack",
@@ -232,7 +232,6 @@ const PT_EN: Record<string, string> = {
 
   // ── Safety & Security ──
   vigilância: "surveillance", vigilancia: "surveillance",
-  vigilância: "surveillance", vigilancia: "surveillance",
   alarme: "alarm", câmera: "camera", camera: "camera",
   monitoramento: "monitoring", portaria: "reception",
   bombeiro: "firefighter", incêndio: "fire", incendio: "fire",
@@ -246,8 +245,6 @@ const PT_EN: Record<string, string> = {
   doação: "donation", doacao: "donation", caridade: "charity",
 
   // ── Energy ──
-  eólica: "wind", eolica: "wind", hidrelétrica: "hydroelectric", hidreletrica: "hydroelectric",
-  eólica: "wind", eolica: "wind", hidrelétrica: "hydroelectric", hidreletrica: "hydroelectric",
   bateria: "battery", gerador: "generator", painel: "panel",
 
   // ── Emotions & Concepts ──
