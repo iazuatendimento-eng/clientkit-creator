@@ -347,8 +347,14 @@ async function renderArt(
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, template.width, template.height);
 
+  const hiddenSet = new Set(overrides.hiddenElements || []);
+
   for (const el of template.elements) {
     try {
+      // Skip hidden elements
+      const elKey = el.type === "logo" ? "logo" : el.type === "contact" ? "contact" : el.type === "mascot" ? "mascot" : el.type === "text" ? "text" : el.id || "";
+      if (hiddenSet.has(elKey)) { continue; }
+
       ctx.save();
       applyStyles(el);
 
@@ -792,6 +798,7 @@ export function ArtGeneratorModal({
   const contactScaleX = currentOv.contactScaleX || 100;
   const contactScaleY = currentOv.contactScaleY || 100;
   const shapeOverrides = currentOv.shapes || {};
+  const hiddenElements = currentOv.hiddenElements || [];
 
   // Updater helpers
   const updateOverride = useCallback((key: keyof ElementOverrides, value: any) => {
@@ -827,6 +834,7 @@ export function ArtGeneratorModal({
   const syncSetContactScaleX = useCallback((v: number) => updateOverride("contactScaleX", v), [updateOverride]);
   const syncSetContactScaleY = useCallback((v: number) => updateOverride("contactScaleY", v), [updateOverride]);
   const syncSetShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => updateOverride("shapes", v), [updateOverride]);
+  const syncSetHiddenElements = useCallback((v: string[]) => updateOverride("hiddenElements", v), [updateOverride]);
 
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
@@ -1250,6 +1258,8 @@ export function ArtGeneratorModal({
                   setContactScaleY={syncSetContactScaleY}
                   shapeOverrides={shapeOverrides}
                   setShapeOverrides={syncSetShapeOverrides}
+                  hiddenElements={hiddenElements}
+                  setHiddenElements={syncSetHiddenElements}
                 />
               </div>
 
