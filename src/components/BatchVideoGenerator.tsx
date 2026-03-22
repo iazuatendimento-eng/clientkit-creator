@@ -3740,7 +3740,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       contentElements: template.contentElements,
                       signatureElements: template.signatureElements,
                     }}
-                    previewUrl={selectedVideo.pages[currentPreviewPage] || null}
+                    previewUrl={(
+                      currentPreviewPage === selectedVideo.pages.length - 1
+                        ? (selectedVideo.fullPages?.[currentPreviewPage] || selectedVideo.pages[currentPreviewPage])
+                        : selectedVideo.pages[currentPreviewPage]
+                    ) || null}
                     isBusy={isApplyingAdjustments}
                     onCommit={() => applyAdjustments()}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
@@ -3756,7 +3760,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     preImageOverlayUrl={selectedVideo.preImageOverlayPages?.[currentPreviewPage] || ""}
                     backgroundImageUrl={selectedVideo.searchedImages?.[currentPreviewPage] || ""}
                     backgroundVideoUrl={selectedVideo.previewVideoUrls?.[currentPreviewPage] || (currentPreviewPage < selectedVideo.pages.length - 1 ? (selectedVideo.previewVideoUrls?.find(v => v && v !== "") || "") : "")}
-                    backgroundPngUrl={templateHasLargeBackgroundShape ? (selectedVideo.brandKit?.backgroundPng || selectedVideo.brandKit?.background_png || "") : ""}
+                    backgroundPngUrl={(
+                      currentPreviewPage === selectedVideo.pages.length - 1 || templateHasLargeBackgroundShape
+                    ) ? (selectedVideo.brandKit?.backgroundPng || selectedVideo.brandKit?.background_png || "") : ""}
                     backgroundColor={template.backgroundColor || "#1a1a2e"}
                     logoX={currentPreviewPage < selectedVideo.pages.length - 1 
                       ? selectedVideo.adjustments.logoX 
