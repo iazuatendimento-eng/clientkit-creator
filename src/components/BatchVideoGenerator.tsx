@@ -2318,14 +2318,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const textAdj = video.pageTextAdjustments[currentPreviewPage] || { textX: 0, textY: 0, textScale: 100 };
         const imageAdj = video.pageImageAdjustments[currentPreviewPage] || { imageX: 0, imageY: 0, imageScale: 100 };
 
-        const frameOverlay = await generatePageImage(
+        const frameOverlay = await generatePageImageFromRenderer(
           template.width, template.height, template.backgroundColor,
           elements, "", video.brandKit, isSignature, undefined,
           video.adjustments, textAdj, imageAdj,
           true, true, true, "after-image"
         );
 
-        const preImageOverlay = await generatePageImage(
+        const preImageOverlay = await generatePageImageFromRenderer(
           template.width, template.height, template.backgroundColor,
           elements, "", video.brandKit, isSignature, undefined,
           video.adjustments, textAdj, imageAdj,
