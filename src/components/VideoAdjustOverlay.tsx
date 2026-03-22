@@ -1030,7 +1030,62 @@ export function VideoAdjustOverlay({
             return null;
           });
         })()}
+
+        {/* Custom overlay boxes */}
+        {customOverlays?.map((ov, idx) => (
+          <Box
+            key={`overlay-${idx}`}
+            part={`overlay:${idx}` as OverlayPart}
+            label={`Extra ${idx + 1}${ov.isVideo ? " (MP4)" : ""}`}
+            tone="warning"
+          >
+            {ov.isVideo ? (
+              <video src={ov.url} className="w-full h-full object-contain" muted loop autoPlay playsInline draggable={false} />
+            ) : (
+              <img src={ov.url} alt={`Extra ${idx + 1}`} className="w-full h-full object-contain" draggable={false} />
+            )}
+          </Box>
+        ))}
       </div>
+
+      {/* Add overlay button */}
+      {onAddOverlay && (
+        <div className="absolute top-2 right-2 z-30 flex gap-1">
+          <input
+            ref={overlayInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,video/mp4"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                onAddOverlay(file);
+                e.target.value = "";
+              }
+            }}
+          />
+          <Button
+            size="icon"
+            variant="secondary"
+            className="h-7 w-7 rounded-full shadow-md"
+            title="Adicionar PNG/MP4 extra"
+            onClick={() => overlayInputRef.current?.click()}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          {active && isOverlayPart(active) && onDeleteOverlay && (
+            <Button
+              size="icon"
+              variant="destructive"
+              className="h-7 w-7 rounded-full shadow-md"
+              title="Remover overlay selecionado"
+              onClick={() => onDeleteOverlay(overlayIndexFromPart(active))}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      )}
 
       {isBusy && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/20 pointer-events-none">
