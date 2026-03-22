@@ -922,6 +922,26 @@ export function VideoAdjustOverlay({
             {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-contain" draggable={false} />}
           </Box>
         )}
+        {/* Decorative shapes */}
+        {els.shapes.map((s, idx) => {
+          const shapeLabels: Record<string, string> = {
+            rect: "Retângulo", circle: "Círculo", triangle: "Triângulo", line: "Linha",
+            star: "Estrela", diamond: "Losango", hexagon: "Hexágono", pentagon: "Pentágono",
+            wave: "Onda", blob: "Blob", arch: "Arco", arrow: "Seta", badge: "Badge",
+            ribbon: "Fita", polkaDots: "Bolinhas", dotsGrid: "Pontos", confetti: "Confeti",
+            splatter: "Splatter", zigzag: "Zigzag", spiral: "Espiral", heart: "Coração",
+            cross: "Cruz", cloud: "Nuvem", speechBubble: "Balão", lightning: "Raio",
+            shield: "Escudo", crescent: "Lua", chevron: "Seta",
+          };
+          return (
+            <Box
+              key={s.id}
+              part={`shape:${s.id}`}
+              label={`${shapeLabels[s.type] || s.type} ${idx + 1}`}
+              tone="muted"
+            />
+          );
+        })}
       </div>
 
       {isBusy && (
