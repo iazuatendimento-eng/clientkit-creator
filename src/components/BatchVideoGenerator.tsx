@@ -53,7 +53,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
-import { generateAllVideoPages, generatePageImage, type VideoPages } from "@/lib/videoRenderer";
+import { generateAllVideoPages, generatePageImage as generatePageImageFromRenderer, type VideoPages } from "@/lib/videoRenderer";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import { encodeVideoToMP4, loadFFmpeg, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
