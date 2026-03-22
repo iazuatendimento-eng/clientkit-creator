@@ -1901,6 +1901,7 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
                 initialText={quickEditBrief.title || quickEditBrief.description || ""}
                 initialType={quickEditBrief.completionType === "Arte" ? "art" : "video"}
                 initialTemplateId={quickEditBrief.completionTemplateId}
+                existingCardId={quickEditBrief.id}
               />
             )}
           </DialogContent>

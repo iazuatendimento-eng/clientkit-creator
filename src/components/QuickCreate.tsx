@@ -19,9 +19,10 @@ interface QuickCreateProps {
   initialText?: string;
   initialType?: "video" | "art";
   initialTemplateId?: string;
+  existingCardId?: string;
 }
 
-export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId }: QuickCreateProps) => {
+export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId, existingCardId }: QuickCreateProps) => {
   const [text, setText] = useState(initialText || "");
   const [type, setType] = useState<"video" | "art">(initialType || "video");
   const [uploading, setUploading] = useState(false);
@@ -134,33 +135,39 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     setShowTemplateSelector(false);
     setCreating(true);
     try {
-      const title = text.split("\n")[0].slice(0, 100) || "Criação Rápida";
-      const today = new Date().toISOString().split("T")[0];
+      let cardId = existingCardId;
 
-      // Create a temporary card (will be deleted after modal closes)
-      const brief = await createProjectBrief({
-        client_id: clientId,
-        title,
-        description: text,
-        deadline: today,
-        status: "todo",
-        brand_kit_id: brandKit?.id || undefined,
-      });
+      if (!cardId) {
+        const title = text.split("\n")[0].slice(0, 100) || "Criação Rápida";
+        const today = new Date().toISOString().split("T")[0];
 
-      // Upload materials as card_uploads (parallel)
-      if (uploadedFiles.length > 0) {
-        await Promise.all(uploadedFiles.map(file =>
-          supabase.from("card_uploads").insert({
-            card_id: brief.id,
-            file_name: file.name,
-            file_url: file.url,
-            file_type: file.fileType,
-            upload_type: "material",
-          })
-        ));
+        // Create a temporary card (will be deleted after modal closes)
+        const brief = await createProjectBrief({
+          client_id: clientId,
+          title,
+          description: text,
+          deadline: today,
+          status: "todo",
+          brand_kit_id: brandKit?.id || undefined,
+        });
+
+        // Upload materials as card_uploads (parallel)
+        if (uploadedFiles.length > 0) {
+          await Promise.all(uploadedFiles.map(file =>
+            supabase.from("card_uploads").insert({
+              card_id: brief.id,
+              file_name: file.name,
+              file_url: file.url,
+              file_type: file.fileType,
+              upload_type: "material",
+            })
+          ));
+        }
+
+        cardId = brief.id;
       }
 
-      setCreatedCardId(brief.id);
+      setCreatedCardId(cardId);
 
       if (type === "video") {
         setIsVideoGenOpen(true);
@@ -176,8 +183,8 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   };
 
   const handleModalClose = async () => {
-    // Delete the temporary card and its uploads (no record left)
-    if (createdCardId) {
+    // Only delete temporary cards (not existing ones from "Alterar")
+    if (createdCardId && !existingCardId) {
       try {
         await supabase.from("card_uploads").delete().eq("card_id", createdCardId);
         await supabase.from("project_briefs").delete().eq("id", createdCardId);
