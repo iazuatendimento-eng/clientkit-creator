@@ -393,8 +393,10 @@ export async function generatePageImage(
   if (!transparentBackground) {
     const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png;
     let bgPngLoaded = false;
+    const hasLargeBg = hasLargeBackgroundShape();
+    console.log(`[VideoRenderer] brandBgPng=${!!brandBgPng}, hasLargeBgShape=${hasLargeBg}, templateBgColor=${templateBgColor}, elements=${elements.length}, colorRoles=${elements.map(e => `${e.type}:${e.colorRole||'none'}:${e.color||'?'}`).join(', ')}`);
     // Only use PNG background if there's a large background-role shape to replace
-    if (brandBgPng && hasLargeBackgroundShape()) {
+    if (brandBgPng && hasLargeBg) {
       const bgPngImg = await loadImage(brandBgPng);
       if (bgPngImg) {
         ctx.drawImage(bgPngImg, 0, 0, w, h);
