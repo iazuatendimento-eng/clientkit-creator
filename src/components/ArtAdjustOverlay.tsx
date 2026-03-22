@@ -491,50 +491,21 @@ export function ArtAdjustOverlay({
         const base = els.photoFrame;
         if (!base) return;
 
-        // Move = move the entire frame freely
+        // Move = pan photo inside the frame
         if (s.mode === "move") {
-          if (setPhotoFrame && s.start.photoRect) {
-            setPhotoFrame({
-              x: s.start.photoRect.x + dx,
-              y: s.start.photoRect.y + dy,
-              width: s.start.photoRect.width,
-              height: s.start.photoRect.height,
-            });
-          } else {
-            // Fallback: pan photo inside frame
-            setPhotoOffsetX(s.start.photoOffsetX + dx);
-            setPhotoOffsetY(s.start.photoOffsetY + dy);
-          }
+          setPhotoOffsetX(s.start.photoOffsetX + dx);
+          setPhotoOffsetY(s.start.photoOffsetY + dy);
           return;
         }
 
-        // Resize = resize the frame/grid
-        if (setPhotoFrame && s.start.photoRect) {
-          const h = s.handle as Handle;
-          const startRect = s.start.photoRect;
-          const minSize = 20;
-
-          let newX = startRect.x;
-          let newY = startRect.y;
-          let newW = startRect.width;
-          let newH = startRect.height;
-
-          if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
-          if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
-          if (handleHasW(h)) {
-            newW = Math.max(minSize, startRect.width - dx);
-            newX = startRect.x + (startRect.width - newW);
-          }
-          if (handleHasN(h)) {
-            newH = Math.max(minSize, startRect.height - dy);
-            newY = startRect.y + (startRect.height - newH);
-          }
-
-          newW = Math.max(minSize, newW);
-          newH = Math.max(minSize, newH);
-
-          setPhotoFrame({ x: newX, y: newY, width: newW, height: newH });
-        }
+        // Resize handles = zoom in/out photo inside frame
+        const h = s.handle as Handle;
+        const signedDx = handleSignX(h) * dx;
+        const signedDy = handleSignY(h) * dy;
+        const dominant = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
+        const zoomDelta = (dominant / Math.max(base.width, base.height)) * 100;
+        const nextScale = clamp(s.start.photoScale + zoomDelta, 20, 500);
+        setPhotoScale(nextScale);
         return;
       }
 
