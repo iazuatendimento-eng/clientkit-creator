@@ -86,7 +86,7 @@ const PT_EN: Record<string, string> = {
   pós: "post", graduação: "graduation", graduacao: "graduation",
   mestrado: "masters", doutorado: "doctorate", pesquisa: "research",
   bolsa: "scholarship", matrícula: "enrollment", matricula: "enrollment",
-  infantil: "children", fundamental: "elementary", médio: "high school",
+  pré: "pre", fundamental: "elementary", médio: "high school",
 
   // ── Real Estate & Construction ──
   casa: "house", apartamento: "apartment", imóvel: "property", imovel: "property",
@@ -208,7 +208,7 @@ const PT_EN: Record<string, string> = {
   // ── Agriculture & Rural ──
   agricultura: "agriculture", plantio: "planting", colheita: "harvest",
   soja: "soybean", milho: "corn", trigo: "wheat", arroz: "rice",
-  café: "coffee", cacau: "cocoa", algodão: "cotton", algodao: "cotton",
+  cacau: "cocoa", algodão: "cotton", algodao: "cotton",
   irrigação: "irrigation", irrigacao: "irrigation", adubo: "fertilizer",
   trator: "tractor", máquina: "machine", maquina: "machine",
   silo: "silo", armazém: "warehouse", armazem: "warehouse",
@@ -228,10 +228,10 @@ const PT_EN: Record<string, string> = {
   recreação: "recreation", recreacao: "recreation", lazer: "leisure",
   parque: "park", diversão: "fun", diversao: "fun",
   brinquedo: "toy", criança: "child", crianca: "child",
-  playground: "playground", infantil: "children",
+  playground: "playground",
 
   // ── Safety & Security ──
-  segurança: "security", seguranca: "security",
+  vigilância: "surveillance", vigilancia: "surveillance",
   vigilância: "surveillance", vigilancia: "surveillance",
   alarme: "alarm", câmera: "camera", camera: "camera",
   monitoramento: "monitoring", portaria: "reception",
@@ -246,7 +246,7 @@ const PT_EN: Record<string, string> = {
   doação: "donation", doacao: "donation", caridade: "charity",
 
   // ── Energy ──
-  energia: "energy", solar: "solar", elétrico: "electric", eletrico: "electric",
+  eólica: "wind", eolica: "wind", hidrelétrica: "hydroelectric", hidreletrica: "hydroelectric",
   eólica: "wind", eolica: "wind", hidrelétrica: "hydroelectric", hidreletrica: "hydroelectric",
   bateria: "battery", gerador: "generator", painel: "panel",
 
@@ -309,7 +309,7 @@ const PT_EN: Record<string, string> = {
   financiamento: "financing", hipoteca: "mortgage",
   poupança: "savings", poupanca: "savings",
   câmbio: "exchange", cambio: "exchange",
-  bolsa: "stock market", ação: "stock", acao: "stock",
+  ação: "stock", acao: "stock",
   criptomoeda: "cryptocurrency", bitcoin: "bitcoin",
   imposto: "tax", tributo: "tax",
   orçamento: "budget", orcamento: "budget",
