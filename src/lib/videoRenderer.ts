@@ -1014,7 +1014,14 @@ export async function generateAllVideoPages(
       }
     }
 
-    return { basePage, textOverlay, preImageOverlay, frameOverlay, logoOverlay };
+    // Generate full composite for thumbnail display
+    const fullPage = await generatePageImage(
+      tw, th, bgColor, elements, text, brandKit, isSignature,
+      bgImage, adjustments, textAdj, imageAdj,
+      false, false, false
+    );
+
+    return { basePage, textOverlay, preImageOverlay, frameOverlay, logoOverlay, fullPage };
   };
 
   for (let i = 0; i < pageTexts.length; i++) {
