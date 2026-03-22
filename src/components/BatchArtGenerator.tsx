@@ -1104,9 +1104,33 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       photoResolveCacheRef.current.set(artKey, { url: resolvedPhotoImage, ts: Date.now() });
     }
 
-    // Draw background: use backgroundPng from brand kit if available, otherwise solid color
+    // Check if template has a large background-role shape that warrants PNG replacement
     const brandBgPng = art.brandKit?.backgroundPng || art.brandKit?.background_png;
-    if (brandBgPng) {
+    const templateBgColor = template.backgroundColor;
+    const hasLargeBgShape = (() => {
+      if (!brandBgPng) return false;
+      for (const el of template.elements) {
+        const isBackgroundRole = el.colorRole === "background";
+        const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
+        if (!isBackgroundRole && !matchesTemplateBg) continue;
+        const ov = art.elementOverrides?.shapes?.[el.id];
+        const ex = ov?.x ?? el.x ?? 0;
+        const ey = ov?.y ?? el.y ?? 0;
+        const ew = ov?.width ?? el.width ?? 0;
+        const eh = ov?.height ?? el.height ?? 0;
+        if (
+          ew * eh >= template.width * template.height * 0.65 &&
+          ex <= template.width * 0.2 &&
+          ey <= template.height * 0.2 &&
+          ex + ew >= template.width * 0.8 &&
+          ey + eh >= template.height * 0.8
+        ) return true;
+      }
+      return false;
+    })();
+
+    // Draw background: use backgroundPng only if there's a large background shape to replace
+    if (brandBgPng && hasLargeBgShape) {
       const bgPngImg = await loadImage(brandBgPng);
       if (bgPngImg) {
         ctx.drawImage(bgPngImg, 0, 0, template.width, template.height);
@@ -1154,7 +1178,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         x + w >= template.width * 0.8 &&
         y + h >= template.height * 0.8;
 
-      return coversMostCanvas && (el.colorRole === "background" || el.color === bgColor);
+      return coversMostCanvas && (el.colorRole === "background" || (!el.colorRole && el.color === templateBgColor));
     };
 
     // Draw elements

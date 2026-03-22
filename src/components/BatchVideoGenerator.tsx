@@ -815,6 +815,29 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     return shapeEl?.animDuration || 2.5;
   };
 
+  // Check if template has a large background-role shape (needed to decide if PNG background applies)
+  const templateHasLargeBackgroundShape = (() => {
+    const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
+    const templateBgColor = template.backgroundColor || "#1a1a2e";
+    for (const el of allEls) {
+      const isBackgroundRole = (el as any).colorRole === "background";
+      const matchesTemplateBg = !(el as any).colorRole && (el as any).color === templateBgColor;
+      if (!isBackgroundRole && !matchesTemplateBg) continue;
+      const ew = (el as any).width ?? 0;
+      const eh = (el as any).height ?? 0;
+      const ex = (el as any).x ?? 0;
+      const ey = (el as any).y ?? 0;
+      if (
+        ew * eh >= template.width * template.height * 0.65 &&
+        ex <= template.width * 0.2 &&
+        ey <= template.height * 0.2 &&
+        ex + ew >= template.width * 0.8 &&
+        ey + eh >= template.height * 0.8
+      ) return true;
+    }
+    return false;
+  })();
+
   const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
   const [textAnimation, setTextAnimation] = useState<TextAnimation>(getTemplateTextAnimation);
@@ -3681,7 +3704,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     preImageOverlayUrl={selectedVideo.preImageOverlayPages?.[currentPreviewPage] || ""}
                     backgroundImageUrl={selectedVideo.searchedImages?.[currentPreviewPage] || ""}
                     backgroundVideoUrl={selectedVideo.previewVideoUrls?.[currentPreviewPage] || (currentPreviewPage < selectedVideo.pages.length - 1 ? (selectedVideo.previewVideoUrls?.find(v => v && v !== "") || "") : "")}
-                    backgroundPngUrl={selectedVideo.brandKit?.backgroundPng || selectedVideo.brandKit?.background_png || ""}
+                    backgroundPngUrl={templateHasLargeBackgroundShape ? (selectedVideo.brandKit?.backgroundPng || selectedVideo.brandKit?.background_png || "") : ""}
                     backgroundColor={template.backgroundColor || "#1a1a2e"}
                     logoX={currentPreviewPage < selectedVideo.pages.length - 1 
                       ? selectedVideo.adjustments.logoX 
