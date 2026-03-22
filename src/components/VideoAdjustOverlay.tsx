@@ -22,11 +22,26 @@ interface VideoTemplateLike {
   signatureElements: CanvasElement[];
 }
 
+type ShapeOverride = { x: number; y: number; width: number; height: number };
+
 type Handle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
-type Part = "logo" | "contact" | "mascot" | "text" | "image";
+type BasePart = "logo" | "contact" | "mascot" | "text" | "image";
+type ShapePart = `shape:${string}`;
+type Part = BasePart | ShapePart;
 type Tone = "primary" | "secondary" | "accent" | "muted" | "warning";
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+
+const handleHasW = (h: Handle) => h === "nw" || h === "sw" || h === "w";
+const handleHasE = (h: Handle) => h === "ne" || h === "se" || h === "e";
+const handleHasN = (h: Handle) => h === "nw" || h === "ne" || h === "n";
+const handleHasS = (h: Handle) => h === "sw" || h === "se" || h === "s";
+
+const handleSignX = (h: Handle) => (handleHasW(h) ? -1 : 1);
+const handleSignY = (h: Handle) => (handleHasN(h) ? -1 : 1);
+
+const isShapePart = (p: Part): p is ShapePart => typeof p === "string" && p.startsWith("shape:");
+const shapeIdFromPart = (p: ShapePart) => p.slice("shape:".length);
 
 const handleHasW = (h: Handle) => h === "nw" || h === "sw" || h === "w";
 const handleHasN = (h: Handle) => h === "nw" || h === "ne" || h === "n";
