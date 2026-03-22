@@ -493,19 +493,59 @@ export function ArtAdjustOverlay({
         const base = els.photoFrame;
         if (!base) return;
 
-        // Move = pan photo inside the frame
+        const isFrameMode = photoInteractionMode === "frame";
+
+        // Move action
         if (s.mode === "move") {
-          setPhotoOffsetX(s.start.photoOffsetX + dx);
-          setPhotoOffsetY(s.start.photoOffsetY + dy);
+          if (isFrameMode && setPhotoFrame && s.start.photoRect) {
+            setPhotoFrame({
+              x: s.start.photoRect.x + dx,
+              y: s.start.photoRect.y + dy,
+              width: s.start.photoRect.width,
+              height: s.start.photoRect.height,
+            });
+          } else {
+            // Default: move photo content inside the frame
+            setPhotoOffsetX(s.start.photoOffsetX + dx);
+            setPhotoOffsetY(s.start.photoOffsetY + dy);
+          }
           return;
         }
 
-        // Resize handles = zoom in/out photo inside frame
+        // Resize action
+        if (isFrameMode && setPhotoFrame && s.start.photoRect) {
+          const h = s.handle as Handle;
+          const startRect = s.start.photoRect;
+          const minSize = 20;
+
+          let newX = startRect.x;
+          let newY = startRect.y;
+          let newW = startRect.width;
+          let newH = startRect.height;
+
+          if (handleHasE(h)) newW = Math.max(minSize, startRect.width + dx);
+          if (handleHasS(h)) newH = Math.max(minSize, startRect.height + dy);
+          if (handleHasW(h)) {
+            newW = Math.max(minSize, startRect.width - dx);
+            newX = startRect.x + (startRect.width - newW);
+          }
+          if (handleHasN(h)) {
+            newH = Math.max(minSize, startRect.height - dy);
+            newY = startRect.y + (startRect.height - newH);
+          }
+
+          setPhotoFrame({ x: newX, y: newY, width: Math.max(minSize, newW), height: Math.max(minSize, newH) });
+          return;
+        }
+
+        // Content mode: resize handles zoom in/out the photo content
         const h = s.handle as Handle;
         const signedDx = handleSignX(h) * dx;
         const signedDy = handleSignY(h) * dy;
         const dominant = Math.abs(signedDx) > Math.abs(signedDy) ? signedDx : signedDy;
-        const zoomDelta = (dominant / Math.max(base.width, base.height)) * 100;
+        const referenceW = s.start.photoRect?.width || base.width;
+        const referenceH = s.start.photoRect?.height || base.height;
+        const zoomDelta = (dominant / Math.max(referenceW, referenceH)) * 100;
         const nextScale = clamp(s.start.photoScale + zoomDelta, 20, 500);
         setPhotoScale(nextScale);
         return;
