@@ -33,6 +33,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   const [isArtGenOpen, setIsArtGenOpen] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [selectedTemplateIndex, setSelectedTemplateIndex] = useState(0);
+  const [modalClosed, setModalClosed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoTriggeredRef = useRef(false);
 
@@ -199,10 +200,11 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     setUploadedFiles([]);
     setCreatedCardId(null);
     setSelectedTemplateIndex(0);
+    setModalClosed(true);
   };
 
   // When auto-triggering from a card, show loading instead of the form
-  if (initialTemplateId && initialText && !isVideoGenOpen && !isArtGenOpen && !showTemplateSelector) {
+  if (initialTemplateId && initialText && !isVideoGenOpen && !isArtGenOpen && !showTemplateSelector && !modalClosed) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
