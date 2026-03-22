@@ -2301,6 +2301,54 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     []
   );
 
+  // Debounced real-time regeneration of frame overlay when shapes are moved/resized
+  const shapeOverridesJson = JSON.stringify(selectedVideo?.adjustments?.shapeOverrides || {});
+  useEffect(() => {
+    const video = selectedVideoRef.current;
+    if (!video || !selectedVideo) return;
+    const overrides = video.adjustments.shapeOverrides;
+    if (!overrides || Object.keys(overrides).length === 0) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const isSignature = currentPreviewPage >= video.pageTexts.length;
+        const elements = isSignature
+          ? (template.signatureElements as any[])
+          : (template.contentElements as any[]);
+        const textAdj = video.pageTextAdjustments[currentPreviewPage] || { textX: 0, textY: 0, textScale: 100 };
+        const imageAdj = video.pageImageAdjustments[currentPreviewPage] || { imageX: 0, imageY: 0, imageScale: 100 };
+
+        const frameOverlay = await generatePageImage(
+          template.width, template.height, template.backgroundColor,
+          elements, "", video.brandKit, isSignature, undefined,
+          video.adjustments, textAdj, imageAdj,
+          true, true, true, "after-image"
+        );
+
+        const preImageOverlay = await generatePageImage(
+          template.width, template.height, template.backgroundColor,
+          elements, "", video.brandKit, isSignature, undefined,
+          video.adjustments, textAdj, imageAdj,
+          true, true, true, "before-image"
+        );
+
+        setSelectedVideo((prev) => {
+          if (!prev) return prev;
+          const newFrame = [...(prev.frameOverlayPages || [])];
+          newFrame[currentPreviewPage] = frameOverlay;
+          const newPreImage = [...(prev.preImageOverlayPages || [])];
+          newPreImage[currentPreviewPage] = preImageOverlay;
+          const updated = { ...prev, frameOverlayPages: newFrame, preImageOverlayPages: newPreImage };
+          selectedVideoRef.current = updated;
+          return updated;
+        });
+      } catch (err) {
+        console.error("Frame overlay regeneration error:", err);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [shapeOverridesJson, currentPreviewPage]);
 
   const generateAllVideos = async () => {
     setIsGenerating(true);
