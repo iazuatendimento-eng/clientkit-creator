@@ -755,9 +755,13 @@ export function VideoGeneratorModal({
                       contactUrl={brandKit?.pngs?.[1] || brandKit?.contactInfo || ""}
                       mascotUrl={brandKit?.pngs?.[2] || brandKit?.mascot || ""}
                       frameOverlayUrl={videoPages.frameOverlayPages?.[currentEditPage] || ""}
+                      preImageOverlayUrl={videoPages.preImageOverlayPages?.[currentEditPage] || ""}
                       textOverlayUrl={videoPages.overlayPages?.[currentEditPage] || ""}
                       logoOverlayUrl={videoPages.logoOverlayPages?.[currentEditPage] || ""}
+                      backgroundImageUrl={searchedImages[currentEditPage] || ""}
                       backgroundVideoUrl={videoUrls[currentEditPage] || ""}
+                      backgroundPngUrl={!isContentPage ? (brandKit?.backgroundPng || brandKit?.background_png || "") : ""}
+                      backgroundColor={template.backgroundColor || "#1a1a2e"}
                       logoX={isContentPage ? adjustments.logoX : (adjustments.sigLogoX ?? adjustments.logoX)}
                       logoY={isContentPage ? adjustments.logoY : (adjustments.sigLogoY ?? adjustments.logoY)}
                       logoScaleX={isContentPage ? adjustments.logoScaleX : (adjustments.sigLogoScaleX ?? adjustments.logoScaleX)}
