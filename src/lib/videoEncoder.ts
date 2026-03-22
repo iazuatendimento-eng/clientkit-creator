@@ -27,6 +27,7 @@ export interface VideoEncoderOptions {
   imageClipShape?: string; // Geometric clip shape for image placeholder (circle, triangle, diamond, etc.)
   audioUrl?: string; // URL of background audio to mix into the video
   requireEmailSafePreview?: boolean; // Force FFmpeg compatibility pass (H.264 baseline + AAC) for email preview clients
+  customOverlayPages?: Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]>;
   onProgress?: (progress: number) => void;
 }
 
