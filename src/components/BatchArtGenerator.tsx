@@ -811,6 +811,19 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       });
 
       arts.sort((a, b) => a.company.localeCompare(b.company, "pt-BR", { numeric: true }));
+
+      // Check which cards have materials attached
+      const uniqueCardIds = [...new Set(arts.map(a => a.cardId).filter(Boolean))];
+      if (uniqueCardIds.length > 0) {
+        const { data: materialsData } = await supabase
+          .from("card_uploads")
+          .select("card_id")
+          .eq("upload_type", "material")
+          .in("card_id", uniqueCardIds);
+        const materialCardIds = new Set((materialsData || []).map((m: any) => m.card_id));
+        arts.forEach(a => { a.hasMaterial = materialCardIds.has(a.cardId); });
+      }
+
       setClientArts(arts);
 
       if (arts.length === 0) {
