@@ -38,13 +38,17 @@ const SAMPLE_CLIENT = "IAZU Digital Brasil";
 
 function applyBrandToElement(el: any, brand: BrandColors): any {
   const clone = { ...el };
+  // Apply colors based on colorRole
+  if (clone.colorRole === "background") {
+    clone.color = brand.primary;
+  } else if (clone.colorRole === "text") {
+    clone.color = brand.secondary;
+  } else if (clone.colorRole === "accessory1" || clone.colorRole === "accessory2") {
+    clone.color = brand.secondary;
+  }
   if (clone.type === "text") {
     clone.color = brand.text;
     clone.content = "Criamos artes e vídeos todos os dias para sua rede social";
-  } else if (clone.type === "rect" || clone.type === "circle") {
-    // Use brand colors for shapes
-    const isAccent = (clone.color || "").toLowerCase().includes("fff") || clone.opacity < 0.5;
-    clone.color = isAccent ? brand.secondary : brand.primary;
   }
   return clone;
 }
