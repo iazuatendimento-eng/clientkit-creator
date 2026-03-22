@@ -1263,6 +1263,7 @@ export function ArtGeneratorModal({
       setPagePhotos([]);
       setPageOverrides([]);
       setPagePhotoOffsets([]);
+      setPageCustomOverlays([]);
       setTemplate(null);
       setCurrentPage(0);
     }
