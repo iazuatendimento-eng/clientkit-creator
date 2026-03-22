@@ -981,17 +981,13 @@ export function ArtGeneratorModal({
 
   const handleOverlayUpload = useCallback(async (file: File) => {
     const reader = new FileReader();
-    reader.onload = async (ev) => {
+    reader.onload = (ev) => {
       const base64 = ev.target?.result as string;
       if (!base64) return;
-      // Upload to storage for persistence
-      const ext = file.name.split(".").pop() || "png";
-      const path = `overlay-extras/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("card-uploads").upload(path, file);
-      const url = error ? base64 : supabase.storage.from("card-uploads").getPublicUrl(path).data.publicUrl;
       
+      // Use base64 immediately for instant display
       const newOverlay: CustomOverlay = {
-        url,
+        url: base64,
         x: 100,
         y: 100,
         width: 200,
@@ -1003,6 +999,23 @@ export function ArtGeneratorModal({
         return copy;
       });
       overlayVersionRef.current += 1;
+
+      // Upload to storage in background for persistence (replace base64 with URL)
+      const ext = file.name.split(".").pop() || "png";
+      const path = `overlay-extras/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      supabase.storage.from("card-uploads").upload(path, file).then(({ error }) => {
+        if (!error) {
+          const url = supabase.storage.from("card-uploads").getPublicUrl(path).data.publicUrl;
+          setPageCustomOverlays(prev => {
+            const copy = [...prev];
+            const arr = copy[currentPage] || [];
+            // Find the overlay with this base64 and replace URL
+            const updated = arr.map(o => o.url === base64 ? { ...o, url } : o);
+            copy[currentPage] = updated;
+            return copy;
+          });
+        }
+      });
     };
     reader.readAsDataURL(file);
   }, [currentPage]);
