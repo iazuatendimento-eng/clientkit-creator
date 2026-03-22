@@ -179,6 +179,7 @@ export function ArtCardWithOverlay({
     shapeOverrides,
     bgOffsetX, bgOffsetY, bgScale,
     hiddenElements,
+    localOverlays,
   });
 
   // Wrapped setters that update both React state AND the ref synchronously
@@ -206,6 +207,7 @@ export function ArtCardWithOverlay({
   const setBgOffsetY = useCallback((v: number) => { latestRef.current.bgOffsetY = v; _setBgOffsetY(v); }, []);
   const setBgScale = useCallback((v: number) => { latestRef.current.bgScale = v; _setBgScale(v); }, []);
   const setHiddenElements = useCallback((v: string[]) => { latestRef.current.hiddenElements = v; _setHiddenElements(v); }, []);
+  const setLocalOverlays = useCallback((v: CustomOverlay[]) => { latestRef.current.localOverlays = v; _setLocalOverlays(v); }, []);
 
   // Sync local state when art changes externally (e.g., after image swap)
   const artKeyRef = useRef(`${art.clientId}-${art.cardId}-${art.pageIndex}-${art.imageUrl}`);
