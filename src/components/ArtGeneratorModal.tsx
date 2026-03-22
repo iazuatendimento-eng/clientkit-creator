@@ -1008,6 +1008,14 @@ export function ArtGeneratorModal({
   }, [currentPage]);
 
 
+  // Re-render canvas when custom overlays change
+  useEffect(() => {
+    if (pendingOverlayRegenRef.current) {
+      pendingOverlayRegenRef.current = false;
+      regenerateCurrentPage();
+    }
+  }, [pageCustomOverlays, regenerateCurrentPage]);
+
 
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
