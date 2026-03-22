@@ -161,6 +161,7 @@ export function ArtCardWithOverlay({
   const [bgOffsetY, _setBgOffsetY] = useState(art.elementOverrides?.bgOffsetY || 0);
   const [bgScale, _setBgScale] = useState(art.elementOverrides?.bgScale || 100);
   const [hiddenElements, _setHiddenElements] = useState<string[]>(art.elementOverrides?.hiddenElements || []);
+  const [localOverlays, _setLocalOverlays] = useState<CustomOverlay[]>(art.customOverlays || []);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const overlayInputRef = useRef<HTMLInputElement>(null);
 
