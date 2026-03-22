@@ -422,6 +422,7 @@ export function VideoAdjustOverlay({
           imageW: number;
           imageH: number;
           shapeRect?: ShapeOverride;
+          overlayRect?: { x: number; y: number; width: number; height: number };
         };
       }
   >(null);
