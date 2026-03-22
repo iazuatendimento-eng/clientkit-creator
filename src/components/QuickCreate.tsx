@@ -283,41 +283,6 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
         </RadioGroup>
       </div>
 
-      {/* Upload */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Upload (opcional)</Label>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="gap-2"
-          >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {uploading ? "Enviando..." : "Adicionar Arquivo"}
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            onChange={handleUpload}
-            className="hidden"
-          />
-        </div>
-        {uploadedFiles.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {uploadedFiles.map((f, i) => (
-              <span
-                key={i}
-                className="px-2 py-1 bg-primary/10 text-primary rounded text-xs border border-primary/20"
-              >
-                {f.name}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Create Button */}
       <Button
