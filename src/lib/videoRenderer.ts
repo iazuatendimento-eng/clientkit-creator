@@ -106,8 +106,8 @@ export interface CanvasElement {
     opacity2?: number;
     angle?: number;
     fadeMode?: boolean;
-    color1Role?: "background" | "text" | "accessory1" | "accessory2";
-    color2Role?: "background" | "text" | "accessory1" | "accessory2";
+    color1Role?: "background" | "element1" | "text" | "accessory1" | "accessory2";
+    color2Role?: "background" | "element1" | "text" | "accessory1" | "accessory2";
   };
   animated?: boolean;
   animationType?: string;
