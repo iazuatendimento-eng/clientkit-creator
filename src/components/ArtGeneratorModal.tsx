@@ -34,7 +34,7 @@ interface CanvasElement {
   borderWidth?: number;
   borderColor?: string;
   borderColorRole?: "background" | "text" | "accessory1" | "accessory2";
-  clipShape?: "rect" | "circle";
+  clipShape?: "rect" | "circle" | "triangle" | "diamond" | "hexagon" | "pentagon" | "star";
   shadowBlur?: number;
   shadowColor?: string;
   shadowOffsetX?: number;
