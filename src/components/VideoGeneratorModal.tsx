@@ -697,7 +697,7 @@ export function VideoGeneratorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[95vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Film className="h-5 w-5" />
@@ -738,7 +738,7 @@ export function VideoGeneratorModal({
           {status === "ready" && videoPages && template && (
             <>
               {/* Preview or Edit mode */}
-              <div className="rounded-lg overflow-hidden border bg-black flex justify-center items-center" style={{ height: 'min(35vh, 400px)' }}>
+              <div className="rounded-lg overflow-hidden border bg-black flex justify-center items-center" style={{ height: 'min(55vh, 600px)' }}>
                 {isEditing ? (
                   <div className="relative h-full" style={{ aspectRatio: `${template.width}/${template.height}` }}>
                     <VideoAdjustOverlay
