@@ -3817,7 +3817,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       <button
                         key={idx}
                         type="button"
-                        className={`shrink-0 rounded-md border overflow-hidden transition-colors relative ${
+                        className={`shrink-0 rounded-md border overflow-hidden transition-colors ${
                           currentPreviewPage === idx
                             ? "border-primary ring-2 ring-primary/30"
                             : "border-border"
@@ -3828,26 +3828,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         }}
                         aria-label={`Abrir página ${idx + 1}`}
                       >
-                        <div className="relative h-12 w-8">
-                          <img
-                            src={page}
-                            alt={`Miniatura da página ${idx + 1}`}
-                            className="absolute inset-0 h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                          {selectedVideo.preImageOverlayPages?.[idx] && (
-                            <img src={selectedVideo.preImageOverlayPages[idx]} className="absolute inset-0 h-full w-full object-cover pointer-events-none" alt="" />
-                          )}
-                          {selectedVideo.frameOverlayPages?.[idx] && (
-                            <img src={selectedVideo.frameOverlayPages[idx]} className="absolute inset-0 h-full w-full object-cover pointer-events-none" alt="" />
-                          )}
-                          {selectedVideo.overlayPages?.[idx] && (
-                            <img src={selectedVideo.overlayPages[idx]} className="absolute inset-0 h-full w-full object-cover pointer-events-none" alt="" />
-                          )}
-                          {selectedVideo.logoOverlayPages?.[idx] && (
-                            <img src={selectedVideo.logoOverlayPages[idx]} className="absolute inset-0 h-full w-full object-cover pointer-events-none" alt="" />
-                          )}
-                        </div>
+                        <img
+                          src={selectedVideo.fullPages?.[idx] || page}
+                          alt={`Miniatura da página ${idx + 1}`}
+                          className="h-12 w-8 object-cover"
+                          loading="lazy"
+                        />
                       </button>
                     ))}
                   </div>
