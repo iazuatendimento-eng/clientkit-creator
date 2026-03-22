@@ -1274,6 +1274,17 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     loadList(overlayPages), loadList(frameOverlayPages), loadList(logoOverlayPages),
   ]);
   console.log("[WebCodecs] Overlays loaded, starting encode...");
+
+  // Load custom overlay images per page
+  const customOvImgs: Record<number, HTMLImageElement[]> = {};
+  if (customOverlayPages) {
+    await Promise.all(Object.entries(customOverlayPages).map(async ([pageIdxStr, ovs]) => {
+      const pageIdx = parseInt(pageIdxStr, 10);
+      const imgs = await Promise.all(ovs.filter(o => !o.isVideo).map(o => loadImg(o.url)));
+      customOvImgs[pageIdx] = imgs.filter(Boolean) as HTMLImageElement[];
+    }));
+  }
+
   onProgress?.(0.20);
 
   const canvas = document.createElement("canvas");
