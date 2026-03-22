@@ -290,6 +290,29 @@ export function VideoPreviewPlayer({
               draggable={false}
             />
           )}
+
+          {/* Layer 5: Custom overlays (z-[5]) */}
+          {customOverlays?.[currentPage]?.map((ov, idx) => {
+            const tw = templateWidth || 1080;
+            const th = templateHeight || 1920;
+            const left = (ov.x / tw) * 100;
+            const top = (ov.y / th) * 100;
+            const w = (ov.width / tw) * 100;
+            const h = (ov.height / th) * 100;
+            return (
+              <div
+                key={`custom-ov-${idx}`}
+                className="absolute z-[5] pointer-events-none"
+                style={{ left: `${left}%`, top: `${top}%`, width: `${w}%`, height: `${h}%` }}
+              >
+                {ov.isVideo ? (
+                  <video src={ov.url} className="w-full h-full object-contain" muted loop autoPlay playsInline />
+                ) : (
+                  <img src={ov.url} alt="" className="w-full h-full object-contain" draggable={false} />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Page indicator */}
