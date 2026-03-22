@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Download, Palette, ImageIcon, Search, Upload, Link, Mail, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Download, Palette, ImageIcon, Search, Upload, Link, Mail, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,9 +89,18 @@ interface ElementOverrides {
   hiddenElements?: string[];
 }
 
+interface CustomOverlay {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface RenderOptions {
   isCarousel?: boolean;
   isLastCarouselPage?: boolean;
+  customOverlays?: CustomOverlay[];
 }
 
 interface ArtGeneratorModalProps {
@@ -849,6 +858,20 @@ async function renderArt(
     }
   }
 
+  // Draw custom overlays on top
+  if (options.customOverlays && options.customOverlays.length > 0) {
+    for (const overlay of options.customOverlays) {
+      try {
+        const overlayImg = await loadImage(overlay.url);
+        if (overlayImg) {
+          ctx.drawImage(overlayImg, overlay.x, overlay.y, overlay.width, overlay.height);
+        }
+      } catch (e) {
+        console.warn("[customOverlay] Failed to draw overlay:", e);
+      }
+    }
+  }
+
   return canvas.toDataURL("image/png");
 }
 
@@ -883,6 +906,8 @@ export function ArtGeneratorModal({
   const [pagePhotos, setPagePhotos] = useState<(string | null)[]>([]);
   const [pageOverrides, setPageOverrides] = useState<ElementOverrides[]>([]);
   const [pagePhotoOffsets, setPagePhotoOffsets] = useState<{ x: number; y: number }[]>([]);
+  const [pageCustomOverlays, setPageCustomOverlays] = useState<CustomOverlay[][]>([]);
+  const overlayInputRef = useRef<HTMLInputElement>(null);
 
   // Current page shortcuts
   const artDataUrl = pageArts[currentPage] || null;
@@ -942,6 +967,42 @@ export function ArtGeneratorModal({
   const syncSetContactScaleY = useCallback((v: number) => updateOverride("contactScaleY", v), [updateOverride]);
   const syncSetShapeOverrides = useCallback((v: Record<string, ShapeOverride>) => updateOverride("shapes", v), [updateOverride]);
   const syncSetHiddenElements = useCallback((v: string[]) => updateOverride("hiddenElements", v), [updateOverride]);
+
+  const currentOverlays = pageCustomOverlays[currentPage] || [];
+  const syncSetCustomOverlays = useCallback((v: CustomOverlay[]) => {
+    setPageCustomOverlays(prev => {
+      const copy = [...prev];
+      copy[currentPage] = v;
+      return copy;
+    });
+  }, [currentPage]);
+
+  const handleOverlayUpload = useCallback(async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target?.result as string;
+      if (!base64) return;
+      // Upload to storage for persistence
+      const ext = file.name.split(".").pop() || "png";
+      const path = `overlay-extras/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("card-uploads").upload(path, file);
+      const url = error ? base64 : supabase.storage.from("card-uploads").getPublicUrl(path).data.publicUrl;
+      
+      const newOverlay: CustomOverlay = {
+        url,
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 200,
+      };
+      setPageCustomOverlays(prev => {
+        const copy = [...prev];
+        copy[currentPage] = [...(copy[currentPage] || []), newOverlay];
+        return copy;
+      });
+    };
+    reader.readAsDataURL(file);
+  }, [currentPage]);
 
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
@@ -1010,6 +1071,7 @@ export function ArtGeneratorModal({
       const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, ov, {
         isCarousel,
         isLastCarouselPage: isCarousel && currentPage === pages.length - 1,
+        customOverlays: pageCustomOverlays[currentPage] || [],
       });
       setPageArts(prev => {
         const copy = [...prev];
@@ -1021,7 +1083,7 @@ export function ArtGeneratorModal({
     } finally {
       setIsRegenerating(false);
     }
-  }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pages, brandKit]);
+  }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, pages, brandKit]);
 
   const handleDragEnd = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -1084,6 +1146,7 @@ export function ArtGeneratorModal({
             const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, mergedOv, {
               isCarousel,
               isLastCarouselPage: isCarousel && i === pages.length - 1,
+              customOverlays: pageCustomOverlays[i] || [],
             });
             setPageArts(prev => {
               const copy = [...prev];
@@ -1097,7 +1160,7 @@ export function ArtGeneratorModal({
         Promise.all(siblingPromises); // Fire and forget - don't await
       }
     }, 80);
-  }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, brandKit]);
+  }, [regenerateCurrentPage, isCarousel, pages, currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, brandKit]);
 
   const generateArt = useCallback(async () => {
     setStatus("loading");
@@ -1200,6 +1263,7 @@ export function ArtGeneratorModal({
       setPagePhotos([]);
       setPageOverrides([]);
       setPagePhotoOffsets([]);
+      setPageCustomOverlays([]);
       setTemplate(null);
       setCurrentPage(0);
     }
@@ -1291,6 +1355,7 @@ export function ArtGeneratorModal({
       const dataUrl = await renderArt(template, brandKit, text, imageUrl, offset, ov, {
         isCarousel,
         isLastCarouselPage: isCarousel && currentPage === pages.length - 1,
+        customOverlays: pageCustomOverlays[currentPage] || [],
       });
       setPageArts(prev => {
         const copy = [...prev];
@@ -1379,7 +1444,35 @@ export function ArtGeneratorModal({
                   setShapeOverrides={syncSetShapeOverrides}
                   hiddenElements={hiddenElements}
                   setHiddenElements={syncSetHiddenElements}
+                  customOverlays={currentOverlays}
+                  setCustomOverlays={syncSetCustomOverlays}
                 />
+              </div>
+
+              {/* Add overlay button */}
+              <div className="flex items-center gap-2">
+                <input
+                  ref={overlayInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleOverlayUpload(file);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => overlayInputRef.current?.click()}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Adicionar PNG/JPG
+                </Button>
               </div>
 
               {/* Page navigation for carousel */}
