@@ -175,6 +175,7 @@ interface ElementAdjustments {
   textScale: number;
   textX: number;
   textY: number;
+  shapeOverrides?: Record<string, { x: number; y: number; width: number; height: number }>;
 }
 
 const defaultAdjustments: ElementAdjustments = {
