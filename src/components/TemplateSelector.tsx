@@ -29,7 +29,15 @@ interface BrandColors {
   bg: string;
   text: string;
   logoUrl?: string;
+  mascotUrl?: string;
+  contactUrl?: string;
   bgPngUrl?: string;
+}
+
+interface PreviewAssets {
+  logo: HTMLImageElement | null;
+  mascot: HTMLImageElement | null;
+  contact: HTMLImageElement | null;
 }
 
 const PREVIEW_MAX = 160;
@@ -53,6 +61,26 @@ function applyBrandToElement(el: any, brand: BrandColors): any {
   return clone;
 }
 
+function getBrandValue(source: any, keys: string[]): string {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === "string" && value.trim()) return value;
+  }
+  return "";
+}
+
+function loadPreviewImage(url?: string): Promise<HTMLImageElement | null> {
+  if (!url) return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
 function renderMiniPreview(
   canvas: HTMLCanvasElement,
   tmpl: TemplateRecord,
@@ -60,6 +88,7 @@ function renderMiniPreview(
   elements: any[],
   bgColor?: string,
   bgImage?: HTMLImageElement | null,
+  previewAssets?: PreviewAssets,
 ) {
   const scale = Math.min(PREVIEW_MAX / tmpl.width, PREVIEW_MAX / tmpl.height);
   const w = Math.round(tmpl.width * scale);
@@ -121,15 +150,33 @@ function renderMiniPreview(
       const tx = el.textAlign === "center" ? ex + ew / 2 : el.textAlign === "right" ? ex + ew : ex;
       ctx.fillText(el.content || el.text || "Texto", tx, ey + fs, ew);
     } else if (el.type === "image" || el.type === "logo" || el.type === "mascot" || el.type === "contact") {
-      ctx.fillStyle = el.type === "logo" ? "#6366f1" : el.type === "mascot" ? "#f59e0b" : "#94a3b8";
-      ctx.globalAlpha = 0.3;
-      ctx.fillRect(ex, ey, ew, eh);
-      ctx.globalAlpha = 1;
-      const label = el.type === "logo" ? "L" : el.type === "mascot" ? "M" : el.type === "contact" ? "C" : "I";
-      ctx.fillStyle = "#fff";
-      ctx.font = `bold ${Math.max(ew * 0.4, 8)}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.fillText(label, ex + ew / 2, ey + eh / 2 + ew * 0.15);
+      const assetImage =
+        el.type === "logo"
+          ? previewAssets?.logo
+          : el.type === "mascot"
+            ? previewAssets?.mascot
+            : el.type === "contact"
+              ? previewAssets?.contact
+              : null;
+
+      if (assetImage && assetImage.complete && assetImage.naturalWidth > 0 && assetImage.naturalHeight > 0) {
+        const scaleFit = Math.min(ew / assetImage.naturalWidth, eh / assetImage.naturalHeight);
+        const dw = assetImage.naturalWidth * scaleFit;
+        const dh = assetImage.naturalHeight * scaleFit;
+        const dx = ex + (ew - dw) / 2;
+        const dy = ey + (eh - dh) / 2;
+        ctx.drawImage(assetImage, dx, dy, dw, dh);
+      } else {
+        ctx.fillStyle = el.type === "logo" ? "#6366f1" : el.type === "mascot" ? "#f59e0b" : "#94a3b8";
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(ex, ey, ew, eh);
+        ctx.globalAlpha = 1;
+        const label = el.type === "logo" ? "L" : el.type === "mascot" ? "M" : el.type === "contact" ? "C" : "I";
+        ctx.fillStyle = "#fff";
+        ctx.font = `bold ${Math.max(ew * 0.4, 8)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(label, ex + ew / 2, ey + eh / 2 + ew * 0.15);
+      }
     } else if (el.type === "triangle") {
       ctx.fillStyle = color;
       ctx.beginPath();
@@ -169,6 +216,7 @@ function AnimatedTemplateCard({
   onSelect,
   brand,
   bgImage,
+  previewAssets,
 }: {
   tmpl: TemplateRecord;
   type: "art" | "video";
@@ -177,6 +225,7 @@ function AnimatedTemplateCard({
   onSelect: () => void;
   brand: BrandColors | null;
   bgImage: HTMLImageElement | null;
+  previewAssets: PreviewAssets;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -212,6 +261,7 @@ function AnimatedTemplateCard({
       elements,
       bgCol,
       isSignature ? bgImage : null,
+      previewAssets,
     );
 
     // Draw page indicator dots for video
@@ -229,7 +279,7 @@ function AnimatedTemplateCard({
         });
       }
     }
-  }, [tmpl, type, brand, bgImage, pages]);
+  }, [tmpl, type, brand, bgImage, previewAssets, pages]);
 
   // Initial render
   useEffect(() => {
@@ -295,38 +345,67 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
   const initialAutoSelected = useRef(false);
   const [brand, setBrand] = useState<BrandColors | null>(null);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
+  const [previewAssets, setPreviewAssets] = useState<PreviewAssets>({
+    logo: null,
+    mascot: null,
+    contact: null,
+  });
 
   // Fetch sample client brand kit for realistic preview
   useEffect(() => {
 
     const fetchBrand = async () => {
       try {
-        const { data } = await supabase
+        const { data: featuredBrand } = await supabase
           .from("client_data")
           .select("brand_kit")
-          .eq("name", SAMPLE_CLIENT)
+          .or("name.ilike.%IAZU DIGITAL BRASIL%,slug.ilike.%iazu-digital-brasil%")
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle();
 
-        if (data?.brand_kit) {
-          const bk = data.brand_kit as any;
+        let brandKit = featuredBrand?.brand_kit as any;
+
+        if (!brandKit) {
+          const { data: fallbackBrand } = await supabase
+            .from("client_data")
+            .select("brand_kit")
+            .not("brand_kit", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          brandKit = fallbackBrand?.brand_kit as any;
+        }
+
+        if (brandKit) {
+          const bk = brandKit;
           const colors = bk.colors || [];
           const brandData: BrandColors = {
             primary: colors[0] || "#a225ac",
             secondary: colors[1] || "#f0b128",
             bg: colors[0] || "#a225ac",
             text: "#ffffff",
-            logoUrl: bk.logo || "",
-            bgPngUrl: bk.backgroundPng || "",
+            logoUrl: getBrandValue(bk, ["logo", "logoUrl", "logo_url"]),
+            mascotUrl: getBrandValue(bk, ["mascot", "mascotUrl", "mascot_url"]),
+            contactUrl: getBrandValue(bk, ["contactInfo", "contact", "contactUrl", "contact_url"]),
+            bgPngUrl: getBrandValue(bk, ["backgroundPng", "background_png", "background", "backgroundUrl", "background_url"]),
           };
           setBrand(brandData);
 
-          // Load background PNG
-          if (brandData.bgPngUrl) {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => setBgImage(img);
-            img.src = brandData.bgPngUrl;
-          }
+          const [bgLoaded, logoLoaded, mascotLoaded, contactLoaded] = await Promise.all([
+            loadPreviewImage(brandData.bgPngUrl),
+            loadPreviewImage(brandData.logoUrl),
+            loadPreviewImage(brandData.mascotUrl),
+            loadPreviewImage(brandData.contactUrl),
+          ]);
+
+          setBgImage(bgLoaded);
+          setPreviewAssets({
+            logo: logoLoaded,
+            mascot: mascotLoaded,
+            contact: contactLoaded,
+          });
         }
       } catch {
         /* ignore - will use template defaults */
@@ -407,6 +486,7 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
             onSelect={() => setSelected(idx)}
             brand={brand}
             bgImage={bgImage}
+            previewAssets={previewAssets}
           />
         ))}
       </div>
