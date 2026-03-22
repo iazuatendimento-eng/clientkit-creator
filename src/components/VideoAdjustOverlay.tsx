@@ -229,8 +229,14 @@ export function VideoAdjustOverlay({
 
   shapeOverrides?: Record<string, ShapeOverride>;
   setShapeOverrides?: (next: Record<string, ShapeOverride>) => void;
+
+  customOverlays?: VideoCustomOverlay[];
+  setCustomOverlays?: (v: VideoCustomOverlay[]) => void;
+  onAddOverlay?: (file: File) => void;
+  onDeleteOverlay?: (idx: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const overlayInputRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<Part>("logo");
 
   const shapeTypes: ElementType[] = [
