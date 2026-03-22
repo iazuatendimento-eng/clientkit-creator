@@ -1443,7 +1443,35 @@ export function ArtGeneratorModal({
                   setShapeOverrides={syncSetShapeOverrides}
                   hiddenElements={hiddenElements}
                   setHiddenElements={syncSetHiddenElements}
+                  customOverlays={currentOverlays}
+                  setCustomOverlays={syncSetCustomOverlays}
                 />
+              </div>
+
+              {/* Add overlay button */}
+              <div className="flex items-center gap-2">
+                <input
+                  ref={overlayInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleOverlayUpload(file);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => overlayInputRef.current?.click()}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Adicionar PNG/JPG
+                </Button>
               </div>
 
               {/* Page navigation for carousel */}
