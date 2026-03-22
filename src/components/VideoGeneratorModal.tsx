@@ -697,7 +697,7 @@ export function VideoGeneratorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[95vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[98vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Film className="h-5 w-5" />
@@ -706,39 +706,14 @@ export function VideoGeneratorModal({
         </DialogHeader>
 
         <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
-          {status === "loading" && (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Gerando preview do vídeo...</p>
-            </div>
-          )}
-
-          {status === "error" && (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <p className="text-sm text-destructive">Erro ao gerar vídeo</p>
-              <Button variant="outline" onClick={() => generateVideo()}>Tentar novamente</Button>
-            </div>
-          )}
-
-          {status === "exporting" && (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">
-                Baixando vídeo... {Math.round(exportProgress * 100)}%
-              </p>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all"
-                  style={{ width: `${exportProgress * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-
+...
           {status === "ready" && videoPages && template && (
             <>
               {/* Preview or Edit mode */}
-              <div className="rounded-lg overflow-hidden border bg-black flex justify-center items-center" style={{ height: 'min(55vh, 600px)' }}>
+              <div
+                className="rounded-lg overflow-hidden border bg-black flex justify-center items-center"
+                style={{ height: isEditing ? 'min(78vh, 780px)' : 'min(55vh, 600px)' }}
+              >
                 {isEditing ? (
                   <div className="relative h-full" style={{ aspectRatio: `${template.width}/${template.height}` }}>
                     <VideoAdjustOverlay
