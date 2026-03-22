@@ -148,6 +148,7 @@ interface ClientArt {
   note?: string; // Anotação do operador
   noteRead?: boolean; // Se a anotação foi marcada como lida
   customOverlays?: CustomOverlay[]; // PNGs extras sobrepostos na arte com posição/tamanho
+  hasMaterial?: boolean; // Card possui material anexado (card_uploads)
 }
 
 interface CustomOverlay {
@@ -676,12 +677,15 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         const clientIds = [...new Set(batchItems.map((item) => item.clientId).filter(Boolean))];
         const cardIds = [...new Set(batchItems.map((item) => item.cardId).filter(Boolean))];
 
-        const [{ data: clientsData }, { data: briefsData }] = await Promise.all([
+        const [{ data: clientsData }, { data: briefsData }, { data: materialsData }] = await Promise.all([
           clientIds.length > 0
             ? supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds })
             : Promise.resolve({ data: [] as any[] }),
           cardIds.length > 0
             ? supabase.from("project_briefs").select("id, cover_image").in("id", cardIds)
+            : Promise.resolve({ data: [] as any[] }),
+          cardIds.length > 0
+            ? supabase.from("card_uploads").select("card_id").eq("upload_type", "material").in("card_id", cardIds)
             : Promise.resolve({ data: [] as any[] }),
         ]);
 
@@ -709,6 +713,8 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
           if (b.cover_image) coverImageMap[b.id] = b.cover_image;
         });
 
+        const materialCardIds = new Set((materialsData as any[])?.map((m: any) => m.card_id).filter(Boolean) || []);
+
         setClientArts((prev) =>
           prev.map((art) => ({
             ...art,
@@ -717,6 +723,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             imageType: art.imageType || imageTypeMap[art.clientId] || undefined,
             narrationType: art.narrationType || narrationTypeMap[art.clientId] || undefined,
             briefing: art.briefing || briefingMap[art.clientId] || undefined,
+            hasMaterial: materialCardIds.has(art.cardId),
           }))
         );
       } catch (error) {
