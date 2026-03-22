@@ -1336,7 +1336,18 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
         newBrief.brandKitId = brandKits[0].id;
       }
 
-      // STEP 1: Create all cards immediately without captions
+      // STEP 0: Shift existing cards' sort_order up to make room at the top
+      const existingTodo = briefs.filter(b => b.status === "todo");
+      if (existingTodo.length > 0) {
+        const shiftAmount = paragraphs.length;
+        await Promise.all(
+          existingTodo.map(b =>
+            supabase.from("project_briefs").update({ sort_order: (briefs.indexOf(b) + 1) + shiftAmount }).eq("id", b.id)
+          )
+        );
+      }
+
+      // STEP 1: Create all cards with sort_order starting from 1 (top)
       const createdIds: string[] = [];
       let failedCount = 0;
 
