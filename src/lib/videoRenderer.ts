@@ -1010,9 +1010,13 @@ export async function generateAllVideoPages(
       );
 
       if (combinedTopOverlay) {
-        textOverlay = combinedTopOverlay;
-        frameOverlay = "";
-        logoOverlay = "";
+        // Only clear layers that were already empty/missing — keep successful ones
+        if (!textOverlay) textOverlay = combinedTopOverlay;
+        // If frame overlay was successfully generated, keep it; otherwise merge into combined
+        if (!frameOverlay) frameOverlay = "";
+        if (!logoOverlay) logoOverlay = "";
+        // If text was the only missing one, combined already has it
+        // If frame was missing too, it's now in the combined text overlay
       }
     }
 
