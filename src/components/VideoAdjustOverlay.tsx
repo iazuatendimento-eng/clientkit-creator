@@ -883,47 +883,9 @@ export function VideoAdjustOverlay({
       })()}
 
       <div className="absolute inset-0 z-[5]">
-        {/* Image interactive handles - on top for interaction */}
-        {isContentPage && setImageX && els.imageEl && (
-          <Box part="image" label="Foto (zoom)" tone="warning" />
-        )}
-        {/* Text - only on content pages */}
-        {isContentPage && els.textEl && (
-          <Box part="text" label="Texto" tone="muted">
-            {pageText && (
-              <p
-                className="w-full leading-tight break-words"
-                style={{
-                  fontFamily: fontFamily || "sans-serif",
-                  color: textColor || "#ffffff",
-                  fontSize: `${((els.textEl.fontSize || 48) * (textScale / 100)) / (template.height / 100)}cqh`,
-                  fontWeight: (els.textEl as any).fontWeight || "normal",
-                  textAlign: (els.textEl as any).textAlign || "left",
-                }}
-              >
-                {pageText}
-              </p>
-            )}
-          </Box>
-        )}
-        {/* Logo, Contato, Mascote */}
-        {els.logoEl && (
-          <Box part="logo" label="Logo" tone="primary">
-            {logoUrl && <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" draggable={false} />}
-          </Box>
-        )}
-        {els.contactEl && (
-          <Box part="contact" label="Contato" tone="accent">
-            {contactUrl && <img src={contactUrl} alt="Contato" className="w-full h-full object-contain" draggable={false} />}
-          </Box>
-        )}
-        {els.mascotEl && (
-          <Box part="mascot" label="Mascote" tone="secondary">
-            {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-contain" draggable={false} />}
-          </Box>
-        )}
-        {/* Decorative shapes */}
-        {els.shapes.map((s, idx) => {
+        {/* Render all elements in template order */}
+        {(() => {
+          const currentElements = isContentPage ? template.contentElements : template.signatureElements;
           const shapeLabels: Record<string, string> = {
             rect: "Retângulo", circle: "Círculo", triangle: "Triângulo", line: "Linha",
             star: "Estrela", diamond: "Losango", hexagon: "Hexágono", pentagon: "Pentágono",
@@ -933,15 +895,66 @@ export function VideoAdjustOverlay({
             cross: "Cruz", cloud: "Nuvem", speechBubble: "Balão", lightning: "Raio",
             shield: "Escudo", crescent: "Lua", chevron: "Seta",
           };
-          return (
-            <Box
-              key={s.id}
-              part={`shape:${s.id}`}
-              label={`${shapeLabels[s.type] || s.type} ${idx + 1}`}
-              tone="muted"
-            />
-          );
-        })}
+          let shapeCounter = 0;
+          return currentElements.map((el, idx) => {
+            if (el.type === "image" && isContentPage && setImageX && els.imageEl) {
+              return <Box key={`el-${idx}`} part="image" label="Foto (zoom)" tone="warning" />;
+            }
+            if (el.type === "text" && isContentPage && els.textEl) {
+              return (
+                <Box key={`el-${idx}`} part="text" label="Texto" tone="muted">
+                  {pageText && (
+                    <p
+                      className="w-full leading-tight break-words"
+                      style={{
+                        fontFamily: fontFamily || "sans-serif",
+                        color: textColor || "#ffffff",
+                        fontSize: `${((els.textEl.fontSize || 48) * (textScale / 100)) / (template.height / 100)}cqh`,
+                        fontWeight: (els.textEl as any).fontWeight || "normal",
+                        textAlign: (els.textEl as any).textAlign || "left",
+                      }}
+                    >
+                      {pageText}
+                    </p>
+                  )}
+                </Box>
+              );
+            }
+            if (el.type === "logo" && els.logoEl) {
+              return (
+                <Box key={`el-${idx}`} part="logo" label="Logo" tone="primary">
+                  {logoUrl && <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" draggable={false} />}
+                </Box>
+              );
+            }
+            if (el.type === "contact" && els.contactEl) {
+              return (
+                <Box key={`el-${idx}`} part="contact" label="Contato" tone="accent">
+                  {contactUrl && <img src={contactUrl} alt="Contato" className="w-full h-full object-contain" draggable={false} />}
+                </Box>
+              );
+            }
+            if (el.type === "mascot" && els.mascotEl) {
+              return (
+                <Box key={`el-${idx}`} part="mascot" label="Mascote" tone="secondary">
+                  {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-contain" draggable={false} />}
+                </Box>
+              );
+            }
+            if (el.id && shapeTypes.includes(el.type)) {
+              shapeCounter++;
+              return (
+                <Box
+                  key={`el-${idx}`}
+                  part={`shape:${el.id}`}
+                  label={`${shapeLabels[el.type] || el.type} ${shapeCounter}`}
+                  tone="muted"
+                />
+              );
+            }
+            return null;
+          });
+        })()}
       </div>
 
       {isBusy && (
