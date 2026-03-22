@@ -254,6 +254,7 @@ interface ClientVideo {
   frameOverlayPages?: string[]; // Array of page images (base64) - decorative shapes AFTER image element (above video)
   preImageOverlayPages?: string[]; // Array of page images (base64) - decorative shapes BEFORE image element (below video)
   logoOverlayPages?: string[]; // Array of page images (base64) - logo only for separate animation
+  fullPages?: string[]; // Full composite pages for thumbnail display
   videoUrl: string | null;
   status: "pending" | "approved" | "rejected";
   backgroundImages?: string[];
