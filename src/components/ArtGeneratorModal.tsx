@@ -257,6 +257,86 @@ const normalizeBrandKit = (raw: any) => {
   };
 };
 
+function applyClipShape(
+  ctx: CanvasRenderingContext2D,
+  shape: CanvasElement["clipShape"] | undefined,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  radius = 0,
+) {
+  if (shape === "circle") {
+    ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+    return;
+  }
+
+  if (shape === "triangle") {
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    return;
+  }
+
+  if (shape === "diamond") {
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w, y + h / 2);
+    ctx.lineTo(x + w / 2, y + h);
+    ctx.lineTo(x, y + h / 2);
+    ctx.closePath();
+    return;
+  }
+
+  if (shape === "hexagon") {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const r = Math.min(w, h) / 2;
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i - Math.PI / 2;
+      if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+    return;
+  }
+
+  if (shape === "pentagon") {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const r = Math.min(w, h) / 2;
+    for (let i = 0; i < 5; i++) {
+      const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+    return;
+  }
+
+  if (shape === "star") {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const outerR = Math.min(w, h) / 2;
+    const innerR = outerR * 0.4;
+    for (let i = 0; i < 10; i++) {
+      const a = (Math.PI / 5) * i - Math.PI / 2;
+      const r = i % 2 === 0 ? outerR : innerR;
+      if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+    return;
+  }
+
+  if (radius > 0) {
+    ctx.roundRect(x, y, w, h, radius);
+    return;
+  }
+
+  ctx.rect(x, y, w, h);
+}
+
 // ── Render art with overrides ─────────────────────────────────────────────────
 
 async function renderArt(
