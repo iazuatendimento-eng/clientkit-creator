@@ -488,11 +488,33 @@ async function renderArt(
   }, null);
   const photoTargetElement = placeholderElement || largestImageElement;
 
+  // Helper to skip large background shapes when PNG background is active
+  const shouldSkipBackgroundShape = (el: CanvasElement) => {
+    if (!brandBgPng || !hasLargeBgShape) return false;
+    const isBackgroundRole = el.colorRole === "background";
+    const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
+    if (!isBackgroundRole && !matchesTemplateBg) return false;
+    const ov = overrides.shapes?.[el.id];
+    const ex = ov?.x ?? el.x ?? 0;
+    const ey = ov?.y ?? el.y ?? 0;
+    const ew = ov?.width ?? el.width ?? 0;
+    const eh = ov?.height ?? el.height ?? 0;
+    return (
+      ew * eh >= template.width * template.height * 0.65 &&
+      ex <= template.width * 0.2 &&
+      ey <= template.height * 0.2 &&
+      ex + ew >= template.width * 0.8 &&
+      ey + eh >= template.height * 0.8
+    );
+  };
+
   for (const el of template.elements) {
     try {
       // Skip hidden elements
       const elKey = el.type === "logo" ? "logo" : el.type === "contact" ? "contact" : el.type === "mascot" ? "mascot" : el.type === "text" ? "text" : el.id || "";
       if (hiddenSet.has(elKey)) { continue; }
+      // Skip large background shapes replaced by PNG
+      if (shouldSkipBackgroundShape(el)) { continue; }
       // Chevron only appears in carousel and is hidden on the last page.
       if (el.type === "chevron" && (!isCarousel || isLastCarouselPage)) { continue; }
 
