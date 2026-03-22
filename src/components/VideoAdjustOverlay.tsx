@@ -973,11 +973,20 @@ export function VideoAdjustOverlay({
       : ((textOverlayUrl && textOverlayUrl !== "") ? textOverlayUrl : "");
 
   // Evita duplicação visual durante arraste/zoom da mídia no ajuste
+  // e força uso do PNG do cliente na página de assinatura
+  const forceSignatureClientBg = Boolean(
+    !isContentPage &&
+    backgroundPngUrl &&
+    backgroundPngUrl !== ""
+  );
+
   const hideBakedBasePreview = Boolean(
-    isContentPage &&
-    setImageX &&
-    els.imageEl &&
-    ((backgroundImageUrl && backgroundImageUrl !== "") || (backgroundVideoUrl && backgroundVideoUrl !== ""))
+    forceSignatureClientBg || (
+      isContentPage &&
+      setImageX &&
+      els.imageEl &&
+      ((backgroundImageUrl && backgroundImageUrl !== "") || (backgroundVideoUrl && backgroundVideoUrl !== ""))
+    )
   );
 
   return (
