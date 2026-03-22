@@ -288,6 +288,13 @@ export function ArtAdjustOverlay({
       };
     }
 
+    if (isOverlayPart(part)) {
+      const idx = overlayIndexFromPart(part);
+      const ov = customOverlays?.[idx];
+      if (!ov) return null;
+      return { x: ov.x, y: ov.y, w: ov.width, h: ov.height };
+    }
+
     return null;
   };
 
