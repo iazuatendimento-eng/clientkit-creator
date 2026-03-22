@@ -460,6 +460,12 @@ export function VideoAdjustOverlay({
       if (r) shapeRect = { x: r.x, y: r.y, width: r.w, height: r.h };
     }
 
+    let overlayRect: { x: number; y: number; width: number; height: number } | undefined;
+    if (isOverlayPart(part)) {
+      const r = getRect(part);
+      if (r) overlayRect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    }
+
     setActive(part);
     startRef.current = {
       mode,
