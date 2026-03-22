@@ -194,7 +194,7 @@ function AnimatedTemplateCard({
     let elements = page.elements as any[];
 
     // Apply brand colors if available
-    if (brand && type === "video") {
+    if (brand) {
       elements = elements.map(el => applyBrandToElement(el, brand));
     }
 
