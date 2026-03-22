@@ -677,12 +677,15 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         const clientIds = [...new Set(batchItems.map((item) => item.clientId).filter(Boolean))];
         const cardIds = [...new Set(batchItems.map((item) => item.cardId).filter(Boolean))];
 
-        const [{ data: clientsData }, { data: briefsData }] = await Promise.all([
+        const [{ data: clientsData }, { data: briefsData }, { data: materialsData }] = await Promise.all([
           clientIds.length > 0
             ? supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds })
             : Promise.resolve({ data: [] as any[] }),
           cardIds.length > 0
             ? supabase.from("project_briefs").select("id, cover_image").in("id", cardIds)
+            : Promise.resolve({ data: [] as any[] }),
+          cardIds.length > 0
+            ? supabase.from("card_uploads").select("card_id").eq("upload_type", "material").in("card_id", cardIds)
             : Promise.resolve({ data: [] as any[] }),
         ]);
 
