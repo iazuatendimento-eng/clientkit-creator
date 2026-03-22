@@ -17,6 +17,7 @@ import {
   Trash2,
   Copy,
   Plus,
+  Move,
 } from "lucide-react";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 import { cn } from "@/lib/utils";
@@ -163,6 +164,7 @@ export function ArtCardWithOverlay({
   const [hiddenElements, _setHiddenElements] = useState<string[]>(art.elementOverrides?.hiddenElements || []);
   const [localOverlays, _setLocalOverlays] = useState<CustomOverlay[]>(art.customOverlays || []);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [photoInteractionMode, setPhotoInteractionMode] = useState<"content" | "frame">("content");
   const overlayInputRef = useRef<HTMLInputElement>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -422,6 +424,7 @@ export function ArtCardWithOverlay({
               customOverlays={localOverlays}
               setCustomOverlays={setLocalOverlays}
               onDragEnd={handleDragEnd}
+              photoInteractionMode={photoInteractionMode}
             />
           </div>
         ) : art.imageUrl ? (
@@ -463,6 +466,14 @@ export function ArtCardWithOverlay({
 
         {art.imageUrl && (
           <div className="flex flex-wrap gap-2 mt-3">
+            <Button
+              size="sm"
+              variant={photoInteractionMode === "frame" ? "default" : "outline"}
+              title={photoInteractionMode === "content" ? "Ativar: Mover moldura" : "Ativar: Zoom da foto"}
+              onClick={() => setPhotoInteractionMode(prev => prev === "content" ? "frame" : "content")}
+            >
+              <Move className="h-4 w-4" />
+            </Button>
             <Button size="sm" variant="outline" title="Trocar foto" onClick={() => onOpenImageDialog(art, index)}>
               <ImageIcon className="h-4 w-4" />
             </Button>
