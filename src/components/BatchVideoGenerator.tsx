@@ -3671,7 +3671,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     setImageScale={(v) => updatePageImageAdjustment(currentPreviewPage, "imageScale", v)}
                     shapeOverrides={selectedVideo.adjustments.shapeOverrides || {}}
                     setShapeOverrides={(next) => {
-                      updateAdjustmentLocal("shapeOverrides" as any, next as any);
+                      const current = selectedVideoRef.current;
+                      if (!current) return;
+                      const updatedAdj = { ...current.adjustments, shapeOverrides: next };
+                      selectedVideoRef.current = { ...current, adjustments: updatedAdj };
+                      setSelectedVideo((prev) => prev ? { ...prev, adjustments: updatedAdj } : prev);
+                      setClientVideos((prev) => prev.map((v) => v.cardId === current.cardId ? { ...v, adjustments: updatedAdj } : v));
                     }}
                   />
 
