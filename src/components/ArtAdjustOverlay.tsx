@@ -110,6 +110,8 @@ export function ArtAdjustOverlay({
   hasBackgroundImage,
   hiddenElements,
   setHiddenElements,
+  customOverlays,
+  setCustomOverlays,
 }: {
   template: MasterTemplateLike;
   previewUrl: string | null;
