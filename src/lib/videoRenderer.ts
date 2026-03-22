@@ -335,8 +335,8 @@ export async function generatePageImage(
       } else {
         gradient = ctx.createRadialGradient(x + elW / 2, y + elH / 2, 0, x + elW / 2, y + elH / 2, Math.max(elW, elH) / 2);
       }
-      const color1 = el.gradient.color1Role === "background" ? brandBgColor : el.gradient.color1Role === "text" ? textColor : el.gradient.color1Role === "accessory1" ? accessoryColor1 : el.gradient.color1Role === "accessory2" ? accessoryColor2 : el.gradient.color1;
-      const color2Raw = el.gradient.color2Role === "background" ? brandBgColor : el.gradient.color2Role === "text" ? textColor : el.gradient.color2Role === "accessory1" ? accessoryColor1 : el.gradient.color2Role === "accessory2" ? accessoryColor2 : el.gradient.color2;
+      const color1 = (el.gradient.color1Role === "background" || el.gradient.color1Role === "element1") ? brandBgColor : el.gradient.color1Role === "text" ? textColor : el.gradient.color1Role === "accessory1" ? accessoryColor1 : el.gradient.color1Role === "accessory2" ? accessoryColor2 : el.gradient.color1;
+      const color2Raw = (el.gradient.color2Role === "background" || el.gradient.color2Role === "element1") ? brandBgColor : el.gradient.color2Role === "text" ? textColor : el.gradient.color2Role === "accessory1" ? accessoryColor1 : el.gradient.color2Role === "accessory2" ? accessoryColor2 : el.gradient.color2;
       const color2 = el.gradient.fadeMode ? color1 : color2Raw;
       const op1 = el.gradient.opacity1 ?? 100;
       const op2 = el.gradient.opacity2 ?? (el.gradient.fadeMode ? 0 : 100);
