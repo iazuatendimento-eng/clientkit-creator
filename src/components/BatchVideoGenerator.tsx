@@ -3668,6 +3668,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     setImageX={(v) => updatePageImageAdjustment(currentPreviewPage, "imageX", v)}
                     setImageY={(v) => updatePageImageAdjustment(currentPreviewPage, "imageY", v)}
                     setImageScale={(v) => updatePageImageAdjustment(currentPreviewPage, "imageScale", v)}
+                    shapeOverrides={selectedVideo.adjustments.shapeOverrides || {}}
+                    setShapeOverrides={(next) => {
+                      updateAdjustmentLocal("shapeOverrides" as any, next as any);
+                    }}
                   />
 
                   <p className="text-center text-[10px] text-muted-foreground">
