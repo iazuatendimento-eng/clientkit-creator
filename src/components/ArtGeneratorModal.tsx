@@ -529,104 +529,109 @@ async function renderArt(
         }
         ctx.fillText(line.trim(), drawX, ly);
         ctx.textAlign = "left";
-      } else if (el.type === "image" && el.placeholder) {
-        // Photo with pan + zoom via overrides
-        const frameOv = overrides.photoFrame;
-        const frameW = frameOv?.width ?? el.width;
-        const frameH = frameOv?.height ?? el.height;
-        const frameX = frameOv?.x ?? el.x;
-        const frameY = frameOv?.y ?? el.y;
+      } else if (el.type === "image") {
+        const isPhotoTarget = !!photoTargetElement && (
+          el === photoTargetElement ||
+          (!!photoTargetElement.id && !!el.id && photoTargetElement.id === el.id)
+        );
 
-        if (photoImage) {
-          const img = await loadImage(photoImage);
-          if (img) {
-            const zoom = (overrides.photoScale || 100) / 100;
-            const imgAspect = img.width / img.height;
-            const frameAspect = frameW / frameH;
-            let sw = img.width, sh = img.height;
-            if (imgAspect > frameAspect) { sh = img.height; sw = sh * frameAspect; }
-            else { sw = img.width; sh = sw / frameAspect; }
-            sw = sw / zoom; sh = sh / zoom;
-            if (sw > img.width) { sw = img.width; sh = sw / frameAspect; }
-            if (sh > img.height) { sh = img.height; sw = sh * frameAspect; }
-            let sx = (img.width - sw) / 2;
-            let sy = (img.height - sh) / 2;
-            const maxPanX = (img.width - sw) / 2;
-            const maxPanY = (img.height - sh) / 2;
-            sx += (photoOffset.x / 100) * maxPanX;
-            sy += (photoOffset.y / 100) * maxPanY;
-            sx = Math.max(0, Math.min(sx, img.width - sw));
-            sy = Math.max(0, Math.min(sy, img.height - sh));
+        const frameOv = isPhotoTarget ? overrides.photoFrame : undefined;
+        const frameW = Number.isFinite(frameOv?.width)
+          ? Math.max(1, frameOv!.width)
+          : Math.max(1, w);
+        const frameH = Number.isFinite(frameOv?.height)
+          ? Math.max(1, frameOv!.height)
+          : Math.max(1, h);
+        const frameX = Number.isFinite(frameOv?.x) ? frameOv!.x : x;
+        const frameY = Number.isFinite(frameOv?.y) ? frameOv!.y : y;
 
-            const clipShape = el.clipShape || "rect";
-            const radius = el.borderRadius || 0;
-            if (clipShape === "circle") {
-              ctx.beginPath();
-              ctx.ellipse(frameX + frameW / 2, frameY + frameH / 2, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
-              ctx.clip();
-            } else if (radius > 0) {
-              ctx.beginPath();
-              ctx.roundRect(frameX, frameY, frameW, frameH, radius);
-              ctx.clip();
-            }
-            ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
-          } else {
-            ctx.fillStyle = "#e5e7eb";
-            ctx.fillRect(frameX, frameY, frameW, frameH);
-          }
-        } else if (el.imageUrl) {
-          const img = await loadImage(el.imageUrl);
-          if (img) {
-            const clipShape = el.clipShape || "rect";
-            const radius = el.borderRadius || 0;
-            if (clipShape === "circle") {
-              ctx.beginPath();
-              ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-              ctx.clip();
-            } else if (radius > 0) {
-              ctx.beginPath();
-              ctx.roundRect(x, y, w, h, radius);
-              ctx.clip();
-            }
-            const imgA = img.width / img.height;
-            const frameA = w / h;
-            let sw2 = img.width, sh2 = img.height;
-            if (imgA > frameA) { sh2 = img.height; sw2 = sh2 * frameA; }
-            else { sw2 = img.width; sh2 = sw2 / frameA; }
-            const sx2 = (img.width - sw2) / 2;
-            const sy2 = (img.height - sh2) / 2;
-            ctx.drawImage(img, sx2, sy2, sw2, sh2, x, y, w, h);
-          } else {
-            ctx.fillStyle = "#e5e7eb";
-            ctx.fillRect(x, y, w, h);
-          }
-        } else {
+        let sourceUrl: string | null = el.imageUrl || null;
+        if (isPhotoTarget && photoImage) {
+          sourceUrl = photoImage;
+        }
+
+        let img = sourceUrl ? await loadImage(sourceUrl) : null;
+        if (!img && isPhotoTarget && photoImage && el.imageUrl) {
+          img = await loadImage(el.imageUrl);
+        }
+
+        if (!img) {
           ctx.fillStyle = "#e5e7eb";
           ctx.fillRect(frameX, frameY, frameW, frameH);
-        }
-      } else if (el.type === "image" && !el.placeholder) {
-        if (el.imageUrl) {
-          const img = await loadImage(el.imageUrl);
-          if (img) {
-            const clipShape = el.clipShape || "rect";
-            const radius = el.borderRadius || 0;
-            if (clipShape === "circle") {
-              ctx.beginPath();
-              ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-              ctx.clip();
-            } else if (radius > 0) {
-              ctx.beginPath();
-              ctx.roundRect(x, y, w, h, radius);
-              ctx.clip();
+        } else {
+          const clipShape = el.clipShape || "rect";
+          const radius = el.borderRadius || 0;
+          const needsClip = clipShape !== "rect" || radius > 0;
+
+          let sx = 0;
+          let sy = 0;
+          let sw = img.width;
+          let sh = img.height;
+
+          const frameAspect = frameW / frameH;
+          const imgAspect = img.width / img.height;
+
+          if (isPhotoTarget && photoImage) {
+            const zoomRaw = (overrides.photoScale || 100) / 100;
+            const zoom = Number.isFinite(zoomRaw) && zoomRaw > 0 ? zoomRaw : 1;
+
+            if (imgAspect > frameAspect) {
+              sh = img.height;
+              sw = sh * frameAspect;
+            } else {
+              sw = img.width;
+              sh = sw / frameAspect;
             }
-            const imgA = img.width / img.height;
-            const frameA = w / h;
-            let sw2 = img.width, sh2 = img.height;
-            if (imgA > frameA) { sh2 = img.height; sw2 = sh2 * frameA; }
-            else { sw2 = img.width; sh2 = sw2 / frameA; }
-            const sx2 = (img.width - sw2) / 2;
-            const sy2 = (img.height - sh2) / 2;
-            ctx.drawImage(img, sx2, sy2, sw2, sh2, x, y, w, h);
+
+            sw = sw / zoom;
+            sh = sh / zoom;
+
+            if (sw > img.width) {
+              sw = img.width;
+              sh = sw / frameAspect;
+            }
+            if (sh > img.height) {
+              sh = img.height;
+              sw = sh * frameAspect;
+            }
+
+            sx = (img.width - sw) / 2;
+            sy = (img.height - sh) / 2;
+
+            const panOffsetX = Number.isFinite(photoOffset.x) ? photoOffset.x : 0;
+            const panOffsetY = Number.isFinite(photoOffset.y) ? photoOffset.y : 0;
+            const maxPanX = (img.width - sw) / 2;
+            const maxPanY = (img.height - sh) / 2;
+
+            sx += (panOffsetX / 100) * maxPanX;
+            sy += (panOffsetY / 100) * maxPanY;
+          } else {
+            if (imgAspect > frameAspect) {
+              sh = img.height;
+              sw = sh * frameAspect;
+            } else {
+              sw = img.width;
+              sh = sw / frameAspect;
+            }
+
+            sx = (img.width - sw) / 2;
+            sy = (img.height - sh) / 2;
+          }
+
+          sx = Math.max(0, Math.min(sx, img.width - sw));
+          sy = Math.max(0, Math.min(sy, img.height - sh));
+
+          if (needsClip) {
+            ctx.save();
+            ctx.beginPath();
+            applyClipShape(ctx, clipShape, frameX, frameY, frameW, frameH, radius);
+            ctx.clip();
+          }
+
+          ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
+
+          if (needsClip) {
+            ctx.restore();
           }
         }
       } else if (el.type === "logo") {
