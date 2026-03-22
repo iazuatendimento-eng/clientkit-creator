@@ -2339,10 +2339,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         }
         const scaledAdj = { ...video.adjustments, shapeOverrides: scaledOverrides };
 
-        const bgImage = video.searchedImages?.[currentPreviewPage] || "";
-        const text = isSignature ? "" : (video.pageTexts[currentPreviewPage] || "");
-
-        const [frameOverlay, preImageOverlay, basePage] = await Promise.all([
+        const [frameOverlay, preImageOverlay] = await Promise.all([
           generatePageImageFromRenderer(
             pw, ph, template.backgroundColor,
             scaledElements, "", video.brandKit, isSignature, undefined,
@@ -2355,13 +2352,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             scaledAdj, textAdj, imageAdj,
             true, true, true, "before-image"
           ),
-          generatePageImageFromRenderer(
-            pw, ph, template.backgroundColor,
-            scaledElements, text, video.brandKit, isSignature,
-            bgImage || undefined,
-            scaledAdj, textAdj, imageAdj,
-            false, true, true
-          ),
         ]);
 
         setSelectedVideo((prev) => {
@@ -2370,9 +2360,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           newFrame[currentPreviewPage] = frameOverlay;
           const newPreImage = [...(prev.preImageOverlayPages || [])];
           newPreImage[currentPreviewPage] = preImageOverlay;
-          const newPages = [...prev.pages];
-          newPages[currentPreviewPage] = basePage;
-          const updated = { ...prev, frameOverlayPages: newFrame, preImageOverlayPages: newPreImage, pages: newPages };
+          const updated = { ...prev, frameOverlayPages: newFrame, preImageOverlayPages: newPreImage };
           selectedVideoRef.current = updated;
           return updated;
         });

@@ -952,6 +952,14 @@ export function VideoAdjustOverlay({
       ? frameOverlayUrl
       : ((textOverlayUrl && textOverlayUrl !== "") ? textOverlayUrl : "");
 
+  // Evita duplicação visual durante arraste/zoom da mídia no ajuste
+  const hideBakedBasePreview = Boolean(
+    isContentPage &&
+    setImageX &&
+    els.imageEl &&
+    ((backgroundImageUrl && backgroundImageUrl !== "") || (backgroundVideoUrl && backgroundVideoUrl !== ""))
+  );
+
   return (
     <div
       ref={containerRef}
@@ -960,16 +968,18 @@ export function VideoAdjustOverlay({
     >
       {previewUrl ? (
         <>
-          {/* Base page image */}
-          <img
-            src={previewUrl}
-            alt="Prévia do vídeo"
-            className={cn(
-              "absolute inset-0 h-full w-full object-contain",
-              isBusy ? "opacity-80" : "opacity-100"
-            )}
-            draggable={false}
-          />
+          {/* Base page image (oculta no ajuste de conteúdo para não duplicar com mídia viva) */}
+          {!hideBakedBasePreview && (
+            <img
+              src={previewUrl}
+              alt="Prévia do vídeo"
+              className={cn(
+                "absolute inset-0 h-full w-full object-contain",
+                isBusy ? "opacity-80" : "opacity-100"
+              )}
+              draggable={false}
+            />
+          )}
           {/* Pre-image overlay (shapes before image) */}
           {preImageOverlayUrl && preImageOverlayUrl !== "" && (
             <img src={preImageOverlayUrl} alt="" className="absolute inset-0 h-full w-full object-contain pointer-events-none z-[1]" draggable={false} />
