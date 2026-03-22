@@ -412,8 +412,8 @@ export async function generatePageImage(
     const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png;
     let bgPngLoaded = false;
     const hasLargeBg = hasLargeBackgroundShape();
-    // Only use PNG background if there's a large background-role shape to replace
-    if (brandBgPng && hasLargeBg) {
+    // Use PNG background if there's a large background-role shape OR if it's a signature page
+    if (brandBgPng && (hasLargeBg || isSignature)) {
       const bgPngImg = await loadImage(brandBgPng);
       if (bgPngImg) {
         ctx.drawImage(bgPngImg, 0, 0, w, h);
