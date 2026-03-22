@@ -354,6 +354,9 @@ async function renderArt(
       // Skip hidden elements
       const elKey = el.type === "logo" ? "logo" : el.type === "contact" ? "contact" : el.type === "mascot" ? "mascot" : el.type === "text" ? "text" : el.id || "";
       if (hiddenSet.has(elKey)) { continue; }
+      // In "Alterar" modal we always render a single page (non-carousel),
+      // so chevron navigation element must never appear on the art.
+      if (el.type === "chevron") { continue; }
 
       ctx.save();
       applyStyles(el);
