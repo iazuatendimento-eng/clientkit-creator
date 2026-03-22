@@ -511,6 +511,26 @@ export function ArtCardWithOverlay({
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
+            {onAddOverlay && (
+              <>
+                <input
+                  ref={overlayInputRef}
+                  type="file"
+                  accept="image/png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      onAddOverlay(index, file);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <Button size="sm" variant="outline" title="Adicionar PNG extra" onClick={() => overlayInputRef.current?.click()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </>
+            )}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
