@@ -125,6 +125,7 @@ export function VideoAdjustOverlay({
   backgroundImageUrl,
   backgroundVideoUrl,
   backgroundPngUrl,
+  backgroundColor,
 
   logoX,
   logoY,
@@ -194,6 +195,7 @@ export function VideoAdjustOverlay({
   backgroundImageUrl?: string;
   backgroundVideoUrl?: string;
   backgroundPngUrl?: string;
+  backgroundColor?: string;
 
   logoX: number;
   logoY: number;
@@ -899,8 +901,8 @@ export function VideoAdjustOverlay({
   return (
     <div
       ref={containerRef}
-      className="relative mx-auto w-full aspect-[9/16] overflow-hidden rounded-lg border bg-muted touch-none"
-      style={{ containerType: "size", ...(backgroundPngUrl ? { backgroundImage: `url(${backgroundPngUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : {}) }}
+      className="relative mx-auto w-full aspect-[9/16] overflow-hidden rounded-lg border touch-none"
+      style={{ containerType: "size", ...(backgroundPngUrl ? { backgroundImage: `url(${backgroundPngUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : { backgroundColor: backgroundColor || undefined }) }}
     >
       {previewUrl ? (
         <>
