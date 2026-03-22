@@ -1190,6 +1190,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
               frameOverlayPages: results[j].frameOverlayPages,
               preImageOverlayPages: results[j].preImageOverlayPages,
               logoOverlayPages: results[j].logoOverlayPages,
+              fullPages: results[j].fullPages,
             };
           }
           setGenerationStatus(`Reconstruindo... (${Math.min(start + BATCH_SIZE, updatedVideos.length)}/${updatedVideos.length})`);
