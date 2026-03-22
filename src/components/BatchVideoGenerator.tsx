@@ -825,6 +825,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
   const [selectedVideo, setSelectedVideo] = useState<ClientVideo | null>(null);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(0);
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [photoInteractionMode, setPhotoInteractionMode] = useState<"content" | "frame">("content");
   const [activeDialogTab, setActiveDialogTab] = useState("adjust");
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -3853,7 +3854,20 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                     setCustomOverlays={setCurrentPageOverlays}
                     onAddOverlay={handleAddVideoOverlay}
                     onDeleteOverlay={handleDeleteVideoOverlay}
+                    photoInteractionMode={photoInteractionMode}
                   />
+
+                  <div className="flex items-center justify-center gap-3">
+                    <Button
+                      variant={photoInteractionMode === "content" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPhotoInteractionMode((prev) => (prev === "content" ? "frame" : "content"))}
+                      className="gap-1.5"
+                    >
+                      <Move className="h-3.5 w-3.5" />
+                      {photoInteractionMode === "content" ? "Zoom da foto" : "Mover moldura"}
+                    </Button>
+                  </div>
 
                   <p className="text-center text-[10px] text-muted-foreground">
                     Arraste os elementos para mover. Arraste as alças dos cantos para redimensionar.
