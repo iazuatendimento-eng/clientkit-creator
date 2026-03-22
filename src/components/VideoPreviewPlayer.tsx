@@ -10,6 +10,15 @@ interface PageImageAdjustment {
   imageScale: number;
 }
 
+export interface VideoCustomOverlayData {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isVideo?: boolean;
+}
+
 interface VideoPreviewPlayerProps {
   pages: string[];
   pageDuration?: number;
@@ -28,6 +37,9 @@ interface VideoPreviewPlayerProps {
   pageImageAdjustments?: PageImageAdjustment[];
   imageElSize?: { width: number; height: number } | null;
   imageClipShape?: string;
+  customOverlays?: Record<number, VideoCustomOverlayData[]>;
+  templateWidth?: number;
+  templateHeight?: number;
 }
 
 export function VideoPreviewPlayer({
@@ -48,6 +60,9 @@ export function VideoPreviewPlayer({
   pageImageAdjustments,
   imageElSize,
   imageClipShape,
+  customOverlays,
+  templateWidth,
+  templateHeight,
 }: VideoPreviewPlayerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
