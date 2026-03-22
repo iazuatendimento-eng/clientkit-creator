@@ -1072,23 +1072,31 @@ export function ArtGeneratorModal({
     }
   };
 
-  // Refs for current page regeneration
+  // Refs for current page regeneration (always up-to-date)
   const templateRef = useRef(template);
   useEffect(() => { templateRef.current = template; });
+  const pageCustomOverlaysRef = useRef(pageCustomOverlays);
+  useEffect(() => { pageCustomOverlaysRef.current = pageCustomOverlays; });
+  const pageOverridesRef = useRef(pageOverrides);
+  useEffect(() => { pageOverridesRef.current = pageOverrides; });
+  const pagePhotoOffsetsRef = useRef(pagePhotoOffsets);
+  useEffect(() => { pagePhotoOffsetsRef.current = pagePhotoOffsets; });
+  const pagePhotosRef = useRef(pagePhotos);
+  useEffect(() => { pagePhotosRef.current = pagePhotos; });
 
   const regenerateCurrentPage = useCallback(async () => {
     const tmpl = templateRef.current;
     if (!tmpl) return;
     setIsRegenerating(true);
     try {
-      const ov = pageOverrides[currentPage] || {};
-      const offset = pagePhotoOffsets[currentPage] || { x: 0, y: 0 };
-      const photo = pagePhotos[currentPage] || null;
+      const ov = pageOverridesRef.current[currentPage] || {};
+      const offset = pagePhotoOffsetsRef.current[currentPage] || { x: 0, y: 0 };
+      const photo = pagePhotosRef.current[currentPage] || null;
       const text = pages[currentPage] || "";
       const dataUrl = await renderArt(tmpl, brandKit, text, photo, offset, ov, {
         isCarousel,
         isLastCarouselPage: isCarousel && currentPage === pages.length - 1,
-        customOverlays: pageCustomOverlays[currentPage] || [],
+        customOverlays: pageCustomOverlaysRef.current[currentPage] || [],
       });
       setPageArts(prev => {
         const copy = [...prev];
@@ -1100,7 +1108,7 @@ export function ArtGeneratorModal({
     } finally {
       setIsRegenerating(false);
     }
-  }, [currentPage, pageOverrides, pagePhotoOffsets, pagePhotos, pageCustomOverlays, pages, brandKit]);
+  }, [currentPage, pages, brandKit, isCarousel]);
 
   // Re-render canvas when custom overlays change (any addition)
   const overlayJsonRef = useRef("");
