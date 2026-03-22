@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { TrimmedImage } from "@/components/TrimmedImage";
 
 export interface VideoCustomOverlay {
   url: string;
@@ -1077,21 +1078,21 @@ export function VideoAdjustOverlay({
             if (el.type === "logo" && els.logoEl) {
               return (
                 <Box key={`el-${idx}`} part="logo" label="Logo" tone="primary">
-                  {logoUrl && <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" draggable={false} />}
+                  {logoUrl && <TrimmedImage src={logoUrl} alt="Logo" trimInfluence={0.6} />}
                 </Box>
               );
             }
             if (el.type === "contact" && els.contactEl) {
               return (
                 <Box key={`el-${idx}`} part="contact" label="Contato" tone="accent">
-                  {contactUrl && <img src={contactUrl} alt="Contato" className="w-full h-full object-contain" draggable={false} />}
+                  {contactUrl && <TrimmedImage src={contactUrl} alt="Contato" trimInfluence={1.0} fitScale={0.88} />}
                 </Box>
               );
             }
             if (el.type === "mascot" && els.mascotEl) {
               return (
                 <Box key={`el-${idx}`} part="mascot" label="Mascote" tone="secondary">
-                  {mascotUrl && <img src={mascotUrl} alt="Mascote" className="w-full h-full object-contain" draggable={false} />}
+                  {mascotUrl && <TrimmedImage src={mascotUrl} alt="Mascote" trimInfluence={0.6} />}
                 </Box>
               );
             }
