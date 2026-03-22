@@ -728,7 +728,18 @@ export function VideoGeneratorModal({
         </DialogHeader>
 
         <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
-...
+          {status === "loading" && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Gerando vídeo...</p>
+            </div>
+          )}
+          {status === "error" && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <p className="text-sm text-destructive">Erro ao gerar vídeo</p>
+              <Button variant="outline" size="sm" onClick={() => generateVideo()}>Tentar novamente</Button>
+            </div>
+          )}
           {status === "ready" && videoPages && template && (
             <>
               {/* Preview or Edit mode */}
