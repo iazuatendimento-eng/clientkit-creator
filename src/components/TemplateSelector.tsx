@@ -40,9 +40,7 @@ function applyBrandToElement(el: any, brand: BrandColors): any {
   const clone = { ...el };
   if (clone.type === "text") {
     clone.color = brand.text;
-    if (clone.content === "{{text}}" || clone.content === "Texto") {
-      clone.content = "Transforme sua marca";
-    }
+    clone.content = "Criamos artes e vídeos todos os dias para sua rede social";
   } else if (clone.type === "rect" || clone.type === "circle") {
     // Use brand colors for shapes
     const isAccent = (clone.color || "").toLowerCase().includes("fff") || clone.opacity < 0.5;
