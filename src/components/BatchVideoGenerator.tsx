@@ -815,7 +815,30 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     return shapeEl?.animDuration || 2.5;
   };
 
-  const [motionEffect, setMotionEffect] = useState<MotionEffect>("ken-burns");
+  // Check if template has a large background-role shape (needed to decide if PNG background applies)
+  const templateHasLargeBackgroundShape = (() => {
+    const allEls = [...(template.contentElements || []), ...(template.signatureElements || [])];
+    const templateBgColor = template.backgroundColor || "#1a1a2e";
+    for (const el of allEls) {
+      const isBackgroundRole = (el as any).colorRole === "background";
+      const matchesTemplateBg = !(el as any).colorRole && (el as any).color === templateBgColor;
+      if (!isBackgroundRole && !matchesTemplateBg) continue;
+      const ew = (el as any).width ?? 0;
+      const eh = (el as any).height ?? 0;
+      const ex = (el as any).x ?? 0;
+      const ey = (el as any).y ?? 0;
+      if (
+        ew * eh >= template.width * template.height * 0.65 &&
+        ex <= template.width * 0.2 &&
+        ey <= template.height * 0.2 &&
+        ex + ew >= template.width * 0.8 &&
+        ey + eh >= template.height * 0.8
+      ) return true;
+    }
+    return false;
+  })();
+
+
   const [transitionEffect, setTransitionEffect] = useState<TransitionEffect>("fade");
   const [textAnimation, setTextAnimation] = useState<TextAnimation>(getTemplateTextAnimation);
   const [logoAnimation, setLogoAnimation] = useState<LogoAnimation>(getTemplateLogoAnimation);
