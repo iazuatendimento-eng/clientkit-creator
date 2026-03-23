@@ -100,8 +100,7 @@ export function buildRoundedPolygonPath(
     ctx.arcTo(curr.x, curr.y, next.x, next.y, r);
   }
 
-  // Final arc back through first vertex
-  ctx.arcTo(firstV.x, firstV.y, vertices[1].x, vertices[1].y, r);
+  // Path already loops through all corners in the for-loop above.
   ctx.closePath();
 }
 
