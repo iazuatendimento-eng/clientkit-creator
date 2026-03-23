@@ -163,12 +163,32 @@ function renderMiniPreview(
                 : null;
 
       if (assetImage && assetImage.complete && assetImage.naturalWidth > 0 && assetImage.naturalHeight > 0) {
-        const scaleFit = Math.min(ew / assetImage.naturalWidth, eh / assetImage.naturalHeight);
-        const dw = assetImage.naturalWidth * scaleFit;
-        const dh = assetImage.naturalHeight * scaleFit;
+        ctx.save();
+        const cr = Math.min((el.borderRadius || 0) * scale, ew / 2, eh / 2);
+        ctx.beginPath();
+        if (cr > 0) {
+          ctx.moveTo(ex + cr, ey); ctx.lineTo(ex + ew - cr, ey);
+          ctx.quadraticCurveTo(ex + ew, ey, ex + ew, ey + cr);
+          ctx.lineTo(ex + ew, ey + eh - cr);
+          ctx.quadraticCurveTo(ex + ew, ey + eh, ex + ew - cr, ey + eh);
+          ctx.lineTo(ex + cr, ey + eh);
+          ctx.quadraticCurveTo(ex, ey + eh, ex, ey + eh - cr);
+          ctx.lineTo(ex, ey + cr);
+          ctx.quadraticCurveTo(ex, ey, ex + cr, ey);
+        } else {
+          ctx.rect(ex, ey, ew, eh);
+        }
+        ctx.clip();
+        const useContain = el.type === "logo" || el.type === "mascot" || el.type === "contact";
+        const sf = useContain
+          ? Math.min(ew / assetImage.naturalWidth, eh / assetImage.naturalHeight)
+          : Math.max(ew / assetImage.naturalWidth, eh / assetImage.naturalHeight);
+        const dw = assetImage.naturalWidth * sf;
+        const dh = assetImage.naturalHeight * sf;
         const dx = ex + (ew - dw) / 2;
         const dy = ey + (eh - dh) / 2;
         ctx.drawImage(assetImage, dx, dy, dw, dh);
+        ctx.restore();
       } else {
         ctx.fillStyle = el.type === "logo" ? "#6366f1" : el.type === "mascot" ? "#f59e0b" : "#94a3b8";
         ctx.globalAlpha = 0.3;
