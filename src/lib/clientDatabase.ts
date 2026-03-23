@@ -215,10 +215,12 @@ export async function deleteProjectBrief(id: string) {
 }
 
 export async function getProjectBriefsByClient(clientId: string) {
+  // Only load non-completed cards for the board (completed are cleaned and useless)
   const { data, error } = await supabase
     .from("project_briefs")
     .select("*")
     .eq("client_id", clientId)
+    .neq("status", "completed")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   

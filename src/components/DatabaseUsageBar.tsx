@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Database, Trash2, Loader2, HardDrive } from "lucide-react";
+import { Database, Trash2, Loader2, HardDrive, Archive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
