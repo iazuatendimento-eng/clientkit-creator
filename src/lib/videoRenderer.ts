@@ -530,7 +530,7 @@ export async function generatePageImage(
           ctx.strokeStyle = getBorderColor(el);
           ctx.lineWidth = el.borderWidth;
           ctx.beginPath();
-          drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height);
+          drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height, el.borderRadius || 0);
           ctx.stroke();
           ctx.restore();
         }
@@ -567,7 +567,7 @@ export async function generatePageImage(
             ctx.strokeStyle = getBorderColor(el);
             ctx.lineWidth = el.borderWidth;
             ctx.beginPath();
-            drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height);
+            drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height, el.borderRadius || 0);
             ctx.stroke();
             ctx.restore();
           }
@@ -603,7 +603,7 @@ export async function generatePageImage(
         }
         ctx.save();
         ctx.beginPath();
-        drawClipPath(el.clipShape || "rect", destX, destY, destW, destH);
+        drawClipPath(el.clipShape || "rect", destX, destY, destW, destH, el.borderRadius || 0);
         ctx.clip();
         ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
         ctx.restore();
