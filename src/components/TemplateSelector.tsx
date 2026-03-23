@@ -158,7 +158,9 @@ function renderMiniPreview(
             ? previewAssets?.mascot
             : el.type === "contact"
               ? previewAssets?.contact
-              : null;
+              : el.type === "image"
+                ? previewAssets?.stockImage
+                : null;
 
       if (assetImage && assetImage.complete && assetImage.naturalWidth > 0 && assetImage.naturalHeight > 0) {
         const scaleFit = Math.min(ew / assetImage.naturalWidth, eh / assetImage.naturalHeight);
@@ -350,6 +352,7 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
     logo: null,
     mascot: null,
     contact: null,
+    stockImage: null,
   });
 
   // Fetch sample client brand kit for realistic preview
