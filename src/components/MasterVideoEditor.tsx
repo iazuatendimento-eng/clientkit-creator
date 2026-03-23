@@ -2169,7 +2169,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
                 )}
 
                 {/* Border Radius for rect - MOVED UP for visibility */}
-                {(selectedEl.type === "rect" || (ROUNDABLE_POLYGON_TYPES as readonly string[]).includes(selectedEl.type)) && (
+                {(selectedEl.type === "rect" || selectedEl.type === "image" || (ROUNDABLE_POLYGON_TYPES as readonly string[]).includes(selectedEl.type)) && (
                   <div className="p-2 bg-primary/10 rounded-md">
                     <Label className="text-xs font-medium">Arredondamento: {selectedEl.borderRadius || 0}px</Label>
                     <Slider
