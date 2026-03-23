@@ -1542,10 +1542,24 @@ const ProjectBoard = ({ brandKits, onCreateProject, clientName, clientId, isPubl
     try {
       await updateProjectBrief(briefId, { status: newStatus as "todo" | "completed" });
 
-      // When moving to completed, delete material uploads
+      // When moving to completed, delete material uploads and trim old completed cards
       if (newStatus === "completed") {
         const { deleteCardUploadsByCardId } = await import("@/lib/clientDatabase");
         await deleteCardUploadsByCardId(briefId);
+
+        // Keep only 3 most recent completed cards for this client — delete the oldest
+        const { data: completedCards } = await supabase
+          .from("project_briefs")
+          .select("id")
+          .eq("client_id", clientId)
+          .eq("status", "completed")
+          .order("created_at", { ascending: false });
+
+        if (completedCards && completedCards.length > 3) {
+          const toDelete = completedCards.slice(3).map(c => c.id);
+          await supabase.from("card_uploads").delete().in("card_id", toDelete);
+          await supabase.from("project_briefs").delete().in("id", toDelete);
+        }
       }
       // Reload briefs from Supabase to ensure sync
       const data = await getProjectBriefsByClient(clientId);
