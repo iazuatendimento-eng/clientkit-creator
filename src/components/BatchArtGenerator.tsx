@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { drawNewShape } from "@/lib/canvasShapes";
+import { drawNewShape, getPolygonVertices, buildRoundedPolygonPath } from "@/lib/canvasShapes";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -1250,98 +1250,23 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
         ctx.fill();
         drawShapeBorder(el);
-      } else if (el.type === "triangle") {
+      } else if (el.type === "triangle" || el.type === "diamond" || el.type === "hexagon" || el.type === "pentagon" || el.type === "star") {
         const ov = art.elementOverrides?.shapes?.[el.id];
         const x = ov?.x ?? el.x;
         const y = ov?.y ?? el.y;
         const w = ov?.width ?? el.width;
         const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor1);
-        ctx.beginPath();
-        ctx.moveTo(x + w / 2, y);
-        ctx.lineTo(x + w, y + h);
-        ctx.lineTo(x, y + h);
-        ctx.closePath();
-        ctx.fill();
-        drawShapeBorder(el);
-      } else if (el.type === "diamond") {
-        const ov = art.elementOverrides?.shapes?.[el.id];
-        const x = ov?.x ?? el.x;
-        const y = ov?.y ?? el.y;
-        const w = ov?.width ?? el.width;
-        const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor2);
-        ctx.beginPath();
-        ctx.moveTo(x + w / 2, y);
-        ctx.lineTo(x + w, y + h / 2);
-        ctx.lineTo(x + w / 2, y + h);
-        ctx.lineTo(x, y + h / 2);
-        ctx.closePath();
-        ctx.fill();
-        drawShapeBorder(el);
-      } else if (el.type === "hexagon") {
-        const ov = art.elementOverrides?.shapes?.[el.id];
-        const x = ov?.x ?? el.x;
-        const y = ov?.y ?? el.y;
-        const w = ov?.width ?? el.width;
-        const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor1);
-        const cx = x + w / 2;
-        const cy = y + h / 2;
-        const r = Math.min(w, h) / 2;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const angle = (Math.PI / 3) * i - Math.PI / 2;
-          const px = cx + r * Math.cos(angle);
-          const py = cy + r * Math.sin(angle);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+        const colorMap: Record<string, string> = { triangle: accessoryColor1, diamond: accessoryColor2, hexagon: accessoryColor1, pentagon: accessoryColor2, star: accessoryColor1 };
+        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, colorMap[el.type] || accessoryColor1);
+        const verts = getPolygonVertices(el.type, x, y, w, h);
+        const bRadius = el.borderRadius || 0;
+        if (bRadius > 0) {
+          buildRoundedPolygonPath(ctx, verts, bRadius);
+        } else {
+          ctx.beginPath();
+          verts.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y));
+          ctx.closePath();
         }
-        ctx.closePath();
-        ctx.fill();
-        drawShapeBorder(el);
-      } else if (el.type === "pentagon") {
-        const ov = art.elementOverrides?.shapes?.[el.id];
-        const x = ov?.x ?? el.x;
-        const y = ov?.y ?? el.y;
-        const w = ov?.width ?? el.width;
-        const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor2);
-        const cx = x + w / 2;
-        const cy = y + h / 2;
-        const r = Math.min(w, h) / 2;
-        ctx.beginPath();
-        for (let i = 0; i < 5; i++) {
-          const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
-          const px = cx + r * Math.cos(angle);
-          const py = cy + r * Math.sin(angle);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fill();
-        drawShapeBorder(el);
-      } else if (el.type === "star") {
-        const ov = art.elementOverrides?.shapes?.[el.id];
-        const x = ov?.x ?? el.x;
-        const y = ov?.y ?? el.y;
-        const w = ov?.width ?? el.width;
-        const h = ov?.height ?? el.height;
-        ctx.fillStyle = getElementFillStyle(el, x, y, w, h, accessoryColor1);
-        const cx = x + w / 2;
-        const cy = y + h / 2;
-        const outerR = Math.min(w, h) / 2;
-        const innerR = outerR * 0.4;
-        ctx.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const angle = (Math.PI / 5) * i - Math.PI / 2;
-          const r = i % 2 === 0 ? outerR : innerR;
-          const px = cx + r * Math.cos(angle);
-          const py = cy + r * Math.sin(angle);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
         ctx.fill();
         drawShapeBorder(el);
       } else if (el.type === "line") {

@@ -3,6 +3,115 @@
  * Used by MasterArtEditor, BatchArtGenerator, MasterVideoEditor, BatchVideoGenerator
  */
 
+/**
+ * Compute vertices for a regular polygon (hexagon, pentagon, star, diamond, triangle)
+ */
+export function getPolygonVertices(
+  type: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): { x: number; y: number }[] {
+  const cx = x + width / 2;
+  const cy = y + height / 2;
+  const r = Math.min(width, height) / 2;
+
+  if (type === "hexagon") {
+    return Array.from({ length: 6 }, (_, i) => {
+      const a = (Math.PI / 3) * i - Math.PI / 2;
+      return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+    });
+  }
+  if (type === "pentagon") {
+    return Array.from({ length: 5 }, (_, i) => {
+      const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+    });
+  }
+  if (type === "star") {
+    const outerR = r;
+    const innerR = r * 0.4;
+    return Array.from({ length: 10 }, (_, i) => {
+      const a = (Math.PI / 5) * i - Math.PI / 2;
+      const rad = i % 2 === 0 ? outerR : innerR;
+      return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) };
+    });
+  }
+  if (type === "diamond") {
+    return [
+      { x: cx, y: y },
+      { x: x + width, y: cy },
+      { x: cx, y: y + height },
+      { x: x, y: cy },
+    ];
+  }
+  if (type === "triangle") {
+    return [
+      { x: cx, y: y },
+      { x: x + width, y: y + height },
+      { x: x, y: y + height },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Build a rounded polygon path using arcTo for each corner.
+ * `radius` is the rounding radius in pixels (clamped automatically).
+ */
+export function buildRoundedPolygonPath(
+  ctx: CanvasRenderingContext2D,
+  vertices: { x: number; y: number }[],
+  radius: number,
+) {
+  const n = vertices.length;
+  if (n < 3) return;
+
+  // Clamp radius to half the shortest edge
+  let maxR = Infinity;
+  for (let i = 0; i < n; i++) {
+    const next = vertices[(i + 1) % n];
+    const dx = next.x - vertices[i].x;
+    const dy = next.y - vertices[i].y;
+    const edgeLen = Math.sqrt(dx * dx + dy * dy);
+    maxR = Math.min(maxR, edgeLen / 2);
+  }
+  const r = Math.min(radius, maxR);
+
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const prev = vertices[(i - 1 + n) % n];
+    const curr = vertices[i];
+    const next = vertices[(i + 1) % n];
+
+    if (r > 0) {
+      // Mid-point approach to start the path for the first vertex
+      if (i === 0) {
+        const mx = (prev.x + curr.x) / 2;
+        const my = (prev.y + curr.y) / 2;
+        ctx.moveTo(mx, my);
+        // Re-draw arc for last corner since we started at midpoint
+      }
+      ctx.arcTo(curr.x, curr.y, next.x, next.y, r);
+    } else {
+      if (i === 0) ctx.moveTo(curr.x, curr.y);
+      else ctx.lineTo(curr.x, curr.y);
+    }
+  }
+  // Close: arcTo back to first vertex midpoint
+  if (r > 0) {
+    const last = vertices[n - 1];
+    const first = vertices[0];
+    const second = vertices[1];
+    ctx.arcTo(first.x, first.y, second.x, second.y, r);
+  }
+  ctx.closePath();
+}
+
+/** Polygon types that support rounded corners */
+export const ROUNDABLE_POLYGON_TYPES = ["triangle", "diamond", "hexagon", "pentagon", "star"] as const;
+
 export function drawNewShape(
   ctx: CanvasRenderingContext2D,
   type: string,
