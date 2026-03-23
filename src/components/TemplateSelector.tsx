@@ -138,6 +138,36 @@ function renderMiniPreview(
     }
   };
 
+  const buildShapePath = (shape: string, x: number, y: number, width: number, height: number, radius: number = 0) => {
+    const normalizedShape = shape || "rect";
+    const clampedRadius = Math.min(Math.max(radius, 0), Math.min(width, height) / 2);
+
+    if (normalizedShape === "circle") {
+      ctx.beginPath();
+      ctx.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+      return;
+    }
+
+    if (["triangle", "diamond", "hexagon", "pentagon", "star"].includes(normalizedShape)) {
+      const vertices = getPolygonVertices(normalizedShape, x, y, width, height);
+      if (vertices.length >= 3) {
+        if (clampedRadius > 0) {
+          buildRoundedPolygonPath(ctx, vertices, clampedRadius);
+        } else {
+          ctx.beginPath();
+          vertices.forEach((vertex, index) => {
+            if (index === 0) ctx.moveTo(vertex.x, vertex.y);
+            else ctx.lineTo(vertex.x, vertex.y);
+          });
+          ctx.closePath();
+        }
+        return;
+      }
+    }
+
+    buildRectPath(x, y, width, height, clampedRadius);
+  };
+
   const drawRectBorder = (rectEl: any) => {
     const rx = (rectEl.x || 0) * scale;
     const ry = (rectEl.y || 0) * scale;
