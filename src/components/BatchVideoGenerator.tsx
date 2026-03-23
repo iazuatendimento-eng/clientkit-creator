@@ -1538,36 +1538,28 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             ctx.strokeStyle = getBorderColor(el);
             ctx.lineWidth = el.borderWidth;
             const shape = el.clipShape || "rect";
-            ctx.beginPath();
+            const borderRadius = Math.max(0, Number(el.borderRadius) || 0);
+            const isRoundedPolygon = ["triangle", "diamond", "hexagon", "pentagon", "star"].includes(shape);
+
             if (shape === "circle") {
+              ctx.beginPath();
               ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
-            } else if (shape === "triangle") {
-              ctx.moveTo(el.x + el.width / 2, el.y);
-              ctx.lineTo(el.x + el.width, el.y + el.height);
-              ctx.lineTo(el.x, el.y + el.height);
-              ctx.closePath();
-            } else if (shape === "diamond") {
-              ctx.moveTo(el.x + el.width / 2, el.y);
-              ctx.lineTo(el.x + el.width, el.y + el.height / 2);
-              ctx.lineTo(el.x + el.width / 2, el.y + el.height);
-              ctx.lineTo(el.x, el.y + el.height / 2);
-              ctx.closePath();
-            } else if (shape === "hexagon") {
-              const hcx = el.x + el.width / 2, hcy = el.y + el.height / 2, hr = Math.min(el.width, el.height) / 2;
-              for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
-              ctx.closePath();
-            } else if (shape === "pentagon") {
-              const pcx = el.x + el.width / 2, pcy = el.y + el.height / 2, pr = Math.min(el.width, el.height) / 2;
-              for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
-              ctx.closePath();
-            } else if (shape === "star") {
-              const scx = el.x + el.width / 2, scy = el.y + el.height / 2;
-              const outerR = Math.min(el.width, el.height) / 2, innerR = outerR * 0.4;
-              for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
-              ctx.closePath();
+            } else if (isRoundedPolygon) {
+              const vertices = getPolygonVertices(shape as CanvasElement["type"], el.x, el.y, el.width, el.height);
+              if (borderRadius > 0) {
+                buildRoundedPolygonPath(ctx, vertices, borderRadius);
+              } else {
+                ctx.beginPath();
+                vertices.forEach((vertex, index) => {
+                  if (index === 0) ctx.moveTo(vertex.x, vertex.y);
+                  else ctx.lineTo(vertex.x, vertex.y);
+                });
+                ctx.closePath();
+              }
             } else {
-              if (el.borderRadius && el.borderRadius > 0) {
-                ctx.roundRect(el.x, el.y, el.width, el.height, el.borderRadius);
+              ctx.beginPath();
+              if (borderRadius > 0) {
+                ctx.roundRect(el.x, el.y, el.width, el.height, borderRadius);
               } else {
                 ctx.rect(el.x, el.y, el.width, el.height);
               }
@@ -1612,37 +1604,29 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           }
 
           ctx.save();
-          ctx.beginPath();
           const clipShape = el.clipShape || "rect";
+          const clipRadius = Math.max(0, Number(el.borderRadius) || 0);
+          const isClipPolygon = ["triangle", "diamond", "hexagon", "pentagon", "star"].includes(clipShape);
+
           if (clipShape === "circle") {
+            ctx.beginPath();
             ctx.ellipse(destX + destW / 2, destY + destH / 2, destW / 2, destH / 2, 0, 0, Math.PI * 2);
-          } else if (clipShape === "triangle") {
-            ctx.moveTo(destX + destW / 2, destY);
-            ctx.lineTo(destX + destW, destY + destH);
-            ctx.lineTo(destX, destY + destH);
-            ctx.closePath();
-          } else if (clipShape === "diamond") {
-            ctx.moveTo(destX + destW / 2, destY);
-            ctx.lineTo(destX + destW, destY + destH / 2);
-            ctx.lineTo(destX + destW / 2, destY + destH);
-            ctx.lineTo(destX, destY + destH / 2);
-            ctx.closePath();
-          } else if (clipShape === "hexagon") {
-            const hcx = destX + destW / 2, hcy = destY + destH / 2, hr = Math.min(destW, destH) / 2;
-            for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
-            ctx.closePath();
-          } else if (clipShape === "pentagon") {
-            const pcx = destX + destW / 2, pcy = destY + destH / 2, pr = Math.min(destW, destH) / 2;
-            for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
-            ctx.closePath();
-          } else if (clipShape === "star") {
-            const scx = destX + destW / 2, scy = destY + destH / 2;
-            const outerR = Math.min(destW, destH) / 2, innerR = outerR * 0.4;
-            for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
-            ctx.closePath();
+          } else if (isClipPolygon) {
+            const vertices = getPolygonVertices(clipShape as CanvasElement["type"], destX, destY, destW, destH);
+            if (clipRadius > 0) {
+              buildRoundedPolygonPath(ctx, vertices, clipRadius);
+            } else {
+              ctx.beginPath();
+              vertices.forEach((vertex, index) => {
+                if (index === 0) ctx.moveTo(vertex.x, vertex.y);
+                else ctx.lineTo(vertex.x, vertex.y);
+              });
+              ctx.closePath();
+            }
           } else {
-            if (el.borderRadius && el.borderRadius > 0) {
-              ctx.roundRect(destX, destY, destW, destH, el.borderRadius);
+            ctx.beginPath();
+            if (clipRadius > 0) {
+              ctx.roundRect(destX, destY, destW, destH, clipRadius);
             } else {
               ctx.rect(destX, destY, destW, destH);
             }
