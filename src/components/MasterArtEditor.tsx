@@ -55,6 +55,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { removeBackground } from "@/lib/backgroundRemoval";
 import { ImageEraserModal } from "./ImageEraserModal";
+import { getPolygonVertices, buildRoundedPolygonPath, ROUNDABLE_POLYGON_TYPES } from "@/lib/canvasShapes";
 
 interface CanvasElement {
   id: string;

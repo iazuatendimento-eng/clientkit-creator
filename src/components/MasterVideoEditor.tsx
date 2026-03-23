@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { drawNewShape } from "@/lib/canvasShapes";
+import { drawNewShape, getPolygonVertices, buildRoundedPolygonPath, ROUNDABLE_POLYGON_TYPES } from "@/lib/canvasShapes";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
