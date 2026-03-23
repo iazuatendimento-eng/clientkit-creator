@@ -1,4 +1,4 @@
-import { drawNewShape } from "@/lib/canvasShapes";
+import { buildRoundedPolygonPath, drawNewShape, getPolygonVertices } from "@/lib/canvasShapes";
 
 // ─── Trim + Contain helper ──────────────────────────────────────
 const opaqueBoundsCache = new WeakMap<HTMLImageElement, { sx: number; sy: number; sw: number; sh: number }>();
@@ -431,26 +431,34 @@ export async function generatePageImage(
   const imageElIndex = elements.findIndex(e => e.type === "image");
 
   // Draw clip path helper
-  const drawClipPath = (shape: string, x: number, y: number, w: number, h: number) => {
+  const drawClipPath = (shape: string, x: number, y: number, w: number, h: number, borderRadius = 0) => {
+    const roundedRadius = Math.max(0, Number(borderRadius) || 0);
+    const polygonShapes = ["triangle", "diamond", "hexagon", "pentagon", "star"];
+
     if (shape === "circle") {
+      ctx.beginPath();
       ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-    } else if (shape === "triangle") {
-      ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h); ctx.closePath();
-    } else if (shape === "diamond") {
-      ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h / 2); ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h / 2); ctx.closePath();
-    } else if (shape === "hexagon") {
-      const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
-      for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
-      ctx.closePath();
-    } else if (shape === "pentagon") {
-      const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
-      for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
-      ctx.closePath();
-    } else if (shape === "star") {
-      const cx = x + w / 2, cy = y + h / 2;
-      const outerR = Math.min(w, h) / 2, innerR = outerR * 0.4;
-      for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
-      ctx.closePath();
+      return;
+    }
+
+    if (polygonShapes.includes(shape)) {
+      const vertices = getPolygonVertices(shape, x, y, w, h);
+      if (roundedRadius > 0) {
+        buildRoundedPolygonPath(ctx, vertices, roundedRadius);
+      } else {
+        ctx.beginPath();
+        vertices.forEach((vertex, index) => {
+          if (index === 0) ctx.moveTo(vertex.x, vertex.y);
+          else ctx.lineTo(vertex.x, vertex.y);
+        });
+        ctx.closePath();
+      }
+      return;
+    }
+
+    ctx.beginPath();
+    if (roundedRadius > 0) {
+      ctx.roundRect(x, y, w, h, roundedRadius);
     } else {
       ctx.rect(x, y, w, h);
     }
@@ -522,7 +530,7 @@ export async function generatePageImage(
           ctx.strokeStyle = getBorderColor(el);
           ctx.lineWidth = el.borderWidth;
           ctx.beginPath();
-          drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height);
+          drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height, el.borderRadius || 0);
           ctx.stroke();
           ctx.restore();
         }
@@ -559,7 +567,7 @@ export async function generatePageImage(
             ctx.strokeStyle = getBorderColor(el);
             ctx.lineWidth = el.borderWidth;
             ctx.beginPath();
-            drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height);
+            drawClipPath(el.clipShape || "rect", el.x, el.y, el.width, el.height, el.borderRadius || 0);
             ctx.stroke();
             ctx.restore();
           }
@@ -595,7 +603,7 @@ export async function generatePageImage(
         }
         ctx.save();
         ctx.beginPath();
-        drawClipPath(el.clipShape || "rect", destX, destY, destW, destH);
+        drawClipPath(el.clipShape || "rect", destX, destY, destW, destH, el.borderRadius || 0);
         ctx.clip();
         ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
         ctx.restore();
@@ -632,30 +640,20 @@ export async function generatePageImage(
       ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor2);
       ctx.beginPath(); ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2); ctx.fill();
       if (el.borderWidth && el.borderWidth > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth; ctx.stroke(); }
-    } else if (el.type === "triangle") {
-      ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
-      ctx.beginPath(); ctx.moveTo(el.x + el.width / 2, el.y); ctx.lineTo(el.x + el.width, el.y + el.height); ctx.lineTo(el.x, el.y + el.height); ctx.closePath(); ctx.fill();
-      if (el.borderWidth && el.borderWidth > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth; ctx.stroke(); }
-    } else if (el.type === "diamond") {
-      ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
-      ctx.beginPath(); ctx.moveTo(el.x + el.width / 2, el.y); ctx.lineTo(el.x + el.width, el.y + el.height / 2); ctx.lineTo(el.x + el.width / 2, el.y + el.height); ctx.lineTo(el.x, el.y + el.height / 2); ctx.closePath(); ctx.fill();
-      if (el.borderWidth && el.borderWidth > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth; ctx.stroke(); }
-    } else if (el.type === "hexagon") {
-      ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
-      const hcx = el.x + el.width / 2, hcy = el.y + el.height / 2, hr = Math.min(el.width, el.height) / 2;
-      ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); } ctx.closePath(); ctx.fill();
-      if (el.borderWidth && el.borderWidth > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth; ctx.stroke(); }
-    } else if (el.type === "pentagon") {
-      ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor1);
-      const pcx = el.x + el.width / 2, pcy = el.y + el.height / 2, pr = Math.min(el.width, el.height) / 2;
-      ctx.beginPath(); for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); } ctx.closePath(); ctx.fill();
-      if (el.borderWidth && el.borderWidth > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth; ctx.stroke(); }
-    } else if (el.type === "star") {
-      ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, accessoryColor2);
-      const scx = el.x + el.width / 2, scy = el.y + el.height / 2;
-      const outerR = Math.min(el.width, el.height) / 2, innerR = outerR * 0.4;
-      ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); } ctx.closePath(); ctx.fill();
-      if (el.borderWidth && el.borderWidth > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = getBorderColor(el); ctx.lineWidth = el.borderWidth; ctx.stroke(); }
+    } else if (["triangle", "diamond", "hexagon", "pentagon", "star"].includes(el.type)) {
+      const polygonFallback = el.type === "star" ? accessoryColor2 : accessoryColor1;
+      ctx.fillStyle = getElementFillStyle(el, el.x, el.y, el.width, el.height, polygonFallback);
+      drawClipPath(el.type, el.x, el.y, el.width, el.height, el.borderRadius || 0);
+      ctx.fill();
+      if (el.borderWidth && el.borderWidth > 0) {
+        const prevAlpha = ctx.globalAlpha;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = getBorderColor(el);
+        ctx.lineWidth = el.borderWidth;
+        drawClipPath(el.type, el.x, el.y, el.width, el.height, el.borderRadius || 0);
+        ctx.stroke();
+        ctx.globalAlpha = prevAlpha;
+      }
     } else if (el.type === "line") {
       ctx.strokeStyle = getElementColor(el, accessoryColor1);
       ctx.lineWidth = el.height || 4; ctx.lineCap = "round";
