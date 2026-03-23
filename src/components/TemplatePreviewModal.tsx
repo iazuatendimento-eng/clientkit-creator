@@ -132,13 +132,14 @@ export function TemplatePreviewModal({
   };
 
   const getClipPathStyle = (el: CanvasElement): React.CSSProperties => {
-    const shape = (el as any).clipShape || "rect";
+    const shape = (el as any).clipShape || el.type || "rect";
     if (shape === "circle") return { borderRadius: "50%" };
     if (shape === "triangle") return { clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" };
     if (shape === "diamond") return { clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" };
     if (shape === "hexagon") return { clipPath: "polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)" };
     if (shape === "pentagon") return { clipPath: "polygon(50% 0%, 97.6% 34.5%, 79.4% 90.5%, 20.6% 90.5%, 2.4% 34.5%)" };
     if (shape === "star") return { clipPath: "polygon(50% 0%, 61.8% 35%, 100% 35%, 69.1% 57%, 80.9% 91%, 50% 70%, 19.1% 91%, 30.9% 57%, 0% 35%, 38.2% 35%)" };
+    if (shape === "arrow") return { clipPath: "polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%)" };
     return {};
   };
 
