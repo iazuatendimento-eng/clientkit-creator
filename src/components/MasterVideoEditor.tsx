@@ -1960,7 +1960,23 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
 
                 {/* Rotation */}
                 <div>
-                  <Label className="text-xs">Rotação: {selectedEl.rotation || 0}°</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label className="text-xs">Rotação</Label>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        value={selectedEl.rotation || 0}
+                        onChange={(e) => {
+                          const v = Math.max(-360, Math.min(360, Number(e.target.value) || 0));
+                          updateSelectedElement({ rotation: v });
+                        }}
+                        className="w-16 h-6 text-xs text-center px-1"
+                        min={-360}
+                        max={360}
+                      />
+                      <span className="text-xs text-muted-foreground">°</span>
+                    </div>
+                  </div>
                   <Slider
                     value={[selectedEl.rotation || 0]}
                     onValueChange={([v]) => updateSelectedElement({ rotation: v })}
