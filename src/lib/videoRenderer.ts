@@ -431,26 +431,34 @@ export async function generatePageImage(
   const imageElIndex = elements.findIndex(e => e.type === "image");
 
   // Draw clip path helper
-  const drawClipPath = (shape: string, x: number, y: number, w: number, h: number) => {
+  const drawClipPath = (shape: string, x: number, y: number, w: number, h: number, borderRadius = 0) => {
+    const roundedRadius = Math.max(0, Number(borderRadius) || 0);
+    const polygonShapes = ["triangle", "diamond", "hexagon", "pentagon", "star"];
+
     if (shape === "circle") {
+      ctx.beginPath();
       ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-    } else if (shape === "triangle") {
-      ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h); ctx.closePath();
-    } else if (shape === "diamond") {
-      ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h / 2); ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h / 2); ctx.closePath();
-    } else if (shape === "hexagon") {
-      const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
-      for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
-      ctx.closePath();
-    } else if (shape === "pentagon") {
-      const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
-      for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
-      ctx.closePath();
-    } else if (shape === "star") {
-      const cx = x + w / 2, cy = y + h / 2;
-      const outerR = Math.min(w, h) / 2, innerR = outerR * 0.4;
-      for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
-      ctx.closePath();
+      return;
+    }
+
+    if (polygonShapes.includes(shape)) {
+      const vertices = getPolygonVertices(shape, x, y, w, h);
+      if (roundedRadius > 0) {
+        buildRoundedPolygonPath(ctx, vertices, roundedRadius);
+      } else {
+        ctx.beginPath();
+        vertices.forEach((vertex, index) => {
+          if (index === 0) ctx.moveTo(vertex.x, vertex.y);
+          else ctx.lineTo(vertex.x, vertex.y);
+        });
+        ctx.closePath();
+      }
+      return;
+    }
+
+    ctx.beginPath();
+    if (roundedRadius > 0) {
+      ctx.roundRect(x, y, w, h, roundedRadius);
     } else {
       ctx.rect(x, y, w, h);
     }
