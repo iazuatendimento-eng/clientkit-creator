@@ -387,35 +387,17 @@ export async function generatePageImage(
   };
 
   // Helper: check if template has a large background-role shape that warrants PNG replacement
-  const hasLargeBackgroundShape = () => {
-    const shapeOvr = adjustments.shapeOverrides || {};
-    for (const el of elements) {
-      const isBackgroundRole = el.colorRole === "background";
-      const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
-      if (!isBackgroundRole && !matchesTemplateBg) continue;
-      const ov = shapeOvr[el.id || ""];
-      const ex = ov?.x ?? el.x ?? 0;
-      const ey = ov?.y ?? el.y ?? 0;
-      const ew = ov?.width ?? el.width ?? 0;
-      const eh = ov?.height ?? el.height ?? 0;
-      if (
-        ew * eh >= templateWidth * templateHeight * 0.65 &&
-        ex <= templateWidth * 0.2 &&
-        ey <= templateHeight * 0.2 &&
-        ex + ew >= templateWidth * 0.8 &&
-        ey + eh >= templateHeight * 0.8
-      ) return true;
-    }
-    return false;
+  const hasExplicitBackgroundRole = () => {
+    return elements.some(el => el.colorRole === "background");
   };
 
   // Draw background
   if (!transparentBackground) {
     const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png;
     let bgPngLoaded = false;
-    const hasLargeBg = hasLargeBackgroundShape();
-    // Use PNG background if there's a large background-role shape OR if it's a signature page
-    if (brandBgPng && (hasLargeBg || isSignature)) {
+    const hasExplicitBg = hasExplicitBackgroundRole();
+    // Use PNG background if there's an explicit background-role element OR if it's a signature page
+    if (brandBgPng && (hasExplicitBg || isSignature)) {
       const bgPngImg = await loadImage(brandBgPng);
       if (bgPngImg) {
         ctx.drawImage(bgPngImg, 0, 0, w, h);
@@ -473,29 +455,8 @@ export async function generatePageImage(
   const brandBgPngForSkip = brandKit?.backgroundPng || brandKit?.background_png;
   const shouldSkipBackgroundShape = (el: CanvasElement) => {
     if (!brandBgPngForSkip) return false;
-    const isBackgroundRole = el.colorRole === "background";
-    const isElement1Role = el.colorRole === "element1";
-    // Raw color match against template/fallback brand color for older templates without explicit role
-    const matchesTemplateBg = !el.colorRole && el.color === templateBgColor;
-    const matchesBrandBg = !el.colorRole && el.color === brandBgColor;
-
-    const ov = shapeOverrides[el.id || ""];
-    const ex = ov?.x ?? el.x ?? 0;
-    const ey = ov?.y ?? el.y ?? 0;
-    const ew = ov?.width ?? el.width ?? 0;
-    const eh = ov?.height ?? el.height ?? 0;
-    const coversMostCanvas =
-      ew * eh >= templateWidth * templateHeight * 0.65 &&
-      ex <= templateWidth * 0.2 &&
-      ey <= templateHeight * 0.2 &&
-      ex + ew >= templateWidth * 0.8 &&
-      ey + eh >= templateHeight * 0.8;
-
-    // On signature pages, skip ANY large shape covering the canvas when PNG is active
-    if (isSignature && coversMostCanvas) return true;
-
-    if (!isBackgroundRole && !isElement1Role && !matchesTemplateBg && !matchesBrandBg) return false;
-    return coversMostCanvas;
+    // Only skip elements explicitly marked as background role
+    return el.colorRole === "background";
   };
 
   for (let elIdx = 0; elIdx < elements.length; elIdx++) {
