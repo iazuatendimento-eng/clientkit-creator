@@ -509,10 +509,8 @@ export async function generatePageImage(
       // Frame-only overlay
       if (transparentBackground && excludeText) {
         if (["text", "contact", "logo", "mascot"].includes(el.type)) continue;
-        if (shapeFilter === "before-image") {
-          const hasTrueAnimation = el.animationType && el.animationType !== "none";
-          if (!hasTrueAnimation && !el.gradient?.fadeMode) continue;
-        }
+        // Include all shapes before the image in pre-image overlay
+        // so they remain visible above the video layer in the preview
         if (el.type === "image") {
           if (el.borderWidth && el.borderWidth > 0) {
             ctx.save();
