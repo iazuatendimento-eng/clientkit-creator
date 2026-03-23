@@ -157,6 +157,49 @@ export const DatabaseUsageBar = () => {
     }
   };
 
+  const handlePurgeCompleted = async () => {
+    if (!confirm(`Tem certeza que deseja apagar ${completedCount} cards concluídos? Eles já não têm mídia e são peso morto no banco.`)) {
+      return;
+    }
+
+    setIsPurging(true);
+    try {
+      // Delete in batches of 200 to avoid timeouts
+      let deleted = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: batch } = await supabase
+          .from("project_briefs")
+          .select("id")
+          .eq("status", "completed")
+          .limit(200);
+
+        if (!batch || batch.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        const ids = batch.map(b => b.id);
+        // Delete related card_uploads first
+        await supabase.from("card_uploads").delete().in("card_id", ids);
+        // Then delete the briefs
+        await supabase.from("project_briefs").delete().in("id", ids);
+        deleted += ids.length;
+      }
+
+      toast({
+        title: "Cards concluídos removidos!",
+        description: `${deleted} cards antigos apagados do banco.`,
+      });
+      setRefreshKey((k) => k + 1);
+    } catch (error) {
+      console.error("Error purging completed:", error);
+      toast({ title: "Erro ao purgar cards", variant: "destructive" });
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
   if (usageMB === null) return null;
 
   const percentage = Math.min((usageMB / MAX_MB) * 100, 100);
@@ -173,22 +216,40 @@ export const DatabaseUsageBar = () => {
           <span className={`font-semibold ${color}`}>
             ~{usageMB} MB / {MAX_MB} MB
           </span>
-          {storageFiles > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={handleCleanStorage}
-              disabled={isCleaning}
-            >
-              {isCleaning ? (
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-              ) : (
-                <Trash2 className="mr-1 h-3 w-3" />
-              )}
-              Limpar Storage ({storageFiles} arquivos)
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {completedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs border-orange-500 text-orange-600 hover:bg-orange-50"
+                onClick={handlePurgeCompleted}
+                disabled={isPurging}
+              >
+                {isPurging ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Archive className="mr-1 h-3 w-3" />
+                )}
+                Purgar Concluídos ({completedCount})
+              </Button>
+            )}
+            {storageFiles > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleCleanStorage}
+                disabled={isCleaning}
+              >
+                {isCleaning ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-1 h-3 w-3" />
+                )}
+                Limpar Storage ({storageFiles} arquivos)
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       <Progress value={percentage} className="h-2" />
