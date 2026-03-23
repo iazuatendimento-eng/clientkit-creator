@@ -1,4 +1,4 @@
-import { drawNewShape } from "@/lib/canvasShapes";
+import { buildRoundedPolygonPath, drawNewShape, getPolygonVertices } from "@/lib/canvasShapes";
 
 // ─── Trim + Contain helper ──────────────────────────────────────
 const opaqueBoundsCache = new WeakMap<HTMLImageElement, { sx: number; sy: number; sw: number; sh: number }>();
