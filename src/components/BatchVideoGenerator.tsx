@@ -2361,24 +2361,41 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
       const buildVideoSearchTerms = (imageType: string, briefing: string, cardTitle: string, cardText: string) => {
-        // Priority 1: image_type is the BEST indicator (e.g. "odontologia", "transporte")
+        // Combine imageType with card text for more relevant results
+        const parts: string[] = [];
+
+        // imageType is the primary context (e.g. "supermercado", "odontologia")
         if (imageType?.trim()) {
-          const translated = translateToEnglishLocal(imageType).trim();
-          if (translated) return translated;
-          // If dictionary can't translate, use raw image_type (Pexels handles many languages)
-          return imageType.trim().split(/\s+/).slice(0, 4).join(" ");
+          parts.push(imageType.trim());
         }
-        // Priority 2: briefing (client description)
-        if (briefing?.trim()) {
-          const translated = translateToEnglishLocal(briefing.split(" ").slice(0, 10).join(" ")).trim();
-          if (translated) return translated;
+
+        // Add key words from card title and text for specificity
+        const cardContext = [cardTitle, cardText].filter(Boolean).join(" ");
+        if (cardContext.trim()) {
+          // Extract meaningful words (skip very short words and common stop words)
+          const stopWords = new Set(["de","do","da","dos","das","em","no","na","nos","nas","um","uma","uns","umas","o","a","os","as","e","é","ou","que","para","por","com","não","se","seu","sua","seus","suas","mais","como","ao","aos","às","ele","ela","eles","elas","isso","isto","esse","essa","este","esta","já","só","nos","lhe","te","me","foi","são","ser","ter","há","vai","vão","muito","bem","mas","até","quando","onde","quem","qual"]);
+          const words = cardContext
+            .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .split(" ")
+            .filter(w => w.length > 2 && !stopWords.has(w.toLowerCase()));
+          if (words.length > 0) {
+            parts.push(words.slice(0, 4).join(" "));
+          }
         }
-        // Priority 3: card text content
-        const textContext = [cardTitle, cardText].filter(Boolean).join(" ").split(" ").slice(0, 12).join(" ");
-        const translated = translateToEnglishLocal(textContext).trim();
-        if (translated) return translated;
-        // Fallback: raw words
-        return textContext.replace(/[^\p{L}\p{N}\s]+/gu, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 5).join(" ") || "business professional";
+
+        // Fallback to briefing if nothing else
+        if (parts.length === 0 && briefing?.trim()) {
+          parts.push(briefing.split(" ").slice(0, 6).join(" "));
+        }
+
+        const combined = parts.join(" ").trim();
+        if (!combined) return "business professional";
+
+        // Translate to English for Pexels
+        const translated = translateToEnglishLocal(combined).trim();
+        return translated || combined.split(/\s+/).slice(0, 6).join(" ");
       };
 
       const fetchVideosCached = async (query: string, perPage = 6) => {
