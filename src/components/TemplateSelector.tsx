@@ -397,11 +397,25 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
           };
           setBrand(brandData);
 
-          const [bgLoaded, logoLoaded, mascotLoaded, contactLoaded] = await Promise.all([
+          // Fetch a stock image from Pixabay for "image" placeholders
+          const fetchStockImage = async (): Promise<HTMLImageElement | null> => {
+            try {
+              const { data: fnData, error: fnError } = await supabase.functions.invoke("search-pixabay-images", {
+                body: { query: "social media marketing", perPage: 1, page: 1 },
+              });
+              if (!fnError && fnData?.images?.[0]?.urls?.small) {
+                return loadPreviewImage(fnData.images[0].urls.small);
+              }
+            } catch { /* ignore */ }
+            return loadPreviewImage("https://picsum.photos/seed/template-preview/400/500");
+          };
+
+          const [bgLoaded, logoLoaded, mascotLoaded, contactLoaded, stockLoaded] = await Promise.all([
             loadPreviewImage(brandData.bgPngUrl),
             loadPreviewImage(brandData.logoUrl),
             loadPreviewImage(brandData.mascotUrl),
             loadPreviewImage(brandData.contactUrl),
+            fetchStockImage(),
           ]);
 
           setBgImage(bgLoaded);
@@ -409,6 +423,7 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
             logo: logoLoaded,
             mascot: mascotLoaded,
             contact: contactLoaded,
+            stockImage: stockLoaded,
           });
         }
       } catch {
