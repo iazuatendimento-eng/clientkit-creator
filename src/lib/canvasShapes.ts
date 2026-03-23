@@ -68,6 +68,13 @@ export function buildRoundedPolygonPath(
   const n = vertices.length;
   if (n < 3) return;
 
+  if (radius <= 0) {
+    ctx.beginPath();
+    vertices.forEach((v, i) => (i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)));
+    ctx.closePath();
+    return;
+  }
+
   // Clamp radius to half the shortest edge
   let maxR = Infinity;
   for (let i = 0; i < n; i++) {
@@ -80,32 +87,21 @@ export function buildRoundedPolygonPath(
   const r = Math.min(radius, maxR);
 
   ctx.beginPath();
+  // Start at the midpoint of the last edge to avoid corner artifact
+  const lastV = vertices[n - 1];
+  const firstV = vertices[0];
+  const startX = (lastV.x + firstV.x) / 2;
+  const startY = (lastV.y + firstV.y) / 2;
+  ctx.moveTo(startX, startY);
+
   for (let i = 0; i < n; i++) {
-    const prev = vertices[(i - 1 + n) % n];
     const curr = vertices[i];
     const next = vertices[(i + 1) % n];
+    ctx.arcTo(curr.x, curr.y, next.x, next.y, r);
+  }
 
-    if (r > 0) {
-      // Mid-point approach to start the path for the first vertex
-      if (i === 0) {
-        const mx = (prev.x + curr.x) / 2;
-        const my = (prev.y + curr.y) / 2;
-        ctx.moveTo(mx, my);
-        // Re-draw arc for last corner since we started at midpoint
-      }
-      ctx.arcTo(curr.x, curr.y, next.x, next.y, r);
-    } else {
-      if (i === 0) ctx.moveTo(curr.x, curr.y);
-      else ctx.lineTo(curr.x, curr.y);
-    }
-  }
-  // Close: arcTo back to first vertex midpoint
-  if (r > 0) {
-    const last = vertices[n - 1];
-    const first = vertices[0];
-    const second = vertices[1];
-    ctx.arcTo(first.x, first.y, second.x, second.y, r);
-  }
+  // Final arc back through first vertex
+  ctx.arcTo(firstV.x, firstV.y, vertices[1].x, vertices[1].y, r);
   ctx.closePath();
 }
 
