@@ -441,31 +441,9 @@ async function renderArt(
   // Background — check for brand kit background PNG
   const templateBgColor = template.backgroundColor;
   const brandBgPng = brandKit?.backgroundPng || brandKit?.background_png || "";
-  // Check if any element is explicitly marked as background
-  const hasExplicitBgRole = template.elements.some(el => el.colorRole === "background");
   const hasLargeBgShape = (() => {
     if (!brandBgPng) return false;
-    for (const el of template.elements) {
-      // If explicit roles exist, ONLY consider those; otherwise fallback to color match
-      if (hasExplicitBgRole) {
-        if (el.colorRole !== "background") continue;
-      } else {
-        if (el.color !== templateBgColor) continue;
-      }
-      const ov = overrides.shapes?.[el.id];
-      const ex = ov?.x ?? el.x ?? 0;
-      const ey = ov?.y ?? el.y ?? 0;
-      const ew = ov?.width ?? el.width ?? 0;
-      const eh = ov?.height ?? el.height ?? 0;
-      if (
-        ew * eh >= template.width * template.height * 0.65 &&
-        ex <= template.width * 0.2 &&
-        ey <= template.height * 0.2 &&
-        ex + ew >= template.width * 0.8 &&
-        ey + eh >= template.height * 0.8
-      ) return true;
-    }
-    return false;
+    return template.elements.some(el => el.colorRole === "background");
   })();
 
   if (brandBgPng && hasLargeBgShape) {
@@ -496,24 +474,7 @@ async function renderArt(
   // Helper to skip large background shapes when PNG background is active
   const shouldSkipBackgroundShape = (el: CanvasElement) => {
     if (!brandBgPng || !hasLargeBgShape) return false;
-    // Only skip elements that match the background criteria used above
-    if (hasExplicitBgRole) {
-      if (el.colorRole !== "background") return false;
-    } else {
-      if (el.color !== templateBgColor) return false;
-    }
-    const ov = overrides.shapes?.[el.id];
-    const ex = ov?.x ?? el.x ?? 0;
-    const ey = ov?.y ?? el.y ?? 0;
-    const ew = ov?.width ?? el.width ?? 0;
-    const eh = ov?.height ?? el.height ?? 0;
-    return (
-      ew * eh >= template.width * template.height * 0.65 &&
-      ex <= template.width * 0.2 &&
-      ey <= template.height * 0.2 &&
-      ex + ew >= template.width * 0.8 &&
-      ey + eh >= template.height * 0.8
-    );
+    return el.colorRole === "background";
   };
 
   for (const el of template.elements) {

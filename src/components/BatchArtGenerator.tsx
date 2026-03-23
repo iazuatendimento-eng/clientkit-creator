@@ -1130,26 +1130,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const hasExplicitBgRole = template.elements.some(el => el.colorRole === "background");
     const hasLargeBgShape = (() => {
       if (!brandBgPng) return false;
-      for (const el of template.elements) {
-        if (hasExplicitBgRole) {
-          if (el.colorRole !== "background") continue;
-        } else {
-          if (el.color !== templateBgColor) continue;
-        }
-        const ov = art.elementOverrides?.shapes?.[el.id];
-        const ex = ov?.x ?? el.x ?? 0;
-        const ey = ov?.y ?? el.y ?? 0;
-        const ew = ov?.width ?? el.width ?? 0;
-        const eh = ov?.height ?? el.height ?? 0;
-        if (
-          ew * eh >= template.width * template.height * 0.65 &&
-          ex <= template.width * 0.2 &&
-          ey <= template.height * 0.2 &&
-          ex + ew >= template.width * 0.8 &&
-          ey + eh >= template.height * 0.8
-        ) return true;
-      }
-      return false;
+      return template.elements.some(el => el.colorRole === "background");
     })();
 
     // Draw background: use backgroundPng only if there's a large background shape to replace
@@ -1187,23 +1168,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
 
     const shouldSkipBackgroundShape = (el: CanvasElement) => {
       if (!brandBgPng || !hasLargeBgShape) return false;
-      if (hasExplicitBgRole) {
-        if (el.colorRole !== "background") return false;
-      } else {
-        if (el.color !== templateBgColor) return false;
-      }
-      const ov = art.elementOverrides?.shapes?.[el.id];
-      const x = ov?.x ?? el.x ?? 0;
-      const y = ov?.y ?? el.y ?? 0;
-      const w = ov?.width ?? el.width ?? 0;
-      const h = ov?.height ?? el.height ?? 0;
-      return (
-        w * h >= template.width * template.height * 0.65 &&
-        x <= template.width * 0.2 &&
-        y <= template.height * 0.2 &&
-        x + w >= template.width * 0.8 &&
-        y + h >= template.height * 0.8
-      );
+      return el.colorRole === "background";
     };
 
     // Draw elements
