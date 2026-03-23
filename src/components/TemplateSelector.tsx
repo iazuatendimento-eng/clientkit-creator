@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Check, ArrowLeft } from "lucide-react";
-import { drawNewShape } from "@/lib/canvasShapes";
+import { buildRoundedPolygonPath, drawNewShape, getPolygonVertices } from "@/lib/canvasShapes";
 
 interface TemplateRecord {
   id: string;
