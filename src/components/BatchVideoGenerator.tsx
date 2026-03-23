@@ -1641,7 +1641,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
             ctx.closePath();
           } else {
-            ctx.rect(destX, destY, destW, destH);
+            if (el.borderRadius && el.borderRadius > 0) {
+              ctx.roundRect(destX, destY, destW, destH, el.borderRadius);
+            } else {
+              ctx.rect(destX, destY, destW, destH);
+            }
           }
           ctx.clip();
           ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
