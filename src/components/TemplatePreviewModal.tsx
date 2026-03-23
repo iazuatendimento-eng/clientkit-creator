@@ -23,6 +23,7 @@ interface CanvasElement {
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
+  clipShape?: string;
   animated?: boolean;
   animationType?: string;
   animDuration?: number;
