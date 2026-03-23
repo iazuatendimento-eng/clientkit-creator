@@ -122,21 +122,38 @@ function renderMiniPreview(
     if (el.type === "rect") {
       ctx.fillStyle = color;
       const r = Math.min((el.borderRadius || 0) * scale, ew / 2, eh / 2);
-      if (r > 0) {
+      const buildRectPath = () => {
         ctx.beginPath();
-        ctx.moveTo(ex + r, ey);
-        ctx.lineTo(ex + ew - r, ey);
-        ctx.quadraticCurveTo(ex + ew, ey, ex + ew, ey + r);
-        ctx.lineTo(ex + ew, ey + eh - r);
-        ctx.quadraticCurveTo(ex + ew, ey + eh, ex + ew - r, ey + eh);
-        ctx.lineTo(ex + r, ey + eh);
-        ctx.quadraticCurveTo(ex, ey + eh, ex, ey + eh - r);
-        ctx.lineTo(ex, ey + r);
-        ctx.quadraticCurveTo(ex, ey, ex + r, ey);
-        ctx.closePath();
+        if (r > 0) {
+          ctx.moveTo(ex + r, ey);
+          ctx.lineTo(ex + ew - r, ey);
+          ctx.quadraticCurveTo(ex + ew, ey, ex + ew, ey + r);
+          ctx.lineTo(ex + ew, ey + eh - r);
+          ctx.quadraticCurveTo(ex + ew, ey + eh, ex + ew - r, ey + eh);
+          ctx.lineTo(ex + r, ey + eh);
+          ctx.quadraticCurveTo(ex, ey + eh, ex, ey + eh - r);
+          ctx.lineTo(ex, ey + r);
+          ctx.quadraticCurveTo(ex, ey, ex + r, ey);
+          ctx.closePath();
+        } else {
+          ctx.rect(ex, ey, ew, eh);
+        }
+      };
+      // Fill
+      const elOpacity = el.opacity != null ? el.opacity : 1;
+      if (elOpacity > 0) {
+        buildRectPath();
         ctx.fill();
-      } else {
-        ctx.fillRect(ex, ey, ew, eh);
+      }
+      // Border
+      if (el.borderWidth && el.borderWidth > 0) {
+        const savedAlpha = ctx.globalAlpha;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = el.borderColor || color;
+        ctx.lineWidth = Math.max(el.borderWidth * scale, 1);
+        buildRectPath();
+        ctx.stroke();
+        ctx.globalAlpha = savedAlpha;
       }
     } else if (el.type === "circle") {
       ctx.fillStyle = color;
