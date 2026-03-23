@@ -304,14 +304,21 @@ function renderMiniPreview(
       if (el.type === "image") {
         flushDeferredBordersInsideImage(el);
       }
-    } else if (el.type === "triangle") {
+    } else if (["triangle", "diamond", "hexagon", "pentagon", "star"].includes(el.type)) {
       ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(ex + ew / 2, ey);
-      ctx.lineTo(ex + ew, ey + eh);
-      ctx.lineTo(ex, ey + eh);
-      ctx.closePath();
+      const shapeRadius = Math.min((el.borderRadius || 0) * scale, ew / 2, eh / 2);
+      buildShapePath(el.type, ex, ey, ew, eh, shapeRadius);
       ctx.fill();
+
+      if (el.borderWidth && el.borderWidth > 0) {
+        const savedAlpha = ctx.globalAlpha;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = el.borderColor || color;
+        ctx.lineWidth = Math.max(Number(el.borderWidth) * scale, 1);
+        buildShapePath(el.type, ex, ey, ew, eh, shapeRadius);
+        ctx.stroke();
+        ctx.globalAlpha = savedAlpha;
+      }
     } else if (el.type === "line") {
       ctx.strokeStyle = color;
       ctx.lineWidth = Math.max((el.lineWidth || 2) * scale, 1);
