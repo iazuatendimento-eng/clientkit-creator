@@ -995,68 +995,16 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
         );
         ctx.fill();
         drawBorder(el);
-      } else if (el.type === "triangle") {
-        ctx.beginPath();
-        ctx.moveTo(el.x + el.width / 2, el.y);
-        ctx.lineTo(el.x + el.width, el.y + el.height);
-        ctx.lineTo(el.x, el.y + el.height);
-        ctx.closePath();
-        ctx.fill();
-        drawBorder(el);
-      } else if (el.type === "diamond") {
-        ctx.beginPath();
-        ctx.moveTo(el.x + el.width / 2, el.y);
-        ctx.lineTo(el.x + el.width, el.y + el.height / 2);
-        ctx.lineTo(el.x + el.width / 2, el.y + el.height);
-        ctx.lineTo(el.x, el.y + el.height / 2);
-        ctx.closePath();
-        ctx.fill();
-        drawBorder(el);
-      } else if (el.type === "hexagon") {
-        const cx = el.x + el.width / 2;
-        const cy = el.y + el.height / 2;
-        const r = Math.min(el.width, el.height) / 2;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const angle = (Math.PI / 3) * i - Math.PI / 2;
-          const px = cx + r * Math.cos(angle);
-          const py = cy + r * Math.sin(angle);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+      } else if (el.type === "triangle" || el.type === "diamond" || el.type === "hexagon" || el.type === "pentagon" || el.type === "star") {
+        const verts = getPolygonVertices(el.type, el.x, el.y, el.width, el.height);
+        const bRadius = el.borderRadius || 0;
+        if (bRadius > 0) {
+          buildRoundedPolygonPath(ctx, verts, bRadius);
+        } else {
+          ctx.beginPath();
+          verts.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y));
+          ctx.closePath();
         }
-        ctx.closePath();
-        ctx.fill();
-        drawBorder(el);
-      } else if (el.type === "pentagon") {
-        const cx = el.x + el.width / 2;
-        const cy = el.y + el.height / 2;
-        const r = Math.min(el.width, el.height) / 2;
-        ctx.beginPath();
-        for (let i = 0; i < 5; i++) {
-          const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
-          const px = cx + r * Math.cos(angle);
-          const py = cy + r * Math.sin(angle);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fill();
-        drawBorder(el);
-      } else if (el.type === "star") {
-        const cx = el.x + el.width / 2;
-        const cy = el.y + el.height / 2;
-        const outerR = Math.min(el.width, el.height) / 2;
-        const innerR = outerR * 0.4;
-        ctx.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const angle = (Math.PI / 5) * i - Math.PI / 2;
-          const r = i % 2 === 0 ? outerR : innerR;
-          const px = cx + r * Math.cos(angle);
-          const py = cy + r * Math.sin(angle);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
         ctx.fill();
         drawBorder(el);
       } else if (el.type === "line") {
