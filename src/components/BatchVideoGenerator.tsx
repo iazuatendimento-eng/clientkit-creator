@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
-import { drawNewShape } from "@/lib/canvasShapes";
+import { drawNewShape, getPolygonVertices, buildRoundedPolygonPath } from "@/lib/canvasShapes";
 import {
   DndContext,
   DragEndEvent,

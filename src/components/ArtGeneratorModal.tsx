@@ -6,7 +6,7 @@ import { Loader2, Download, Palette, ImageIcon, Search, Upload, Link, Mail, Chev
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { drawNewShape } from "@/lib/canvasShapes";
+import { drawNewShape, getPolygonVertices, buildRoundedPolygonPath } from "@/lib/canvasShapes";
 import { searchPexelsImages, searchImages, SearchImage } from "@/lib/imageSearch";
 import { ArtAdjustOverlay } from "@/components/ArtAdjustOverlay";
 
