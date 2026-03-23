@@ -397,6 +397,36 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
   const CANVAS_HEIGHT = 1920;
   const SCALE = 0.28; // Scale for display
 
+  const buildImagePlaceholderPath = (
+    ctx: CanvasRenderingContext2D,
+    el: CanvasElement,
+    shape: NonNullable<CanvasElement["clipShape"]> | "rect",
+  ) => {
+    if (shape === "circle") {
+      ctx.beginPath();
+      ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
+      return;
+    }
+
+    if ((ROUNDABLE_POLYGON_TYPES as readonly string[]).includes(shape)) {
+      const verts = getPolygonVertices(shape, el.x, el.y, el.width, el.height);
+      const bRadius = el.borderRadius || 0;
+      if (bRadius > 0) {
+        buildRoundedPolygonPath(ctx, verts, bRadius);
+      } else {
+        ctx.beginPath();
+        verts.forEach((v, i) => (i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)));
+        ctx.closePath();
+      }
+      return;
+    }
+
+    const radius = el.borderRadius || 0;
+    ctx.beginPath();
+    if (radius > 0) ctx.roundRect(el.x, el.y, el.width, el.height, radius);
+    else ctx.rect(el.x, el.y, el.width, el.height);
+  };
+
   const elements = currentPage === "content" ? contentElements : signatureElements;
   const setElements = currentPage === "content" ? setContentElements : setSignatureElements;
 
@@ -816,24 +846,14 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     } else if (el.type === "image") {
       // Image placeholder with high-contrast reference
       ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
-      const shape = el.clipShape || "rect";
-      if (shape === "circle") {
-        ctx.beginPath();
-        ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
-        ctx.lineWidth = 3;
-        ctx.setLineDash([10, 6]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else {
-        ctx.fillRect(el.x, el.y, el.width, el.height);
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
-        ctx.lineWidth = 3;
-        ctx.setLineDash([10, 6]);
-        ctx.strokeRect(el.x, el.y, el.width, el.height);
-        ctx.setLineDash([]);
-      }
+      const shape = (el.clipShape || "rect") as NonNullable<CanvasElement["clipShape"]> | "rect";
+      buildImagePlaceholderPath(ctx, el, shape);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
       // Draw image icon and label with high contrast
       const centerX = el.x + el.width / 2;
       const centerY = el.y + el.height / 2;
@@ -1340,24 +1360,14 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
       } else if (el.type === "image") {
         // Image placeholder with high-contrast reference in drawCanvas
         ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
-        const shape = el.clipShape || "rect";
-        if (shape === "circle") {
-          ctx.beginPath();
-          ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, el.height / 2, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
-          ctx.lineWidth = 3;
-          ctx.setLineDash([10, 6]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        } else {
-          ctx.fillRect(el.x, el.y, el.width, el.height);
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
-          ctx.lineWidth = 3;
-          ctx.setLineDash([10, 6]);
-          ctx.strokeRect(el.x, el.y, el.width, el.height);
-          ctx.setLineDash([]);
-        }
+        const shape = (el.clipShape || "rect") as NonNullable<CanvasElement["clipShape"]> | "rect";
+        buildImagePlaceholderPath(ctx, el, shape);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 6]);
+        ctx.stroke();
+        ctx.setLineDash([]);
         // Draw icon and label
         const centerX = el.x + el.width / 2;
         const centerY = el.y + el.height / 2;
