@@ -47,13 +47,21 @@ const SAMPLE_CLIENT = "IAZU Digital Brasil";
 
 function applyBrandToElement(el: any, brand: BrandColors): any {
   const clone = { ...el };
+  const roleToColor = (role: string) => {
+    if (role === "background") return brand.primary;
+    if (role === "text") return brand.secondary;
+    if (role === "accessory1" || role === "accessory2") return brand.secondary;
+    return null;
+  };
   // Apply colors based on colorRole
-  if (clone.colorRole === "background") {
-    clone.color = brand.primary;
-  } else if (clone.colorRole === "text") {
-    clone.color = brand.secondary;
-  } else if (clone.colorRole === "accessory1" || clone.colorRole === "accessory2") {
-    clone.color = brand.secondary;
+  if (clone.colorRole) {
+    const c = roleToColor(clone.colorRole);
+    if (c) clone.color = c;
+  }
+  // Apply border color based on borderColorRole
+  if (clone.borderColorRole) {
+    const bc = roleToColor(clone.borderColorRole);
+    if (bc) clone.borderColor = bc;
   }
   if (clone.type === "text") {
     clone.color = brand.text;
