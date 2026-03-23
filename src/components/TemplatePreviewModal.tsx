@@ -23,6 +23,7 @@ interface CanvasElement {
   borderRadius?: number;
   borderWidth?: number;
   borderColor?: string;
+  clipShape?: string;
   animated?: boolean;
   animationType?: string;
   animDuration?: number;
@@ -128,6 +129,17 @@ export function TemplatePreviewModal({
       return `radial-gradient(circle, ${hexToRgba(color1, opacity1)}, ${hexToRgba(color2, opacity2)})`;
     }
     return `linear-gradient(${angle}deg, ${hexToRgba(color1, opacity1)}, ${hexToRgba(color2, opacity2)})`;
+  };
+
+  const getClipPathStyle = (el: CanvasElement): React.CSSProperties => {
+    const shape = (el as any).clipShape || "rect";
+    if (shape === "circle") return { borderRadius: "50%" };
+    if (shape === "triangle") return { clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" };
+    if (shape === "diamond") return { clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" };
+    if (shape === "hexagon") return { clipPath: "polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)" };
+    if (shape === "pentagon") return { clipPath: "polygon(50% 0%, 97.6% 34.5%, 79.4% 90.5%, 20.6% 90.5%, 2.4% 34.5%)" };
+    if (shape === "star") return { clipPath: "polygon(50% 0%, 61.8% 35%, 100% 35%, 69.1% 57%, 80.9% 91%, 50% 70%, 19.1% 91%, 30.9% 57%, 0% 35%, 38.2% 35%)" };
+    return {};
   };
 
   const renderElement = (el: CanvasElement) => {
@@ -237,19 +249,21 @@ export function TemplatePreviewModal({
     }
 
     if (el.type === "image") {
+      const clipStyle = getClipPathStyle(el);
       return (
         <div
           key={`${el.id}-${animKey}`}
           className={animClass}
           style={{
             ...baseStyle,
+            ...clipStyle,
             backgroundColor: "rgba(255,255,255,0.05)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 10 * previewScale,
             color: "rgba(255,255,255,0.4)",
-            border: "1px dashed rgba(255,255,255,0.2)",
+            border: el.borderWidth ? `${el.borderWidth * previewScale}px solid ${el.borderColor || "#fff"}` : "1px dashed rgba(255,255,255,0.2)",
             overflow: "hidden",
           }}
         >
@@ -278,11 +292,12 @@ export function TemplatePreviewModal({
     }
 
     // Default: rect and other shapes
+    const defaultClipStyle = getClipPathStyle(el);
     return (
       <div
         key={`${el.id}-${animKey}`}
         className={animClass}
-        style={baseStyle}
+        style={{ ...baseStyle, ...defaultClipStyle }}
       />
     );
   };
