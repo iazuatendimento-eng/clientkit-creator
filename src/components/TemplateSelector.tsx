@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Check, ArrowLeft } from "lucide-react";
-import { drawNewShape } from "@/lib/canvasShapes";
+import { buildRoundedPolygonPath, drawNewShape, getPolygonVertices } from "@/lib/canvasShapes";
 
 interface TemplateRecord {
   id: string;
@@ -138,6 +138,36 @@ function renderMiniPreview(
     }
   };
 
+  const buildShapePath = (shape: string, x: number, y: number, width: number, height: number, radius: number = 0) => {
+    const normalizedShape = shape || "rect";
+    const clampedRadius = Math.min(Math.max(radius, 0), Math.min(width, height) / 2);
+
+    if (normalizedShape === "circle") {
+      ctx.beginPath();
+      ctx.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+      return;
+    }
+
+    if (["triangle", "diamond", "hexagon", "pentagon", "star"].includes(normalizedShape)) {
+      const vertices = getPolygonVertices(normalizedShape, x, y, width, height);
+      if (vertices.length >= 3) {
+        if (clampedRadius > 0) {
+          buildRoundedPolygonPath(ctx, vertices, clampedRadius);
+        } else {
+          ctx.beginPath();
+          vertices.forEach((vertex, index) => {
+            if (index === 0) ctx.moveTo(vertex.x, vertex.y);
+            else ctx.lineTo(vertex.x, vertex.y);
+          });
+          ctx.closePath();
+        }
+        return;
+      }
+    }
+
+    buildRectPath(x, y, width, height, clampedRadius);
+  };
+
   const drawRectBorder = (rectEl: any) => {
     const rx = (rectEl.x || 0) * scale;
     const ry = (rectEl.y || 0) * scale;
@@ -247,37 +277,7 @@ function renderMiniPreview(
         ctx.save();
         const clipShape = el.clipShape || "rect";
         const cr = Math.min((el.borderRadius || 0) * scale, ew / 2, eh / 2);
-        ctx.beginPath();
-        if (clipShape === "circle") {
-          ctx.ellipse(ex + ew / 2, ey + eh / 2, ew / 2, eh / 2, 0, 0, Math.PI * 2);
-        } else if (clipShape === "triangle") {
-          ctx.moveTo(ex + ew / 2, ey); ctx.lineTo(ex + ew, ey + eh); ctx.lineTo(ex, ey + eh); ctx.closePath();
-        } else if (clipShape === "diamond") {
-          ctx.moveTo(ex + ew / 2, ey); ctx.lineTo(ex + ew, ey + eh / 2); ctx.lineTo(ex + ew / 2, ey + eh); ctx.lineTo(ex, ey + eh / 2); ctx.closePath();
-        } else if (clipShape === "hexagon") {
-          const hcx = ex + ew / 2, hcy = ey + eh / 2, hr = Math.min(ew, eh) / 2;
-          for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
-          ctx.closePath();
-        } else if (clipShape === "pentagon") {
-          const pcx = ex + ew / 2, pcy = ey + eh / 2, pr = Math.min(ew, eh) / 2;
-          for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
-          ctx.closePath();
-        } else if (clipShape === "star") {
-          const scx = ex + ew / 2, scy = ey + eh / 2, outerR = Math.min(ew, eh) / 2, innerR = outerR * 0.4;
-          for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
-          ctx.closePath();
-        } else if (cr > 0) {
-          ctx.moveTo(ex + cr, ey); ctx.lineTo(ex + ew - cr, ey);
-          ctx.quadraticCurveTo(ex + ew, ey, ex + ew, ey + cr);
-          ctx.lineTo(ex + ew, ey + eh - cr);
-          ctx.quadraticCurveTo(ex + ew, ey + eh, ex + ew - cr, ey + eh);
-          ctx.lineTo(ex + cr, ey + eh);
-          ctx.quadraticCurveTo(ex, ey + eh, ex, ey + eh - cr);
-          ctx.lineTo(ex, ey + cr);
-          ctx.quadraticCurveTo(ex, ey, ex + cr, ey);
-        } else {
-          ctx.rect(ex, ey, ew, eh);
-        }
+        buildShapePath(clipShape, ex, ey, ew, eh, cr);
         ctx.clip();
         const useContain = el.type === "logo" || el.type === "mascot" || el.type === "contact";
         const sf = useContain
@@ -304,14 +304,21 @@ function renderMiniPreview(
       if (el.type === "image") {
         flushDeferredBordersInsideImage(el);
       }
-    } else if (el.type === "triangle") {
+    } else if (["triangle", "diamond", "hexagon", "pentagon", "star"].includes(el.type)) {
       ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(ex + ew / 2, ey);
-      ctx.lineTo(ex + ew, ey + eh);
-      ctx.lineTo(ex, ey + eh);
-      ctx.closePath();
+      const shapeRadius = Math.min((el.borderRadius || 0) * scale, ew / 2, eh / 2);
+      buildShapePath(el.type, ex, ey, ew, eh, shapeRadius);
       ctx.fill();
+
+      if (el.borderWidth && el.borderWidth > 0) {
+        const savedAlpha = ctx.globalAlpha;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = el.borderColor || color;
+        ctx.lineWidth = Math.max(Number(el.borderWidth) * scale, 1);
+        buildShapePath(el.type, ex, ey, ew, eh, shapeRadius);
+        ctx.stroke();
+        ctx.globalAlpha = savedAlpha;
+      }
     } else if (el.type === "line") {
       ctx.strokeStyle = color;
       ctx.lineWidth = Math.max((el.lineWidth || 2) * scale, 1);
