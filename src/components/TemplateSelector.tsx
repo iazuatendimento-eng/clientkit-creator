@@ -38,6 +38,7 @@ interface PreviewAssets {
   logo: HTMLImageElement | null;
   mascot: HTMLImageElement | null;
   contact: HTMLImageElement | null;
+  stockImage: HTMLImageElement | null;
 }
 
 const PREVIEW_MAX = 160;
