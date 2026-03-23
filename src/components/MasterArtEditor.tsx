@@ -2084,7 +2084,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
                   </div>
                 )}
 
-                {(selectedEl.type === "rect" || selectedEl.type === "image") && (
+                {(selectedEl.type === "rect" || selectedEl.type === "image" || (ROUNDABLE_POLYGON_TYPES as readonly string[]).includes(selectedEl.type)) && (
                   <div className="p-2 bg-primary/10 rounded-md">
                     <Label className="text-xs font-medium">Arredondamento: {selectedEl.borderRadius || 0}px</Label>
                     <Slider
