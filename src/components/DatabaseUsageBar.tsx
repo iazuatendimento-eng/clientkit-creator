@@ -28,7 +28,9 @@ export const DatabaseUsageBar = () => {
   const [usageMB, setUsageMB] = useState<number | null>(null);
   const [breakdown, setBreakdown] = useState<{ table: string; count: number; mb: number }[]>([]);
   const [storageFiles, setStorageFiles] = useState<number>(0);
+  const [completedCount, setCompletedCount] = useState<number>(0);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const { toast } = useToast();
 
