@@ -238,19 +238,21 @@ export function TemplatePreviewModal({
     }
 
     if (el.type === "image") {
+      const clipStyle = getClipPathStyle(el);
       return (
         <div
           key={`${el.id}-${animKey}`}
           className={animClass}
           style={{
             ...baseStyle,
+            ...clipStyle,
             backgroundColor: "rgba(255,255,255,0.05)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 10 * previewScale,
             color: "rgba(255,255,255,0.4)",
-            border: "1px dashed rgba(255,255,255,0.2)",
+            border: el.borderWidth ? `${el.borderWidth * previewScale}px solid ${el.borderColor || "#fff"}` : "1px dashed rgba(255,255,255,0.2)",
             overflow: "hidden",
           }}
         >
