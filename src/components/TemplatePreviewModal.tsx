@@ -292,11 +292,12 @@ export function TemplatePreviewModal({
     }
 
     // Default: rect and other shapes
+    const defaultClipStyle = getClipPathStyle(el);
     return (
       <div
         key={`${el.id}-${animKey}`}
         className={animClass}
-        style={baseStyle}
+        style={{ ...baseStyle, ...defaultClipStyle }}
       />
     );
   };
