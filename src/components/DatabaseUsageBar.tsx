@@ -68,6 +68,13 @@ export const DatabaseUsageBar = () => {
 
       setStorageFiles(storageCounts.reduce((a, b) => a + b, 0));
 
+      // Count completed briefs (dead weight)
+      const { count: doneCount } = await supabase
+        .from("project_briefs")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "completed");
+      setCompletedCount(doneCount || 0);
+
       let totalKB = 0;
       for (const { table, count } of counts) {
         const avgKB = TABLE_AVG_SIZES[table] || 1;
