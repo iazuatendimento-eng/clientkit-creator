@@ -622,7 +622,7 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
         <div className="w-20" />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4">
         {templates.map((tmpl, idx) => (
           <AnimatedTemplateCard
             key={tmpl.id}
