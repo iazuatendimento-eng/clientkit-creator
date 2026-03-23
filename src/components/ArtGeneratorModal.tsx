@@ -791,44 +791,19 @@ async function renderArt(
             ctx.drawImage(img, mx, my, mw, mh);
           }
         }
-      } else if (el.type === "diamond") {
-        ctx.fillStyle = getFill(el, x, y, w, h, acc2) as string;
-        ctx.beginPath();
-        ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h / 2);
-        ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h / 2);
-        ctx.closePath(); ctx.fill(); drawBorder(el);
-      } else if (el.type === "hexagon") {
-        ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
-        const cx2 = x + w / 2, cy2 = y + h / 2, r2 = Math.min(w, h) / 2;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const a = (Math.PI / 3) * i - Math.PI / 2;
-          const px = cx2 + r2 * Math.cos(a), py = cy2 + r2 * Math.sin(a);
-          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      } else if (el.type === "diamond" || el.type === "hexagon" || el.type === "pentagon" || el.type === "star") {
+        const colorMap: Record<string, string> = { diamond: acc2, hexagon: acc1, pentagon: acc2, star: acc1 };
+        ctx.fillStyle = getFill(el, x, y, w, h, colorMap[el.type] || acc1) as string;
+        const verts = getPolygonVertices(el.type, x, y, w, h);
+        const bRadius = el.borderRadius || 0;
+        if (bRadius > 0) {
+          buildRoundedPolygonPath(ctx, verts, bRadius);
+        } else {
+          ctx.beginPath();
+          verts.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y));
+          ctx.closePath();
         }
-        ctx.closePath(); ctx.fill(); drawBorder(el);
-      } else if (el.type === "pentagon") {
-        ctx.fillStyle = getFill(el, x, y, w, h, acc2) as string;
-        const cx2 = x + w / 2, cy2 = y + h / 2, r2 = Math.min(w, h) / 2;
-        ctx.beginPath();
-        for (let i = 0; i < 5; i++) {
-          const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
-          const px = cx2 + r2 * Math.cos(a), py = cy2 + r2 * Math.sin(a);
-          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-        }
-        ctx.closePath(); ctx.fill(); drawBorder(el);
-      } else if (el.type === "star") {
-        ctx.fillStyle = getFill(el, x, y, w, h, acc1) as string;
-        const cx2 = x + w / 2, cy2 = y + h / 2;
-        const outerR = Math.min(w, h) / 2, innerR = outerR * 0.4;
-        ctx.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const a = (Math.PI / 5) * i - Math.PI / 2;
-          const r2 = i % 2 === 0 ? outerR : innerR;
-          const px = cx2 + r2 * Math.cos(a), py = cy2 + r2 * Math.sin(a);
-          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-        }
-        ctx.closePath(); ctx.fill(); drawBorder(el);
+        ctx.fill(); drawBorder(el);
       } else if (el.type === "polkaDots") {
         const color = getColor(el, acc1);
         const dotRadius = Math.min(w, h) * 0.08;
