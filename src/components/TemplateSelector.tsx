@@ -118,48 +118,104 @@ function renderMiniPreview(
   }
 
   // Render elements
+  const deferredTransparentRectBorders: any[] = [];
+
+  const buildRectPath = (x: number, y: number, width: number, height: number, radius: number) => {
+    ctx.beginPath();
+    if (radius > 0) {
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    } else {
+      ctx.rect(x, y, width, height);
+    }
+  };
+
+  const drawRectBorder = (rectEl: any) => {
+    const rx = (rectEl.x || 0) * scale;
+    const ry = (rectEl.y || 0) * scale;
+    const rw = (rectEl.width || 100) * scale;
+    const rh = (rectEl.height || 100) * scale;
+    const rr = Math.min((rectEl.borderRadius || 0) * scale, rw / 2, rh / 2);
+    const borderW = Number(rectEl.borderWidth) || 0;
+    if (borderW <= 0) return;
+
+    ctx.save();
+    if (rectEl.rotation) {
+      const cx = rx + rw / 2;
+      const cy = ry + rh / 2;
+      ctx.translate(cx, cy);
+      ctx.rotate((Number(rectEl.rotation) * Math.PI) / 180);
+      ctx.translate(-cx, -cy);
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = rectEl.borderColor || rectEl.color || rectEl.fill || "#cccccc";
+    ctx.lineWidth = Math.max(borderW * scale, 1.25);
+    buildRectPath(rx, ry, rw, rh, rr);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  const flushDeferredBordersInsideImage = (imageEl: any) => {
+    const ix = Number(imageEl.x || 0);
+    const iy = Number(imageEl.y || 0);
+    const iw = Number(imageEl.width || 0);
+    const ih = Number(imageEl.height || 0);
+
+    for (let i = deferredTransparentRectBorders.length - 1; i >= 0; i--) {
+      const borderEl = deferredTransparentRectBorders[i];
+      const bx = Number(borderEl.x || 0);
+      const by = Number(borderEl.y || 0);
+      const bw = Number(borderEl.width || 0);
+      const bh = Number(borderEl.height || 0);
+      const isInsideImage = bx >= ix - 1 && by >= iy - 1 && bx + bw <= ix + iw + 1 && by + bh <= iy + ih + 1;
+
+      if (isInsideImage) {
+        drawRectBorder(borderEl);
+        deferredTransparentRectBorders.splice(i, 1);
+      }
+    }
+  };
+
   for (const el of elements) {
     const ex = (el.x || 0) * scale;
     const ey = (el.y || 0) * scale;
     const ew = (el.width || 100) * scale;
     const eh = (el.height || 100) * scale;
     const color = el.color || el.fill || "#cccccc";
+    const rawOpacity = el.opacity != null ? Number(el.opacity) : 1;
+    const normalizedOpacity = Number.isFinite(rawOpacity) ? (rawOpacity > 1 ? rawOpacity / 100 : rawOpacity) : 1;
 
-    ctx.globalAlpha = el.opacity != null ? el.opacity : 1;
+    ctx.globalAlpha = normalizedOpacity;
 
     if (el.type === "rect") {
+      const borderOnlyRect = normalizedOpacity <= 0 && Number(el.borderWidth || 0) > 0;
+      if (borderOnlyRect) {
+        deferredTransparentRectBorders.push(el);
+        ctx.globalAlpha = 1;
+        continue;
+      }
+
       ctx.fillStyle = color;
       const r = Math.min((el.borderRadius || 0) * scale, ew / 2, eh / 2);
-      const buildRectPath = () => {
-        ctx.beginPath();
-        if (r > 0) {
-          ctx.moveTo(ex + r, ey);
-          ctx.lineTo(ex + ew - r, ey);
-          ctx.quadraticCurveTo(ex + ew, ey, ex + ew, ey + r);
-          ctx.lineTo(ex + ew, ey + eh - r);
-          ctx.quadraticCurveTo(ex + ew, ey + eh, ex + ew - r, ey + eh);
-          ctx.lineTo(ex + r, ey + eh);
-          ctx.quadraticCurveTo(ex, ey + eh, ex, ey + eh - r);
-          ctx.lineTo(ex, ey + r);
-          ctx.quadraticCurveTo(ex, ey, ex + r, ey);
-          ctx.closePath();
-        } else {
-          ctx.rect(ex, ey, ew, eh);
-        }
-      };
-      // Fill
-      const elOpacity = el.opacity != null ? el.opacity : 1;
-      if (elOpacity > 0) {
-        buildRectPath();
+      if (normalizedOpacity > 0) {
+        buildRectPath(ex, ey, ew, eh, r);
         ctx.fill();
       }
-      // Border
+
       if (el.borderWidth && el.borderWidth > 0) {
         const savedAlpha = ctx.globalAlpha;
         ctx.globalAlpha = 1;
         ctx.strokeStyle = el.borderColor || color;
-        ctx.lineWidth = Math.max(el.borderWidth * scale, 1);
-        buildRectPath();
+        ctx.lineWidth = Math.max(Number(el.borderWidth) * scale, 1);
+        buildRectPath(ex, ey, ew, eh, r);
         ctx.stroke();
         ctx.globalAlpha = savedAlpha;
       }
@@ -244,6 +300,10 @@ function renderMiniPreview(
         ctx.textAlign = "center";
         ctx.fillText(label, ex + ew / 2, ey + eh / 2 + ew * 0.15);
       }
+
+      if (el.type === "image") {
+        flushDeferredBordersInsideImage(el);
+      }
     } else if (el.type === "triangle") {
       ctx.fillStyle = color;
       ctx.beginPath();
@@ -269,6 +329,10 @@ function renderMiniPreview(
     }
 
     ctx.globalAlpha = 1;
+  }
+
+  if (deferredTransparentRectBorders.length > 0) {
+    deferredTransparentRectBorders.forEach((rectEl) => drawRectBorder(rectEl));
   }
 
   // Page indicator dot
