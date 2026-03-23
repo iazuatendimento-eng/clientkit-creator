@@ -164,9 +164,28 @@ function renderMiniPreview(
 
       if (assetImage && assetImage.complete && assetImage.naturalWidth > 0 && assetImage.naturalHeight > 0) {
         ctx.save();
+        const clipShape = el.clipShape || "rect";
         const cr = Math.min((el.borderRadius || 0) * scale, ew / 2, eh / 2);
         ctx.beginPath();
-        if (cr > 0) {
+        if (clipShape === "circle") {
+          ctx.ellipse(ex + ew / 2, ey + eh / 2, ew / 2, eh / 2, 0, 0, Math.PI * 2);
+        } else if (clipShape === "triangle") {
+          ctx.moveTo(ex + ew / 2, ey); ctx.lineTo(ex + ew, ey + eh); ctx.lineTo(ex, ey + eh); ctx.closePath();
+        } else if (clipShape === "diamond") {
+          ctx.moveTo(ex + ew / 2, ey); ctx.lineTo(ex + ew, ey + eh / 2); ctx.lineTo(ex + ew / 2, ey + eh); ctx.lineTo(ex, ey + eh / 2); ctx.closePath();
+        } else if (clipShape === "hexagon") {
+          const hcx = ex + ew / 2, hcy = ey + eh / 2, hr = Math.min(ew, eh) / 2;
+          for (let i = 0; i < 6; i++) { const a = (Math.PI / 3) * i - Math.PI / 2; if (i === 0) ctx.moveTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); else ctx.lineTo(hcx + hr * Math.cos(a), hcy + hr * Math.sin(a)); }
+          ctx.closePath();
+        } else if (clipShape === "pentagon") {
+          const pcx = ex + ew / 2, pcy = ey + eh / 2, pr = Math.min(ew, eh) / 2;
+          for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 / 5) * i - Math.PI / 2; if (i === 0) ctx.moveTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); else ctx.lineTo(pcx + pr * Math.cos(a), pcy + pr * Math.sin(a)); }
+          ctx.closePath();
+        } else if (clipShape === "star") {
+          const scx = ex + ew / 2, scy = ey + eh / 2, outerR = Math.min(ew, eh) / 2, innerR = outerR * 0.4;
+          for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2; const r = i % 2 === 0 ? outerR : innerR; if (i === 0) ctx.moveTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); else ctx.lineTo(scx + r * Math.cos(a), scy + r * Math.sin(a)); }
+          ctx.closePath();
+        } else if (cr > 0) {
           ctx.moveTo(ex + cr, ey); ctx.lineTo(ex + ew - cr, ey);
           ctx.quadraticCurveTo(ex + ew, ey, ex + ew, ey + cr);
           ctx.lineTo(ex + ew, ey + eh - cr);
