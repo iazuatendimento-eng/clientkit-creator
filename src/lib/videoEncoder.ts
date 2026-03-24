@@ -2466,7 +2466,8 @@ export async function encodeVideoSimple(
     }
   };
 
-  const useFramesPerPage = isMobileDevice ? effectiveFramesPerPage : framesPerPage;
+  const useCumulativeFrames = isMobileDevice ? mobilePPInfo.cumulativeFrames : simpleCumulativeFrames;
+  const useFramesPerPageArr = isMobileDevice ? mobilePPInfo.framesPerPageArr : simpleFramesPerPageArr;
   const useTotalFrames = isMobileDevice ? effectiveTotalFrames : totalFrames;
 
   return new Promise((resolve, reject) => {
