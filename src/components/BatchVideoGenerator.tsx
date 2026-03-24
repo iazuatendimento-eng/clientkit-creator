@@ -3265,11 +3265,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           }> = [
             { label: `email (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 150_000, overrides: {} },
             {
-              label: "mínimo sem vídeo",
+              label: "modo leve (com vídeo)",
               timeoutMs: 90_000,
               overrides: {
                 fps: 10,
-                backgroundVideoUrls: undefined,
                 requireEmailSafePreview: true,
               },
             },
