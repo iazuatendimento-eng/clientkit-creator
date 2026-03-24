@@ -1065,19 +1065,33 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       
       const clientIds = [...new Set(batchItems.map(item => item.clientId))];
 
-      // Fetch image_type, particularity_type AND brand_kit to restore assets stripped during save
-      const { data: clientsData } = await supabase
-        .from("client_data")
-        .select("id, image_type, particularity_type, brand_kit")
-        .in("id", clientIds);
+      // Fetch lightweight client metadata + brand kit URLs via RPC (avoids 14MB+ brand_kit JSONB)
+      const [{ data: clientsMeta }, { data: brandKitUrls }] = await Promise.all([
+        supabase
+          .from("client_data")
+          .select("id, image_type, particularity_type")
+          .in("id", clientIds),
+        supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
+      ]);
 
       const imageTypeMap: Record<string, string> = {};
       const particularityMap: Record<string, string> = {};
-      const freshBrandKitMap: Record<string, any> = {};
-      clientsData?.forEach(c => { 
+      clientsMeta?.forEach((c: any) => { 
         if (c.image_type) imageTypeMap[c.id] = c.image_type;
         if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
-        if (c.brand_kit) freshBrandKitMap[c.id] = c.brand_kit;
+      });
+
+      // Build a lightweight brand kit map from RPC results (URLs only, no base64)
+      const freshBrandKitMap: Record<string, any> = {};
+      (brandKitUrls || []).forEach((r: any) => {
+        freshBrandKitMap[r.id] = {
+          logo: r.logo || "",
+          contactInfo: r.contact_info || "",
+          mascot: r.mascot || "",
+          pngs: [r.logo || "", r.contact_info || "", r.mascot || ""],
+          colors: r.colors || [],
+          backgroundPng: r.background_png || "",
+        };
       });
 
       const videos: ClientVideo[] = batchItems.map((item) => {
@@ -1148,47 +1162,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       setClientVideos(videos);
       setIsLoading(false);
 
-      const isArtBatch = batch.type === "art";
-
-      // Art history: open immediately and lazily prepare overlays when user opens a card
-      if (isArtBatch) {
-        return;
-      }
-
-      // Video history: regenerate overlay layers upfront
-      setIsGenerating(true);
-      setGenerationStatus("Reconstruindo camadas...");
-      try {
-        const updatedVideos = [...videos];
-        const BATCH_SIZE = 3;
-        for (let start = 0; start < updatedVideos.length; start += BATCH_SIZE) {
-          const chunk = updatedVideos.slice(start, start + BATCH_SIZE);
-          const results = await Promise.all(chunk.map(video => regenerateSingleVideo(video)));
-          for (let j = 0; j < results.length; j++) {
-            const idx = start + j;
-            updatedVideos[idx] = {
-              ...updatedVideos[idx],
-              pages: results[j].pages,
-              overlayPages: results[j].overlayPages,
-              frameOverlayPages: results[j].frameOverlayPages,
-              preImageOverlayPages: results[j].preImageOverlayPages,
-              logoOverlayPages: results[j].logoOverlayPages,
-              fullPages: results[j].fullPages,
-            };
-          }
-          setGenerationStatus(`Reconstruindo... (${Math.min(start + BATCH_SIZE, updatedVideos.length)}/${updatedVideos.length})`);
-          setClientVideos([...updatedVideos]);
-        }
-
-        const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
-        if (videosNeedingFetch.length > 0) {
-          setGenerationStatus("Buscando vídeos de fundo...");
-          await autoFetchPexelsCovers(updatedVideos);
-        }
-      } finally {
-        setIsGenerating(false);
-        setGenerationStatus("");
-      }
+      // Overlays are rebuilt lazily when the user clicks on each card (see onClick handler).
+      // This avoids the expensive upfront regeneration of all overlay layers.
     } catch (error) {
       console.error("Error loading batch:", error);
       toast({
