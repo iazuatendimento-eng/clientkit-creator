@@ -508,23 +508,26 @@ const CardCoverPreview = memo(({
 
   const renderSinglePage = (pageIdx: number, skipAspectRatio = false) => {
     const isSignature = pageIdx === allPages - 1 && allPages > 1;
-    const signatureFullPage = isSignature ? (video.fullPages?.[pageIdx] || "") : "";
-    const useSignatureComposite = !!signatureFullPage;
-    const pageBaseImage = useSignatureComposite ? signatureFullPage : (video.pages[pageIdx] || "");
+    const fullCompositePage = video.fullPages?.[pageIdx] || "";
+    const pgOverlay = video.overlayPages?.[pageIdx];
+    const pgFrame = video.frameOverlayPages?.[pageIdx];
+    const pgPreImage = video.preImageOverlayPages?.[pageIdx];
+    const pgLogo = video.logoOverlayPages?.[pageIdx];
+    const hasAnyOverlayLayer = [pgPreImage, pgFrame, pgOverlay, pgLogo].some(
+      (layer) => typeof layer === "string" && layer !== ""
+    );
+    const useCompositeFallback = !!fullCompositePage && (isSignature || !hasAnyOverlayLayer);
+    const pageBaseImage = useCompositeFallback ? fullCompositePage : (video.pages[pageIdx] || "");
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
     const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
     const pgHasVideo = !!pgActiveUrl && !videoGiveUp[pageIdx];
-    const pgOverlay = video.overlayPages?.[pageIdx];
-    const pgFrame = video.frameOverlayPages?.[pageIdx];
     const effectiveFrameOverlay = (pgFrame && pgFrame !== "")
       ? pgFrame
       : ((pgOverlay && pgOverlay !== "") ? pgOverlay : "");
     const effectiveTextOverlay = (pgOverlay && pgOverlay !== "" && pgOverlay !== effectiveFrameOverlay)
       ? pgOverlay
       : "";
-    const pgPreImage = video.preImageOverlayPages?.[pageIdx];
-    const pgLogo = video.logoOverlayPages?.[pageIdx];
     const isDragOver = dragOverPage === pageIdx;
     const isCurrentPage = pageIdx === currentPage;
 
@@ -601,7 +604,7 @@ const CardCoverPreview = memo(({
           </div>
         )}
 
-        {!useSignatureComposite && pgPreImage && pgPreImage !== "" && (
+        {!useCompositeFallback && pgPreImage && pgPreImage !== "" && (
           <img
             src={pgPreImage}
             alt=""
@@ -611,7 +614,7 @@ const CardCoverPreview = memo(({
           />
         )}
 
-        {pgHasVideo && !imageRect && (
+        {!useCompositeFallback && pgHasVideo && !imageRect && (
           <video
             key={`preview-video-fallback-${video.cardId}-${pageIdx}-${currentRetryKey}`}
             src={pgActiveUrl!}
@@ -625,7 +628,7 @@ const CardCoverPreview = memo(({
           />
         )}
 
-        {pgHasVideo && imageRect && (() => {
+        {!useCompositeFallback && pgHasVideo && imageRect && (() => {
           const adj = video.pageImageAdjustments?.[pageIdx];
           const videoTransform: React.CSSProperties = {};
           if (adj && imageElSize && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
@@ -710,13 +713,13 @@ const CardCoverPreview = memo(({
           );
         })()}
 
-        {!useSignatureComposite && effectiveFrameOverlay && (
+        {!useCompositeFallback && effectiveFrameOverlay && (
           <img src={effectiveFrameOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`} style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined} draggable={false} />
         )}
-        {!useSignatureComposite && effectiveTextOverlay && (
+        {!useCompositeFallback && effectiveTextOverlay && (
           <img src={effectiveTextOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`} style={{ animationDuration: `${textAnimDuration}s` }} draggable={false} />
         )}
-        {!useSignatureComposite && pgLogo && pgLogo !== "" && (
+        {!useCompositeFallback && pgLogo && pgLogo !== "" && (
           <img src={pgLogo} alt="" className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`} draggable={false} />
         )}
 
@@ -800,7 +803,13 @@ const CardCoverPreview = memo(({
                 : null;
               const thumbActiveVideoUrl = thumbVideoUrl || thumbFallbackVideoUrl;
               const hasThumbVideo = !!thumbActiveVideoUrl && !videoGiveUp[i] && !isThumbSignature;
-              const useFullPageThumb = !!video.fullPages?.[i] && !hasThumbVideo;
+              const thumbHasAnyOverlayLayer = [
+                video.preImageOverlayPages?.[i],
+                video.frameOverlayPages?.[i],
+                video.overlayPages?.[i],
+                video.logoOverlayPages?.[i],
+              ].some((layer) => typeof layer === "string" && layer !== "");
+              const useFullPageThumb = !!video.fullPages?.[i] && (!thumbHasAnyOverlayLayer || !hasThumbVideo);
               const thumbRetryKey = videoRetryKey[i] ?? 0;
               return (
                 <div
@@ -1382,10 +1391,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   const baseVideo = overlayQueue.shift();
                   if (!baseVideo) break;
                   try {
-                    const result = await regenerateSingleVideo({
-                      ...baseVideo,
-                      searchedImages: baseVideo.pageTexts.map(() => ""),
-                    });
+                    const result = await regenerateSingleVideo(baseVideo);
                     setClientVideos((prev) =>
                       prev.map((v) =>
                         v.cardId === baseVideo.cardId
@@ -1395,8 +1401,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                               frameOverlayPages: result.frameOverlayPages,
                               preImageOverlayPages: result.preImageOverlayPages,
                               logoOverlayPages: result.logoOverlayPages,
-                              fullPages: result.fullPages,
-                              // Keep saved pages (don't override with empty-background renders)
+                              // Keep saved pages/fullPages to avoid visual flicker while overlays hydrate
                             }
                           : v
                       )
