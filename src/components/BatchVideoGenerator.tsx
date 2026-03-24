@@ -508,23 +508,26 @@ const CardCoverPreview = memo(({
 
   const renderSinglePage = (pageIdx: number, skipAspectRatio = false) => {
     const isSignature = pageIdx === allPages - 1 && allPages > 1;
-    const signatureFullPage = isSignature ? (video.fullPages?.[pageIdx] || "") : "";
-    const useSignatureComposite = !!signatureFullPage;
-    const pageBaseImage = useSignatureComposite ? signatureFullPage : (video.pages[pageIdx] || "");
+    const fullCompositePage = video.fullPages?.[pageIdx] || "";
+    const pgOverlay = video.overlayPages?.[pageIdx];
+    const pgFrame = video.frameOverlayPages?.[pageIdx];
+    const pgPreImage = video.preImageOverlayPages?.[pageIdx];
+    const pgLogo = video.logoOverlayPages?.[pageIdx];
+    const hasAnyOverlayLayer = [pgPreImage, pgFrame, pgOverlay, pgLogo].some(
+      (layer) => typeof layer === "string" && layer !== ""
+    );
+    const useCompositeFallback = !!fullCompositePage && (isSignature || !hasAnyOverlayLayer);
+    const pageBaseImage = useCompositeFallback ? fullCompositePage : (video.pages[pageIdx] || "");
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
     const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
     const pgHasVideo = !!pgActiveUrl && !videoGiveUp[pageIdx];
-    const pgOverlay = video.overlayPages?.[pageIdx];
-    const pgFrame = video.frameOverlayPages?.[pageIdx];
     const effectiveFrameOverlay = (pgFrame && pgFrame !== "")
       ? pgFrame
       : ((pgOverlay && pgOverlay !== "") ? pgOverlay : "");
     const effectiveTextOverlay = (pgOverlay && pgOverlay !== "" && pgOverlay !== effectiveFrameOverlay)
       ? pgOverlay
       : "";
-    const pgPreImage = video.preImageOverlayPages?.[pageIdx];
-    const pgLogo = video.logoOverlayPages?.[pageIdx];
     const isDragOver = dragOverPage === pageIdx;
     const isCurrentPage = pageIdx === currentPage;
 
