@@ -1317,6 +1317,11 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
   onProgress?.(0.20);
 
+  // Pre-seek all background videos to frame 0 so the first frame is decoded
+  console.log("[WebCodecs] Pre-seeking background videos...");
+  await preSeekVideos(bgVideos);
+  console.log("[WebCodecs] Pre-seek done");
+
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
