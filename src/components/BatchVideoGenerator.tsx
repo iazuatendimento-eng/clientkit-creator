@@ -1259,6 +1259,28 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         } catch (err) {
           console.warn("Background hydration failed, using saved snapshot data:", err);
         }
+
+        // After hydration + page rebuild, fetch Pexels videos for cards missing previewVideoUrls
+        try {
+          setClientVideos((prev) => {
+            const needsFetch = prev.filter(
+              (v) => !v.previewVideoUrls || !v.previewVideoUrls.some((u) => u && u !== "")
+            );
+            if (needsFetch.length > 0) {
+              console.log(`[BatchVideo] Auto-fetching Pexels videos for ${needsFetch.length} card(s) from history...`);
+              // Run async outside setState
+              setTimeout(() => {
+                setClientVideos((current) => {
+                  autoFetchPexelsCovers(current);
+                  return current;
+                });
+              }, 100);
+            }
+            return prev;
+          });
+        } catch (e) {
+          console.warn("Auto-fetch Pexels after hydration failed:", e);
+        }
       };
 
       void hydrateAndRecoverMissingPages();
