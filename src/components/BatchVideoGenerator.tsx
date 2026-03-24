@@ -1065,19 +1065,33 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       
       const clientIds = [...new Set(batchItems.map(item => item.clientId))];
 
-      // Fetch image_type, particularity_type AND brand_kit to restore assets stripped during save
-      const { data: clientsData } = await supabase
-        .from("client_data")
-        .select("id, image_type, particularity_type, brand_kit")
-        .in("id", clientIds);
+      // Fetch lightweight client metadata + brand kit URLs via RPC (avoids 14MB+ brand_kit JSONB)
+      const [{ data: clientsMeta }, { data: brandKitUrls }] = await Promise.all([
+        supabase
+          .from("client_data")
+          .select("id, image_type, particularity_type")
+          .in("id", clientIds),
+        supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
+      ]);
 
       const imageTypeMap: Record<string, string> = {};
       const particularityMap: Record<string, string> = {};
-      const freshBrandKitMap: Record<string, any> = {};
-      clientsData?.forEach(c => { 
+      clientsMeta?.forEach((c: any) => { 
         if (c.image_type) imageTypeMap[c.id] = c.image_type;
         if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
-        if (c.brand_kit) freshBrandKitMap[c.id] = c.brand_kit;
+      });
+
+      // Build a lightweight brand kit map from RPC results (URLs only, no base64)
+      const freshBrandKitMap: Record<string, any> = {};
+      (brandKitUrls || []).forEach((r: any) => {
+        freshBrandKitMap[r.id] = {
+          logo: r.logo || "",
+          contactInfo: r.contact_info || "",
+          mascot: r.mascot || "",
+          pngs: [r.logo || "", r.contact_info || "", r.mascot || ""],
+          colors: r.colors || [],
+          backgroundPng: r.background_png || "",
+        };
       });
 
       const videos: ClientVideo[] = batchItems.map((item) => {
