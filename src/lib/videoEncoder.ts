@@ -1894,6 +1894,11 @@ export async function encodeVideoSimple(
     }));
   }
 
+  // Pre-seek all background videos to frame 0 so the first frame is decoded
+  console.log("[VideoEncoder] Pre-seeking background videos...");
+  await preSeekVideos(bgVideos);
+  console.log("[VideoEncoder] Pre-seek done");
+
   const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
   const totalFrames = framesPerPage * images.length;
