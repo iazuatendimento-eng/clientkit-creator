@@ -191,6 +191,59 @@ function normalizeBackgroundVideoUrls(
   });
 }
 
+/**
+ * Per-page duration: min(bgVideo.duration, pageDuration).
+ * If a page has no bg video, uses the full pageDuration.
+ */
+interface PerPageFrameInfo {
+  pageDurations: number[];        // effective duration per page in seconds
+  framesPerPageArr: number[];     // frames per page
+  cumulativeFrames: number[];     // cumulative frame offset (start frame of each page)
+  totalFrames: number;
+}
+
+function computePerPageFrameInfo(
+  bgVideos: (HTMLVideoElement | null)[],
+  pageCount: number,
+  pageDuration: number,
+  fps: number
+): PerPageFrameInfo {
+  const pageDurations: number[] = [];
+  const framesPerPageArr: number[] = [];
+  const cumulativeFrames: number[] = [];
+  let total = 0;
+
+  for (let i = 0; i < pageCount; i++) {
+    const v = bgVideos[i];
+    let dur = pageDuration;
+    // If the bg video is shorter than the page, use the video's duration
+    if (v && v.duration && isFinite(v.duration) && v.duration > 0) {
+      dur = Math.min(v.duration, pageDuration);
+    }
+    pageDurations.push(dur);
+    const frames = Math.max(1, Math.floor(dur * fps));
+    framesPerPageArr.push(frames);
+    cumulativeFrames.push(total);
+    total += frames;
+  }
+
+  return { pageDurations, framesPerPageArr, cumulativeFrames, totalFrames: total };
+}
+
+/** Convert global frame number to page index and frame-within-page */
+function frameToPageInfo(
+  frameNum: number,
+  cumulativeFrames: number[],
+  framesPerPageArr: number[]
+): { pageIdx: number; frameInPage: number } {
+  for (let p = cumulativeFrames.length - 1; p >= 0; p--) {
+    if (frameNum >= cumulativeFrames[p]) {
+      return { pageIdx: p, frameInPage: frameNum - cumulativeFrames[p] };
+    }
+  }
+  return { pageIdx: 0, frameInPage: frameNum };
+}
+
 function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "ogg" | "m4a" {
   const normalizedUrl = audioUrl.toLowerCase().split("?")[0].split("#")[0];
   const normalizedMime = (mimeType || "").toLowerCase();
@@ -1397,9 +1450,12 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
-  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
+  // Per-page duration: min(bgVideo.duration, pageDuration)
+  const ppInfo = computePerPageFrameInfo(bgVideos, images.length, pageDuration, fps);
+  const { pageDurations: perPageDurations, framesPerPageArr, cumulativeFrames, totalFrames } = ppInfo;
+  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps)); // fallback for non-per-page uses
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
-  const totalFrames = framesPerPage * images.length;
+  console.log("[WebCodecs] Per-page durations:", perPageDurations, "total frames:", totalFrames);
 
   // Drawing helpers (same as encodeVideoSimple)
   const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
@@ -1462,19 +1518,19 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   const lastGoodVideoFrame: Record<number, ImageData | null> = {};
 
   const renderFrame = (frameNum: number) => {
-    const pageIdx = Math.floor(frameNum / framesPerPage);
-    const frameInPage = frameNum - (pageIdx * framesPerPage);
+    const { pageIdx, frameInPage } = frameToPageInfo(frameNum, cumulativeFrames, framesPerPageArr);
     if (pageIdx >= images.length) return;
+    const pageFrames = framesPerPageArr[pageIdx];
 
     const img = images[pageIdx];
     const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
     const bgVideo = bgVideos[pageIdx] || null;
-    const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
-    const pageProgress = frameInPage / framesPerPage;
+    const isTransitionPhase = frameInPage >= pageFrames - transitionFrames && nextImg;
+    const pageProgress = frameInPage / pageFrames;
 
     // Draw the base image first (no black clear — prevents flashing)
     if (isTransitionPhase && nextImg) {
-      const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
+      const transitionProgress = (frameInPage - (pageFrames - transitionFrames)) / transitionFrames;
       applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
     } else if (bgVideo) {
       // Try drawing video frame; if not ready, use last good frame or static image
@@ -1566,7 +1622,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // Decode audio if provided (in parallel with video setup)
   let audioData: { left: Float32Array; right: Float32Array; numberOfChannels: number } | null = null;
   let canMuxAudio = false;
-  const totalDurationSec = (framesPerPage * images.length) / fps;
+  const totalDurationSec = totalFrames / fps;
 
   if (audioUrl) {
     try {
@@ -1695,16 +1751,12 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   };
 
   // Deterministic seek: advance the video to the exact target time for each frame.
-  // This avoids the "accelerated video" problem caused by real-time playback
-  // running ahead of the encoder loop.
-  const seekBgVideoToFrameTime = async (video: HTMLVideoElement, frameInPage: number): Promise<void> => {
-    // Target time within the page (0 to pageDuration)
-    const targetTime = (frameInPage / framesPerPage) * pageDuration;
+  const seekBgVideoToFrameTime = async (video: HTMLVideoElement, frameInPage: number, pageIdx: number): Promise<void> => {
+    const pageDur = perPageDurations[pageIdx] || pageDuration;
+    const pageFrames = framesPerPageArr[pageIdx] || framesPerPage;
+    const targetTime = (frameInPage / pageFrames) * pageDur;
 
-    // Only seek if the target is significantly different from current position
-    // (skip seeking for tiny jumps to avoid excessive overhead)
     if (Math.abs(video.currentTime - targetTime) < 0.02) return;
-
     await seekVideoToTime(video, targetTime);
   };
 
@@ -1714,8 +1766,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   for (let i = 0; i < totalFrames; i++) {
     if (encoderError) throw encoderError;
 
-    const pageIdx = Math.floor(i / framesPerPage);
-    const frameInPage = i - (pageIdx * framesPerPage);
+    const { pageIdx, frameInPage } = frameToPageInfo(i, cumulativeFrames, framesPerPageArr);
 
     // On page change, swap active video and seek to t=0
     if (pageIdx !== lastPageIdx) {
@@ -1727,7 +1778,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       }
     } else if (activeBgVideo) {
       // Deterministically seek to the exact time for this frame
-      await seekBgVideoToFrameTime(activeBgVideo, frameInPage);
+      await seekBgVideoToFrameTime(activeBgVideo, frameInPage, pageIdx);
     }
 
     renderFrame(i);
@@ -2098,9 +2149,13 @@ export async function encodeVideoSimple(
   await preSeekVideos(bgVideos);
   console.log("[VideoEncoder] Pre-seek done");
 
-  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
+  // Per-page duration: min(bgVideo.duration, pageDuration)
+  const simplePPInfo = computePerPageFrameInfo(bgVideos, images.length, pageDuration, fps);
+  const { pageDurations: simplePerPageDurations, framesPerPageArr: simpleFramesPerPageArr, cumulativeFrames: simpleCumulativeFrames, totalFrames: simpleTotalFramesVar } = simplePPInfo;
+  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps)); // fallback
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
-  const totalFrames = framesPerPage * images.length;
+  const totalFrames = simpleTotalFramesVar;
+  console.log("[VideoEncoder] Per-page durations:", simplePerPageDurations, "total frames:", totalFrames);
 
   // --- Drawing helpers (shared by mobile & desktop paths) ---
   const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
@@ -2172,18 +2227,18 @@ export async function encodeVideoSimple(
 
   // Pure rendering function for a single frame (no side effects)
   const renderFrameToCanvas = (frameNum: number) => {
-    const pageIdx = Math.floor(frameNum / framesPerPage);
-    const frameInPage = frameNum - (pageIdx * framesPerPage);
+    const { pageIdx, frameInPage } = frameToPageInfo(frameNum, simpleCumulativeFrames, simpleFramesPerPageArr);
     if (pageIdx >= images.length) return;
+    const pageFrames = simpleFramesPerPageArr[pageIdx];
 
     const img = images[pageIdx];
     const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
     const bgVideo = bgVideos[pageIdx] || null;
-    const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
-    const pageProgress = frameInPage / framesPerPage;
+    const isTransitionPhase = frameInPage >= pageFrames - transitionFrames && nextImg;
+    const pageProgress = frameInPage / pageFrames;
 
     if (isTransitionPhase && nextImg) {
-      const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
+      const transitionProgress = (frameInPage - (pageFrames - transitionFrames)) / transitionFrames;
       applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
     } else if (bgVideo) {
       let videoDrawn = false;
@@ -2320,8 +2375,10 @@ export async function encodeVideoSimple(
 
   // On mobile, reduce FPS for performance
   const effectiveFps = isMobileDevice ? Math.min(fps, 12) : fps;
+  // For mobile, recompute with reduced FPS
+  const mobilePPInfo = isMobileDevice ? computePerPageFrameInfo(bgVideos, images.length, pageDuration, effectiveFps) : simplePPInfo;
   const effectiveFramesPerPage = Math.max(1, Math.floor(pageDuration * effectiveFps));
-  const effectiveTotalFrames = effectiveFramesPerPage * images.length;
+  const effectiveTotalFrames = isMobileDevice ? mobilePPInfo.totalFrames : totalFrames;
   const frameIntervalMs = Math.floor(1000 / effectiveFps);
 
   // iOS: captureStream(0) — frame captured on each canvas draw
@@ -2409,7 +2466,8 @@ export async function encodeVideoSimple(
     }
   };
 
-  const useFramesPerPage = isMobileDevice ? effectiveFramesPerPage : framesPerPage;
+  const useCumulativeFrames = isMobileDevice ? mobilePPInfo.cumulativeFrames : simpleCumulativeFrames;
+  const useFramesPerPageArr = isMobileDevice ? mobilePPInfo.framesPerPageArr : simpleFramesPerPageArr;
   const useTotalFrames = isMobileDevice ? effectiveTotalFrames : totalFrames;
 
   return new Promise((resolve, reject) => {
@@ -2509,7 +2567,7 @@ export async function encodeVideoSimple(
 
       let framesThisBatch = 0;
       while (framesThisBatch < FRAMES_PER_BATCH && globalFrame < useTotalFrames) {
-        const pageIdx = Math.floor(globalFrame / useFramesPerPage);
+        const { pageIdx } = frameToPageInfo(globalFrame, useCumulativeFrames, useFramesPerPageArr);
         if (pageIdx !== lastPageIdx) {
           startVideoForPage(pageIdx);
           lastPageIdx = pageIdx;
