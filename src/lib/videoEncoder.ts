@@ -1950,7 +1950,24 @@ export async function encodeVideoSimple(
     })
   );
 
-  // Load logo overlay images (transparent PNGs with logo only)
+  // Load pre-image overlay images (shapes below video - z-1)
+  const preImageOverlayImages: (HTMLImageElement | null)[] = await Promise.all(
+    (preImageOverlayPages || []).map(async (pageUrl) => {
+      if (!pageUrl) return null;
+      try {
+        return await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = pageUrl;
+        });
+      } catch {
+        return null;
+      }
+    })
+  );
+
   const logoOverlayImages: (HTMLImageElement | null)[] = await Promise.all(
     (logoOverlayPages || []).map(async (pageUrl) => {
       if (!pageUrl) return null;
