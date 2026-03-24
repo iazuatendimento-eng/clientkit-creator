@@ -1162,47 +1162,8 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       setClientVideos(videos);
       setIsLoading(false);
 
-      const isArtBatch = batch.type === "art";
-
-      // Art history: open immediately and lazily prepare overlays when user opens a card
-      if (isArtBatch) {
-        return;
-      }
-
-      // Video history: regenerate overlay layers upfront
-      setIsGenerating(true);
-      setGenerationStatus("Reconstruindo camadas...");
-      try {
-        const updatedVideos = [...videos];
-        const BATCH_SIZE = 3;
-        for (let start = 0; start < updatedVideos.length; start += BATCH_SIZE) {
-          const chunk = updatedVideos.slice(start, start + BATCH_SIZE);
-          const results = await Promise.all(chunk.map(video => regenerateSingleVideo(video)));
-          for (let j = 0; j < results.length; j++) {
-            const idx = start + j;
-            updatedVideos[idx] = {
-              ...updatedVideos[idx],
-              pages: results[j].pages,
-              overlayPages: results[j].overlayPages,
-              frameOverlayPages: results[j].frameOverlayPages,
-              preImageOverlayPages: results[j].preImageOverlayPages,
-              logoOverlayPages: results[j].logoOverlayPages,
-              fullPages: results[j].fullPages,
-            };
-          }
-          setGenerationStatus(`Reconstruindo... (${Math.min(start + BATCH_SIZE, updatedVideos.length)}/${updatedVideos.length})`);
-          setClientVideos([...updatedVideos]);
-        }
-
-        const videosNeedingFetch = updatedVideos.filter(v => !v.previewVideoUrls || v.previewVideoUrls.every(u => !u));
-        if (videosNeedingFetch.length > 0) {
-          setGenerationStatus("Buscando vídeos de fundo...");
-          await autoFetchPexelsCovers(updatedVideos);
-        }
-      } finally {
-        setIsGenerating(false);
-        setGenerationStatus("");
-      }
+      // Overlays are rebuilt lazily when the user clicks on each card (see onClick handler).
+      // This avoids the expensive upfront regeneration of all overlay layers.
     } catch (error) {
       console.error("Error loading batch:", error);
       toast({
