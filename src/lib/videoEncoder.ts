@@ -1047,8 +1047,16 @@ function applyTransition(
 // Helper: seek video to a specific time and wait for the frame to be ready
 function seekVideoToTime(video: HTMLVideoElement, time: number): Promise<void> {
   return new Promise<void>((resolve) => {
-    if (Math.abs(video.currentTime - time) < 0.05) {
-      resolve();
+    if (Math.abs(video.currentTime - time) < 0.03) {
+      // Already at the right time, but ensure frame is decoded
+      if (video.readyState >= 2) { resolve(); return; }
+      // Wait briefly for readyState
+      const check = () => {
+        if (video.readyState >= 2) { resolve(); return; }
+        setTimeout(check, 16);
+      };
+      setTimeout(check, 16);
+      setTimeout(resolve, 500); // absolute max wait
       return;
     }
     let settled = false;
@@ -1056,17 +1064,39 @@ function seekVideoToTime(video: HTMLVideoElement, time: number): Promise<void> {
       if (settled) return;
       settled = true;
       video.removeEventListener("seeked", done);
-      resolve();
+      // Wait one extra frame for the decoder to present the frame
+      requestAnimationFrame(() => resolve());
     };
     // Timeout to prevent hanging forever if seeked never fires
-    setTimeout(done, 2000);
+    setTimeout(() => { if (!settled) { settled = true; video.removeEventListener("seeked", done); resolve(); } }, 3000);
     video.addEventListener("seeked", done);
     try {
       video.currentTime = time;
     } catch {
-      done();
+      if (!settled) { settled = true; resolve(); }
     }
   });
+}
+
+// Pre-seek all videos to time 0 so the first frame is decoded and ready
+async function preSeekVideos(videos: (HTMLVideoElement | null)[]): Promise<void> {
+  await Promise.all(videos.map(async (v) => {
+    if (!v) return;
+    try {
+      await seekVideoToTime(v, 0);
+      // Double-check readyState
+      if (v.readyState < 2) {
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, 1000);
+          const check = () => {
+            if (v.readyState >= 2) { clearTimeout(timer); resolve(); return; }
+            setTimeout(check, 50);
+          };
+          check();
+        });
+      }
+    } catch { /* ignore */ }
+  }));
 }
 
 // Apply geometric clip path to canvas context
