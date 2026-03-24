@@ -1556,8 +1556,20 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     if (!selectedElement) return;
 
     if (isResizing && resizeHandle) {
-      const deltaX = x - resizeStart.x;
-      const deltaY = y - resizeStart.y;
+      // Transform mouse into element's local (un-rotated) space for accurate resize
+      const el = elements.find((e) => e.id === selectedElement);
+      const ecx = (resizeStart.elX + resizeStart.width / 2);
+      const ecy = (resizeStart.elY + resizeStart.height / 2);
+      const erot = -((el?.rotation || 0) * Math.PI) / 180;
+      const ecos = Math.cos(erot);
+      const esin = Math.sin(erot);
+      const ldx = x - ecx;
+      const ldy = y - ecy;
+      const lx = ecos * ldx - esin * ldy + ecx;
+      const ly = esin * ldx + ecos * ldy + ecy;
+
+      const deltaX = lx - resizeStart.x;
+      const deltaY = ly - resizeStart.y;
       
       let newWidth = resizeStart.width;
       let newHeight = resizeStart.height;
