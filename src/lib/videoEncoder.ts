@@ -1496,6 +1496,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
           // Save this good frame for fallback
           try { lastGoodVideoFrame[pageIdx] = ctx.getImageData(0, 0, width, height); } catch { /* ignore */ }
 
+          const piov = preImageOverlayImages[pageIdx]; if (piov) ctx.drawImage(piov, 0, 0, width, height);
           const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
           const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
           const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -1511,6 +1512,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         const cached = lastGoodVideoFrame[pageIdx];
         if (cached) {
           ctx.putImageData(cached, 0, 0);
+          const piov2 = preImageOverlayImages[pageIdx]; if (piov2) ctx.drawImage(piov2, 0, 0, width, height);
           const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
           const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
           const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -1518,6 +1520,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         } else {
           // Last resort: static image
           drawSource(img, true, pageProgress);
+          const piov3 = preImageOverlayImages[pageIdx]; if (piov3) ctx.drawImage(piov3, 0, 0, width, height);
           const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
           const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
           const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -1526,6 +1529,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       }
     } else {
       drawSource(img, true, pageProgress);
+      const piov4 = preImageOverlayImages[pageIdx]; if (piov4) ctx.drawImage(piov4, 0, 0, width, height);
       const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
       const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
       const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
