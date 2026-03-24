@@ -46,12 +46,12 @@ let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
 let ffmpegLoadStartedAt = 0;
 let ffmpegUnavailableUntil = 0;
 
-const FFMPEG_MAX_RETRIES = 2;
-const FFMPEG_FETCH_TIMEOUT_MS = 20_000;
-const FFMPEG_LOAD_TIMEOUT_MS = 30_000;
-const FFMPEG_RETRY_DELAY_MS = 500;
+const FFMPEG_MAX_RETRIES = 1;
+const FFMPEG_FETCH_TIMEOUT_MS = 8_000;
+const FFMPEG_LOAD_TIMEOUT_MS = 12_000;
+const FFMPEG_RETRY_DELAY_MS = 250;
 const FFMPEG_COOLDOWN_MS = 90_000;
-const FFMPEG_STALE_PROMISE_MS = 25_000;
+const FFMPEG_STALE_PROMISE_MS = 12_000;
 
 const FFMPEG_SOURCES: FFmpegSource[] = [
   {
@@ -1231,12 +1231,13 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     });
   };
 
-  // Helper: load video with resilient fallback.
-  // 1) Try fetch-as-blob (best for precise seek)
-  // 2) If fetch fails (CORS/timeout), fallback to direct URL source
+  // Helper: load video with resilient + fast fallback.
+  // 1) Try direct URL first (fast metadata load, no full-file download upfront)
+  // 2) If direct load fails, fallback to fetch-as-blob
   const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const vidFetchTimeout = isMob ? 15_000 : 30_000;
-  const vidDecodeTimeout = isMob ? 8_000 : 12_000;
+  const vidDirectTimeout = isMob ? 6_000 : 8_000;
+  const vidFetchTimeout = isMob ? 12_000 : 18_000;
+  const vidDecodeTimeout = isMob ? 8_000 : 10_000;
 
   const loadVid = async (url: string): Promise<HTMLVideoElement | null> => {
     if (!url) return null;
@@ -1250,6 +1251,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         }, timeoutMs);
 
         const video = document.createElement("video");
+        video.crossOrigin = "anonymous";
         video.muted = true;
         video.playsInline = true;
         video.preload = "auto";
@@ -1271,6 +1273,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
           resolve(null);
         };
 
+        video.onloadedmetadata = done;
         video.onloadeddata = done;
         video.oncanplay = done;
         video.onerror = fail;
@@ -1280,11 +1283,13 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     };
 
     try {
-      const controller = new AbortController();
-      const fetchTimer = setTimeout(() => controller.abort(), vidFetchTimeout);
-      let blobUrl: string | null = null;
+      // Fast path: direct URL first (avoids downloading full MP4 before encode starts)
+      const directVideo = await loadVideoElement(url, vidDirectTimeout);
+      if (directVideo) return directVideo;
 
       try {
+        const controller = new AbortController();
+        const fetchTimer = setTimeout(() => controller.abort(), vidFetchTimeout);
         const resp = await fetch(url, { signal: controller.signal, cache: "no-store" });
         clearTimeout(fetchTimer);
         if (!resp.ok) throw new Error(`status=${resp.status}`);
@@ -1292,17 +1297,12 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         const blob = await resp.blob();
         if (!blob.size) throw new Error("empty blob");
 
-        blobUrl = URL.createObjectURL(blob);
+        const blobUrl = URL.createObjectURL(blob);
         const blobVideo = await loadVideoElement(blobUrl, vidDecodeTimeout, blobUrl);
         if (blobVideo) return blobVideo;
       } catch (fetchErr) {
-        clearTimeout(fetchTimer);
-        console.warn("[WebCodecs] Blob video load failed, trying direct URL:", url.slice(0, 60), fetchErr);
+        console.warn("[WebCodecs] Direct+blob video load failed:", url.slice(0, 60), fetchErr);
       }
-
-      // Fallback path: direct URL (works when fetch is blocked by CORS/policy)
-      const directVideo = await loadVideoElement(url, vidDecodeTimeout);
-      if (directVideo) return directVideo;
 
       console.warn("[WebCodecs] Vid load failed (all strategies):", url.slice(0, 60));
       return null;
@@ -1436,7 +1436,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // Keep a per-page buffer of the last successfully drawn video frame to avoid flashing
   const lastGoodVideoFrame: Record<number, ImageData | null> = {};
 
-  const renderFrame = async (frameNum: number) => {
+  const renderFrame = (frameNum: number) => {
     const pageIdx = Math.floor(frameNum / framesPerPage);
     const frameInPage = frameNum - (pageIdx * framesPerPage);
     if (pageIdx >= images.length) return;
@@ -1612,27 +1612,21 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
   const frameDurationMicros = Math.round(1_000_000 / fps);
 
-  // Seek-based video sync: instead of play() (real-time), seek to exact frame time
-  // This ensures background videos advance correctly in the faster-than-realtime encoding loop
-  const seekVideoForFrame = async (pageIdx: number, frameInPage: number) => {
+  // Lightweight seek strategy (non-blocking): keeps animation moving
+  // without stalling the encoder loop waiting on decode readiness.
+  const seekVideoForFrame = (pageIdx: number, frameInPage: number) => {
     const v = bgVideos[pageIdx];
     if (!v) return;
-    // If video lost readyState, wait briefly for it to recover
-    if (v.readyState < 2) {
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, 500);
-        const check = () => {
-          if (v.readyState >= 2) { clearTimeout(timer); resolve(); return; }
-          setTimeout(check, 30);
-        };
-        check();
-      });
-      if (v.readyState < 2) return; // still not ready, skip
-    }
-    const targetTime = (frameInPage / fps) % (v.duration || 999);
-    // Only seek if difference is significant (avoid redundant seeks)
-    if (Math.abs(v.currentTime - targetTime) > 0.03) {
-      await seekVideoToTime(v, targetTime);
+    if (v.readyState < 1 || !Number.isFinite(v.duration) || v.duration <= 0) return;
+
+    const targetTime = (frameInPage / fps) % v.duration;
+    const seekTolerance = Math.max(0.08, 2 / fps);
+    if (Math.abs(v.currentTime - targetTime) > seekTolerance) {
+      try {
+        v.currentTime = targetTime;
+      } catch {
+        // ignore seek hiccups and keep encoding
+      }
     }
   };
 
@@ -1645,10 +1639,10 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
     // Seek background video to correct time for this frame
     if (bgVideos[pageIdx]) {
-      await seekVideoForFrame(pageIdx, frameInPage);
+      seekVideoForFrame(pageIdx, frameInPage);
     }
 
-    await renderFrame(i);
+    renderFrame(i);
 
     try {
       const frame = new VideoFrame(canvas, {
