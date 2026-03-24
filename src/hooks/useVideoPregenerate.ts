@@ -15,6 +15,7 @@ import {
 } from "@/lib/videoRenderer";
 import { searchPexelsVideos } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
+import { getSmartSearchTerms } from "@/lib/smartSearch";
 
 export interface PreloadedVideoData {
   template: VideoTemplateData;
