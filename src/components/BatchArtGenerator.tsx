@@ -1842,7 +1842,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
               const rawQuery = [art.imageType, art.cardText].filter(Boolean).join(" ").substring(0, 150);
               searchTerms = translateToEnglishLocal(rawQuery);
             }
-            console.log("Searching images:", rawQuery, "→", searchTerms);
+            console.log("🧠 Searching images:", art.cardText, "→", searchTerms);
             
             const images = await searchImages(searchTerms, 1);
             if (images.length > 0) {

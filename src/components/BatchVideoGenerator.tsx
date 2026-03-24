@@ -2578,7 +2578,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         if (missingPageIndexes.length > 0) {
           try {
             const missingTexts = missingPageIndexes.map((idx) => video.pageTexts[idx] || "").join(" ");
-            const searchTerms = buildVideoSearchTerms(video.imageType || "", video.briefing || "", video.cardTitle, missingTexts);
+            const searchTerms = await buildVideoSearchTerms(video.imageType || "", video.briefing || "", video.cardTitle, missingTexts);
             const fetchCount = Math.max(missingPageIndexes.length, 6);
 
             const foundVideos = await fetchVideosCached(searchTerms, fetchCount);
