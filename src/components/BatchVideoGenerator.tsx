@@ -768,6 +768,15 @@ const CardCoverPreview = memo(({
           <div className="flex gap-0.5 p-0.5 shrink-0">
             {Array.from({ length: totalPages }, (_, i) => {
               const isActive = i === currentPage;
+              const isThumbSignature = i === allPages - 1 && allPages > 1;
+              const thumbVideoUrl = video.previewVideoUrls?.[i] || null;
+              const thumbFallbackVideoUrl = !isThumbSignature
+                ? (video.previewVideoUrls?.find((u) => u && u !== "") || null)
+                : null;
+              const thumbActiveVideoUrl = thumbVideoUrl || thumbFallbackVideoUrl;
+              const hasThumbVideo = !!thumbActiveVideoUrl && !videoGiveUp[i] && !isThumbSignature;
+              const useFullPageThumb = !!video.fullPages?.[i] && !hasThumbVideo;
+              const thumbRetryKey = videoRetryKey[i] ?? 0;
               return (
                 <div
                   key={`thumb-${video.cardId}-${i}`}
@@ -776,13 +785,25 @@ const CardCoverPreview = memo(({
                 >
                   {video.pages[i] ? (
                     <div className="absolute inset-0 bg-muted/40">
-                      {video.fullPages?.[i] ? (
+                      {useFullPageThumb ? (
                         <img src={video.fullPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain" />
                       ) : (
                         <>
                           <img src={video.pages[i]} alt="" className="absolute inset-0 w-full h-full object-contain" />
                           {video.preImageOverlayPages?.[i] && (
                             <img src={video.preImageOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                          )}
+                          {hasThumbVideo && (
+                            <video
+                              key={`thumb-video-${video.cardId}-${i}-${thumbRetryKey}`}
+                              src={thumbActiveVideoUrl!}
+                              className="absolute inset-0 w-full h-full object-cover z-[2]"
+                              muted
+                              loop
+                              autoPlay
+                              playsInline
+                              preload="metadata"
+                            />
                           )}
                           {video.frameOverlayPages?.[i] && (
                             <img src={video.frameOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
