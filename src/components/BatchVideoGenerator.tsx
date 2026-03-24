@@ -466,15 +466,19 @@ const CardCoverPreview = memo(({
   onDropVideo?: (pageIdx: number, file: File) => void;
   displayPage?: number;
 }) => {
-  const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
+  const [videoFailCount, setVideoFailCount] = useState<Record<number, number>>({});
+  const [videoGiveUp, setVideoGiveUp] = useState<Record<number, boolean>>({});
+  const [videoRetryKey, setVideoRetryKey] = useState<Record<number, number>>({});
   const allPages = video.pages.length;
   const totalPages = hideSignature && allPages > 1 ? allPages - 1 : allPages;
   const [dragOverPage, setDragOverPage] = useState<number | null>(null);
   const currentPage = Math.min(displayPage || 0, Math.max(0, totalPages - 1));
 
-  // Reset video failed state when video URLs change
+  // Reset transient video error/retry state when video URLs change
   useEffect(() => {
-    setVideoFailed({});
+    setVideoFailCount({});
+    setVideoGiveUp({});
+    setVideoRetryKey({});
   }, [video.previewVideoUrls]);
 
   const renderSinglePage = (pageIdx: number, skipAspectRatio = false) => {
@@ -485,7 +489,7 @@ const CardCoverPreview = memo(({
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
     const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
-    const pgHasVideo = !!pgActiveUrl && !videoFailed[pageIdx];
+    const pgHasVideo = !!pgActiveUrl && !videoGiveUp[pageIdx];
     const pgOverlay = video.overlayPages?.[pageIdx];
     const pgFrame = video.frameOverlayPages?.[pageIdx];
     const effectiveFrameOverlay = (pgFrame && pgFrame !== "")
