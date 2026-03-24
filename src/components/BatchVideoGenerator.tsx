@@ -3200,6 +3200,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const hasRenderablePages = (pages?: string[]) =>
         Array.isArray(pages) && pages.some((p) => typeof p === "string" && p.trim().length > 0);
 
+      const hasRenderablePageAt = (pages: string[] | undefined, pageIdx: number) =>
+        !!pages?.[pageIdx] && pages[pageIdx].trim().length > 0;
+
       const hasRenderableCustomOverlays = (
         custom?: Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]>
       ) =>
@@ -3207,6 +3210,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         Object.values(custom).some(
           (list) => Array.isArray(list) && list.some((ov) => !!ov?.url && !ov.isVideo)
         );
+
+      const hasRenderableCustomOverlaysAt = (
+        custom: Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]> | undefined,
+        pageIdx: number
+      ) => {
+        const list = custom?.[pageIdx];
+        return Array.isArray(list) && list.some((ov) => !!ov?.url && !ov.isVideo);
+      };
 
       const ensureVideoLayersForEncode = async (video: ClientVideo): Promise<ClientVideo> => {
         const hasLayerAssets =
@@ -3279,12 +3290,39 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
           const hasBasePages = hasRenderablePages(video.pages);
           const hasCompositePages = hasRenderablePages(video.fullPages);
-          const pagesForEncoding =
+          const pageCount = Math.max(video.pages?.length || 0, video.fullPages?.length || 0);
+          const fallbackPages = Array.from({ length: pageCount }, (_, idx) => {
+            const basePage = video.pages?.[idx];
+            const compositePage = video.fullPages?.[idx];
+            if (basePage && basePage.trim().length > 0) return basePage;
+            if (compositePage && compositePage.trim().length > 0) return compositePage;
+            return "";
+          });
+
+          let pagesForEncoding =
             hasLayerAssets && hasBasePages
-              ? video.pages
+              ? [...(video.pages as string[])]
               : hasCompositePages
-                ? (video.fullPages as string[])
-                : video.pages;
+                ? [...(video.fullPages as string[])]
+                : [...fallbackPages];
+
+          if (hasLayerAssets && hasCompositePages && pagesForEncoding.length > 0) {
+            for (let pageIdx = 0; pageIdx < pagesForEncoding.length; pageIdx++) {
+              const isSignaturePage = pagesForEncoding.length > 1 && pageIdx === pagesForEncoding.length - 1;
+              const hasTextLayer = hasRenderablePageAt(video.overlayPages, pageIdx);
+              const hasFrameLayer = hasRenderablePageAt(video.frameOverlayPages, pageIdx);
+              const hasLogoLayer = hasRenderablePageAt(video.logoOverlayPages, pageIdx);
+              const hasCustomLayer = hasRenderableCustomOverlaysAt(video.customOverlayPages, pageIdx);
+              const hasAnyLayerForPage = hasTextLayer || hasFrameLayer || hasLogoLayer || hasCustomLayer;
+              const hasCompositeForPage = hasRenderablePageAt(video.fullPages, pageIdx);
+
+              // Safety fallback: when a page has missing/empty layers (common on old signature snapshots),
+              // use the full composite image for that specific page to match preview output.
+              if (hasCompositeForPage && (!hasAnyLayerForPage || (isSignaturePage && (!hasFrameLayer || !hasLogoLayer)))) {
+                pagesForEncoding[pageIdx] = (video.fullPages as string[])[pageIdx];
+              }
+            }
+          }
 
 
           // Adaptive FPS: lower for long videos
@@ -3310,6 +3348,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             logoAnimation,
             textAnimDuration: textAnimDuration / (template.pageDuration || 3),
             backgroundVideoUrls: video.previewVideoUrls || undefined,
+            loopShortBackgroundVideos: true,
             frameOverlayPages: hasLayerAssets ? (video.frameOverlayPages || undefined) : undefined,
             preImageOverlayPages: hasLayerAssets ? (video.preImageOverlayPages || undefined) : undefined,
             overlayPages: hasLayerAssets ? (video.overlayPages || undefined) : undefined,
