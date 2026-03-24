@@ -1612,6 +1612,17 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     
     const element = elements.find((el) => el.id === selectedElement);
     if (!element) return "crosshair";
+
+    // Transform mouse into element's local (un-rotated) space
+    const ecx = element.x + element.width / 2;
+    const ecy = element.y + element.height / 2;
+    const erot = -((element.rotation || 0) * Math.PI) / 180;
+    const ecos = Math.cos(erot);
+    const esin = Math.sin(erot);
+    const ldx = x - ecx;
+    const ldy = y - ecy;
+    const lx = ecos * ldx - esin * ldy + ecx;
+    const ly = esin * ldx + ecos * ldy + ecy;
     
     const handleSize = 30;
     const handles = [
@@ -1622,12 +1633,12 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     ];
     
     for (const handle of handles) {
-      if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
+      if (Math.abs(lx - handle.x) < handleSize && Math.abs(ly - handle.y) < handleSize) {
         return handle.cursor;
       }
     }
     
-    if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
+    if (lx >= element.x && lx <= element.x + element.width && ly >= element.y && ly <= element.y + element.height) {
       return "move";
     }
     
