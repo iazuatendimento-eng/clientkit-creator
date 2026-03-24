@@ -1567,10 +1567,22 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // This ensures background videos advance correctly in the faster-than-realtime encoding loop
   const seekVideoForFrame = async (pageIdx: number, frameInPage: number) => {
     const v = bgVideos[pageIdx];
-    if (!v || v.readyState < 2) return;
+    if (!v) return;
+    // If video lost readyState, wait briefly for it to recover
+    if (v.readyState < 2) {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 500);
+        const check = () => {
+          if (v.readyState >= 2) { clearTimeout(timer); resolve(); return; }
+          setTimeout(check, 30);
+        };
+        check();
+      });
+      if (v.readyState < 2) return; // still not ready, skip
+    }
     const targetTime = (frameInPage / fps) % (v.duration || 999);
     // Only seek if difference is significant (avoid redundant seeks)
-    if (Math.abs(v.currentTime - targetTime) > 0.04) {
+    if (Math.abs(v.currentTime - targetTime) > 0.03) {
       await seekVideoToTime(v, targetTime);
     }
   };
