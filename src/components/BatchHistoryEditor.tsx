@@ -366,6 +366,7 @@ export const BatchHistoryEditor = ({
         overlayPages: (selectedItem as any).overlayPages || undefined,
         logoOverlayPages: (selectedItem as any).logoOverlayPages || undefined,
         frameOverlayPages: (selectedItem as any).frameOverlayPages || undefined,
+        preImageOverlayPages: (selectedItem as any).preImageOverlayPages || undefined,
         audioUrl: (() => {
           const t = template as any;
           const sel = (selectedItem as any).selectedAudio || 1;
@@ -431,6 +432,7 @@ export const BatchHistoryEditor = ({
           overlayPages: (item as any).overlayPages || undefined,
           logoOverlayPages: (item as any).logoOverlayPages || undefined,
           frameOverlayPages: (item as any).frameOverlayPages || undefined,
+          preImageOverlayPages: (item as any).preImageOverlayPages || undefined,
           audioUrl: (() => {
             const t = template as any;
             const sel = (item as any).selectedAudio || 1;
