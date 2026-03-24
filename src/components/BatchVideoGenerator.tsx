@@ -527,6 +527,34 @@ const CardCoverPreview = memo(({
       }
     };
 
+    const currentRetryKey = videoRetryKey[pageIdx] ?? 0;
+    const handleVideoError = () => {
+      setVideoFailCount((prev) => {
+        const attempts = (prev[pageIdx] ?? 0) + 1;
+        if (attempts >= 3) {
+          setVideoGiveUp((current) => ({ ...current, [pageIdx]: true }));
+          return { ...prev, [pageIdx]: attempts };
+        }
+        setVideoRetryKey((current) => ({ ...current, [pageIdx]: (current[pageIdx] ?? 0) + 1 }));
+        return { ...prev, [pageIdx]: attempts };
+      });
+    };
+
+    const handleVideoLoadedData = () => {
+      setVideoFailCount((prev) => {
+        if (!(pageIdx in prev)) return prev;
+        const next = { ...prev };
+        delete next[pageIdx];
+        return next;
+      });
+      setVideoGiveUp((prev) => {
+        if (!(pageIdx in prev)) return prev;
+        const next = { ...prev };
+        delete next[pageIdx];
+        return next;
+      });
+    };
+
     return (
       <div
         key={`page-${video.cardId}-${pageIdx}`}
