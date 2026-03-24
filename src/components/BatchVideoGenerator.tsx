@@ -1284,50 +1284,81 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
           setClientVideos((prev) => prev.map(hydrateVideo));
 
-          const missingPageVideos = videos
-            .filter((v) => cardsMissingSavedPages.has(v.cardId))
-            .map(hydrateVideo);
+          // Rebuild pages for cards missing saved pages AND rebuild overlay layers
+          // for ALL cards (overlays are not saved in batch items, so they need regeneration)
+          const allHydratedVideos = videos.map(hydrateVideo);
+          const missingPageVideos = allHydratedVideos.filter((v) => cardsMissingSavedPages.has(v.cardId));
+          // Cards WITH saved pages still need overlay regeneration (logo, text, frame overlays)
+          const overlayOnlyVideos = allHydratedVideos.filter((v) => !cardsMissingSavedPages.has(v.cardId));
 
-          if (missingPageVideos.length === 0) return;
+          console.log(`[BatchVideo] Rebuilding: ${missingPageVideos.length} full + ${overlayOnlyVideos.length} overlay-only`);
 
-          console.log(`[BatchVideo] Rebuilding ${missingPageVideos.length} card preview(s) without saved pages...`);
-
-          const queue = [...missingPageVideos];
-          const workerCount = Math.min(3, queue.length);
-
-          await Promise.all(
-            Array.from({ length: workerCount }, async () => {
-              while (queue.length > 0) {
-                const baseVideo = queue.shift();
-                if (!baseVideo) break;
-                try {
-                  // Fast rebuild without external background fetches (prevents long stalls on blocked URLs)
-                  const fastRebuildInput: ClientVideo = {
-                    ...baseVideo,
-                    searchedImages: baseVideo.pageTexts.map(() => ""),
-                  };
-                  const result = await regenerateSingleVideo(fastRebuildInput);
-                  setClientVideos((prev) =>
-                    prev.map((v) =>
-                      v.cardId === baseVideo.cardId
-                        ? {
-                            ...v,
-                            pages: result.pages,
-                            overlayPages: result.overlayPages,
-                            frameOverlayPages: result.frameOverlayPages,
-                            preImageOverlayPages: result.preImageOverlayPages,
-                            logoOverlayPages: result.logoOverlayPages,
-                            fullPages: result.fullPages,
-                          }
-                        : v
-                    )
-                  );
-                } catch (regenError) {
-                  console.warn(`[BatchVideo] Failed to rebuild card preview for ${baseVideo.cardId}:`, regenError);
+          // Full rebuild for cards without saved pages
+          if (missingPageVideos.length > 0) {
+            const queue = [...missingPageVideos];
+            const workerCount = Math.min(3, queue.length);
+            await Promise.all(
+              Array.from({ length: workerCount }, async () => {
+                while (queue.length > 0) {
+                  const baseVideo = queue.shift();
+                  if (!baseVideo) break;
+                  try {
+                    const fastRebuildInput: ClientVideo = {
+                      ...baseVideo,
+                      searchedImages: baseVideo.pageTexts.map(() => ""),
+                    };
+                    const result = await regenerateSingleVideo(fastRebuildInput);
+                    setClientVideos((prev) =>
+                      prev.map((v) =>
+                        v.cardId === baseVideo.cardId
+                          ? { ...v, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages }
+                          : v
+                      )
+                    );
+                  } catch (regenError) {
+                    console.warn(`[BatchVideo] Failed to rebuild card preview for ${baseVideo.cardId}:`, regenError);
+                  }
                 }
-              }
-            })
-          );
+              })
+            );
+          }
+
+          // Overlay-only rebuild for cards WITH saved pages but missing overlay layers
+          if (overlayOnlyVideos.length > 0) {
+            const overlayQueue = [...overlayOnlyVideos];
+            const overlayWorkerCount = Math.min(3, overlayQueue.length);
+            await Promise.all(
+              Array.from({ length: overlayWorkerCount }, async () => {
+                while (overlayQueue.length > 0) {
+                  const baseVideo = overlayQueue.shift();
+                  if (!baseVideo) break;
+                  try {
+                    const result = await regenerateSingleVideo({
+                      ...baseVideo,
+                      searchedImages: baseVideo.pageTexts.map(() => ""),
+                    });
+                    setClientVideos((prev) =>
+                      prev.map((v) =>
+                        v.cardId === baseVideo.cardId
+                          ? {
+                              ...v,
+                              overlayPages: result.overlayPages,
+                              frameOverlayPages: result.frameOverlayPages,
+                              preImageOverlayPages: result.preImageOverlayPages,
+                              logoOverlayPages: result.logoOverlayPages,
+                              fullPages: result.fullPages,
+                              // Keep saved pages (don't override with empty-background renders)
+                            }
+                          : v
+                      )
+                    );
+                  } catch (regenError) {
+                    console.warn(`[BatchVideo] Failed to rebuild overlays for ${baseVideo.cardId}:`, regenError);
+                  }
+                }
+              })
+            );
+          }
         } catch (err) {
           console.warn("Background hydration failed, using saved snapshot data:", err);
         }
