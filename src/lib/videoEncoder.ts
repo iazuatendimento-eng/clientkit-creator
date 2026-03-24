@@ -1612,34 +1612,56 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
   const frameDurationMicros = Math.round(1_000_000 / fps);
 
-  // Lightweight seek strategy (non-blocking): keeps animation moving
-  // without stalling the encoder loop waiting on decode readiness.
-  const seekVideoForFrame = (pageIdx: number, frameInPage: number) => {
+  // Semi-blocking seek: waits for the video to decode the target frame
+  // so the encoder always has real video content to draw.
+  const seekVideoForFrame = async (pageIdx: number, frameInPage: number): Promise<void> => {
     const v = bgVideos[pageIdx];
     if (!v) return;
     if (v.readyState < 1 || !Number.isFinite(v.duration) || v.duration <= 0) return;
 
     const targetTime = (frameInPage / fps) % v.duration;
-    const seekTolerance = Math.max(0.08, 2 / fps);
-    if (Math.abs(v.currentTime - targetTime) > seekTolerance) {
-      try {
-        v.currentTime = targetTime;
-      } catch {
-        // ignore seek hiccups and keep encoding
-      }
+    const seekTolerance = Math.max(0.04, 1.5 / fps);
+    if (Math.abs(v.currentTime - targetTime) <= seekTolerance) return;
+
+    try {
+      v.currentTime = targetTime;
+    } catch {
+      return;
     }
+
+    // Wait for the seeked event or a short timeout so the frame is decoded
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const done = () => { if (settled) return; settled = true; v.removeEventListener("seeked", done); resolve(); };
+      v.addEventListener("seeked", done);
+      // Short timeout: if the seek takes too long, proceed with whatever is available
+      setTimeout(done, 80);
+    });
   };
 
   console.log("[WebCodecs] Starting frame loop, total:", totalFrames);
+  let lastPageIdx = -1;
   for (let i = 0; i < totalFrames; i++) {
     if (encoderError) throw encoderError;
 
     const pageIdx = Math.floor(i / framesPerPage);
     const frameInPage = i - (pageIdx * framesPerPage);
 
-    // Seek background video to correct time for this frame
-    if (bgVideos[pageIdx]) {
-      seekVideoForFrame(pageIdx, frameInPage);
+    // On page change, do a full blocking seek to ensure video is ready from frame 0
+    if (pageIdx !== lastPageIdx && bgVideos[pageIdx]) {
+      lastPageIdx = pageIdx;
+      await seekVideoToTime(bgVideos[pageIdx]!, 0);
+      // Start playing so subsequent frames advance naturally
+      try { bgVideos[pageIdx]!.play(); } catch {}
+    }
+
+    // For subsequent frames, seek only if video fell behind significantly
+    if (bgVideos[pageIdx] && frameInPage > 0) {
+      const v = bgVideos[pageIdx]!;
+      const targetTime = (frameInPage / fps) % (v.duration || 1);
+      if (v.readyState >= 2 && Math.abs(v.currentTime - targetTime) > 0.3) {
+        await seekVideoForFrame(pageIdx, frameInPage);
+      }
     }
 
     renderFrame(i);
@@ -1658,15 +1680,18 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       throw frameErr;
     }
 
-    // Yield to UI every few frames
-    if (i % 3 === 0) {
+    // Yield to UI every few frames + give video time to advance
+    if (i % 2 === 0) {
       onProgress?.(Math.min(0.95, 0.20 + 0.75 * (i / totalFrames)));
-      await new Promise((r) => setTimeout(r, 0));
+      await new Promise((r) => setTimeout(r, 4));
     }
     if (encoder.encodeQueueSize > 8) {
       await new Promise((r) => setTimeout(r, 10));
     }
   }
+
+  // Pause all videos after encoding
+  bgVideos.forEach(v => { if (v) { try { v.pause(); } catch {} } });
 
   // Encode audio chunks AFTER video frames (audio is non-realtime, just feed the samples)
   if (audioEncoder && audioData) {
