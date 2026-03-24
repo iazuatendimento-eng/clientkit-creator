@@ -1230,45 +1230,81 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     });
   };
 
-  // Helper: load video with short timeout (mobile often blocks video preload)
-  // Downloads the video as a blob first so seeking works reliably on fully-buffered local data
+  // Helper: load video with resilient fallback.
+  // 1) Try fetch-as-blob (best for precise seek)
+  // 2) If fetch fails (CORS/timeout), fallback to direct URL source
   const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const vidTimeout = isMob ? 8_000 : 15_000;
+  const vidFetchTimeout = isMob ? 15_000 : 30_000;
+  const vidDecodeTimeout = isMob ? 8_000 : 12_000;
+
   const loadVid = async (url: string): Promise<HTMLVideoElement | null> => {
     if (!url) return null;
-    try {
-      // Download video as blob for reliable seeking (remote videos don't buffer well)
-      const controller = new AbortController();
-      const fetchTimer = setTimeout(() => controller.abort(), vidTimeout);
-      let blobUrl: string;
-      try {
-        const resp = await fetch(url, { signal: controller.signal, cache: "no-store" });
-        clearTimeout(fetchTimer);
-        if (!resp.ok) { console.warn("[WebCodecs] Vid fetch failed:", resp.status, url.slice(0, 60)); return null; }
-        const blob = await resp.blob();
-        blobUrl = URL.createObjectURL(blob);
-      } catch (fetchErr) {
-        clearTimeout(fetchTimer);
-        console.warn("[WebCodecs] Vid download failed:", url.slice(0, 60), fetchErr);
-        return null;
-      }
 
+    const loadVideoElement = (src: string, timeoutMs: number, blobUrlToCleanup?: string): Promise<HTMLVideoElement | null> => {
       return new Promise<HTMLVideoElement | null>((resolve) => {
-        const timer = setTimeout(() => { console.warn("[WebCodecs] Vid load timeout:", url.slice(0, 60)); URL.revokeObjectURL(blobUrl); resolve(null); }, 5_000);
+        const timer = setTimeout(() => {
+          console.warn("[WebCodecs] Vid load timeout:", url.slice(0, 60));
+          if (blobUrlToCleanup) URL.revokeObjectURL(blobUrlToCleanup);
+          resolve(null);
+        }, timeoutMs);
+
         const video = document.createElement("video");
         video.muted = true;
         video.playsInline = true;
         video.preload = "auto";
         video.loop = true;
+
         let resolved = false;
-        const done = () => { if (resolved) return; resolved = true; clearTimeout(timer); resolve(video); };
-        const fail = () => { if (resolved) return; resolved = true; clearTimeout(timer); URL.revokeObjectURL(blobUrl); resolve(null); };
+        const done = () => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timer);
+          if (blobUrlToCleanup) (video as any).__blobUrl = blobUrlToCleanup;
+          resolve(video);
+        };
+        const fail = () => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timer);
+          if (blobUrlToCleanup) URL.revokeObjectURL(blobUrlToCleanup);
+          resolve(null);
+        };
+
         video.onloadeddata = done;
         video.oncanplay = done;
         video.onerror = fail;
-        video.src = blobUrl;
+        video.src = src;
         try { video.load(); } catch {}
       });
+    };
+
+    try {
+      const controller = new AbortController();
+      const fetchTimer = setTimeout(() => controller.abort(), vidFetchTimeout);
+      let blobUrl: string | null = null;
+
+      try {
+        const resp = await fetch(url, { signal: controller.signal, cache: "no-store" });
+        clearTimeout(fetchTimer);
+        if (!resp.ok) throw new Error(`status=${resp.status}`);
+
+        const blob = await resp.blob();
+        if (!blob.size) throw new Error("empty blob");
+
+        blobUrl = URL.createObjectURL(blob);
+        const blobVideo = await loadVideoElement(blobUrl, vidDecodeTimeout, blobUrl);
+        if (blobVideo) return blobVideo;
+      } catch (fetchErr) {
+        clearTimeout(fetchTimer);
+        console.warn("[WebCodecs] Blob video load failed, trying direct URL:", url.slice(0, 60), fetchErr);
+      }
+
+      // Fallback path: direct URL (works when fetch is blocked by CORS/policy)
+      const directVideo = await loadVideoElement(url, vidDecodeTimeout);
+      if (directVideo) return directVideo;
+
+      console.warn("[WebCodecs] Vid load failed (all strategies):", url.slice(0, 60));
+      return null;
     } catch (err) {
       console.warn("[WebCodecs] Vid load error:", err);
       return null;
