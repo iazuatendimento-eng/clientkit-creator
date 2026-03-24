@@ -1110,19 +1110,22 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       setIsLoading(false);
 
       // 2) Slow path: hydrate metadata/assets in background (never block opening)
-      Promise.all([
-        supabase
-          .from("client_data")
-          .select("id, image_type, particularity_type")
-          .in("id", clientIds),
-        supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
-        supabase
-          .from("card_uploads")
-          .select("card_id")
-          .in("card_id", videos.map(v => v.cardId))
-          .eq("upload_type", "material"),
-      ])
-        .then(([clientsMetaRes, brandKitUrlsRes, uploadsRes]) => {
+      // and rebuild page previews automatically when old batches don't have saved `files`.
+      const hydrateAndRecoverMissingPages = async () => {
+        try {
+          const [clientsMetaRes, brandKitUrlsRes, uploadsRes] = await Promise.all([
+            supabase
+              .from("client_data")
+              .select("id, image_type, particularity_type")
+              .in("id", clientIds),
+            supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
+            supabase
+              .from("card_uploads")
+              .select("card_id")
+              .in("card_id", videos.map(v => v.cardId))
+              .eq("upload_type", "material"),
+          ]);
+
           const imageTypeMap: Record<string, string> = {};
           const particularityMap: Record<string, string> = {};
           (clientsMetaRes.data || []).forEach((c: any) => {
@@ -1144,19 +1147,52 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
           const cardsWithUploads = new Set((uploadsRes.data || []).map((u: any) => u.card_id));
 
-          setClientVideos((prev) =>
-            prev.map((v) => ({
-              ...v,
-              brandKit: mergeBrandKitAssets(v.brandKit || {}, freshBrandKitMap[v.clientId] || {}),
-              imageType: imageTypeMap[v.clientId] || v.imageType,
-              particularityType: particularityMap[v.clientId] || v.particularityType,
-              hasMaterialUploads: cardsWithUploads.has(v.cardId),
-            }))
-          );
-        })
-        .catch((err) => {
+          const hydrateVideo = (v: ClientVideo): ClientVideo => ({
+            ...v,
+            brandKit: mergeBrandKitAssets(v.brandKit || {}, freshBrandKitMap[v.clientId] || {}),
+            imageType: imageTypeMap[v.clientId] || v.imageType,
+            particularityType: particularityMap[v.clientId] || v.particularityType,
+            hasMaterialUploads: cardsWithUploads.has(v.cardId),
+          });
+
+          setClientVideos((prev) => prev.map(hydrateVideo));
+
+          const missingPageVideos = videos
+            .filter((v) => !Array.isArray(v.pages) || v.pages.length === 0)
+            .map(hydrateVideo);
+
+          if (missingPageVideos.length === 0) return;
+
+          console.log(`[BatchVideo] Rebuilding ${missingPageVideos.length} card preview(s) without saved pages...`);
+
+          for (const baseVideo of missingPageVideos) {
+            try {
+              const result = await regenerateSingleVideo(baseVideo);
+              setClientVideos((prev) =>
+                prev.map((v) =>
+                  v.cardId === baseVideo.cardId
+                    ? {
+                        ...v,
+                        pages: result.pages,
+                        overlayPages: result.overlayPages,
+                        frameOverlayPages: result.frameOverlayPages,
+                        preImageOverlayPages: result.preImageOverlayPages,
+                        logoOverlayPages: result.logoOverlayPages,
+                        fullPages: result.fullPages,
+                      }
+                    : v
+                )
+              );
+            } catch (regenError) {
+              console.warn(`[BatchVideo] Failed to rebuild card preview for ${baseVideo.cardId}:`, regenError);
+            }
+          }
+        } catch (err) {
           console.warn("Background hydration failed, using saved snapshot data:", err);
-        });
+        }
+      };
+
+      void hydrateAndRecoverMissingPages();
 
       // Overlays are rebuilt lazily when the user clicks on each card (see onClick handler).
       // This avoids the expensive upfront regeneration of all overlay layers.
