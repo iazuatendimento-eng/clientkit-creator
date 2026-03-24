@@ -20,6 +20,7 @@ export interface VideoEncoderOptions {
   textAnimDuration?: number; // 0-1 fraction of page duration for text animation (default 0.3)
   backgroundVideoUrls?: (string | null)[]; // Actual video URLs per page to use as animated background
   frameOverlayPages?: string[]; // Transparent frame overlay pages (decorative shapes - static)
+  preImageOverlayPages?: string[]; // Transparent overlay for shapes BELOW the video/image (z-1)
   overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
   logoOverlayPages?: string[]; // Transparent logo-only overlay pages
   imageRect?: { left: number; top: number; width: number; height: number } | null; // Image placeholder rect as percentages
@@ -1209,7 +1210,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     width, height, pageDuration, fps: rawFps = 24,
     motionEffect = "ken-burns", transitionEffect = "fade",
     textAnimation = "none", logoAnimation = "none", textAnimDuration,
-    backgroundVideoUrls, frameOverlayPages, overlayPages, logoOverlayPages,
+    backgroundVideoUrls, frameOverlayPages, preImageOverlayPages, overlayPages, logoOverlayPages,
     imageRect, pageImageAdjustments, imageClipShape, audioUrl, customOverlayPages, onProgress,
   } = options;
 
@@ -1344,8 +1345,8 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   console.log("[WebCodecs] Loading overlays...");
   const loadList = (list: string[] | undefined) =>
     Promise.all((list || []).map(url => url ? loadImg(url) : Promise.resolve(null)));
-  const [overlayImages, frameOverlayImages, logoOverlayImages] = await Promise.all([
-    loadList(overlayPages), loadList(frameOverlayPages), loadList(logoOverlayPages),
+  const [overlayImages, frameOverlayImages, logoOverlayImages, preImageOverlayImages] = await Promise.all([
+    loadList(overlayPages), loadList(frameOverlayPages), loadList(logoOverlayPages), loadList(preImageOverlayPages),
   ]);
   console.log("[WebCodecs] Overlays loaded, starting encode...");
 
@@ -1495,6 +1496,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
           // Save this good frame for fallback
           try { lastGoodVideoFrame[pageIdx] = ctx.getImageData(0, 0, width, height); } catch { /* ignore */ }
 
+          const piov = preImageOverlayImages[pageIdx]; if (piov) ctx.drawImage(piov, 0, 0, width, height);
           const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
           const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
           const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -1510,6 +1512,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         const cached = lastGoodVideoFrame[pageIdx];
         if (cached) {
           ctx.putImageData(cached, 0, 0);
+          const piov2 = preImageOverlayImages[pageIdx]; if (piov2) ctx.drawImage(piov2, 0, 0, width, height);
           const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
           const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
           const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -1517,6 +1520,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         } else {
           // Last resort: static image
           drawSource(img, true, pageProgress);
+          const piov3 = preImageOverlayImages[pageIdx]; if (piov3) ctx.drawImage(piov3, 0, 0, width, height);
           const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
           const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
           const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -1525,6 +1529,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       }
     } else {
       drawSource(img, true, pageProgress);
+      const piov4 = preImageOverlayImages[pageIdx]; if (piov4) ctx.drawImage(piov4, 0, 0, width, height);
       const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
       const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
       const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -1786,6 +1791,7 @@ export async function encodeVideoSimple(
     textAnimDuration,
     backgroundVideoUrls,
     frameOverlayPages,
+    preImageOverlayPages,
     overlayPages,
     logoOverlayPages,
     imageRect,
@@ -1944,7 +1950,24 @@ export async function encodeVideoSimple(
     })
   );
 
-  // Load logo overlay images (transparent PNGs with logo only)
+  // Load pre-image overlay images (shapes below video - z-1)
+  const preImageOverlayImages: (HTMLImageElement | null)[] = await Promise.all(
+    (preImageOverlayPages || []).map(async (pageUrl) => {
+      if (!pageUrl) return null;
+      try {
+        return await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = pageUrl;
+        });
+      } catch {
+        return null;
+      }
+    })
+  );
+
   const logoOverlayImages: (HTMLImageElement | null)[] = await Promise.all(
     (logoOverlayPages || []).map(async (pageUrl) => {
       if (!pageUrl) return null;
@@ -2128,6 +2151,8 @@ export async function encodeVideoSimple(
           // Cache this good frame
           try { simpleLastGoodFrame[pageIdx] = ctx.getImageData(0, 0, width, height); } catch { /* ignore */ }
 
+          const preImgOv = preImageOverlayImages[pageIdx];
+          if (preImgOv) ctx.drawImage(preImgOv, 0, 0, width, height);
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
           const overlay = overlayImages[pageIdx];
@@ -2145,6 +2170,7 @@ export async function encodeVideoSimple(
         const cached = simpleLastGoodFrame[pageIdx];
         if (cached) {
           ctx.putImageData(cached, 0, 0);
+          const piov2s = preImageOverlayImages[pageIdx]; if (piov2s) ctx.drawImage(piov2s, 0, 0, width, height);
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
           const overlay = overlayImages[pageIdx];
@@ -2154,6 +2180,7 @@ export async function encodeVideoSimple(
           drawSimpleCustomOverlays(pageIdx);
         } else {
           drawSource(img, true, pageProgress);
+          const piov3s = preImageOverlayImages[pageIdx]; if (piov3s) ctx.drawImage(piov3s, 0, 0, width, height);
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
           const overlay = overlayImages[pageIdx];
@@ -2165,6 +2192,7 @@ export async function encodeVideoSimple(
       }
     } else {
       drawSource(img, true, pageProgress);
+      const piov4s = preImageOverlayImages[pageIdx]; if (piov4s) ctx.drawImage(piov4s, 0, 0, width, height);
       const frameOverlay = frameOverlayImages[pageIdx];
       if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
       const overlay = overlayImages[pageIdx];
