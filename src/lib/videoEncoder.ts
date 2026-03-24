@@ -1502,6 +1502,9 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
           }
 
           ctx.drawImage(img, 0, 0, width, height);
+          const piov = preImageOverlayImages[pageIdx];
+          if (piov) ctx.drawImage(piov, 0, 0, width, height);
+
           const adj = pageImageAdjustments?.[pageIdx];
           const clipShape = imageClipShape || "rect";
           if (adj && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
@@ -1518,10 +1521,9 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
           if (applyMotionToCanvas) ctx.restore();
 
-          // Save this good frame for fallback
+          // Save this good frame for fallback (base + pre-image + video)
           try { lastGoodVideoFrame[pageIdx] = ctx.getImageData(0, 0, width, height); } catch { /* ignore */ }
 
-          const piov = preImageOverlayImages[pageIdx]; if (piov) ctx.drawImage(piov, 0, 0, width, height);
           const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
           const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
           const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -1537,7 +1539,6 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         const cached = lastGoodVideoFrame[pageIdx];
         if (cached) {
           ctx.putImageData(cached, 0, 0);
-          const piov2 = preImageOverlayImages[pageIdx]; if (piov2) ctx.drawImage(piov2, 0, 0, width, height);
           const fov = frameOverlayImages[pageIdx]; if (fov) ctx.drawImage(fov, 0, 0, width, height);
           const ov = overlayImages[pageIdx]; if (ov) drawOverlay(ov, pageProgress);
           const lov = logoOverlayImages[pageIdx]; if (lov) drawLogoOverlay(lov, pageProgress);
@@ -2216,6 +2217,9 @@ export async function encodeVideoSimple(
           }
 
           ctx.drawImage(img, 0, 0, width, height);
+          const preImgOv = preImageOverlayImages[pageIdx];
+          if (preImgOv) ctx.drawImage(preImgOv, 0, 0, width, height);
+
           const adj = pageImageAdjustments?.[pageIdx];
           const clipShape = imageClipShape || "rect";
 
@@ -2240,11 +2244,9 @@ export async function encodeVideoSimple(
 
           if (applyMotionToCanvas) ctx.restore();
 
-          // Cache this good frame
+          // Cache this good frame (base + pre-image + video)
           try { simpleLastGoodFrame[pageIdx] = ctx.getImageData(0, 0, width, height); } catch { /* ignore */ }
 
-          const preImgOv = preImageOverlayImages[pageIdx];
-          if (preImgOv) ctx.drawImage(preImgOv, 0, 0, width, height);
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
           const overlay = overlayImages[pageIdx];
@@ -2262,7 +2264,6 @@ export async function encodeVideoSimple(
         const cached = simpleLastGoodFrame[pageIdx];
         if (cached) {
           ctx.putImageData(cached, 0, 0);
-          const piov2s = preImageOverlayImages[pageIdx]; if (piov2s) ctx.drawImage(piov2s, 0, 0, width, height);
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
           const overlay = overlayImages[pageIdx];
