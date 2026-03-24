@@ -1231,13 +1231,13 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     });
   };
 
-  // Helper: load video with resilient + fast fallback.
-  // 1) Try direct URL first (fast metadata load, no full-file download upfront)
-  // 2) If direct load fails, fallback to fetch-as-blob
+  // Helper: load video with reliability-first strategy for export.
+  // 1) Try fetch-as-blob first (full random access for deterministic seeks)
+  // 2) If blob load fails, fallback to direct URL
   const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const vidDirectTimeout = isMob ? 6_000 : 8_000;
-  const vidFetchTimeout = isMob ? 12_000 : 18_000;
-  const vidDecodeTimeout = isMob ? 8_000 : 10_000;
+  const vidDirectTimeout = isMob ? 7_000 : 10_000;
+  const vidFetchTimeout = isMob ? 25_000 : 40_000;
+  const vidDecodeTimeout = isMob ? 10_000 : 14_000;
 
   const loadVid = async (url: string): Promise<HTMLVideoElement | null> => {
     if (!url) return null;
@@ -1283,10 +1283,6 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     };
 
     try {
-      // Fast path: direct URL first (avoids downloading full MP4 before encode starts)
-      const directVideo = await loadVideoElement(url, vidDirectTimeout);
-      if (directVideo) return directVideo;
-
       try {
         const controller = new AbortController();
         const fetchTimer = setTimeout(() => controller.abort(), vidFetchTimeout);
@@ -1299,9 +1295,18 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
         const blobUrl = URL.createObjectURL(blob);
         const blobVideo = await loadVideoElement(blobUrl, vidDecodeTimeout, blobUrl);
-        if (blobVideo) return blobVideo;
+        if (blobVideo) {
+          console.log("[WebCodecs] Vid loaded via blob:", url.slice(0, 60));
+          return blobVideo;
+        }
       } catch (fetchErr) {
-        console.warn("[WebCodecs] Direct+blob video load failed:", url.slice(0, 60), fetchErr);
+        console.warn("[WebCodecs] Blob video load failed, trying direct URL:", url.slice(0, 60), fetchErr);
+      }
+
+      const directVideo = await loadVideoElement(url, vidDirectTimeout);
+      if (directVideo) {
+        console.log("[WebCodecs] Vid loaded via direct URL:", url.slice(0, 60));
+        return directVideo;
       }
 
       console.warn("[WebCodecs] Vid load failed (all strategies):", url.slice(0, 60));
@@ -1619,8 +1624,11 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     if (!v) return;
     if (v.readyState < 1 || !Number.isFinite(v.duration) || v.duration <= 0) return;
 
-    const targetTime = (frameInPage / fps) % v.duration;
-    const seekTolerance = Math.max(0.04, 1.5 / fps);
+    const duration = v.duration;
+    const epsilon = 1 / Math.max(fps * 4, 80);
+    const loopedTime = (frameInPage / fps) % duration;
+    const targetTime = Math.min(Math.max(0, loopedTime), Math.max(0, duration - epsilon));
+    const seekTolerance = Math.max(0.01, 0.5 / fps);
     if (Math.abs(v.currentTime - targetTime) <= seekTolerance) return;
 
     try {
@@ -1629,14 +1637,34 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       return;
     }
 
-    // Wait for the seeked event or a short timeout so the frame is decoded
+    // Wait for seek completion with a safer timeout for remote/cloud videos
     await new Promise<void>((resolve) => {
       let settled = false;
-      const done = () => { if (settled) return; settled = true; v.removeEventListener("seeked", done); resolve(); };
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        v.removeEventListener("seeked", done);
+        resolve();
+      };
       v.addEventListener("seeked", done);
-      // Short timeout: if the seek takes too long, proceed with whatever is available
-      setTimeout(done, 80);
+      setTimeout(done, isMob ? 320 : 220);
     });
+
+    if (v.readyState < 2) {
+      await new Promise<void>((resolve) => {
+        const startedAt = performance.now();
+        const poll = () => {
+          if (v.readyState >= 2 || performance.now() - startedAt > (isMob ? 420 : 260)) {
+            resolve();
+            return;
+          }
+          setTimeout(poll, 16);
+        };
+        poll();
+      });
+    }
+
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   };
 
   console.log("[WebCodecs] Starting frame loop, total:", totalFrames);
@@ -1650,18 +1678,13 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     // On page change, do a full blocking seek to ensure video is ready from frame 0
     if (pageIdx !== lastPageIdx && bgVideos[pageIdx]) {
       lastPageIdx = pageIdx;
+      try { bgVideos[pageIdx]!.pause(); } catch {}
       await seekVideoToTime(bgVideos[pageIdx]!, 0);
-      // Start playing so subsequent frames advance naturally
-      try { bgVideos[pageIdx]!.play(); } catch {}
     }
 
-    // For subsequent frames, seek only if video fell behind significantly
-    if (bgVideos[pageIdx] && frameInPage > 0) {
-      const v = bgVideos[pageIdx]!;
-      const targetTime = (frameInPage / fps) % (v.duration || 1);
-      if (v.readyState >= 2 && Math.abs(v.currentTime - targetTime) > 0.3) {
-        await seekVideoForFrame(pageIdx, frameInPage);
-      }
+    // Deterministic export: drive the video by frame index (no realtime playback drift)
+    if (bgVideos[pageIdx]) {
+      await seekVideoForFrame(pageIdx, frameInPage);
     }
 
     renderFrame(i);
