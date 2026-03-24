@@ -1826,40 +1826,75 @@ export async function encodeVideoSimple(
     )
   );
 
-  // Load background videos for pages that have them (download as blob for reliable seeking)
+  // Load background videos for pages that have them (with blob->direct fallback)
   const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
     (backgroundVideoUrls || []).map(async (videoUrl, idx) => {
       if (!videoUrl) return null;
-      try {
-        // Download as blob so seeking works on fully-buffered local data
-        const resp = await fetch(videoUrl, { cache: "no-store" });
-        if (!resp.ok) { console.warn(`[VideoEncoder] Video ${idx} fetch failed: ${resp.status}`); return null; }
-        const blob = await resp.blob();
-        const blobUrl = URL.createObjectURL(blob);
 
-        const video = document.createElement("video");
-        video.muted = true;
-        video.playsInline = true;
-        video.preload = "auto";
-        video.loop = true;
-        video.src = blobUrl;
-        
-        await new Promise<void>((resolve, reject) => {
-          const timer = setTimeout(() => resolve(), 5000);
-          video.onloadeddata = () => {
+      const loadVideoElement = (src: string, timeoutMs: number, blobUrlToKeep?: string): Promise<HTMLVideoElement | null> => {
+        return new Promise((resolve) => {
+          const video = document.createElement("video");
+          video.muted = true;
+          video.playsInline = true;
+          video.preload = "auto";
+          video.loop = true;
+
+          const timer = setTimeout(() => resolve(null), timeoutMs);
+          let settled = false;
+          const done = () => {
+            if (settled) return;
+            settled = true;
             clearTimeout(timer);
-            console.log(`[VideoEncoder] Video ${idx} loaded: ${video.videoWidth}x${video.videoHeight}, duration: ${video.duration}s`);
-            resolve();
+            if (blobUrlToKeep) (video as any).__blobUrl = blobUrlToKeep;
+            resolve(video);
           };
-          video.onerror = () => {
+          const fail = () => {
+            if (settled) return;
+            settled = true;
             clearTimeout(timer);
-            console.error(`[VideoEncoder] Video ${idx} failed to load`);
-            URL.revokeObjectURL(blobUrl);
-            reject(new Error(`Video ${idx} failed`));
+            if (blobUrlToKeep) URL.revokeObjectURL(blobUrlToKeep);
+            resolve(null);
           };
+
+          video.onloadeddata = done;
+          video.oncanplay = done;
+          video.onerror = fail;
+          video.src = src;
+          try { video.load(); } catch {}
         });
-        
-        return video;
+      };
+
+      try {
+        const controller = new AbortController();
+        const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 15_000 : 30_000);
+
+        try {
+          const resp = await fetch(videoUrl, { cache: "no-store", signal: controller.signal });
+          clearTimeout(fetchTimer);
+          if (!resp.ok) throw new Error(`status=${resp.status}`);
+
+          const blob = await resp.blob();
+          if (!blob.size) throw new Error("empty blob");
+
+          const blobUrl = URL.createObjectURL(blob);
+          const blobVideo = await loadVideoElement(blobUrl, 10_000, blobUrl);
+          if (blobVideo) {
+            console.log(`[VideoEncoder] Video ${idx} loaded via blob: ${blobVideo.videoWidth}x${blobVideo.videoHeight}`);
+            return blobVideo;
+          }
+        } catch (blobErr) {
+          clearTimeout(fetchTimer);
+          console.warn(`[VideoEncoder] Video ${idx} blob load failed, trying direct URL:`, blobErr);
+        }
+
+        const directVideo = await loadVideoElement(videoUrl, 10_000);
+        if (directVideo) {
+          console.log(`[VideoEncoder] Video ${idx} loaded via direct URL: ${directVideo.videoWidth}x${directVideo.videoHeight}`);
+          return directVideo;
+        }
+
+        console.warn(`[VideoEncoder] Video ${idx} failed in all load strategies`);
+        return null;
       } catch (err) {
         console.error(`[VideoEncoder] Could not load video ${idx}:`, err);
         return null;
