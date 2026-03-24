@@ -586,6 +586,20 @@ const CardCoverPreview = memo(({
           />
         )}
 
+        {pgHasVideo && !imageRect && (
+          <video
+            key={`preview-video-fallback-${video.cardId}-${pageIdx}-${currentRetryKey}`}
+            src={pgActiveUrl!}
+            className="absolute inset-0 w-full h-full object-cover z-[2]"
+            muted
+            loop
+            autoPlay
+            playsInline
+            onLoadedData={handleVideoLoadedData}
+            onError={handleVideoError}
+          />
+        )}
+
         {pgHasVideo && imageRect && (() => {
           const adj = video.pageImageAdjustments?.[pageIdx];
           const videoTransform: React.CSSProperties = {};
@@ -629,6 +643,7 @@ const CardCoverPreview = memo(({
                   />
                 )}
                 <video
+                  key={`preview-video-clipped-${video.cardId}-${pageIdx}-${currentRetryKey}`}
                   src={pgActiveUrl!}
                   className="absolute object-cover"
                   style={{
@@ -637,7 +652,8 @@ const CardCoverPreview = memo(({
                     ...videoTransform,
                   }}
                   muted loop autoPlay playsInline
-                  onError={() => setVideoFailed(prev => ({ ...prev, [pageIdx]: true }))}
+                  onLoadedData={handleVideoLoadedData}
+                  onError={handleVideoError}
                 />
               </div>
             );
@@ -657,11 +673,13 @@ const CardCoverPreview = memo(({
                 />
               )}
               <video
+                key={`preview-video-rect-${video.cardId}-${pageIdx}-${currentRetryKey}`}
                 src={pgActiveUrl!}
                 className="w-full h-full object-cover"
                 style={{ ...videoTransform, position: 'relative' as const }}
                 muted loop autoPlay playsInline
-                onError={() => setVideoFailed(prev => ({ ...prev, [pageIdx]: true }))}
+                onLoadedData={handleVideoLoadedData}
+                onError={handleVideoError}
               />
             </div>
           );
