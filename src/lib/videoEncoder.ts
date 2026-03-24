@@ -1617,8 +1617,42 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
   const frameDurationMicros = Math.round(1_000_000 / fps);
 
-  // Semi-blocking seek: waits for the video to decode the target frame
-  // so the encoder always has real video content to draw.
+  // Reliability-first seek: guarantee decoded frame before drawing to avoid
+  // long frozen stretches where only ~1s of background video appears in export.
+  const waitForVideoReady = async (video: HTMLVideoElement, timeoutMs: number): Promise<boolean> => {
+    if (video.readyState >= 2) return true;
+
+    return await new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finish = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        video.removeEventListener("loadeddata", onReady);
+        video.removeEventListener("canplay", onReady);
+        resolve(ok);
+      };
+      const onReady = () => finish(video.readyState >= 2);
+
+      const timer = window.setTimeout(() => finish(video.readyState >= 2), timeoutMs);
+      video.addEventListener("loadeddata", onReady);
+      video.addEventListener("canplay", onReady);
+
+      const poll = () => {
+        if (settled) {
+          window.clearTimeout(timer);
+          return;
+        }
+        if (video.readyState >= 2) {
+          window.clearTimeout(timer);
+          finish(true);
+          return;
+        }
+        window.setTimeout(poll, 20);
+      };
+      poll();
+    });
+  };
+
   const seekVideoForFrame = async (pageIdx: number, frameInPage: number): Promise<void> => {
     const v = bgVideos[pageIdx];
     if (!v) return;
@@ -1628,39 +1662,27 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     const epsilon = 1 / Math.max(fps * 4, 80);
     const loopedTime = (frameInPage / fps) % duration;
     const targetTime = Math.min(Math.max(0, loopedTime), Math.max(0, duration - epsilon));
-    const seekTolerance = Math.max(0.01, 0.5 / fps);
-    if (Math.abs(v.currentTime - targetTime) <= seekTolerance) return;
+    const seekTolerance = Math.max(0.008, 0.35 / fps);
 
-    try {
-      v.currentTime = targetTime;
-    } catch {
-      return;
+    if (Math.abs(v.currentTime - targetTime) > seekTolerance) {
+      await seekVideoToTime(v, targetTime);
     }
 
-    // Wait for seek completion with a safer timeout for remote/cloud videos
-    await new Promise<void>((resolve) => {
-      let settled = false;
-      const done = () => {
-        if (settled) return;
-        settled = true;
-        v.removeEventListener("seeked", done);
-        resolve();
-      };
-      v.addEventListener("seeked", done);
-      setTimeout(done, isMob ? 320 : 220);
-    });
+    let ready = await waitForVideoReady(v, isMob ? 1400 : 900);
 
-    if (v.readyState < 2) {
-      await new Promise<void>((resolve) => {
-        const startedAt = performance.now();
-        const poll = () => {
-          if (v.readyState >= 2 || performance.now() - startedAt > (isMob ? 420 : 260)) {
-            resolve();
-            return;
-          }
-          setTimeout(poll, 16);
-        };
-        poll();
+    // One deterministic retry in case browser decoder lags on random-access seeks.
+    if (!ready) {
+      const retryTime = Math.min(Math.max(0, targetTime + 1 / fps), Math.max(0, duration - epsilon));
+      await seekVideoToTime(v, retryTime);
+      ready = await waitForVideoReady(v, isMob ? 1200 : 700);
+    }
+
+    if (!ready) {
+      console.warn("[WebCodecs] Background video frame not ready in time", {
+        pageIdx,
+        frameInPage,
+        targetTime,
+        readyState: v.readyState,
       });
     }
 
@@ -2435,7 +2457,9 @@ export async function encodeVideoSimple(
 
     if (bgVideos[0]) startVideoForPage(0);
 
-    const FRAMES_PER_BATCH = isMobileDevice ? 1 : 4;
+    const hasAnimatedBackground = bgVideos.some((v) => !!v);
+    const useRealtimePacing = isMobileDevice || hasAnimatedBackground;
+    const FRAMES_PER_BATCH = useRealtimePacing ? 1 : 4;
     const PROGRESS_INTERVAL = isMobileDevice ? 3 : 10;
     let progressCounter = 0;
 
@@ -2474,8 +2498,9 @@ export async function encodeVideoSimple(
       }
 
       if (globalFrame < useTotalFrames) {
-        // On mobile, render at real-time pace so MediaRecorder can keep up
-        if (isMobileDevice) {
+        // Realtime pacing is mandatory for MediaRecorder when a background video is used,
+        // otherwise the video track advances only ~1s while we render many synthetic frames.
+        if (useRealtimePacing) {
           setTimeout(tick, frameIntervalMs);
         } else {
           setTimeout(tick, 0);
