@@ -1388,11 +1388,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         v.cardId === baseVideo.cardId
                           ? {
                               ...v,
+                              // CRITICAL: update pages to base-only (no shapes/text/logo baked in)
+                              // to prevent double-rendering when compositing with overlay layers.
+                              // The old fullPages (saved composites) stay for thumbnail display.
+                              pages: result.pages,
                               overlayPages: result.overlayPages,
                               frameOverlayPages: result.frameOverlayPages,
                               preImageOverlayPages: result.preImageOverlayPages,
                               logoOverlayPages: result.logoOverlayPages,
-                              // Keep saved pages/fullPages to avoid visual flicker while overlays hydrate
+                              fullPages: result.fullPages,
                             }
                           : v
                       )
