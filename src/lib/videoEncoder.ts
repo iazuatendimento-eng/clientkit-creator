@@ -1518,15 +1518,15 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   const lastGoodVideoFrame: Record<number, ImageData | null> = {};
 
   const renderFrame = (frameNum: number) => {
-    const pageIdx = Math.floor(frameNum / framesPerPage);
-    const frameInPage = frameNum - (pageIdx * framesPerPage);
+    const { pageIdx, frameInPage } = frameToPageInfo(frameNum, cumulativeFrames, framesPerPageArr);
     if (pageIdx >= images.length) return;
+    const pageFrames = framesPerPageArr[pageIdx];
 
     const img = images[pageIdx];
     const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
     const bgVideo = bgVideos[pageIdx] || null;
-    const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
-    const pageProgress = frameInPage / framesPerPage;
+    const isTransitionPhase = frameInPage >= pageFrames - transitionFrames && nextImg;
+    const pageProgress = frameInPage / pageFrames;
 
     // Draw the base image first (no black clear — prevents flashing)
     if (isTransitionPhase && nextImg) {
