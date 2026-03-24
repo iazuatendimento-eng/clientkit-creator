@@ -1405,9 +1405,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                           : v
                       )
                     );
-                          : v
-                      )
-                    );
                   } catch (regenError) {
                     console.warn(`[BatchVideo] Failed to rebuild overlays for ${baseVideo.cardId}:`, regenError);
                   }
