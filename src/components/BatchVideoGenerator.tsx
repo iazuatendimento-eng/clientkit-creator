@@ -4007,7 +4007,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       contentElements: template.contentElements,
                       signatureElements: template.signatureElements,
                     }}
-                    previewUrl={selectedVideo.fullPages?.[currentPreviewPage] || selectedVideo.pages[currentPreviewPage] || null}
+                    previewUrl={selectedVideo.pages[currentPreviewPage] || null}
                     isBusy={isApplyingAdjustments}
                     onCommit={scheduleApplyAdjustments}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
