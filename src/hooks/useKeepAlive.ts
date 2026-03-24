@@ -1,26 +1,26 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { refreshSessionIfNeeded } from "@/hooks/useAuth";
 
 /**
- * Global keep-alive hook: pings the database every 2 minutes to prevent
- * cold-start hibernation. Also pings immediately on mount and whenever
- * the tab becomes visible again (e.g. user switches back to the app).
+ * Global keep-alive hook: pings the database every 2 minutes.
+ * If a ping returns JWT expired, it refreshes the token automatically.
  */
 export function useKeepAlive() {
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const ping = () => {
-      supabase.from("teams").select("id").limit(1).maybeSingle().then(() => {});
+    const ping = async () => {
+      const { error } = await supabase.from("teams").select("id").limit(1).maybeSingle();
+      if (error?.message?.includes("JWT expired") || error?.code === "PGRST303") {
+        console.log("[KeepAlive] JWT expired, refreshing...");
+        await refreshSessionIfNeeded();
+      }
     };
 
-    // Immediate ping on mount
     ping();
-
-    // Ping every 2 minutes
     intervalRef.current = window.setInterval(ping, 2 * 60 * 1000);
 
-    // Ping when tab becomes visible again (user returns to app)
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
         ping();
