@@ -604,7 +604,7 @@ const CardCoverPreview = memo(({
           </div>
         )}
 
-        {!useSignatureComposite && pgPreImage && pgPreImage !== "" && (
+        {!useCompositeFallback && pgPreImage && pgPreImage !== "" && (
           <img
             src={pgPreImage}
             alt=""
@@ -614,7 +614,7 @@ const CardCoverPreview = memo(({
           />
         )}
 
-        {pgHasVideo && !imageRect && (
+        {!useCompositeFallback && pgHasVideo && !imageRect && (
           <video
             key={`preview-video-fallback-${video.cardId}-${pageIdx}-${currentRetryKey}`}
             src={pgActiveUrl!}
@@ -628,7 +628,7 @@ const CardCoverPreview = memo(({
           />
         )}
 
-        {pgHasVideo && imageRect && (() => {
+        {!useCompositeFallback && pgHasVideo && imageRect && (() => {
           const adj = video.pageImageAdjustments?.[pageIdx];
           const videoTransform: React.CSSProperties = {};
           if (adj && imageElSize && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
@@ -713,13 +713,13 @@ const CardCoverPreview = memo(({
           );
         })()}
 
-        {!useSignatureComposite && effectiveFrameOverlay && (
+        {!useCompositeFallback && effectiveFrameOverlay && (
           <img src={effectiveFrameOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[3] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`} style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined} draggable={false} />
         )}
-        {!useSignatureComposite && effectiveTextOverlay && (
+        {!useCompositeFallback && effectiveTextOverlay && (
           <img src={effectiveTextOverlay} alt="" className={`absolute inset-0 w-full h-full object-contain z-[4] pointer-events-none ${textAnimation !== "none" ? `card-animate-text-${textAnimation}` : ""}`} style={{ animationDuration: `${textAnimDuration}s` }} draggable={false} />
         )}
-        {!useSignatureComposite && pgLogo && pgLogo !== "" && (
+        {!useCompositeFallback && pgLogo && pgLogo !== "" && (
           <img src={pgLogo} alt="" className={`absolute inset-0 w-full h-full object-contain z-[5] pointer-events-none ${logoAnimation !== "none" ? `card-animate-logo-${logoAnimation}` : ""}`} draggable={false} />
         )}
 
