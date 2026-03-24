@@ -191,6 +191,59 @@ function normalizeBackgroundVideoUrls(
   });
 }
 
+/**
+ * Per-page duration: min(bgVideo.duration, pageDuration).
+ * If a page has no bg video, uses the full pageDuration.
+ */
+interface PerPageFrameInfo {
+  pageDurations: number[];        // effective duration per page in seconds
+  framesPerPageArr: number[];     // frames per page
+  cumulativeFrames: number[];     // cumulative frame offset (start frame of each page)
+  totalFrames: number;
+}
+
+function computePerPageFrameInfo(
+  bgVideos: (HTMLVideoElement | null)[],
+  pageCount: number,
+  pageDuration: number,
+  fps: number
+): PerPageFrameInfo {
+  const pageDurations: number[] = [];
+  const framesPerPageArr: number[] = [];
+  const cumulativeFrames: number[] = [];
+  let total = 0;
+
+  for (let i = 0; i < pageCount; i++) {
+    const v = bgVideos[i];
+    let dur = pageDuration;
+    // If the bg video is shorter than the page, use the video's duration
+    if (v && v.duration && isFinite(v.duration) && v.duration > 0) {
+      dur = Math.min(v.duration, pageDuration);
+    }
+    pageDurations.push(dur);
+    const frames = Math.max(1, Math.floor(dur * fps));
+    framesPerPageArr.push(frames);
+    cumulativeFrames.push(total);
+    total += frames;
+  }
+
+  return { pageDurations, framesPerPageArr, cumulativeFrames, totalFrames: total };
+}
+
+/** Convert global frame number to page index and frame-within-page */
+function frameToPageInfo(
+  frameNum: number,
+  cumulativeFrames: number[],
+  framesPerPageArr: number[]
+): { pageIdx: number; frameInPage: number } {
+  for (let p = cumulativeFrames.length - 1; p >= 0; p--) {
+    if (frameNum >= cumulativeFrames[p]) {
+      return { pageIdx: p, frameInPage: frameNum - cumulativeFrames[p] };
+    }
+  }
+  return { pageIdx: 0, frameInPage: frameNum };
+}
+
 function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "ogg" | "m4a" {
   const normalizedUrl = audioUrl.toLowerCase().split("?")[0].split("#")[0];
   const normalizedMime = (mimeType || "").toLowerCase();
