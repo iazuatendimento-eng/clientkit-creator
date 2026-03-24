@@ -36,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, searchPexelsImages, searchPixabayImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
+import { getSmartSearchTerms } from "@/lib/smartSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
 import {
@@ -912,15 +913,17 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
       // 3) Last resort: automated search (only in full auto mode)
       if (allowSearch) {
         try {
-          const rawParts = [art.imageType, art.cardTitle, art.cardText].filter(Boolean);
-          const rawQuery = rawParts.join(" ").slice(0, 150);
           let query: string;
           try {
-            const { data: fnData } = await supabase.functions.invoke("translate-text", {
-              body: { text: rawQuery },
+            query = await getSmartSearchTerms({
+              cardTitle: art.cardTitle,
+              cardDescription: art.cardText,
+              imageType: art.imageType,
+              clientName: art.clientName,
+              mediaType: "image",
             });
-            query = fnData?.translatedText || translateToEnglishLocal(rawQuery);
           } catch {
+            const rawQuery = [art.imageType, art.cardTitle, art.cardText].filter(Boolean).join(" ").slice(0, 150);
             query = translateToEnglishLocal(rawQuery);
           }
           const images = await searchImages(query, 1);
@@ -1826,17 +1829,17 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
         if (hasImagePlaceholder && !art.photoImage) {
           try {
             // Build search query from card text + image type
-            const rawParts = [art.imageType, art.cardText].filter(Boolean);
-            const rawQuery = rawParts.join(" ").substring(0, 150);
-            
-            // Try AI translation first, fallback to local dictionary
             let searchTerms: string;
             try {
-              const { data: fnData } = await supabase.functions.invoke("translate-text", {
-                body: { text: rawQuery },
+              searchTerms = await getSmartSearchTerms({
+                cardTitle: art.cardTitle,
+                cardDescription: art.cardText,
+                imageType: art.imageType,
+                clientName: art.clientName,
+                mediaType: "image",
               });
-              searchTerms = fnData?.translatedText || translateToEnglishLocal(rawQuery);
             } catch {
+              const rawQuery = [art.imageType, art.cardText].filter(Boolean).join(" ").substring(0, 150);
               searchTerms = translateToEnglishLocal(rawQuery);
             }
             console.log("Searching images:", rawQuery, "→", searchTerms);
