@@ -20,6 +20,7 @@ export interface VideoEncoderOptions {
   textAnimDuration?: number; // 0-1 fraction of page duration for text animation (default 0.3)
   backgroundVideoUrls?: (string | null)[]; // Actual video URLs per page to use as animated background
   frameOverlayPages?: string[]; // Transparent frame overlay pages (decorative shapes - static)
+  preImageOverlayPages?: string[]; // Transparent overlay for shapes BELOW the video/image (z-1)
   overlayPages?: string[]; // Transparent overlay pages for compositing on top of video
   logoOverlayPages?: string[]; // Transparent logo-only overlay pages
   imageRect?: { left: number; top: number; width: number; height: number } | null; // Image placeholder rect as percentages
