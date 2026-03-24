@@ -1329,7 +1329,15 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
     (backgroundVideoUrls || []).map(url => url ? loadVid(url) : Promise.resolve(null))
   );
-  console.log("[WebCodecs] Bg videos:", bgVideos.filter(Boolean).length);
+  const expectedBgVideoCount = (backgroundVideoUrls || []).filter(Boolean).length;
+  const loadedBgVideoCount = bgVideos.filter(Boolean).length;
+  console.log("[WebCodecs] Bg videos:", loadedBgVideoCount, "of", expectedBgVideoCount);
+
+  // If videos were expected but none loaded, force fallback path instead of exporting static images.
+  if (expectedBgVideoCount > 0 && loadedBgVideoCount === 0) {
+    throw new Error("Nenhum vídeo de fundo carregou no modo WebCodecs");
+  }
+
   onProgress?.(0.15);
 
   // Load overlays (parallel, with timeout)
