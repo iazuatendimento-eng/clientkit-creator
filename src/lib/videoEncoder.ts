@@ -229,6 +229,30 @@ function getReliableVideoDuration(video: HTMLVideoElement | null): number | null
   return Math.max(...candidates);
 }
 
+const VIDEO_SEEK_EPSILON_SEC = 1 / 240;
+
+function getSafeVideoSeekTime(
+  video: HTMLVideoElement,
+  targetTimeSec: number,
+  allowLoop: boolean
+): number {
+  if (!Number.isFinite(targetTimeSec) || targetTimeSec <= 0) return 0;
+
+  const reliableDuration = getReliableVideoDuration(video);
+  if (!reliableDuration || reliableDuration <= VIDEO_SEEK_EPSILON_SEC) {
+    return Math.max(0, targetTimeSec);
+  }
+
+  const maxSeekTime = Math.max(0, reliableDuration - VIDEO_SEEK_EPSILON_SEC);
+
+  if (allowLoop) {
+    const wrapped = ((targetTimeSec % reliableDuration) + reliableDuration) % reliableDuration;
+    return Math.min(Math.max(0, wrapped), maxSeekTime);
+  }
+
+  return Math.min(Math.max(0, targetTimeSec), maxSeekTime);
+}
+
 function computePerPageFrameInfo(
   bgVideos: (HTMLVideoElement | null)[],
   pageCount: number,
@@ -1559,7 +1583,8 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     const img = images[pageIdx];
     const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
     const bgVideo = bgVideos[pageIdx] || null;
-    const isTransitionPhase = frameInPage >= pageFrames - transitionFrames && nextImg;
+    // Keep full page visibility when background video is active to avoid end-of-page flicker.
+    const isTransitionPhase = !!nextImg && frameInPage >= pageFrames - transitionFrames && !bgVideo;
     const pageProgress = frameInPage / pageFrames;
 
     // Draw the base image first (no black clear — prevents flashing)
@@ -1789,9 +1814,16 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     const pageDur = perPageDurations[pageIdx] || pageDuration;
     const pageFrames = framesPerPageArr[pageIdx] || framesPerPage;
     const targetTime = (frameInPage / pageFrames) * pageDur;
+    const normalizedTargetTime = getSafeVideoSeekTime(video, targetTime, loopShortBackgroundVideos);
+    const frameTolerance = Math.max(0.02, (pageDur / Math.max(1, pageFrames)) * 0.45);
 
-    if (Math.abs(video.currentTime - targetTime) < 0.02) return;
-    await seekVideoToTime(video, targetTime);
+    if (Math.abs(video.currentTime - normalizedTargetTime) < frameTolerance) return;
+
+    await seekVideoToTime(video, normalizedTargetTime);
+
+    if (video.readyState < 2) {
+      await waitForVideoReady(video, isMob ? 320 : 180);
+    }
   };
 
   console.log("[WebCodecs] Starting frame loop, total:", totalFrames);
@@ -2270,7 +2302,8 @@ export async function encodeVideoSimple(
     const img = images[pageIdx];
     const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
     const bgVideo = bgVideos[pageIdx] || null;
-    const isTransitionPhase = frameInPage >= pageFrames - transitionFrames && nextImg;
+    // Keep full page visibility when background video is active to avoid end-of-page flicker.
+    const isTransitionPhase = !!nextImg && frameInPage >= pageFrames - transitionFrames && !bgVideo;
     const pageProgress = frameInPage / pageFrames;
 
     if (isTransitionPhase && nextImg) {
