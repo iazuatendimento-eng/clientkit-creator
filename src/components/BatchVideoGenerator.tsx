@@ -3197,6 +3197,57 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         return { path, publicUrl: urlData.publicUrl };
       };
 
+      const hasRenderablePages = (pages?: string[]) =>
+        Array.isArray(pages) && pages.some((p) => typeof p === "string" && p.trim().length > 0);
+
+      const hasRenderableCustomOverlays = (
+        custom?: Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]>
+      ) =>
+        !!custom &&
+        Object.values(custom).some(
+          (list) => Array.isArray(list) && list.some((ov) => !!ov?.url && !ov.isVideo)
+        );
+
+      const ensureVideoLayersForEncode = async (video: ClientVideo): Promise<ClientVideo> => {
+        const hasLayerAssets =
+          hasRenderablePages(video.preImageOverlayPages) ||
+          hasRenderablePages(video.frameOverlayPages) ||
+          hasRenderablePages(video.overlayPages) ||
+          hasRenderablePages(video.logoOverlayPages) ||
+          hasRenderableCustomOverlays(video.customOverlayPages);
+
+        if (hasLayerAssets && hasRenderablePages(video.pages)) {
+          return video;
+        }
+
+        try {
+          const rebuilt = await regenerateSingleVideo(video);
+          const merged: ClientVideo = {
+            ...video,
+            pages: rebuilt.pages,
+            overlayPages: rebuilt.overlayPages,
+            frameOverlayPages: rebuilt.frameOverlayPages,
+            preImageOverlayPages: rebuilt.preImageOverlayPages,
+            logoOverlayPages: rebuilt.logoOverlayPages,
+            fullPages: rebuilt.fullPages,
+          };
+
+          setClientVideos((prev) =>
+            prev.map((v) => (v.cardId === video.cardId ? merged : v))
+          );
+
+          if (selectedVideoRef.current?.cardId === video.cardId) {
+            selectedVideoRef.current = merged;
+            setSelectedVideo((cur) => (cur?.cardId === video.cardId ? merged : cur));
+          }
+
+          return merged;
+        } catch (regenErr) {
+          console.warn(`[BatchVideo] Falha ao regenerar layers para ${video.clientName}:`, regenErr);
+          return video;
+        }
+      };
+
       // Process a single client: encode all videos, upload, send email
       const processClient = async (clientId: string, videos: typeof normalizedApprovedVideos, clientIdx: number) => {
         const clientRow = clientsData?.find((c) => c.id === clientId);
@@ -3217,11 +3268,27 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         const clientPaths: string[] = [];
 
         for (let vi = 0; vi < videos.length; vi++) {
-          const video = videos[vi];
+          const video = await ensureVideoLayersForEncode(videos[vi]);
+
+          const hasLayerAssets =
+            hasRenderablePages(video.preImageOverlayPages) ||
+            hasRenderablePages(video.frameOverlayPages) ||
+            hasRenderablePages(video.overlayPages) ||
+            hasRenderablePages(video.logoOverlayPages) ||
+            hasRenderableCustomOverlays(video.customOverlayPages);
+
+          const hasBasePages = hasRenderablePages(video.pages);
+          const hasCompositePages = hasRenderablePages(video.fullPages);
+          const pagesForEncoding =
+            hasLayerAssets && hasBasePages
+              ? video.pages
+              : hasCompositePages
+                ? (video.fullPages as string[])
+                : video.pages;
 
 
           // Adaptive FPS: lower for long videos
-          const estimatedDurationSec = Math.max(1, video.pages.length * (template.pageDuration || 3));
+          const estimatedDurationSec = Math.max(1, pagesForEncoding.length * (template.pageDuration || 3));
           const adaptiveFps = estimatedDurationSec >= 40 ? 12 : estimatedDurationSec >= 24 ? 15 : estimatedDurationSec >= 16 ? 18 : 24;
           const emailFps = Math.min(adaptiveFps, 18);
 
@@ -3243,14 +3310,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             logoAnimation,
             textAnimDuration: textAnimDuration / (template.pageDuration || 3),
             backgroundVideoUrls: video.previewVideoUrls || undefined,
-            frameOverlayPages: video.frameOverlayPages || undefined,
-            preImageOverlayPages: video.preImageOverlayPages || undefined,
-            overlayPages: video.overlayPages || undefined,
-            logoOverlayPages: video.logoOverlayPages || undefined,
+            frameOverlayPages: hasLayerAssets ? (video.frameOverlayPages || undefined) : undefined,
+            preImageOverlayPages: hasLayerAssets ? (video.preImageOverlayPages || undefined) : undefined,
+            overlayPages: hasLayerAssets ? (video.overlayPages || undefined) : undefined,
+            logoOverlayPages: hasLayerAssets ? (video.logoOverlayPages || undefined) : undefined,
             imageRect: getImagePlaceholderRect(template.contentElements as CanvasElement[], template.width, template.height),
             imageClipShape: getImageClipShape(template.contentElements as CanvasElement[]),
             pageImageAdjustments: video.pageImageAdjustments,
-            customOverlayPages: video.customOverlayPages || undefined,
+            customOverlayPages: hasLayerAssets ? (video.customOverlayPages || undefined) : undefined,
             audioUrl,
             requireEmailSafePreview: true,
             onProgress: (p: number) => {
@@ -3284,7 +3351,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             );
 
             try {
-              const encodingPromise = encodeVideoToMP4(video.pages, {
+              const encodingPromise = encodeVideoToMP4(pagesForEncoding, {
                 ...baseOptions,
                 ...attempt.overrides,
               });
