@@ -2227,18 +2227,18 @@ export async function encodeVideoSimple(
 
   // Pure rendering function for a single frame (no side effects)
   const renderFrameToCanvas = (frameNum: number) => {
-    const pageIdx = Math.floor(frameNum / framesPerPage);
-    const frameInPage = frameNum - (pageIdx * framesPerPage);
+    const { pageIdx, frameInPage } = frameToPageInfo(frameNum, simpleCumulativeFrames, simpleFramesPerPageArr);
     if (pageIdx >= images.length) return;
+    const pageFrames = simpleFramesPerPageArr[pageIdx];
 
     const img = images[pageIdx];
     const nextImg = pageIdx + 1 < images.length ? images[pageIdx + 1] : null;
     const bgVideo = bgVideos[pageIdx] || null;
-    const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
-    const pageProgress = frameInPage / framesPerPage;
+    const isTransitionPhase = frameInPage >= pageFrames - transitionFrames && nextImg;
+    const pageProgress = frameInPage / pageFrames;
 
     if (isTransitionPhase && nextImg) {
-      const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
+      const transitionProgress = (frameInPage - (pageFrames - transitionFrames)) / transitionFrames;
       applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
     } else if (bgVideo) {
       let videoDrawn = false;
