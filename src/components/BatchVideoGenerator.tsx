@@ -2242,14 +2242,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setSelectedVideo((prev) =>
       prev ? { ...prev, adjustments: { ...prev.adjustments, [key]: value } } : prev
     );
-
-    setClientVideos((prev) =>
-      prev.map((v) =>
-        v.cardId === current.cardId
-          ? { ...v, adjustments: { ...v.adjustments, [key]: value } }
-          : v
-      )
-    );
   }, []);
 
   // Update text adjustment for a specific page
@@ -2273,14 +2265,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     setSelectedVideo((prev) =>
       prev ? { ...prev, pageTextAdjustments: updatedPageTextAdjustments } : prev
-    );
-
-    setClientVideos((prev) =>
-      prev.map((v) =>
-        v.cardId === current.cardId
-          ? { ...v, pageTextAdjustments: updatedPageTextAdjustments }
-          : v
-      )
     );
   }, []);
 
@@ -2306,14 +2290,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     setSelectedVideo((prev) =>
       prev ? { ...prev, pageImageAdjustments: updatedPageImageAdjustments } : prev
     );
-
-    setClientVideos((prev) =>
-      prev.map((v) =>
-        v.cardId === current.cardId
-          ? { ...v, pageImageAdjustments: updatedPageImageAdjustments }
-          : v
-      )
-    );
   }, []);
 
   const setCurrentPageOverlays = useCallback((overlays: VideoCustomOverlay[]) => {
@@ -2332,14 +2308,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
     setSelectedVideo((prev) =>
       prev ? { ...prev, customOverlayPages: updatedCustomOverlayPages } : prev
-    );
-
-    setClientVideos((prev) =>
-      prev.map((v) =>
-        v.cardId === current.cardId
-          ? { ...v, customOverlayPages: updatedCustomOverlayPages }
-          : v
-      )
     );
   }, [currentPreviewPage]);
 
@@ -4073,7 +4041,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       const updatedAdj = { ...current.adjustments, shapeOverrides: next };
                       selectedVideoRef.current = { ...current, adjustments: updatedAdj };
                       setSelectedVideo((prev) => prev ? { ...prev, adjustments: updatedAdj } : prev);
-                      setClientVideos((prev) => prev.map((v) => v.cardId === current.cardId ? { ...v, adjustments: updatedAdj } : v));
                     }}
                     customOverlays={selectedVideo.customOverlayPages?.[currentPreviewPage] || []}
                     setCustomOverlays={setCurrentPageOverlays}
