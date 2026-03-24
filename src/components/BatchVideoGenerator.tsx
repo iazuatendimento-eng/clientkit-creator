@@ -3752,7 +3752,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
                      if (needsOverlayBuild) {
                        try {
-                         setIsApplyingAdjustments(true);
                          const result = await regenerateSingleVideo(video);
                          const updatedVideo = {
                            ...video,
@@ -3765,15 +3764,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
                          setClientVideos((prev) => prev.map((v, i) => (i === index ? updatedVideo : v)));
                          setSelectedVideo(updatedVideo);
+                        selectedVideoRef.current = updatedVideo;
                        } catch (error) {
                          console.error("Error preparing overlays for art edit:", error);
-                         toast({
-                           title: "Erro ao preparar edição",
-                           description: "Tente abrir novamente este card.",
-                           variant: "destructive",
-                         });
-                       } finally {
-                         setIsApplyingAdjustments(false);
+                        // Non-blocking: user can still interact with what's available
                        }
                      }
                    }}
@@ -4027,11 +4021,18 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       contentElements: template.contentElements,
                       signatureElements: template.signatureElements,
                     }}
-                    previewUrl={(
-                      currentPreviewPage === selectedVideo.pages.length - 1
-                        ? selectedVideo.pages[currentPreviewPage]
-                        : selectedVideo.pages[currentPreviewPage]
-                    ) || null}
+                    previewUrl={(() => {
+                      const basePage = selectedVideo.pages[currentPreviewPage] || "";
+                      // When overlay layers are missing, use the full composite page
+                      // so the user sees a complete preview immediately
+                      const hasOverlays = (selectedVideo.overlayPages?.[currentPreviewPage] || "") !== "" ||
+                        (selectedVideo.logoOverlayPages?.[currentPreviewPage] || "") !== "" ||
+                        (selectedVideo.frameOverlayPages?.[currentPreviewPage] || "") !== "";
+                      if (!hasOverlays && selectedVideo.fullPages?.[currentPreviewPage]) {
+                        return selectedVideo.fullPages[currentPreviewPage];
+                      }
+                      return basePage || null;
+                    })()}
                     isBusy={isApplyingAdjustments}
                     onCommit={scheduleApplyAdjustments}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
