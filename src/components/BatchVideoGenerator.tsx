@@ -466,15 +466,19 @@ const CardCoverPreview = memo(({
   onDropVideo?: (pageIdx: number, file: File) => void;
   displayPage?: number;
 }) => {
-  const [videoFailed, setVideoFailed] = useState<Record<number, boolean>>({});
+  const [videoFailCount, setVideoFailCount] = useState<Record<number, number>>({});
+  const [videoGiveUp, setVideoGiveUp] = useState<Record<number, boolean>>({});
+  const [videoRetryKey, setVideoRetryKey] = useState<Record<number, number>>({});
   const allPages = video.pages.length;
   const totalPages = hideSignature && allPages > 1 ? allPages - 1 : allPages;
   const [dragOverPage, setDragOverPage] = useState<number | null>(null);
   const currentPage = Math.min(displayPage || 0, Math.max(0, totalPages - 1));
 
-  // Reset video failed state when video URLs change
+  // Reset transient video error/retry state when video URLs change
   useEffect(() => {
-    setVideoFailed({});
+    setVideoFailCount({});
+    setVideoGiveUp({});
+    setVideoRetryKey({});
   }, [video.previewVideoUrls]);
 
   const renderSinglePage = (pageIdx: number, skipAspectRatio = false) => {
@@ -485,7 +489,7 @@ const CardCoverPreview = memo(({
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
     const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
-    const pgHasVideo = !!pgActiveUrl && !videoFailed[pageIdx];
+    const pgHasVideo = !!pgActiveUrl && !videoGiveUp[pageIdx];
     const pgOverlay = video.overlayPages?.[pageIdx];
     const pgFrame = video.frameOverlayPages?.[pageIdx];
     const effectiveFrameOverlay = (pgFrame && pgFrame !== "")
@@ -523,6 +527,34 @@ const CardCoverPreview = memo(({
       }
     };
 
+    const currentRetryKey = videoRetryKey[pageIdx] ?? 0;
+    const handleVideoError = () => {
+      setVideoFailCount((prev) => {
+        const attempts = (prev[pageIdx] ?? 0) + 1;
+        if (attempts >= 3) {
+          setVideoGiveUp((current) => ({ ...current, [pageIdx]: true }));
+          return { ...prev, [pageIdx]: attempts };
+        }
+        setVideoRetryKey((current) => ({ ...current, [pageIdx]: (current[pageIdx] ?? 0) + 1 }));
+        return { ...prev, [pageIdx]: attempts };
+      });
+    };
+
+    const handleVideoLoadedData = () => {
+      setVideoFailCount((prev) => {
+        if (!(pageIdx in prev)) return prev;
+        const next = { ...prev };
+        delete next[pageIdx];
+        return next;
+      });
+      setVideoGiveUp((prev) => {
+        if (!(pageIdx in prev)) return prev;
+        const next = { ...prev };
+        delete next[pageIdx];
+        return next;
+      });
+    };
+
     return (
       <div
         key={`page-${video.cardId}-${pageIdx}`}
@@ -551,6 +583,20 @@ const CardCoverPreview = memo(({
             className={`absolute inset-0 w-full h-full object-contain z-[1] pointer-events-none ${shapeAnimation !== "none" ? `card-animate-${shapeAnimation}` : ""}`}
             style={shapeAnimation !== "none" ? { animationDuration: `${shapeAnimDuration}s` } : undefined}
             draggable={false}
+          />
+        )}
+
+        {pgHasVideo && !imageRect && (
+          <video
+            key={`preview-video-fallback-${video.cardId}-${pageIdx}-${currentRetryKey}`}
+            src={pgActiveUrl!}
+            className="absolute inset-0 w-full h-full object-cover z-[2]"
+            muted
+            loop
+            autoPlay
+            playsInline
+            onLoadedData={handleVideoLoadedData}
+            onError={handleVideoError}
           />
         )}
 
@@ -597,6 +643,7 @@ const CardCoverPreview = memo(({
                   />
                 )}
                 <video
+                  key={`preview-video-clipped-${video.cardId}-${pageIdx}-${currentRetryKey}`}
                   src={pgActiveUrl!}
                   className="absolute object-cover"
                   style={{
@@ -605,7 +652,8 @@ const CardCoverPreview = memo(({
                     ...videoTransform,
                   }}
                   muted loop autoPlay playsInline
-                  onError={() => setVideoFailed(prev => ({ ...prev, [pageIdx]: true }))}
+                  onLoadedData={handleVideoLoadedData}
+                  onError={handleVideoError}
                 />
               </div>
             );
@@ -625,11 +673,13 @@ const CardCoverPreview = memo(({
                 />
               )}
               <video
+                key={`preview-video-rect-${video.cardId}-${pageIdx}-${currentRetryKey}`}
                 src={pgActiveUrl!}
                 className="w-full h-full object-cover"
                 style={{ ...videoTransform, position: 'relative' as const }}
                 muted loop autoPlay playsInline
-                onError={() => setVideoFailed(prev => ({ ...prev, [pageIdx]: true }))}
+                onLoadedData={handleVideoLoadedData}
+                onError={handleVideoError}
               />
             </div>
           );
