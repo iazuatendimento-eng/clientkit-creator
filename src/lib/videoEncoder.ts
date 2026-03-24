@@ -1653,37 +1653,39 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     });
   };
 
-  const seekVideoForFrame = async (pageIdx: number, frameInPage: number): Promise<void> => {
+  const stopBgPlayback = (video: HTMLVideoElement | null) => {
+    if (!video) return;
+    try {
+      video.pause();
+    } catch {
+      // ignore
+    }
+  };
+
+  const startBgPlaybackForPage = async (pageIdx: number): Promise<void> => {
     const v = bgVideos[pageIdx];
     if (!v) return;
-    if (v.readyState < 1 || !Number.isFinite(v.duration) || v.duration <= 0) return;
 
-    const duration = v.duration;
-    const epsilon = 1 / Math.max(fps * 4, 80);
-    const loopedTime = (frameInPage / fps) % duration;
-    const targetTime = Math.min(Math.max(0, loopedTime), Math.max(0, duration - epsilon));
-    const seekTolerance = Math.max(0.008, 0.35 / fps);
-
-    if (Math.abs(v.currentTime - targetTime) > seekTolerance) {
-      await seekVideoToTime(v, targetTime);
+    try {
+      v.pause();
+    } catch {
+      // ignore
     }
 
-    let ready = await waitForVideoReady(v, isMob ? 1400 : 900);
+    // Reliability-first: seek once to 0 and then play in real-time.
+    // This avoids keyframe-only random-access behavior where video appears
+    // only in short bursts near the end of the page.
+    await seekVideoToTime(v, 0);
+    await waitForVideoReady(v, isMob ? 2000 : 1200);
 
-    // One deterministic retry in case browser decoder lags on random-access seeks.
-    if (!ready) {
-      const retryTime = Math.min(Math.max(0, targetTime + 1 / fps), Math.max(0, duration - epsilon));
-      await seekVideoToTime(v, retryTime);
-      ready = await waitForVideoReady(v, isMob ? 1200 : 700);
-    }
-
-    if (!ready) {
-      console.warn("[WebCodecs] Background video frame not ready in time", {
-        pageIdx,
-        frameInPage,
-        targetTime,
-        readyState: v.readyState,
-      });
+    try {
+      v.playbackRate = 1;
+      const playPromise = v.play();
+      if (playPromise && typeof playPromise.then === "function") {
+        await playPromise.catch(() => {});
+      }
+    } catch {
+      // keep rendering with last decoded frame/static fallback
     }
 
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -1691,22 +1693,21 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
   console.log("[WebCodecs] Starting frame loop, total:", totalFrames);
   let lastPageIdx = -1;
+  let activeBgVideo: HTMLVideoElement | null = null;
+  const frameIntervalMs = Math.max(1, Math.round(1000 / fps));
   for (let i = 0; i < totalFrames; i++) {
     if (encoderError) throw encoderError;
 
     const pageIdx = Math.floor(i / framesPerPage);
-    const frameInPage = i - (pageIdx * framesPerPage);
 
-    // On page change, do a full blocking seek to ensure video is ready from frame 0
-    if (pageIdx !== lastPageIdx && bgVideos[pageIdx]) {
+    // On page change, swap active video and restart playback from t=0.
+    if (pageIdx !== lastPageIdx) {
+      stopBgPlayback(activeBgVideo);
       lastPageIdx = pageIdx;
-      try { bgVideos[pageIdx]!.pause(); } catch {}
-      await seekVideoToTime(bgVideos[pageIdx]!, 0);
-    }
-
-    // Deterministic export: drive the video by frame index (no realtime playback drift)
-    if (bgVideos[pageIdx]) {
-      await seekVideoForFrame(pageIdx, frameInPage);
+      activeBgVideo = bgVideos[pageIdx] || null;
+      if (activeBgVideo) {
+        await startBgPlaybackForPage(pageIdx);
+      }
     }
 
     renderFrame(i);
@@ -1725,11 +1726,16 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       throw frameErr;
     }
 
-    // Yield to UI every few frames + give video time to advance
-    if (i % 2 === 0) {
+    // For pages with animated background, real-time pacing is required so
+    // HTMLVideoElement can decode and advance throughout the full page duration.
+    if (activeBgVideo) {
+      onProgress?.(Math.min(0.95, 0.20 + 0.75 * (i / totalFrames)));
+      await new Promise((r) => setTimeout(r, frameIntervalMs));
+    } else if (i % 2 === 0) {
       onProgress?.(Math.min(0.95, 0.20 + 0.75 * (i / totalFrames)));
       await new Promise((r) => setTimeout(r, 4));
     }
+
     if (encoder.encodeQueueSize > 8) {
       await new Promise((r) => setTimeout(r, 10));
     }
