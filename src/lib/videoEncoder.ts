@@ -2567,7 +2567,7 @@ export async function encodeVideoSimple(
 
       let framesThisBatch = 0;
       while (framesThisBatch < FRAMES_PER_BATCH && globalFrame < useTotalFrames) {
-        const pageIdx = Math.floor(globalFrame / useFramesPerPage);
+        const { pageIdx } = frameToPageInfo(globalFrame, useCumulativeFrames, useFramesPerPageArr);
         if (pageIdx !== lastPageIdx) {
           startVideoForPage(pageIdx);
           lastPageIdx = pageIdx;
