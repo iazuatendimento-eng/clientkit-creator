@@ -1916,6 +1916,9 @@ export async function encodeVideoSimple(
     }
   };
 
+  // Keep a per-page buffer of the last successfully drawn video frame to avoid flashing
+  const simpleLastGoodFrame: Record<number, ImageData | null> = {};
+
   // Pure rendering function for a single frame (no side effects)
   const renderFrameToCanvas = (frameNum: number) => {
     const pageIdx = Math.floor(frameNum / framesPerPage);
@@ -1928,74 +1931,100 @@ export async function encodeVideoSimple(
     const isTransitionPhase = frameInPage >= framesPerPage - transitionFrames && nextImg;
     const pageProgress = frameInPage / framesPerPage;
 
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, width, height);
-
     if (isTransitionPhase && nextImg) {
       const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
       applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
-    } else if (bgVideo && bgVideo.readyState >= 2) {
-      try {
-        const vw = bgVideo.videoWidth;
-        const vh = bgVideo.videoHeight;
-        let dx = 0, dy = 0, dw = width, dh = height;
-        if (imageRect) {
-          dx = (imageRect.left / 100) * width;
-          dy = (imageRect.top / 100) * height;
-          dw = (imageRect.width / 100) * width;
-          dh = (imageRect.height / 100) * height;
+    } else if (bgVideo) {
+      let videoDrawn = false;
+      if (bgVideo.readyState >= 2) {
+        try {
+          const vw = bgVideo.videoWidth;
+          const vh = bgVideo.videoHeight;
+          let dx = 0, dy = 0, dw = width, dh = height;
+          if (imageRect) {
+            dx = (imageRect.left / 100) * width;
+            dy = (imageRect.top / 100) * height;
+            dw = (imageRect.width / 100) * width;
+            dh = (imageRect.height / 100) * height;
+          }
+          const destRatio = dw / dh;
+          const videoRatio = vw / vh;
+          let sx = 0, sy = 0, sw = vw, sh = vh;
+          if (videoRatio > destRatio) { sw = vh * destRatio; sx = (vw - sw) / 2; }
+          else { sh = vw / destRatio; sy = (vh - sh) / 2; }
+
+          const applyMotionToCanvas = motionEffect !== "none";
+          if (applyMotionToCanvas) {
+            const motion = getMotionTransform(motionEffect, pageProgress);
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            ctx.rotate((motion.rotate * Math.PI) / 180);
+            ctx.scale(motion.scale, motion.scale);
+            ctx.translate(-width / 2 + (motion.translateX * width) / 100, -height / 2 + (motion.translateY * height) / 100);
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const adj = pageImageAdjustments?.[pageIdx];
+          const clipShape = imageClipShape || "rect";
+
+          if (adj && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
+            const scale = adj.imageScale / 100;
+            const scaledW = dw * scale;
+            const scaledH = dh * scale;
+            const offsetX = (adj.imageX / dw) * scaledW;
+            const offsetY = (adj.imageY / dh) * scaledH;
+            const adjDx = dx + (dw - scaledW) / 2 + offsetX;
+            const adjDy = dy + (dh - scaledH) / 2 + offsetY;
+            ctx.save();
+            applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
+            ctx.drawImage(bgVideo, sx, sy, sw, sh, adjDx, adjDy, scaledW, scaledH);
+            ctx.restore();
+          } else {
+            ctx.save();
+            applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
+            ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh);
+            ctx.restore();
+          }
+
+          if (applyMotionToCanvas) ctx.restore();
+
+          // Cache this good frame
+          try { simpleLastGoodFrame[pageIdx] = ctx.getImageData(0, 0, width, height); } catch { /* ignore */ }
+
+          const frameOverlay = frameOverlayImages[pageIdx];
+          if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
+          const overlay = overlayImages[pageIdx];
+          if (overlay) drawOverlay(overlay, pageProgress);
+          const logoOverlay = logoOverlayImages[pageIdx];
+          if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+          drawSimpleCustomOverlays(pageIdx);
+          videoDrawn = true;
+        } catch (e) {
+          console.warn("[VideoEncoder] Video frame draw failed:", e);
         }
-        const destRatio = dw / dh;
-        const videoRatio = vw / vh;
-        let sx = 0, sy = 0, sw = vw, sh = vh;
-        if (videoRatio > destRatio) { sw = vh * destRatio; sx = (vw - sw) / 2; }
-        else { sh = vw / destRatio; sy = (vh - sh) / 2; }
+      }
 
-        const applyMotionToCanvas = motionEffect !== "none";
-        if (applyMotionToCanvas) {
-          const motion = getMotionTransform(motionEffect, pageProgress);
-          ctx.save();
-          ctx.translate(width / 2, height / 2);
-          ctx.rotate((motion.rotate * Math.PI) / 180);
-          ctx.scale(motion.scale, motion.scale);
-          ctx.translate(-width / 2 + (motion.translateX * width) / 100, -height / 2 + (motion.translateY * height) / 100);
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-        const adj = pageImageAdjustments?.[pageIdx];
-        const clipShape = imageClipShape || "rect";
-
-        if (adj && (adj.imageScale !== 100 || adj.imageX !== 0 || adj.imageY !== 0)) {
-          const scale = adj.imageScale / 100;
-          const scaledW = dw * scale;
-          const scaledH = dh * scale;
-          const offsetX = (adj.imageX / dw) * scaledW;
-          const offsetY = (adj.imageY / dh) * scaledH;
-          const adjDx = dx + (dw - scaledW) / 2 + offsetX;
-          const adjDy = dy + (dh - scaledH) / 2 + offsetY;
-          ctx.save();
-          applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
-          ctx.drawImage(bgVideo, sx, sy, sw, sh, adjDx, adjDy, scaledW, scaledH);
-          ctx.restore();
+      if (!videoDrawn) {
+        const cached = simpleLastGoodFrame[pageIdx];
+        if (cached) {
+          ctx.putImageData(cached, 0, 0);
+          const frameOverlay = frameOverlayImages[pageIdx];
+          if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
+          const overlay = overlayImages[pageIdx];
+          if (overlay) drawOverlay(overlay, pageProgress);
+          const logoOverlay = logoOverlayImages[pageIdx];
+          if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+          drawSimpleCustomOverlays(pageIdx);
         } else {
-          ctx.save();
-          applyCanvasClipShape(ctx, clipShape, dx, dy, dw, dh);
-          ctx.drawImage(bgVideo, sx, sy, sw, sh, dx, dy, dw, dh);
-          ctx.restore();
+          drawSource(img, true, pageProgress);
+          const frameOverlay = frameOverlayImages[pageIdx];
+          if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
+          const overlay = overlayImages[pageIdx];
+          if (overlay) drawOverlay(overlay, pageProgress);
+          const logoOverlay = logoOverlayImages[pageIdx];
+          if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
+          drawSimpleCustomOverlays(pageIdx);
         }
-
-        if (applyMotionToCanvas) ctx.restore();
-
-        const frameOverlay = frameOverlayImages[pageIdx];
-        if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
-        const overlay = overlayImages[pageIdx];
-        if (overlay) drawOverlay(overlay, pageProgress);
-        const logoOverlay = logoOverlayImages[pageIdx];
-        if (logoOverlay) drawLogoOverlay(logoOverlay, pageProgress);
-        drawSimpleCustomOverlays(pageIdx);
-      } catch (e) {
-        console.warn("[VideoEncoder] Video frame draw failed, using static:", e);
-        drawSource(img, true, pageProgress);
       }
     } else {
       drawSource(img, true, pageProgress);
