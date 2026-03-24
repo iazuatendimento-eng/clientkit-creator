@@ -30,7 +30,9 @@ const BatchHistoryPage = () => {
 
     // Video batches antigos podem não ter assinatura no snapshot.
     // Hidratamos do template mestre quando necessário.
-    if (!isArt && snap.id) {
+    // Only query if snap.id looks like a valid UUID (not a generated timestamp-based id)
+    const isValidUuid = snap.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(snap.id);
+    if (!isArt && isValidUuid) {
       try {
         const { data } = await supabase
           .from("master_video_templates")
