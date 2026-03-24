@@ -1530,7 +1530,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
     // Draw the base image first (no black clear — prevents flashing)
     if (isTransitionPhase && nextImg) {
-      const transitionProgress = (frameInPage - (framesPerPage - transitionFrames)) / transitionFrames;
+      const transitionProgress = (frameInPage - (pageFrames - transitionFrames)) / transitionFrames;
       applyTransition(ctx, img, nextImg, transitionProgress, transitionEffect, width, height);
     } else if (bgVideo) {
       // Try drawing video frame; if not ready, use last good frame or static image
