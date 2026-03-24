@@ -15,6 +15,7 @@ import {
 } from "@/lib/videoRenderer";
 import { searchPexelsVideos } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
+import { getSmartSearchTerms } from "@/lib/smartSearch";
 
 export interface PreloadedVideoData {
   template: VideoTemplateData;
@@ -197,26 +198,19 @@ export function useVideoPregenerate(
           void (async () => {
             try {
               let translatedTerms = "";
-              if (clientImageType?.trim()) {
-                translatedTerms = translateToEnglishLocal(clientImageType).trim();
-                if (!translatedTerms) translatedTerms = clientImageType.trim().split(/\s+/).slice(0, 4).join(" ");
-              }
-              if (!translatedTerms) {
-                const fallbackContext = [fullText, clientBriefing, clientNarrationType]
-                  .filter(Boolean)
-                  .join(" ")
-                  .split(" ")
-                  .slice(0, 10)
-                  .join(" ");
-                translatedTerms = translateToEnglishLocal(fallbackContext).trim();
+              try {
+                translatedTerms = await getSmartSearchTerms({
+                  cardDescription: fullText,
+                  imageType: clientImageType,
+                  mediaType: "video",
+                });
+              } catch {
+                if (clientImageType?.trim()) {
+                  translatedTerms = translateToEnglishLocal(clientImageType).trim();
+                }
                 if (!translatedTerms) {
-                  translatedTerms = fallbackContext
-                    .replace(/[\n\r]+/g, " ")
-                    .replace(/\s+/g, " ")
-                    .trim()
-                    .split(/\s+/)
-                    .slice(0, 5)
-                    .join(" ");
+                  const fallbackContext = [fullText, clientBriefing, clientNarrationType].filter(Boolean).join(" ").split(" ").slice(0, 10).join(" ");
+                  translatedTerms = translateToEnglishLocal(fallbackContext).trim() || "business professional";
                 }
               }
               if (!translatedTerms) translatedTerms = "business professional";

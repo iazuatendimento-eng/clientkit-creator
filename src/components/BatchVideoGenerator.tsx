@@ -53,6 +53,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
 import { searchImages, SearchImage, searchPexelsVideos, searchVideos } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
+import { getSmartSearchTerms } from "@/lib/smartSearch";
 import { generateAllVideoPages, generatePageImage as generatePageImageFromRenderer, type VideoPages } from "@/lib/videoRenderer";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
@@ -1453,16 +1454,24 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       if (video.previewVideoUrls && video.previewVideoUrls.some(u => u && u !== "")) continue;
       if (!video.imageType && !video.cardTitle && !video.pageTexts[0]) continue;
       try {
-        // Use image_type as PRIMARY search term (most specific to the client's visual needs)
+        // Use AI to generate optimized search terms
         let searchTerms = "";
-        if (video.imageType?.trim()) {
-          searchTerms = translateToEnglishLocal(video.imageType).trim();
-          if (!searchTerms) searchTerms = video.imageType.trim().split(/\s+/).slice(0, 4).join(" ");
-        }
-        if (!searchTerms) {
-          const fallbackText = [video.cardTitle, video.pageTexts[0]].filter(Boolean).join(" ").split(" ").slice(0, 10).join(" ");
-          searchTerms = translateToEnglishLocal(fallbackText).trim();
-          if (!searchTerms) searchTerms = fallbackText.replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).slice(0, 5).join(" ");
+        try {
+          searchTerms = await getSmartSearchTerms({
+            cardTitle: video.cardTitle,
+            cardDescription: video.pageTexts[0],
+            imageType: video.imageType,
+            clientName: video.clientName,
+            mediaType: "video",
+          });
+        } catch {
+          if (video.imageType?.trim()) {
+            searchTerms = translateToEnglishLocal(video.imageType).trim();
+          }
+          if (!searchTerms) {
+            const fallbackText = [video.cardTitle, video.pageTexts[0]].filter(Boolean).join(" ").split(" ").slice(0, 10).join(" ");
+            searchTerms = translateToEnglishLocal(fallbackText).trim();
+          }
         }
         if (!searchTerms) searchTerms = "business professional";
         console.log(`[BatchVideo] Card "${video.clientName}": search="${searchTerms}" (imageType: "${video.imageType || 'N/A'}")`);
@@ -2494,40 +2503,31 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       const minSearchIntervalMs = 450;
       const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      const buildVideoSearchTerms = (imageType: string, briefing: string, cardTitle: string, cardText: string) => {
-        // Combine imageType with card text for more relevant results
-        const parts: string[] = [];
-
-        // imageType is the primary context (e.g. "supermercado", "odontologia")
-        if (imageType?.trim()) {
-          parts.push(imageType.trim());
+      const buildVideoSearchTerms = async (imageType: string, briefing: string, cardTitle: string, cardText: string) => {
+        try {
+          const terms = await getSmartSearchTerms({
+            cardTitle,
+            cardDescription: cardText,
+            imageType,
+            mediaType: "video",
+          });
+          if (terms) return terms;
+        } catch {
+          // Fall through to local translation
         }
 
-        // Add key words from card title and text for specificity
+        // Fallback: local translation
+        const parts: string[] = [];
+        if (imageType?.trim()) parts.push(imageType.trim());
         const cardContext = [cardTitle, cardText].filter(Boolean).join(" ");
         if (cardContext.trim()) {
-          // Extract meaningful words (skip very short words and common stop words)
           const stopWords = new Set(["de","do","da","dos","das","em","no","na","nos","nas","um","uma","uns","umas","o","a","os","as","e","é","ou","que","para","por","com","não","se","seu","sua","seus","suas","mais","como","ao","aos","às","ele","ela","eles","elas","isso","isto","esse","essa","este","esta","já","só","nos","lhe","te","me","foi","são","ser","ter","há","vai","vão","muito","bem","mas","até","quando","onde","quem","qual"]);
-          const words = cardContext
-            .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .split(" ")
-            .filter(w => w.length > 2 && !stopWords.has(w.toLowerCase()));
-          if (words.length > 0) {
-            parts.push(words.slice(0, 4).join(" "));
-          }
+          const words = cardContext.replace(/[^\p{L}\p{N}\s]+/gu, " ").replace(/\s+/g, " ").trim().split(" ").filter(w => w.length > 2 && !stopWords.has(w.toLowerCase()));
+          if (words.length > 0) parts.push(words.slice(0, 4).join(" "));
         }
-
-        // Fallback to briefing if nothing else
-        if (parts.length === 0 && briefing?.trim()) {
-          parts.push(briefing.split(" ").slice(0, 6).join(" "));
-        }
-
+        if (parts.length === 0 && briefing?.trim()) parts.push(briefing.split(" ").slice(0, 6).join(" "));
         const combined = parts.join(" ").trim();
         if (!combined) return "business professional";
-
-        // Translate to English for Pexels
         const translated = translateToEnglishLocal(combined).trim();
         return translated || combined.split(/\s+/).slice(0, 6).join(" ");
       };
@@ -2578,7 +2578,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         if (missingPageIndexes.length > 0) {
           try {
             const missingTexts = missingPageIndexes.map((idx) => video.pageTexts[idx] || "").join(" ");
-            const searchTerms = buildVideoSearchTerms(video.imageType || "", video.briefing || "", video.cardTitle, missingTexts);
+            const searchTerms = await buildVideoSearchTerms(video.imageType || "", video.briefing || "", video.cardTitle, missingTexts);
             const fetchCount = Math.max(missingPageIndexes.length, 6);
 
             const foundVideos = await fetchVideosCached(searchTerms, fetchCount);
