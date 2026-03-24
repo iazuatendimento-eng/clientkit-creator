@@ -1065,6 +1065,51 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       
       const clientIds = [...new Set(batchItems.map(item => item.clientId))];
 
+      const isRenderableStoredPage = (value: unknown): value is string => {
+        return (
+          typeof value === "string" &&
+          value.trim().length > 0 &&
+          !value.startsWith("blob:")
+        );
+      };
+
+      const normalizeStoredPages = (files: unknown): string[] => {
+        if (!Array.isArray(files)) return [];
+        return files.filter(isRenderableStoredPage);
+      };
+
+      const buildQuickPlaceholderPage = (label: string, brandKit: any, isSignature = false): string => {
+        const canvas = document.createElement("canvas");
+        canvas.width = template.width || 1080;
+        canvas.height = template.height || 1920;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return "";
+
+        const colors = Array.isArray(brandKit?.colors) ? brandKit.colors : [];
+        const bg = (colors[0] && typeof colors[0] === "string" ? colors[0] : template.backgroundColor) || "#1a1a2e";
+        const fg = (colors[1] && typeof colors[1] === "string" ? colors[1] : "#ffffff") || "#ffffff";
+
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = fg;
+        ctx.globalAlpha = 0.95;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.font = "700 64px Arial";
+        const safeLabel = (label || "Card").slice(0, 90);
+        ctx.fillText(safeLabel, canvas.width / 2, canvas.height * 0.52, canvas.width * 0.82);
+
+        ctx.globalAlpha = 0.7;
+        ctx.font = "500 34px Arial";
+        ctx.fillText(isSignature ? "ASSINATURA" : "PREVIEW", canvas.width / 2, canvas.height * 0.62);
+
+        return canvas.toDataURL("image/png");
+      };
+
+      const cardsMissingSavedPages = new Set<string>();
+
       // 1) Fast path: render immediately with saved snapshot data (no blocking DB hydration)
       const videos: ClientVideo[] = batchItems.map((item) => {
         const savedText = item.cardText || item.cardTitle;
@@ -1073,7 +1118,17 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           .map((t: string) => t.trim())
           .filter((t: string) => t.length > 0);
         const pageTexts = textParts.length > 0 ? textParts : [savedText];
-        const savedPages = (item.files || []).map((url: string) => url);
+        const savedPages = normalizeStoredPages(item.files);
+        const quickFallbackPages = [
+          ...pageTexts.map((pageText) => buildQuickPlaceholderPage(pageText, item.brandKit || {}, false)),
+          buildQuickPlaceholderPage(item.company || item.clientName || "Assinatura", item.brandKit || {}, true),
+        ].filter((p) => typeof p === "string" && p.length > 0);
+
+        const pagesForFastRender = savedPages.length > 0 ? savedPages : quickFallbackPages;
+
+        if (savedPages.length === 0) {
+          cardsMissingSavedPages.add(item.cardId);
+        }
 
         return {
           clientId: item.clientId,
@@ -1083,7 +1138,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           cardTitle: item.cardTitle,
           cardText: savedText,
           brandKit: item.brandKit || {},
-          pages: savedPages,
+          pages: pagesForFastRender,
           videoUrl: null,
           status: savedPages.length > 0 ? ("approved" as const) : ("pending" as const),
           pageTexts,
@@ -1158,35 +1213,49 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           setClientVideos((prev) => prev.map(hydrateVideo));
 
           const missingPageVideos = videos
-            .filter((v) => !Array.isArray(v.pages) || v.pages.length === 0)
+            .filter((v) => cardsMissingSavedPages.has(v.cardId))
             .map(hydrateVideo);
 
           if (missingPageVideos.length === 0) return;
 
           console.log(`[BatchVideo] Rebuilding ${missingPageVideos.length} card preview(s) without saved pages...`);
 
-          for (const baseVideo of missingPageVideos) {
-            try {
-              const result = await regenerateSingleVideo(baseVideo);
-              setClientVideos((prev) =>
-                prev.map((v) =>
-                  v.cardId === baseVideo.cardId
-                    ? {
-                        ...v,
-                        pages: result.pages,
-                        overlayPages: result.overlayPages,
-                        frameOverlayPages: result.frameOverlayPages,
-                        preImageOverlayPages: result.preImageOverlayPages,
-                        logoOverlayPages: result.logoOverlayPages,
-                        fullPages: result.fullPages,
-                      }
-                    : v
-                )
-              );
-            } catch (regenError) {
-              console.warn(`[BatchVideo] Failed to rebuild card preview for ${baseVideo.cardId}:`, regenError);
-            }
-          }
+          const queue = [...missingPageVideos];
+          const workerCount = Math.min(3, queue.length);
+
+          await Promise.all(
+            Array.from({ length: workerCount }, async () => {
+              while (queue.length > 0) {
+                const baseVideo = queue.shift();
+                if (!baseVideo) break;
+                try {
+                  // Fast rebuild without external background fetches (prevents long stalls on blocked URLs)
+                  const fastRebuildInput: ClientVideo = {
+                    ...baseVideo,
+                    searchedImages: baseVideo.pageTexts.map(() => ""),
+                  };
+                  const result = await regenerateSingleVideo(fastRebuildInput);
+                  setClientVideos((prev) =>
+                    prev.map((v) =>
+                      v.cardId === baseVideo.cardId
+                        ? {
+                            ...v,
+                            pages: result.pages,
+                            overlayPages: result.overlayPages,
+                            frameOverlayPages: result.frameOverlayPages,
+                            preImageOverlayPages: result.preImageOverlayPages,
+                            logoOverlayPages: result.logoOverlayPages,
+                            fullPages: result.fullPages,
+                          }
+                        : v
+                    )
+                  );
+                } catch (regenError) {
+                  console.warn(`[BatchVideo] Failed to rebuild card preview for ${baseVideo.cardId}:`, regenError);
+                }
+              }
+            })
+          );
         } catch (err) {
           console.warn("Background hydration failed, using saved snapshot data:", err);
         }
