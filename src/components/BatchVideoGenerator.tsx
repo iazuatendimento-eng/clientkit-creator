@@ -219,18 +219,42 @@ const getCleanAssetUrl = (...candidates: unknown[]): string => {
   return "";
 };
 
+const extractBrandKitAssets = (brandKit: any) => {
+  const source = brandKit && typeof brandKit === "object" ? brandKit : {};
+  const pngs = Array.isArray(source.pngs) ? source.pngs : [];
+
+  return {
+    logo: getCleanAssetUrl(pngs[0], source.logo, source.logoUrl, source.logo_url),
+    contactInfo: getCleanAssetUrl(
+      pngs[1],
+      source.contactInfo,
+      source.contact,
+      source.contactUrl,
+      source.contact_url
+    ),
+    mascot: getCleanAssetUrl(pngs[2], source.mascot, source.mascotUrl, source.mascot_url),
+    backgroundPng: getCleanAssetUrl(
+      source.backgroundPng,
+      source.background_png,
+      source.background,
+      source.backgroundUrl,
+      source.background_url
+    ),
+  };
+};
+
 const mergeBrandKitAssets = (savedBrandKit: any, freshBrandKit: any) => {
   const saved = savedBrandKit && typeof savedBrandKit === "object" ? savedBrandKit : {};
   const fresh = freshBrandKit && typeof freshBrandKit === "object" ? freshBrandKit : {};
 
-  const savedPngs = Array.isArray(saved.pngs) ? saved.pngs : [];
-  const freshPngs = Array.isArray(fresh.pngs) ? fresh.pngs : [];
+  const savedAssets = extractBrandKitAssets(saved);
+  const freshAssets = extractBrandKitAssets(fresh);
 
   // Fresh assets first (current client data), then fallback to saved batch snapshot.
-  const logo = getCleanAssetUrl(freshPngs[0], fresh.logo, savedPngs[0], saved.logo);
-  const contactInfo = getCleanAssetUrl(freshPngs[1], fresh.contactInfo, savedPngs[1], saved.contactInfo);
-  const mascot = getCleanAssetUrl(freshPngs[2], fresh.mascot, savedPngs[2], saved.mascot);
-  const backgroundPng = getCleanAssetUrl(fresh.backgroundPng, fresh.background_png, saved.backgroundPng, saved.background_png);
+  const logo = getCleanAssetUrl(freshAssets.logo, savedAssets.logo);
+  const contactInfo = getCleanAssetUrl(freshAssets.contactInfo, savedAssets.contactInfo);
+  const mascot = getCleanAssetUrl(freshAssets.mascot, savedAssets.mascot);
+  const backgroundPng = getCleanAssetUrl(freshAssets.backgroundPng, savedAssets.backgroundPng);
 
   return {
     ...saved,
@@ -1275,7 +1299,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           const [clientsMetaRes, brandKitUrlsRes, uploadsRes] = await Promise.all([
             supabase
               .from("client_data")
-              .select("id, image_type, particularity_type")
+              .select("id, image_type, particularity_type, brand_kit")
               .in("id", clientIds),
             supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
             supabase
@@ -1287,9 +1311,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
           const imageTypeMap: Record<string, string> = {};
           const particularityMap: Record<string, string> = {};
+          const dbBrandKitMap: Record<string, any> = {};
           (clientsMetaRes.data || []).forEach((c: any) => {
             if (c.image_type) imageTypeMap[c.id] = c.image_type;
             if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
+            if (c.brand_kit && typeof c.brand_kit === "object") {
+              dbBrandKitMap[c.id] = c.brand_kit;
+            }
           });
 
           const freshBrandKitMap: Record<string, any> = {};
@@ -1308,7 +1336,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
           const hydrateVideo = (v: ClientVideo): ClientVideo => ({
             ...v,
-            brandKit: mergeBrandKitAssets(v.brandKit || {}, freshBrandKitMap[v.clientId] || {}),
+            brandKit: mergeBrandKitAssets(
+              mergeBrandKitAssets(v.brandKit || {}, dbBrandKitMap[v.clientId] || {}),
+              freshBrandKitMap[v.clientId] || {}
+            ),
             imageType: imageTypeMap[v.clientId] || v.imageType,
             particularityType: particularityMap[v.clientId] || v.particularityType,
             hasMaterialUploads: cardsWithUploads.has(v.cardId),
