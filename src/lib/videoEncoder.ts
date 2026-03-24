@@ -2375,8 +2375,10 @@ export async function encodeVideoSimple(
 
   // On mobile, reduce FPS for performance
   const effectiveFps = isMobileDevice ? Math.min(fps, 12) : fps;
+  // For mobile, recompute with reduced FPS
+  const mobilePPInfo = isMobileDevice ? computePerPageFrameInfo(bgVideos, images.length, pageDuration, effectiveFps) : simplePPInfo;
   const effectiveFramesPerPage = Math.max(1, Math.floor(pageDuration * effectiveFps));
-  const effectiveTotalFrames = effectiveFramesPerPage * images.length;
+  const effectiveTotalFrames = isMobileDevice ? mobilePPInfo.totalFrames : totalFrames;
   const frameIntervalMs = Math.floor(1000 / effectiveFps);
 
   // iOS: captureStream(0) — frame captured on each canvas draw
