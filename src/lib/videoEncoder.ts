@@ -2149,9 +2149,13 @@ export async function encodeVideoSimple(
   await preSeekVideos(bgVideos);
   console.log("[VideoEncoder] Pre-seek done");
 
-  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
+  // Per-page duration: min(bgVideo.duration, pageDuration)
+  const simplePPInfo = computePerPageFrameInfo(bgVideos, images.length, pageDuration, fps);
+  const { pageDurations: simplePerPageDurations, framesPerPageArr: simpleFramesPerPageArr, cumulativeFrames: simpleCumulativeFrames, totalFrames: simpleTotalFramesVar } = simplePPInfo;
+  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps)); // fallback
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
-  const totalFrames = framesPerPage * images.length;
+  const totalFrames = simpleTotalFramesVar;
+  console.log("[VideoEncoder] Per-page durations:", simplePerPageDurations, "total frames:", totalFrames);
 
   // --- Drawing helpers (shared by mobile & desktop paths) ---
   const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
