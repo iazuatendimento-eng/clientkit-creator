@@ -1400,6 +1400,13 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
 
       // Draw selection with handles
       if (el.id === selectedElement) {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const rot = ((el.rotation || 0) * Math.PI) / 180;
+
+        ctx.save();
+        if (rot) { ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy); }
+
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 3;
         ctx.setLineDash([8, 4]);
@@ -1421,6 +1428,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
           ctx.fillRect(c.x, c.y, handleSize, handleSize);
           ctx.strokeRect(c.x, c.y, handleSize, handleSize);
         });
+
+        ctx.restore();
       }
     });
   }, [elements, selectedElement, backgroundColor, currentPage, currentColor, animatingElementId]);
@@ -1450,11 +1459,22 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / SCALE;
-    const y = (e.clientY - rect.top) / SCALE;
+    const rawX = (e.clientX - rect.left) / SCALE;
+    const rawY = (e.clientY - rect.top) / SCALE;
 
     const element = elements.find((el) => el.id === selectedElement);
     if (!element) return;
+
+    // Transform mouse into element's local (un-rotated) coordinate space
+    const cx = element.x + element.width / 2;
+    const cy = element.y + element.height / 2;
+    const rot = -((element.rotation || 0) * Math.PI) / 180;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const dx = rawX - cx;
+    const dy = rawY - cy;
+    const x = cos * dx - sin * dy + cx;
+    const y = sin * dx + cos * dy + cy;
 
     const handleSize = 30;
     const handles = [
@@ -1484,7 +1504,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     // Otherwise, start dragging
     if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
       setIsDragging(true);
-      setDragOffset({ x: x - element.x, y: y - element.y });
+      setDragOffset({ x: rawX - element.x, y: rawY - element.y });
     }
   };
 
