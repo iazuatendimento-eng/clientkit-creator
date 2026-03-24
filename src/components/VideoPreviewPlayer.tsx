@@ -76,26 +76,39 @@ export function VideoPreviewPlayer({
     return videoUrls?.[idx] && videoUrls[idx] !== null && videoUrls[idx] !== "";
   };
 
+  // Compute effective duration for a page: min(bgVideo.duration, pageDuration)
+  const getEffectivePageDuration = (pageIdx: number) => {
+    const vid = videoRefs.current[0]; // current video element
+    if (hasVideoForPage(pageIdx) && vid && vid.duration && isFinite(vid.duration) && vid.duration > 0) {
+      return Math.min(vid.duration, pageDuration);
+    }
+    return pageDuration;
+  };
+
   useEffect(() => {
     if (isPlaying && pages.length > 1) {
-      intervalRef.current = window.setInterval(() => {
-        setIsTransitioning(true);
-        
-        transitionTimeoutRef.current = window.setTimeout(() => {
-          setCurrentPage((p) => (p + 1) % pages.length);
+      const scheduleNext = () => {
+        const dur = getEffectivePageDuration(currentPage);
+        intervalRef.current = window.setTimeout(() => {
+          setIsTransitioning(true);
           
           transitionTimeoutRef.current = window.setTimeout(() => {
-            setIsTransitioning(false);
+            setCurrentPage((p) => (p + 1) % pages.length);
+            
+            transitionTimeoutRef.current = window.setTimeout(() => {
+              setIsTransitioning(false);
+            }, 300);
           }, 300);
-        }, 300);
-      }, pageDuration * 1000);
+        }, dur * 1000);
+      };
+      scheduleNext();
 
       return () => {
-        if (intervalRef.current) window.clearInterval(intervalRef.current);
+        if (intervalRef.current) window.clearTimeout(intervalRef.current);
         if (transitionTimeoutRef.current) window.clearTimeout(transitionTimeoutRef.current);
       };
     }
-  }, [isPlaying, pages.length, pageDuration]);
+  }, [isPlaying, pages.length, pageDuration, currentPage]);
 
   useEffect(() => {
     onPageChange?.(currentPage);
