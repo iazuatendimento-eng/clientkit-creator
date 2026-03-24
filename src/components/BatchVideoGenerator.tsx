@@ -509,25 +509,20 @@ const CardCoverPreview = memo(({
   const renderSinglePage = (pageIdx: number, skipAspectRatio = false) => {
     const isSignature = pageIdx === allPages - 1 && allPages > 1;
     const fullCompositePage = video.fullPages?.[pageIdx] || "";
-    const pgOverlay = video.overlayPages?.[pageIdx];
-    const pgFrame = video.frameOverlayPages?.[pageIdx];
-    const pgPreImage = video.preImageOverlayPages?.[pageIdx];
-    const pgLogo = video.logoOverlayPages?.[pageIdx];
-    const hasAnyOverlayLayer = [pgPreImage, pgFrame, pgOverlay, pgLogo].some(
-      (layer) => typeof layer === "string" && layer !== ""
-    );
-    const useCompositeFallback = !!fullCompositePage && (isSignature || !hasAnyOverlayLayer);
+    const pgOverlay = video.overlayPages?.[pageIdx] || "";
+    const pgFrame = video.frameOverlayPages?.[pageIdx] || "";
+    const pgPreImage = video.preImageOverlayPages?.[pageIdx] || "";
+    const pgLogo = video.logoOverlayPages?.[pageIdx] || "";
+    const effectiveFrameOverlay = pgFrame || pgOverlay;
+    const effectiveTextOverlay = pgOverlay && pgOverlay !== effectiveFrameOverlay ? pgOverlay : "";
+    // Keep full composite visible until essential overlay layers are ready (prevents delayed logo/contact pop-in).
+    const essentialOverlaysReady = !!effectiveFrameOverlay && !!pgLogo;
+    const useCompositeFallback = !!fullCompositePage && (isSignature || !essentialOverlaysReady);
     const pageBaseImage = useCompositeFallback ? fullCompositePage : (video.pages[pageIdx] || "");
     const pgVideoUrl = video.previewVideoUrls?.[pageIdx] || null;
     const pgFallbackUrl = !isSignature ? (video.previewVideoUrls?.find(v => v && v !== "") || null) : null;
     const pgActiveUrl = pgVideoUrl || pgFallbackUrl;
     const pgHasVideo = !!pgActiveUrl && !videoGiveUp[pageIdx];
-    const effectiveFrameOverlay = (pgFrame && pgFrame !== "")
-      ? pgFrame
-      : ((pgOverlay && pgOverlay !== "") ? pgOverlay : "");
-    const effectiveTextOverlay = (pgOverlay && pgOverlay !== "" && pgOverlay !== effectiveFrameOverlay)
-      ? pgOverlay
-      : "";
     const isDragOver = dragOverPage === pageIdx;
     const isCurrentPage = pageIdx === currentPage;
 
@@ -803,13 +798,11 @@ const CardCoverPreview = memo(({
                 : null;
               const thumbActiveVideoUrl = thumbVideoUrl || thumbFallbackVideoUrl;
               const hasThumbVideo = !!thumbActiveVideoUrl && !videoGiveUp[i] && !isThumbSignature;
-              const thumbHasAnyOverlayLayer = [
-                video.preImageOverlayPages?.[i],
-                video.frameOverlayPages?.[i],
-                video.overlayPages?.[i],
-                video.logoOverlayPages?.[i],
-              ].some((layer) => typeof layer === "string" && layer !== "");
-              const useFullPageThumb = !!video.fullPages?.[i] && (!thumbHasAnyOverlayLayer || !hasThumbVideo);
+              const thumbOverlay = video.overlayPages?.[i] || "";
+              const thumbFrame = video.frameOverlayPages?.[i] || "";
+              const thumbLogo = video.logoOverlayPages?.[i] || "";
+              const thumbEssentialOverlaysReady = !!(thumbFrame || thumbOverlay) && !!thumbLogo;
+              const useFullPageThumb = !!video.fullPages?.[i] && (isThumbSignature || !thumbEssentialOverlaysReady || !hasThumbVideo);
               const thumbRetryKey = videoRetryKey[i] ?? 0;
               return (
                 <div
@@ -1263,6 +1256,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           cardText: savedText,
           brandKit: item.brandKit || {},
           pages: pagesForFastRender,
+          fullPages: pagesForFastRender,
           videoUrl: null,
           status: savedPages.length > 0 ? ("approved" as const) : ("pending" as const),
           pageTexts,
