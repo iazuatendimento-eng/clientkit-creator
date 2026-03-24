@@ -1798,6 +1798,10 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     }
   };
 
+  // Keep seek progression monotonic per page to avoid back-and-forth jumps
+  // on videos with sparse keyframes (observed as "play/rewind/play" flicker).
+  const lastRequestedSeekTimeByPage: Record<number, number> = {};
+
   const prepareBgVideoForPage = async (pageIdx: number): Promise<void> => {
     const v = bgVideos[pageIdx];
     if (!v) return;
@@ -1807,6 +1811,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     // Seek to t=0 and ensure first frame is decoded
     await seekVideoToTime(v, 0);
     await waitForVideoReady(v, isMob ? 2000 : 1200);
+    lastRequestedSeekTimeByPage[pageIdx] = 0;
   };
 
   // Deterministic seek: advance the video to the exact target time for each frame.
@@ -1816,14 +1821,40 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     const targetTime = (frameInPage / pageFrames) * pageDur;
     const normalizedTargetTime = getSafeVideoSeekTime(video, targetTime, loopShortBackgroundVideos);
     const frameTolerance = Math.max(0.02, (pageDur / Math.max(1, pageFrames)) * 0.45);
+    const prevRequestedTime = lastRequestedSeekTimeByPage[pageIdx] ?? 0;
 
-    if (Math.abs(video.currentTime - normalizedTargetTime) < frameTolerance) return;
+    const isLoopWrap =
+      loopShortBackgroundVideos &&
+      normalizedTargetTime + frameTolerance < prevRequestedTime;
 
-    await seekVideoToTime(video, normalizedTargetTime);
+    // Prevent backward seeks inside the same loop cycle. Some browsers snap seeks
+    // to previous keyframes, causing visible oscillation when we repeatedly rewind.
+    const stableTargetTime = isLoopWrap
+      ? normalizedTargetTime
+      : Math.max(normalizedTargetTime, prevRequestedTime);
+
+    const currentTime = Number(video.currentTime);
+    if (
+      Number.isFinite(currentTime) &&
+      !isLoopWrap &&
+      currentTime > stableTargetTime + frameTolerance
+    ) {
+      lastRequestedSeekTimeByPage[pageIdx] = stableTargetTime;
+      return;
+    }
+
+    if (Number.isFinite(currentTime) && Math.abs(currentTime - stableTargetTime) < frameTolerance) {
+      lastRequestedSeekTimeByPage[pageIdx] = stableTargetTime;
+      return;
+    }
+
+    await seekVideoToTime(video, stableTargetTime);
 
     if (video.readyState < 2) {
       await waitForVideoReady(video, isMob ? 320 : 180);
     }
+
+    lastRequestedSeekTimeByPage[pageIdx] = stableTargetTime;
   };
 
   console.log("[WebCodecs] Starting frame loop, total:", totalFrames);
