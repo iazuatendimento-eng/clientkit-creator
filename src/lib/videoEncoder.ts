@@ -29,6 +29,7 @@ export interface VideoEncoderOptions {
   audioUrl?: string; // URL of background audio to mix into the video
   requireEmailSafePreview?: boolean; // Force FFmpeg compatibility pass (H.264 baseline + AAC) for email preview clients
   customOverlayPages?: Record<number, { url: string; x: number; y: number; width: number; height: number; isVideo?: boolean }[]>;
+  loopShortBackgroundVideos?: boolean; // Keep template page duration even when background video is shorter (preview parity)
   onProgress?: (progress: number) => void;
 }
 
@@ -232,7 +233,8 @@ function computePerPageFrameInfo(
   bgVideos: (HTMLVideoElement | null)[],
   pageCount: number,
   pageDuration: number,
-  fps: number
+  fps: number,
+  loopShortBackgroundVideos: boolean = false
 ): PerPageFrameInfo {
   const pageDurations: number[] = [];
   const framesPerPageArr: number[] = [];
@@ -242,10 +244,12 @@ function computePerPageFrameInfo(
   for (let i = 0; i < pageCount; i++) {
     const v = bgVideos[i];
     let dur = pageDuration;
-    // If the bg video is shorter than the page, use the video's duration
-    const reliableVideoDuration = getReliableVideoDuration(v);
-    if (reliableVideoDuration && isFinite(reliableVideoDuration) && reliableVideoDuration > 0) {
-      dur = Math.min(reliableVideoDuration, pageDuration);
+    if (!loopShortBackgroundVideos) {
+      // If the bg video is shorter than the page, use the video's duration
+      const reliableVideoDuration = getReliableVideoDuration(v);
+      if (reliableVideoDuration && isFinite(reliableVideoDuration) && reliableVideoDuration > 0) {
+        dur = Math.min(reliableVideoDuration, pageDuration);
+      }
     }
     pageDurations.push(dur);
     const frames = Math.max(1, Math.floor(dur * fps));
@@ -1312,7 +1316,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     motionEffect = "ken-burns", transitionEffect = "fade",
     textAnimation = "none", logoAnimation = "none", textAnimDuration,
     backgroundVideoUrls, frameOverlayPages, preImageOverlayPages, overlayPages, logoOverlayPages,
-    imageRect, pageImageAdjustments, imageClipShape, audioUrl, customOverlayPages, onProgress,
+    imageRect, pageImageAdjustments, imageClipShape, audioUrl, customOverlayPages, loopShortBackgroundVideos = false, onProgress,
   } = options;
 
   const fps = Math.min(rawFps, 20);
@@ -1481,7 +1485,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   const ctx = canvas.getContext("2d")!;
 
   // Per-page duration: min(bgVideo.duration, pageDuration)
-  const ppInfo = computePerPageFrameInfo(bgVideos, images.length, pageDuration, fps);
+  const ppInfo = computePerPageFrameInfo(bgVideos, images.length, pageDuration, fps, loopShortBackgroundVideos);
   const { pageDurations: perPageDurations, framesPerPageArr, cumulativeFrames, totalFrames } = ppInfo;
   const framesPerPage = Math.max(1, Math.floor(pageDuration * fps)); // fallback for non-per-page uses
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
@@ -1970,6 +1974,7 @@ export async function encodeVideoSimple(
     imageClipShape,
     audioUrl,
     customOverlayPages,
+    loopShortBackgroundVideos = false,
     onProgress
   } = options;
 
@@ -2181,7 +2186,7 @@ export async function encodeVideoSimple(
   console.log("[VideoEncoder] Pre-seek done");
 
   // Per-page duration: min(bgVideo.duration, pageDuration)
-  const simplePPInfo = computePerPageFrameInfo(bgVideos, images.length, pageDuration, fps);
+  const simplePPInfo = computePerPageFrameInfo(bgVideos, images.length, pageDuration, fps, loopShortBackgroundVideos);
   const { pageDurations: simplePerPageDurations, framesPerPageArr: simpleFramesPerPageArr, cumulativeFrames: simpleCumulativeFrames, totalFrames: simpleTotalFramesVar } = simplePPInfo;
   const framesPerPage = Math.max(1, Math.floor(pageDuration * fps)); // fallback
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
@@ -2407,7 +2412,9 @@ export async function encodeVideoSimple(
   // On mobile, reduce FPS for performance
   const effectiveFps = isMobileDevice ? Math.min(fps, 12) : fps;
   // For mobile, recompute with reduced FPS
-  const mobilePPInfo = isMobileDevice ? computePerPageFrameInfo(bgVideos, images.length, pageDuration, effectiveFps) : simplePPInfo;
+  const mobilePPInfo = isMobileDevice
+    ? computePerPageFrameInfo(bgVideos, images.length, pageDuration, effectiveFps, loopShortBackgroundVideos)
+    : simplePPInfo;
   const effectiveFramesPerPage = Math.max(1, Math.floor(pageDuration * effectiveFps));
   const effectiveTotalFrames = isMobileDevice ? mobilePPInfo.totalFrames : totalFrames;
   const frameIntervalMs = Math.floor(1000 / effectiveFps);
