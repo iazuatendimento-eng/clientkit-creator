@@ -3737,25 +3737,23 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       const needsOverlayBuild = !hasRenderableText || !hasRenderableFrame || !hasRenderableLogo;
 
                      if (needsOverlayBuild) {
-                       try {
-                         const result = await regenerateSingleVideo(video);
-                         const updatedVideo = {
-                           ...video,
-                           pages: result.pages,
-                           overlayPages: result.overlayPages,
-                           frameOverlayPages: result.frameOverlayPages,
-                           preImageOverlayPages: result.preImageOverlayPages,
-                           logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages,
-                         };
-
-                         setClientVideos((prev) => prev.map((v, i) => (i === index ? updatedVideo : v)));
-                         setSelectedVideo(updatedVideo);
-                        selectedVideoRef.current = updatedVideo;
-                       } catch (error) {
-                         console.error("Error preparing overlays for art edit:", error);
-                        // Non-blocking: user can still interact with what's available
-                       }
-                     }
+                        // Non-blocking: rebuild overlays in background so modal opens instantly
+                        regenerateSingleVideo(video).then((result) => {
+                          const updatedVideo = {
+                            ...video,
+                            pages: result.pages,
+                            overlayPages: result.overlayPages,
+                            frameOverlayPages: result.frameOverlayPages,
+                            preImageOverlayPages: result.preImageOverlayPages,
+                            logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages,
+                          };
+                          setClientVideos((prev) => prev.map((v, i) => (i === index ? updatedVideo : v)));
+                          setSelectedVideo((cur) => cur?.cardId === video.cardId ? updatedVideo : cur);
+                          selectedVideoRef.current = updatedVideo;
+                        }).catch((error) => {
+                          console.error("Error preparing overlays for video edit:", error);
+                        });
+                      }
                    }}
                 />
 
@@ -4007,7 +4005,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       contentElements: template.contentElements,
                       signatureElements: template.signatureElements,
                     }}
-                    previewUrl={selectedVideo.pages[currentPreviewPage] || null}
+                    previewUrl={selectedVideo.fullPages?.[currentPreviewPage] || selectedVideo.pages[currentPreviewPage] || null}
                     isBusy={isApplyingAdjustments}
                     onCommit={scheduleApplyAdjustments}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
