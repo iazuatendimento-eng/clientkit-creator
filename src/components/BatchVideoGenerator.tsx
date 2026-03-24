@@ -1065,52 +1065,15 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       
       const clientIds = [...new Set(batchItems.map(item => item.clientId))];
 
-      // Fetch lightweight client metadata + brand kit URLs via RPC (avoids 14MB+ brand_kit JSONB)
-      const [{ data: clientsMeta }, { data: brandKitUrls }] = await Promise.all([
-        supabase
-          .from("client_data")
-          .select("id, image_type, particularity_type")
-          .in("id", clientIds),
-        supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
-      ]);
-
-      const imageTypeMap: Record<string, string> = {};
-      const particularityMap: Record<string, string> = {};
-      clientsMeta?.forEach((c: any) => { 
-        if (c.image_type) imageTypeMap[c.id] = c.image_type;
-        if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
-      });
-
-      // Build a lightweight brand kit map from RPC results (URLs only, no base64)
-      const freshBrandKitMap: Record<string, any> = {};
-      (brandKitUrls || []).forEach((r: any) => {
-        freshBrandKitMap[r.id] = {
-          logo: r.logo || "",
-          contactInfo: r.contact_info || "",
-          mascot: r.mascot || "",
-          pngs: [r.logo || "", r.contact_info || "", r.mascot || ""],
-          colors: r.colors || [],
-          backgroundPng: r.background_png || "",
-        };
-      });
-
+      // 1) Fast path: render immediately with saved snapshot data (no blocking DB hydration)
       const videos: ClientVideo[] = batchItems.map((item) => {
-        // Use saved text/brandKit from the batch snapshot (preserve history as-is)
         const savedText = item.cardText || item.cardTitle;
         const textParts = savedText
           .split(";")
           .map((t: string) => t.trim())
           .filter((t: string) => t.length > 0);
         const pageTexts = textParts.length > 0 ? textParts : [savedText];
-
-        // Restore saved pages (file URLs) from the batch items
         const savedPages = (item.files || []).map((url: string) => url);
-
-        // Merge saved brand kit with fresh data from client_data to restore
-        // logo/contact/mascot/pngs that were stripped (base64/blob) during save
-        const savedBk = item.brandKit || {};
-        const freshBk = freshBrandKitMap[item.clientId] || {};
-        const mergedBrandKit = mergeBrandKitAssets(savedBk, freshBk);
 
         return {
           clientId: item.clientId,
@@ -1119,16 +1082,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           cardId: item.cardId,
           cardTitle: item.cardTitle,
           cardText: savedText,
-          brandKit: mergedBrandKit,
+          brandKit: item.brandKit || {},
           pages: savedPages,
           videoUrl: null,
           status: savedPages.length > 0 ? ("approved" as const) : ("pending" as const),
           pageTexts,
           searchedImages: item.backgroundImages,
-          // Filter out blob: URLs — they only exist in the browser session that created them
-          // and will fail on other computers. The auto-fetch logic below will re-fetch them.
           previewVideoUrls: item.previewVideoUrls
-            ? item.previewVideoUrls.map((u: string | null) => u && !u.startsWith("blob:") ? u : null)
+            ? item.previewVideoUrls.map((u: string | null) => (u && !u.startsWith("blob:") ? u : null))
             : undefined,
           adjustments: item.adjustments ? { ...defaultAdjustments, ...item.adjustments } : { ...defaultAdjustments },
           pageTextAdjustments: item.pageTextAdjustments && item.pageTextAdjustments.length > 0
@@ -1137,30 +1098,65 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           pageImageAdjustments: item.pageImageAdjustments && item.pageImageAdjustments.length > 0
             ? item.pageImageAdjustments.map((a: any) => ({ ...defaultPageImageAdjustment, ...a }))
             : pageTexts.map(() => ({ ...defaultPageImageAdjustment })),
-          imageType: imageTypeMap[item.clientId] || undefined,
-          particularityType: particularityMap[item.clientId] || undefined,
+          imageType: item.imageType || undefined,
+          particularityType: undefined,
           note: item.note,
           noteRead: item.noteRead,
         };
       });
 
-      // Check which cards have material uploads
-      if (videos.length > 0) {
-        const cardIds = videos.map(v => v.cardId);
-        const { data: uploads } = await supabase
-          .from("card_uploads")
-          .select("card_id")
-          .in("card_id", cardIds)
-          .eq("upload_type", "material");
-        const cardsWithUploads = new Set((uploads || []).map(u => u.card_id));
-        videos.forEach(v => {
-          v.hasMaterialUploads = cardsWithUploads.has(v.cardId);
-        });
-      }
-
       videos.sort((a, b) => a.company.localeCompare(b.company, "pt-BR", { numeric: true }));
       setClientVideos(videos);
       setIsLoading(false);
+
+      // 2) Slow path: hydrate metadata/assets in background (never block opening)
+      Promise.all([
+        supabase
+          .from("client_data")
+          .select("id, image_type, particularity_type")
+          .in("id", clientIds),
+        supabase.rpc("get_client_brand_kit_urls", { client_ids: clientIds }),
+        supabase
+          .from("card_uploads")
+          .select("card_id")
+          .in("card_id", videos.map(v => v.cardId))
+          .eq("upload_type", "material"),
+      ])
+        .then(([clientsMetaRes, brandKitUrlsRes, uploadsRes]) => {
+          const imageTypeMap: Record<string, string> = {};
+          const particularityMap: Record<string, string> = {};
+          (clientsMetaRes.data || []).forEach((c: any) => {
+            if (c.image_type) imageTypeMap[c.id] = c.image_type;
+            if (c.particularity_type) particularityMap[c.id] = c.particularity_type;
+          });
+
+          const freshBrandKitMap: Record<string, any> = {};
+          (brandKitUrlsRes.data || []).forEach((r: any) => {
+            freshBrandKitMap[r.id] = {
+              logo: r.logo || "",
+              contactInfo: r.contact_info || "",
+              mascot: r.mascot || "",
+              pngs: [r.logo || "", r.contact_info || "", r.mascot || ""],
+              colors: r.colors || [],
+              backgroundPng: r.background_png || "",
+            };
+          });
+
+          const cardsWithUploads = new Set((uploadsRes.data || []).map((u: any) => u.card_id));
+
+          setClientVideos((prev) =>
+            prev.map((v) => ({
+              ...v,
+              brandKit: mergeBrandKitAssets(v.brandKit || {}, freshBrandKitMap[v.clientId] || {}),
+              imageType: imageTypeMap[v.clientId] || v.imageType,
+              particularityType: particularityMap[v.clientId] || v.particularityType,
+              hasMaterialUploads: cardsWithUploads.has(v.cardId),
+            }))
+          );
+        })
+        .catch((err) => {
+          console.warn("Background hydration failed, using saved snapshot data:", err);
+        });
 
       // Overlays are rebuilt lazily when the user clicks on each card (see onClick handler).
       // This avoids the expensive upfront regeneration of all overlay layers.
