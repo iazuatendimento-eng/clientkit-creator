@@ -1751,16 +1751,12 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   };
 
   // Deterministic seek: advance the video to the exact target time for each frame.
-  // This avoids the "accelerated video" problem caused by real-time playback
-  // running ahead of the encoder loop.
-  const seekBgVideoToFrameTime = async (video: HTMLVideoElement, frameInPage: number): Promise<void> => {
-    // Target time within the page (0 to pageDuration)
-    const targetTime = (frameInPage / framesPerPage) * pageDuration;
+  const seekBgVideoToFrameTime = async (video: HTMLVideoElement, frameInPage: number, pageIdx: number): Promise<void> => {
+    const pageDur = perPageDurations[pageIdx] || pageDuration;
+    const pageFrames = framesPerPageArr[pageIdx] || framesPerPage;
+    const targetTime = (frameInPage / pageFrames) * pageDur;
 
-    // Only seek if the target is significantly different from current position
-    // (skip seeking for tiny jumps to avoid excessive overhead)
     if (Math.abs(video.currentTime - targetTime) < 0.02) return;
-
     await seekVideoToTime(video, targetTime);
   };
 
@@ -1770,8 +1766,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   for (let i = 0; i < totalFrames; i++) {
     if (encoderError) throw encoderError;
 
-    const pageIdx = Math.floor(i / framesPerPage);
-    const frameInPage = i - (pageIdx * framesPerPage);
+    const { pageIdx, frameInPage } = frameToPageInfo(i, cumulativeFrames, framesPerPageArr);
 
     // On page change, swap active video and seek to t=0
     if (pageIdx !== lastPageIdx) {
@@ -1783,7 +1778,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
       }
     } else if (activeBgVideo) {
       // Deterministically seek to the exact time for this frame
-      await seekBgVideoToFrameTime(activeBgVideo, frameInPage);
+      await seekBgVideoToFrameTime(activeBgVideo, frameInPage, pageIdx);
     }
 
     renderFrame(i);
