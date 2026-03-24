@@ -1384,7 +1384,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
         video.muted = true;
         video.playsInline = true;
         video.preload = "auto";
-        video.loop = true;
+        video.loop = false;
 
         let resolved = false;
         const done = () => {
@@ -1819,12 +1819,18 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     const pageDur = perPageDurations[pageIdx] || pageDuration;
     const pageFrames = framesPerPageArr[pageIdx] || framesPerPage;
     const targetTime = (frameInPage / pageFrames) * pageDur;
-    const normalizedTargetTime = getSafeVideoSeekTime(video, targetTime, loopShortBackgroundVideos);
+    const mediaDuration = Number(video.duration);
+    const shouldLoopShortVideo =
+      loopShortBackgroundVideos &&
+      Number.isFinite(mediaDuration) &&
+      mediaDuration >= 2 &&
+      mediaDuration + VIDEO_SEEK_EPSILON_SEC < pageDur;
+    const normalizedTargetTime = getSafeVideoSeekTime(video, targetTime, shouldLoopShortVideo);
     const frameTolerance = Math.max(0.02, (pageDur / Math.max(1, pageFrames)) * 0.45);
     const prevRequestedTime = lastRequestedSeekTimeByPage[pageIdx] ?? 0;
 
     const isLoopWrap =
-      loopShortBackgroundVideos &&
+      shouldLoopShortVideo &&
       normalizedTargetTime + frameTolerance < prevRequestedTime;
 
     // Prevent backward seeks inside the same loop cycle. Some browsers snap seeks
@@ -2090,7 +2096,7 @@ export async function encodeVideoSimple(
           video.muted = true;
           video.playsInline = true;
           video.preload = "auto";
-          video.loop = true;
+          video.loop = false;
 
           const timer = setTimeout(() => resolve(null), timeoutMs);
           let settled = false;
