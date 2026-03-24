@@ -1450,9 +1450,12 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
-  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps));
+  // Per-page duration: min(bgVideo.duration, pageDuration)
+  const ppInfo = computePerPageFrameInfo(bgVideos, images.length, pageDuration, fps);
+  const { pageDurations: perPageDurations, framesPerPageArr, cumulativeFrames, totalFrames } = ppInfo;
+  const framesPerPage = Math.max(1, Math.floor(pageDuration * fps)); // fallback for non-per-page uses
   const transitionFrames = Math.max(1, Math.floor(fps * 0.5));
-  const totalFrames = framesPerPage * images.length;
+  console.log("[WebCodecs] Per-page durations:", perPageDurations, "total frames:", totalFrames);
 
   // Drawing helpers (same as encodeVideoSimple)
   const drawSource = (source: HTMLImageElement | HTMLVideoElement, applyMotion: boolean, progress: number) => {
