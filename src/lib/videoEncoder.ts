@@ -1622,7 +1622,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // Decode audio if provided (in parallel with video setup)
   let audioData: { left: Float32Array; right: Float32Array; numberOfChannels: number } | null = null;
   let canMuxAudio = false;
-  const totalDurationSec = (framesPerPage * images.length) / fps;
+  const totalDurationSec = totalFrames / fps;
 
   if (audioUrl) {
     try {
