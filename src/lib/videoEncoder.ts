@@ -202,6 +202,32 @@ interface PerPageFrameInfo {
   totalFrames: number;
 }
 
+function getReliableVideoDuration(video: HTMLVideoElement | null): number | null {
+  if (!video) return null;
+
+  const candidates: number[] = [];
+
+  const mediaDuration = Number(video.duration);
+  if (Number.isFinite(mediaDuration) && mediaDuration > 0) {
+    candidates.push(mediaDuration);
+  }
+
+  try {
+    const seekable = video.seekable;
+    if (seekable && seekable.length > 0) {
+      const seekableEnd = Number(seekable.end(seekable.length - 1));
+      if (Number.isFinite(seekableEnd) && seekableEnd > 0) {
+        candidates.push(seekableEnd);
+      }
+    }
+  } catch {
+    // Some browsers can throw when reading seekable ranges for cross-origin streams.
+  }
+
+  if (candidates.length === 0) return null;
+  return Math.max(...candidates);
+}
+
 function computePerPageFrameInfo(
   bgVideos: (HTMLVideoElement | null)[],
   pageCount: number,
@@ -217,8 +243,9 @@ function computePerPageFrameInfo(
     const v = bgVideos[i];
     let dur = pageDuration;
     // If the bg video is shorter than the page, use the video's duration
-    if (v && v.duration && isFinite(v.duration) && v.duration > 0) {
-      dur = Math.min(v.duration, pageDuration);
+    const reliableVideoDuration = getReliableVideoDuration(v);
+    if (reliableVideoDuration && isFinite(reliableVideoDuration) && reliableVideoDuration > 0) {
+      dur = Math.min(reliableVideoDuration, pageDuration);
     }
     pageDurations.push(dur);
     const frames = Math.max(1, Math.floor(dur * fps));
@@ -593,9 +620,9 @@ async function ensureCompatibleMp4(blob: Blob, context: string): Promise<Blob> {
 export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOptions): Promise<Blob> {
   const { onProgress, audioUrl, requireEmailSafePreview = false, pageDuration } = options;
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const videoDurationSec = pages.length * pageDuration;
+  const fallbackDurationSec = pages.length * pageDuration;
 
-  console.log("[VideoEncoder] Starting encode. mobile:", isMobileDevice, "webcodecs:", hasWebCodecs(), "pages:", pages.length, "duration:", videoDurationSec);
+  console.log("[VideoEncoder] Starting encode. mobile:", isMobileDevice, "webcodecs:", hasWebCodecs(), "pages:", pages.length, "duration:", fallbackDurationSec);
   onProgress?.(0.05);
 
   // ====== ALL DEVICES: Try WebCodecs first (most reliable — each frame is encoded directly) ======
@@ -623,6 +650,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         );
 
         const audioWasMuxed = !!(rawBlob as any).__hasAudio;
+        const encodedDurationSec = Number((rawBlob as any).__encodedDurationSec) || fallbackDurationSec;
         console.log("[VideoEncoder] WebCodecs done, audioMuxed:", audioWasMuxed, "size:", rawBlob.size);
 
         // If audio was already muxed via AudioEncoder, skip FFmpeg entirely
@@ -641,7 +669,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
                 inputBlob: rawBlob,
                 inputFileName: "input.mp4",
                 audioUrl,
-                videoDurationSec,
+                videoDurationSec: encodedDurationSec,
               }),
               35_000,
               "gerar MP4 com áudio"
@@ -665,7 +693,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
               transcodeToTrueMp4({
                 inputBlob: rawBlob,
                 inputFileName: "input.mp4",
-                videoDurationSec,
+                videoDurationSec: encodedDurationSec,
               }),
               35_000,
               "gerar MP4 compatível"
@@ -712,6 +740,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       300_000,
       "gerar MP4"
     );
+    const encodedDurationSec = Number((nativeMp4 as any).__encodedDurationSec) || fallbackDurationSec;
     onProgress?.(0.6);
 
     // Always transcode native MP4 through FFmpeg to guarantee H.264 Baseline
@@ -723,7 +752,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
           inputBlob: nativeMp4,
           inputFileName: "input.mp4",
           audioUrl,
-          videoDurationSec,
+          videoDurationSec: encodedDurationSec,
         }),
         35_000,
         "gerar MP4 compatível"
@@ -756,6 +785,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
     300_000,
     "gerar WebM"
   );
+  const encodedDurationSec = Number((webmBlob as any).__encodedDurationSec) || fallbackDurationSec;
 
   onProgress?.(0.72);
   const convertedMp4 = await withTimeout(
@@ -763,7 +793,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
       inputBlob: webmBlob,
       inputFileName: "input.webm",
       audioUrl,
-      videoDurationSec,
+      videoDurationSec: encodedDurationSec,
     }),
     35_000,
     "gerar MP4 compatível"
@@ -1902,6 +1932,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
 
   // Flag whether audio was muxed so caller knows
   (blob as any).__hasAudio = audioChunksReceived > 0;
+  (blob as any).__encodedDurationSec = totalFrames / fps;
   
   return blob;
 }
@@ -2514,6 +2545,7 @@ export async function encodeVideoSimple(
       if (stallTimer) window.clearTimeout(stallTimer);
       cleanupRecorderResources();
       const result = new Blob(chunks, { type: outType });
+      (result as any).__encodedDurationSec = useTotalFrames / effectiveFps;
       console.log("[VideoEncoder] Stopped. chunks:", chunks.length, "size:", result.size, "dataEvents:", dataEventCount);
       resolve(result);
     };
