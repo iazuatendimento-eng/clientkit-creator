@@ -8,7 +8,7 @@ import { ClientDashboard } from "@/components/ClientDashboard";
 import { QuickCreate } from "@/components/QuickCreate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, refreshSessionIfNeeded } from "@/hooks/useAuth";
 import * as XLSX from 'xlsx';
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseUsageBar } from "@/components/DatabaseUsageBar";
@@ -295,7 +295,15 @@ const Index = () => {
       setLoadError(false);
     } catch (error: any) {
       console.error("Error loading clients:", error);
-      if (retryCount < maxRetries) {
+      // If JWT expired, try refreshing the token before retrying
+      const isJwtExpired = error?.message?.includes("JWT expired") || error?.code === "PGRST303";
+      if (isJwtExpired) {
+        console.log("[Index] JWT expired detected, refreshing token...");
+        const refreshed = await refreshSessionIfNeeded();
+        if (refreshed && retryCount < 1) {
+          return loadClients(retryCount + 1);
+        }
+      } else if (retryCount < maxRetries) {
         console.log(`Retrying loadClients (${retryCount + 1}/${maxRetries})...`);
         return loadClients(retryCount + 1);
       }
