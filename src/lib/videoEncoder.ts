@@ -173,6 +173,24 @@ function pickSupportedMimeType(candidates: string[]): string | null {
   return null;
 }
 
+function normalizeBackgroundVideoUrls(
+  backgroundVideoUrls: (string | null)[] | undefined,
+  pageCount: number
+): (string | null)[] {
+  const source = backgroundVideoUrls || [];
+  const firstAvailable = source.find((url): url is string => !!url && url.trim().length > 0) || null;
+
+  return Array.from({ length: pageCount }, (_, pageIdx) => {
+    const pageUrl = source[pageIdx];
+    if (pageUrl && pageUrl.trim().length > 0) return pageUrl;
+
+    const isSignaturePage = pageCount > 1 && pageIdx === pageCount - 1;
+    if (!isSignaturePage && firstAvailable) return firstAvailable;
+
+    return null;
+  });
+}
+
 function inferAudioExt(audioUrl: string, mimeType?: string): "mp3" | "wav" | "ogg" | "m4a" {
   const normalizedUrl = audioUrl.toLowerCase().split("?")[0].split("#")[0];
   const normalizedMime = (mimeType || "").toLowerCase();
@@ -1331,13 +1349,15 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   onProgress?.(0.10);
 
   // Load background videos (timeout = skip)
+  const normalizedBgVideoUrls = normalizeBackgroundVideoUrls(backgroundVideoUrls, pages.length);
+
   console.log("[WebCodecs] Loading bg videos...");
   const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
-    (backgroundVideoUrls || []).map(url => url ? loadVid(url) : Promise.resolve(null))
+    normalizedBgVideoUrls.map(url => url ? loadVid(url) : Promise.resolve(null))
   );
-  const expectedBgVideoCount = (backgroundVideoUrls || []).filter(Boolean).length;
+  const expectedBgVideoCount = normalizedBgVideoUrls.filter(Boolean).length;
   const loadedBgVideoCount = bgVideos.filter(Boolean).length;
-  console.log("[WebCodecs] Bg videos:", loadedBgVideoCount, "of", expectedBgVideoCount);
+  console.log("[WebCodecs] Bg videos:", loadedBgVideoCount, "of", expectedBgVideoCount, "(normalized mapping)");
 
   // If videos were expected but none loaded, force fallback path instead of exporting static images.
   if (expectedBgVideoCount > 0 && loadedBgVideoCount === 0) {
@@ -1909,8 +1929,10 @@ export async function encodeVideoSimple(
   );
 
   // Load background videos for pages that have them (with blob->direct fallback)
+  const normalizedBgVideoUrls = normalizeBackgroundVideoUrls(backgroundVideoUrls, pages.length);
+
   const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
-    (backgroundVideoUrls || []).map(async (videoUrl, idx) => {
+    normalizedBgVideoUrls.map(async (videoUrl, idx) => {
       if (!videoUrl) return null;
 
       const loadVideoElement = (src: string, timeoutMs: number, blobUrlToKeep?: string): Promise<HTMLVideoElement | null> => {
