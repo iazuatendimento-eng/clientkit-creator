@@ -2313,7 +2313,13 @@ export async function encodeVideoSimple(
     }
 
     const cleanupRecorderResources = () => {
-      bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
+      bgVideos.forEach((v) => {
+        if (!v) return;
+        v.pause();
+        const blobUrl = (v as any).__blobUrl as string | undefined;
+        v.src = "";
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+      });
       outputStream.getTracks().forEach((track) => track.stop());
       try {
         audioSourceNode?.stop();
