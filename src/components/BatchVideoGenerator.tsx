@@ -4007,18 +4007,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       contentElements: template.contentElements,
                       signatureElements: template.signatureElements,
                     }}
-                    previewUrl={(() => {
-                      const basePage = selectedVideo.pages[currentPreviewPage] || "";
-                      // When overlay layers are missing, use the full composite page
-                      // so the user sees a complete preview immediately
-                      const hasOverlays = (selectedVideo.overlayPages?.[currentPreviewPage] || "") !== "" ||
-                        (selectedVideo.logoOverlayPages?.[currentPreviewPage] || "") !== "" ||
-                        (selectedVideo.frameOverlayPages?.[currentPreviewPage] || "") !== "";
-                      if (!hasOverlays && selectedVideo.fullPages?.[currentPreviewPage]) {
-                        return selectedVideo.fullPages[currentPreviewPage];
-                      }
-                      return basePage || null;
-                    })()}
+                    previewUrl={selectedVideo.fullPages?.[currentPreviewPage] || selectedVideo.pages[currentPreviewPage] || null}
                     isBusy={isApplyingAdjustments}
                     onCommit={scheduleApplyAdjustments}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
