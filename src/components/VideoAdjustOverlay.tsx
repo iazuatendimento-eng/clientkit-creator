@@ -445,6 +445,7 @@ export function VideoAdjustOverlay({
         };
       }
   >(null);
+  const lastPointerMoveAtRef = useRef(0);
 
   const begin = (e: React.PointerEvent, part: Part, mode: "move" | "resize", handle?: Handle) => {
     e.preventDefault();
@@ -531,6 +532,10 @@ export function VideoAdjustOverlay({
     };
 
     const onMove = (ev: PointerEvent) => {
+      const now = performance.now();
+      if (now - lastPointerMoveAtRef.current < 16) return;
+      lastPointerMoveAtRef.current = now;
+
       const s = startRef.current;
       const rect = containerRef.current?.getBoundingClientRect();
       if (!s || !rect) return;
