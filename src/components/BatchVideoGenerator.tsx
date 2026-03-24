@@ -810,6 +810,7 @@ const CardCoverPreview = memo(({
                 video.logoOverlayPages?.[i],
               ].some((layer) => typeof layer === "string" && layer !== "");
               const useFullPageThumb = !!video.fullPages?.[i] && (!thumbHasAnyOverlayLayer || !hasThumbVideo);
+              const thumbRetryKey = videoRetryKey[i] ?? 0;
               return (
                 <div
                   key={`thumb-${video.cardId}-${i}`}
