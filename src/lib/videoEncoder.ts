@@ -1709,7 +1709,13 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   }
 
   // Cleanup videos
-  bgVideos.forEach((v) => { if (v) { v.pause(); v.src = ""; } });
+  bgVideos.forEach((v) => {
+    if (!v) return;
+    v.pause();
+    const blobUrl = (v as any).__blobUrl as string | undefined;
+    v.src = "";
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+  });
 
   console.log("[WebCodecs] Frame loop done. Video chunks:", chunksReceived, "Audio chunks:", audioChunksReceived, "encoder state:", encoder.state);
 
