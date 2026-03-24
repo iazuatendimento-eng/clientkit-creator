@@ -1210,7 +1210,7 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
     width, height, pageDuration, fps: rawFps = 24,
     motionEffect = "ken-burns", transitionEffect = "fade",
     textAnimation = "none", logoAnimation = "none", textAnimDuration,
-    backgroundVideoUrls, frameOverlayPages, overlayPages, logoOverlayPages,
+    backgroundVideoUrls, frameOverlayPages, preImageOverlayPages, overlayPages, logoOverlayPages,
     imageRect, pageImageAdjustments, imageClipShape, audioUrl, customOverlayPages, onProgress,
   } = options;
 
@@ -1345,8 +1345,8 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   console.log("[WebCodecs] Loading overlays...");
   const loadList = (list: string[] | undefined) =>
     Promise.all((list || []).map(url => url ? loadImg(url) : Promise.resolve(null)));
-  const [overlayImages, frameOverlayImages, logoOverlayImages] = await Promise.all([
-    loadList(overlayPages), loadList(frameOverlayPages), loadList(logoOverlayPages),
+  const [overlayImages, frameOverlayImages, logoOverlayImages, preImageOverlayImages] = await Promise.all([
+    loadList(overlayPages), loadList(frameOverlayPages), loadList(logoOverlayPages), loadList(preImageOverlayPages),
   ]);
   console.log("[WebCodecs] Overlays loaded, starting encode...");
 
