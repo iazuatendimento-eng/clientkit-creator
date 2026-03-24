@@ -345,7 +345,7 @@ export function VideoPreviewPlayer({
             <div
               className="h-full bg-primary transition-all ease-linear"
               style={{
-                animation: `progress ${pageDuration}s linear infinite`,
+                animation: `progress ${getEffectivePageDuration(currentPage)}s linear infinite`,
               }}
             />
           </div>
