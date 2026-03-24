@@ -1400,6 +1400,13 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
 
       // Draw selection with handles
       if (el.id === selectedElement) {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const rot = ((el.rotation || 0) * Math.PI) / 180;
+
+        ctx.save();
+        if (rot) { ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy); }
+
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 3;
         ctx.setLineDash([8, 4]);
@@ -1421,6 +1428,8 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
           ctx.fillRect(c.x, c.y, handleSize, handleSize);
           ctx.strokeRect(c.x, c.y, handleSize, handleSize);
         });
+
+        ctx.restore();
       }
     });
   }, [elements, selectedElement, backgroundColor, currentPage, currentColor, animatingElementId]);
@@ -1450,11 +1459,22 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / SCALE;
-    const y = (e.clientY - rect.top) / SCALE;
+    const rawX = (e.clientX - rect.left) / SCALE;
+    const rawY = (e.clientY - rect.top) / SCALE;
 
     const element = elements.find((el) => el.id === selectedElement);
     if (!element) return;
+
+    // Transform mouse into element's local (un-rotated) coordinate space
+    const cx = element.x + element.width / 2;
+    const cy = element.y + element.height / 2;
+    const rot = -((element.rotation || 0) * Math.PI) / 180;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const dx = rawX - cx;
+    const dy = rawY - cy;
+    const x = cos * dx - sin * dy + cx;
+    const y = sin * dx + cos * dy + cy;
 
     const handleSize = 30;
     const handles = [
@@ -1484,7 +1504,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     // Otherwise, start dragging
     if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
       setIsDragging(true);
-      setDragOffset({ x: x - element.x, y: y - element.y });
+      setDragOffset({ x: rawX - element.x, y: rawY - element.y });
     }
   };
 
@@ -1500,6 +1520,17 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     if (selectedTool === "select" && selectedElement) {
       const element = elements.find((el) => el.id === selectedElement);
       if (element) {
+        // Transform mouse into element's local space for hit-testing
+        const ecx = element.x + element.width / 2;
+        const ecy = element.y + element.height / 2;
+        const erot = -((element.rotation || 0) * Math.PI) / 180;
+        const ecos = Math.cos(erot);
+        const esin = Math.sin(erot);
+        const edx = x - ecx;
+        const edy = y - ecy;
+        const lx = ecos * edx - esin * edy + ecx;
+        const ly = esin * edx + ecos * edy + ecy;
+
         const handleSize = 30;
         const handles = [
           { id: 'nw', x: element.x, y: element.y, cursor: 'nwse-resize' },
@@ -1510,12 +1541,12 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
         
         let newCursor = "crosshair";
         for (const handle of handles) {
-          if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
+          if (Math.abs(lx - handle.x) < handleSize && Math.abs(ly - handle.y) < handleSize) {
             newCursor = handle.cursor;
             break;
           }
         }
-        if (newCursor === "crosshair" && x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
+        if (newCursor === "crosshair" && lx >= element.x && lx <= element.x + element.width && ly >= element.y && ly <= element.y + element.height) {
           newCursor = "move";
         }
         setCursorStyle(newCursor);
@@ -1525,8 +1556,20 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     if (!selectedElement) return;
 
     if (isResizing && resizeHandle) {
-      const deltaX = x - resizeStart.x;
-      const deltaY = y - resizeStart.y;
+      // Transform mouse into element's local (un-rotated) space for accurate resize
+      const el = elements.find((e) => e.id === selectedElement);
+      const ecx = (resizeStart.elX + resizeStart.width / 2);
+      const ecy = (resizeStart.elY + resizeStart.height / 2);
+      const erot = -((el?.rotation || 0) * Math.PI) / 180;
+      const ecos = Math.cos(erot);
+      const esin = Math.sin(erot);
+      const ldx = x - ecx;
+      const ldy = y - ecy;
+      const lx = ecos * ldx - esin * ldy + ecx;
+      const ly = esin * ldx + ecos * ldy + ecy;
+
+      const deltaX = lx - resizeStart.x;
+      const deltaY = ly - resizeStart.y;
       
       let newWidth = resizeStart.width;
       let newHeight = resizeStart.height;

@@ -1160,13 +1160,19 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
   };
 
   const drawSelection = (ctx: CanvasRenderingContext2D, el: CanvasElement) => {
+    const cx = el.x + el.width / 2;
+    const cy = el.y + el.height / 2;
+    const rot = ((el.rotation || 0) * Math.PI) / 180;
+
+    ctx.save();
+    if (rot) { ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy); }
+
     ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = 4;
 
     const radius = (el.type === "rect" || el.type === "image") ? (el.borderRadius || 0) : 0;
     if (radius > 0) {
       ctx.beginPath();
-      // a bit larger than the element so the selection sits outside
       roundedRectPath(ctx, el.x - 3, el.y - 3, el.width + 6, el.height + 6, radius + 3);
       ctx.stroke();
     } else {
@@ -1174,7 +1180,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     }
 
     // Draw handles - larger for better visibility at 40% scale
-    const handleSize = 24; // Larger handles (24 * 0.4 = ~10px on screen)
+    const handleSize = 24;
     ctx.fillStyle = "#3b82f6";
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2;
@@ -1188,6 +1194,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
       ctx.fillRect(c.x, c.y, handleSize, handleSize);
       ctx.strokeRect(c.x, c.y, handleSize, handleSize);
     });
+
+    ctx.restore();
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1469,11 +1477,22 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / SCALE;
-    const y = (e.clientY - rect.top) / SCALE;
+    const rawX = (e.clientX - rect.left) / SCALE;
+    const rawY = (e.clientY - rect.top) / SCALE;
 
     const element = elements.find((el) => el.id === selectedElement);
     if (!element) return;
+
+    // Transform mouse into element's local (un-rotated) coordinate space
+    const cx = element.x + element.width / 2;
+    const cy = element.y + element.height / 2;
+    const rot = -((element.rotation || 0) * Math.PI) / 180;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const dx = rawX - cx;
+    const dy = rawY - cy;
+    const x = cos * dx - sin * dy + cx;
+    const y = sin * dx + cos * dy + cy;
 
     const handleSize = 30;
     const handles = [
@@ -1503,7 +1522,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     // Otherwise, start dragging
     if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
       setIsDragging(true);
-      setDragOffset({ x: x - element.x, y: y - element.y });
+      setDragOffset({ x: rawX - element.x, y: rawY - element.y });
     }
   };
 
@@ -1516,8 +1535,20 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     const y = (e.clientY - rect.top) / SCALE;
 
     if (isResizing && resizeHandle) {
-      const deltaX = x - resizeStart.x;
-      const deltaY = y - resizeStart.y;
+      // Transform mouse into element's local (un-rotated) space for accurate resize
+      const el = elements.find((e) => e.id === selectedElement);
+      const ecx = (resizeStart.elX + resizeStart.width / 2);
+      const ecy = (resizeStart.elY + resizeStart.height / 2);
+      const erot = -((el?.rotation || 0) * Math.PI) / 180;
+      const ecos = Math.cos(erot);
+      const esin = Math.sin(erot);
+      const ldx = x - ecx;
+      const ldy = y - ecy;
+      const lx = ecos * ldx - esin * ldy + ecx;
+      const ly = esin * ldx + ecos * ldy + ecy;
+
+      const deltaX = lx - resizeStart.x;
+      const deltaY = ly - resizeStart.y;
       
       let newWidth = resizeStart.width;
       let newHeight = resizeStart.height;
@@ -1581,6 +1612,17 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     
     const element = elements.find((el) => el.id === selectedElement);
     if (!element) return "crosshair";
+
+    // Transform mouse into element's local (un-rotated) space
+    const ecx = element.x + element.width / 2;
+    const ecy = element.y + element.height / 2;
+    const erot = -((element.rotation || 0) * Math.PI) / 180;
+    const ecos = Math.cos(erot);
+    const esin = Math.sin(erot);
+    const ldx = x - ecx;
+    const ldy = y - ecy;
+    const lx = ecos * ldx - esin * ldy + ecx;
+    const ly = esin * ldx + ecos * ldy + ecy;
     
     const handleSize = 30;
     const handles = [
@@ -1591,12 +1633,12 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     ];
     
     for (const handle of handles) {
-      if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
+      if (Math.abs(lx - handle.x) < handleSize && Math.abs(ly - handle.y) < handleSize) {
         return handle.cursor;
       }
     }
     
-    if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
+    if (lx >= element.x && lx <= element.x + element.width && ly >= element.y && ly <= element.y + element.height) {
       return "move";
     }
     
