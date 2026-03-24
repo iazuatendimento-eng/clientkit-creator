@@ -963,8 +963,40 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
   const selectedVideoRef = useRef<ClientVideo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedVideoRenderRafRef = useRef<number | null>(null);
+  const selectedVideoRenderPendingRef = useRef<ClientVideo | null>(null);
+  const applyAdjustmentsDebounceRef = useRef<number | null>(null);
+  const queuedAdjustmentApplyRef = useRef(false);
+  const isApplyingAdjustmentsRef = useRef(false);
+
+  const scheduleSelectedVideoRender = useCallback((next: ClientVideo) => {
+    selectedVideoRenderPendingRef.current = next;
+    if (selectedVideoRenderRafRef.current !== null) return;
+
+    selectedVideoRenderRafRef.current = requestAnimationFrame(() => {
+      selectedVideoRenderRafRef.current = null;
+      const pending = selectedVideoRenderPendingRef.current;
+      selectedVideoRenderPendingRef.current = null;
+      if (pending) setSelectedVideo(pending);
+    });
+  }, []);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    isApplyingAdjustmentsRef.current = isApplyingAdjustments;
+  }, [isApplyingAdjustments]);
+
+  useEffect(() => {
+    return () => {
+      if (selectedVideoRenderRafRef.current !== null) {
+        cancelAnimationFrame(selectedVideoRenderRafRef.current);
+      }
+      if (applyAdjustmentsDebounceRef.current !== null) {
+        window.clearTimeout(applyAdjustmentsDebounceRef.current);
+      }
+    };
+  }, []);
 
   // DnD for card reordering
   const dndSensors = useSensors(
@@ -2274,15 +2306,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     if (!current) return;
 
     // Update ref synchronously so "onCommit" always sees the latest values
-    selectedVideoRef.current = {
+    const nextVideo = {
       ...current,
       adjustments: { ...current.adjustments, [key]: value },
     };
+    selectedVideoRef.current = nextVideo;
 
-    setSelectedVideo((prev) =>
-      prev ? { ...prev, adjustments: { ...prev.adjustments, [key]: value } } : prev
-    );
-  }, []);
+    scheduleSelectedVideoRender(nextVideo);
+  }, [scheduleSelectedVideoRender]);
 
   // Update text adjustment for a specific page
   const updatePageTextAdjustment = useCallback((pageIndex: number, key: keyof PageTextAdjustment, value: number) => {
@@ -2298,15 +2329,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       [key]: value,
     };
 
-    selectedVideoRef.current = {
+    const nextVideo = {
       ...current,
       pageTextAdjustments: updatedPageTextAdjustments,
     };
+    selectedVideoRef.current = nextVideo;
 
-    setSelectedVideo((prev) =>
-      prev ? { ...prev, pageTextAdjustments: updatedPageTextAdjustments } : prev
-    );
-  }, []);
+    scheduleSelectedVideoRender(nextVideo);
+  }, [scheduleSelectedVideoRender]);
 
   // Update image adjustment for a specific page
   const updatePageImageAdjustment = useCallback((pageIndex: number, key: keyof PageImageAdjustment, value: number) => {
@@ -2322,15 +2352,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       [key]: value,
     };
 
-    selectedVideoRef.current = {
+    const nextVideo = {
       ...current,
       pageImageAdjustments: updatedPageImageAdjustments,
     };
+    selectedVideoRef.current = nextVideo;
 
-    setSelectedVideo((prev) =>
-      prev ? { ...prev, pageImageAdjustments: updatedPageImageAdjustments } : prev
-    );
-  }, []);
+    scheduleSelectedVideoRender(nextVideo);
+  }, [scheduleSelectedVideoRender]);
 
   const setCurrentPageOverlays = useCallback((overlays: VideoCustomOverlay[]) => {
     const current = selectedVideoRef.current;
@@ -2341,15 +2370,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       [currentPreviewPage]: overlays,
     };
 
-    selectedVideoRef.current = {
+    const nextVideo = {
       ...current,
       customOverlayPages: updatedCustomOverlayPages,
     };
+    selectedVideoRef.current = nextVideo;
 
-    setSelectedVideo((prev) =>
-      prev ? { ...prev, customOverlayPages: updatedCustomOverlayPages } : prev
-    );
-  }, [currentPreviewPage]);
+    scheduleSelectedVideoRender(nextVideo);
+  }, [currentPreviewPage, scheduleSelectedVideoRender]);
 
   const handleAddVideoOverlay = useCallback((file: File) => {
     const reader = new FileReader();
@@ -2415,6 +2443,33 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
     },
     []
   );
+
+  const flushQueuedAdjustmentApply = useCallback(() => {
+    if (isApplyingAdjustmentsRef.current) {
+      queuedAdjustmentApplyRef.current = true;
+      return;
+    }
+
+    queuedAdjustmentApplyRef.current = false;
+    void applyAdjustments();
+  }, [applyAdjustments]);
+
+  const scheduleApplyAdjustments = useCallback(() => {
+    if (applyAdjustmentsDebounceRef.current !== null) {
+      window.clearTimeout(applyAdjustmentsDebounceRef.current);
+    }
+
+    applyAdjustmentsDebounceRef.current = window.setTimeout(() => {
+      applyAdjustmentsDebounceRef.current = null;
+      flushQueuedAdjustmentApply();
+    }, 120);
+  }, [flushQueuedAdjustmentApply]);
+
+  useEffect(() => {
+    if (!isApplyingAdjustments && queuedAdjustmentApplyRef.current) {
+      flushQueuedAdjustmentApply();
+    }
+  }, [isApplyingAdjustments, flushQueuedAdjustmentApply]);
 
   // Debounced real-time regeneration of frame overlay when shapes are moved/resized
   const shapeOverridesJson = JSON.stringify(selectedVideo?.adjustments?.shapeOverrides || {});
@@ -3947,7 +4002,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                         : selectedVideo.pages[currentPreviewPage]
                     ) || null}
                     isBusy={isApplyingAdjustments}
-                    onCommit={() => applyAdjustments()}
+                    onCommit={scheduleApplyAdjustments}
                     isContentPage={currentPreviewPage < selectedVideo.pages.length - 1}
                     pageText={selectedVideo.pageTexts[currentPreviewPage] || ""}
                     fontFamily={selectedVideo.brandKit?.font || selectedVideo.brandKit?.fontFamily || ""}
@@ -4070,8 +4125,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                       const current = selectedVideoRef.current;
                       if (!current) return;
                       const updatedAdj = { ...current.adjustments, shapeOverrides: next };
-                      selectedVideoRef.current = { ...current, adjustments: updatedAdj };
-                      setSelectedVideo((prev) => prev ? { ...prev, adjustments: updatedAdj } : prev);
+                      const nextVideo = { ...current, adjustments: updatedAdj };
+                      selectedVideoRef.current = nextVideo;
+                      scheduleSelectedVideoRender(nextVideo);
                     }}
                     customOverlays={selectedVideo.customOverlayPages?.[currentPreviewPage] || []}
                     setCustomOverlays={setCurrentPageOverlays}
