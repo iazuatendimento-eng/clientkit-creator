@@ -803,8 +803,13 @@ const CardCoverPreview = memo(({
                 : null;
               const thumbActiveVideoUrl = thumbVideoUrl || thumbFallbackVideoUrl;
               const hasThumbVideo = !!thumbActiveVideoUrl && !videoGiveUp[i] && !isThumbSignature;
-              const useFullPageThumb = !!video.fullPages?.[i] && !hasThumbVideo;
-              const thumbRetryKey = videoRetryKey[i] ?? 0;
+              const thumbHasAnyOverlayLayer = [
+                video.preImageOverlayPages?.[i],
+                video.frameOverlayPages?.[i],
+                video.overlayPages?.[i],
+                video.logoOverlayPages?.[i],
+              ].some((layer) => typeof layer === "string" && layer !== "");
+              const useFullPageThumb = !!video.fullPages?.[i] && (!thumbHasAnyOverlayLayer || !hasThumbVideo);
               return (
                 <div
                   key={`thumb-${video.cardId}-${i}`}
@@ -1385,10 +1390,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   const baseVideo = overlayQueue.shift();
                   if (!baseVideo) break;
                   try {
-                    const result = await regenerateSingleVideo({
-                      ...baseVideo,
-                      searchedImages: baseVideo.pageTexts.map(() => ""),
-                    });
+                    const result = await regenerateSingleVideo(baseVideo);
                     setClientVideos((prev) =>
                       prev.map((v) =>
                         v.cardId === baseVideo.cardId
@@ -1398,9 +1400,11 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                               frameOverlayPages: result.frameOverlayPages,
                               preImageOverlayPages: result.preImageOverlayPages,
                               logoOverlayPages: result.logoOverlayPages,
-                              fullPages: result.fullPages,
-                              // Keep saved pages (don't override with empty-background renders)
+                              // Keep saved pages/fullPages to avoid visual flicker while overlays hydrate
                             }
+                          : v
+                      )
+                    );
                           : v
                       )
                     );
