@@ -1242,8 +1242,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           .filter((t: string) => t.length > 0);
         const pageTexts = textParts.length > 0 ? textParts : [savedText];
         const savedPages = normalizeStoredPages(item.files);
+        const normalizedBackgroundImages = normalizeStoredPages(item.backgroundImages);
         const quickFallbackPages = [
-          ...pageTexts.map((pageText) => buildQuickPlaceholderPage(pageText, item.brandKit || {}, false)),
+          ...pageTexts.map((pageText, idx) => normalizedBackgroundImages[idx] || normalizedBackgroundImages[0] || buildQuickPlaceholderPage(pageText, item.brandKit || {}, false)),
           buildQuickPlaceholderPage(item.company || item.clientName || "Assinatura", item.brandKit || {}, true),
         ].filter((p) => typeof p === "string" && p.length > 0);
 
@@ -1361,11 +1362,7 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                   const baseVideo = queue.shift();
                   if (!baseVideo) break;
                   try {
-                    const fastRebuildInput: ClientVideo = {
-                      ...baseVideo,
-                      searchedImages: baseVideo.pageTexts.map(() => ""),
-                    };
-                    const result = await regenerateSingleVideo(fastRebuildInput);
+                    const result = await regenerateSingleVideo(baseVideo);
                     setClientVideos((prev) =>
                       prev.map((v) =>
                         v.cardId === baseVideo.cardId
