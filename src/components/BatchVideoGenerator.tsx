@@ -1215,23 +1215,9 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
         const colors = Array.isArray(brandKit?.colors) ? brandKit.colors : [];
         const bg = (colors[0] && typeof colors[0] === "string" ? colors[0] : template.backgroundColor) || "#1a1a2e";
-        const fg = (colors[1] && typeof colors[1] === "string" ? colors[1] : "#ffffff") || "#ffffff";
 
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = fg;
-        ctx.globalAlpha = 0.95;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-
-        ctx.font = "700 64px Arial";
-        const safeLabel = (label || "Card").slice(0, 90);
-        ctx.fillText(safeLabel, canvas.width / 2, canvas.height * 0.52, canvas.width * 0.82);
-
-        ctx.globalAlpha = 0.7;
-        ctx.font = "500 34px Arial";
-        ctx.fillText(isSignature ? "ASSINATURA" : "PREVIEW", canvas.width / 2, canvas.height * 0.62);
 
         return canvas.toDataURL("image/png");
       };
