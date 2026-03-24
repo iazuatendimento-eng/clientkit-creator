@@ -1791,6 +1791,7 @@ export async function encodeVideoSimple(
     textAnimDuration,
     backgroundVideoUrls,
     frameOverlayPages,
+    preImageOverlayPages,
     overlayPages,
     logoOverlayPages,
     imageRect,
