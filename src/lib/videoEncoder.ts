@@ -2151,6 +2151,8 @@ export async function encodeVideoSimple(
           // Cache this good frame
           try { simpleLastGoodFrame[pageIdx] = ctx.getImageData(0, 0, width, height); } catch { /* ignore */ }
 
+          const preImgOv = preImageOverlayImages[pageIdx];
+          if (preImgOv) ctx.drawImage(preImgOv, 0, 0, width, height);
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
           const overlay = overlayImages[pageIdx];
@@ -2168,6 +2170,7 @@ export async function encodeVideoSimple(
         const cached = simpleLastGoodFrame[pageIdx];
         if (cached) {
           ctx.putImageData(cached, 0, 0);
+          const piov2s = preImageOverlayImages[pageIdx]; if (piov2s) ctx.drawImage(piov2s, 0, 0, width, height);
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
           const overlay = overlayImages[pageIdx];
@@ -2177,6 +2180,7 @@ export async function encodeVideoSimple(
           drawSimpleCustomOverlays(pageIdx);
         } else {
           drawSource(img, true, pageProgress);
+          const piov3s = preImageOverlayImages[pageIdx]; if (piov3s) ctx.drawImage(piov3s, 0, 0, width, height);
           const frameOverlay = frameOverlayImages[pageIdx];
           if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
           const overlay = overlayImages[pageIdx];
@@ -2188,6 +2192,7 @@ export async function encodeVideoSimple(
       }
     } else {
       drawSource(img, true, pageProgress);
+      const piov4s = preImageOverlayImages[pageIdx]; if (piov4s) ctx.drawImage(piov4s, 0, 0, width, height);
       const frameOverlay = frameOverlayImages[pageIdx];
       if (frameOverlay) ctx.drawImage(frameOverlay, 0, 0, width, height);
       const overlay = overlayImages[pageIdx];
