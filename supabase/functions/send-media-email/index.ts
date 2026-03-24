@@ -430,8 +430,10 @@ serve(async (req) => {
     );
 
     const tipoMidia = isVideo ? "VÍDEO" : "ARTE";
+    const artigoMidia = isVideo ? "SEU" : "SUA";
+    const artigoMidia2 = isVideo ? "O" : "A";
     const tipoArquivo = isVideo ? "MP4" : "PNG";
-    const downloadInstruction = `SUA ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER A ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`;
+    const downloadInstruction = `${artigoMidia} ${tipoMidia} ESTÁ EM ANEXO ABAIXO, PARA VER ${artigoMidia2} ${tipoMidia} NÃO DÊ PLAYER É NECESSÁRIO BAIXAR, FAZER O DOWNLOAD MESMO...\n\nAVISO: BAIXAR FAZER O DOWNLOAD MESMO DO ${tipoArquivo}`;
 
     const bodyParts: string[] = [];
     if (caption) bodyParts.push(caption);
