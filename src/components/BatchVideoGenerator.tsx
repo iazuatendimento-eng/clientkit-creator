@@ -786,12 +786,12 @@ const CardCoverPreview = memo(({
                   {video.pages[i] ? (
                     <div className="absolute inset-0 bg-muted/40">
                       {useFullPageThumb ? (
-                        <img src={video.fullPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                        <img src={video.fullPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain z-0" />
                       ) : (
                         <>
-                          <img src={video.pages[i]} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                          <img src={video.pages[i]} alt="" className="absolute inset-0 w-full h-full object-contain z-0" />
                           {video.preImageOverlayPages?.[i] && (
-                            <img src={video.preImageOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                            <img src={video.preImageOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[1]" />
                           )}
                           {hasThumbVideo && (
                             <video
@@ -806,13 +806,13 @@ const CardCoverPreview = memo(({
                             />
                           )}
                           {video.frameOverlayPages?.[i] && (
-                            <img src={video.frameOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                            <img src={video.frameOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[3]" />
                           )}
                           {video.overlayPages?.[i] && (
-                            <img src={video.overlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                            <img src={video.overlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[4]" />
                           )}
                           {video.logoOverlayPages?.[i] && (
-                            <img src={video.logoOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                            <img src={video.logoOverlayPages[i]} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[5]" />
                           )}
                         </>
                       )}
