@@ -412,10 +412,10 @@ serve(async (req) => {
       }),
     );
 
-    // Split conservatively — Trello silently rejects emails with many attachments.
-    // Images: max 3 attachments or 10MB per email to ensure delivery on strict gateways.
+    // Split conservatively — some gateways silently reject multi-attachment emails.
+    // Images: max 2 attachments or 10MB per email to maximize delivery reliability.
     const maxBytesPerEmail = isVideo ? 20 * 1024 * 1024 : 10 * 1024 * 1024;
-    const maxAttachmentsPerEmail = isVideo ? 2 : 3;
+    const maxAttachmentsPerEmail = isVideo ? 2 : 2;
     const attachmentChunks = splitAttachmentsIntoChunks(attachmentMeta, {
       maxBytesPerEmail,
       maxAttachmentsPerEmail,
@@ -456,9 +456,9 @@ serve(async (req) => {
     for (let ei = 0; ei < validEmails.length; ei++) {
       const email = validEmails[ei];
 
-      if (ei > 0) {
-        await new Promise((r) => setTimeout(r, 300));
-      }
+        if (ei > 0) {
+          await sleep(1500);
+        }
 
       try {
         let recipientSuccess = true;
@@ -467,7 +467,7 @@ serve(async (req) => {
         let partCounter = 0;
         for (let pi = 0; pi < attachmentChunks.length; pi++) {
           if (pi > 0) {
-            await new Promise((r) => setTimeout(r, 250));
+            await sleep(1200);
           }
 
           const currentChunk = attachmentChunks[pi].map(({ filename, path }) => ({ filename, path }));
