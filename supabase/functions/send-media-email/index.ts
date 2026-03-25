@@ -412,10 +412,10 @@ serve(async (req) => {
       }),
     );
 
-    // Split conservatively — Trello and some gateways silently reject large emails.
-    // Images: max 5 attachments or 15MB per email to ensure delivery.
-    const maxBytesPerEmail = isVideo ? 20 * 1024 * 1024 : 15 * 1024 * 1024;
-    const maxAttachmentsPerEmail = isVideo ? 2 : 5;
+    // Split conservatively — Trello silently rejects emails with many attachments.
+    // Images: max 3 attachments or 10MB per email to ensure delivery on strict gateways.
+    const maxBytesPerEmail = isVideo ? 20 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxAttachmentsPerEmail = isVideo ? 2 : 3;
     const attachmentChunks = splitAttachmentsIntoChunks(attachmentMeta, {
       maxBytesPerEmail,
       maxAttachmentsPerEmail,
