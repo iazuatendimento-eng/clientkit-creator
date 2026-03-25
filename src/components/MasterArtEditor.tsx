@@ -1430,8 +1430,17 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
 
     const dblHitPadding = 8;
     const dblHits = [...elements].reverse().filter((el) => {
-      return x >= el.x - dblHitPadding && x <= el.x + el.width + dblHitPadding &&
-             y >= el.y - dblHitPadding && y <= el.y + el.height + dblHitPadding;
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      const rot = -((el.rotation || 0) * Math.PI) / 180;
+      const cos = Math.cos(rot);
+      const sin = Math.sin(rot);
+      const dx = x - cx;
+      const dy = y - cy;
+      const lx = cos * dx - sin * dy + cx;
+      const ly = sin * dx + cos * dy + cy;
+      return lx >= el.x - dblHitPadding && lx <= el.x + el.width + dblHitPadding &&
+             ly >= el.y - dblHitPadding && ly <= el.y + el.height + dblHitPadding;
     });
     const clickedElement = dblHits.length > 1
       ? dblHits.reduce((best, el) => (el.width * el.height < best.width * best.height ? el : best), dblHits[0])
