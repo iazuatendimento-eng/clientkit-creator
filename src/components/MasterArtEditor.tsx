@@ -139,6 +139,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null); // 'nw', 'ne', 'sw', 'se'
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, elX: 0, elY: 0 });
+  const wasInteractingRef = useRef(false);
   const [unsplashImages, setUnsplashImages] = useState<UnsplashImage[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -1199,21 +1200,37 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Skip click if we just finished dragging/resizing
+    if (wasInteractingRef.current) {
+      wasInteractingRef.current = false;
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / SCALE;
-    const y = (e.clientY - rect.top) / SCALE;
+    const rawX = (e.clientX - rect.left) / SCALE;
+    const rawY = (e.clientY - rect.top) / SCALE;
 
     if (selectedTool === "move") {
-      // Find clicked element — prefer smaller elements (shapes on top of backgrounds)
-      const hitPadding = 8; // extra pixels tolerance for small elements
+      // Find clicked element — rotation-aware hit testing
+      const hitPadding = 8;
       const hits = [...elements].reverse().filter((el) => {
-        return x >= el.x - hitPadding && x <= el.x + el.width + hitPadding &&
-               y >= el.y - hitPadding && y <= el.y + el.height + hitPadding;
+        // Transform mouse into element's local (un-rotated) space
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const rot = -((el.rotation || 0) * Math.PI) / 180;
+        const cos = Math.cos(rot);
+        const sin = Math.sin(rot);
+        const dx = rawX - cx;
+        const dy = rawY - cy;
+        const lx = cos * dx - sin * dy + cx;
+        const ly = sin * dx + cos * dy + cy;
+        return lx >= el.x - hitPadding && lx <= el.x + el.width + hitPadding &&
+               ly >= el.y - hitPadding && ly <= el.y + el.height + hitPadding;
       });
-      // Prefer the smallest-area element among hits (so small arrows/shapes aren't hidden behind large rects)
+      // Prefer the smallest-area element among hits
       const clickedElement = hits.length > 1
         ? hits.reduce((best, el) => (el.width * el.height < best.width * best.height ? el : best), hits[0])
         : hits[0] || null;
@@ -1227,8 +1244,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "rect") {
       addElement({
         type: "rect",
-        x: x - 75,
-        y: y - 50,
+        x: rawX - 75,
+        y: rawY - 50,
         width: 150,
         height: 100,
         color: "#cccccc",
@@ -1236,8 +1253,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "circle") {
       addElement({
         type: "circle",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1245,8 +1262,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "triangle") {
       addElement({
         type: "triangle",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1254,8 +1271,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "diamond") {
       addElement({
         type: "diamond",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1263,8 +1280,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "hexagon") {
       addElement({
         type: "hexagon",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1272,8 +1289,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "pentagon") {
       addElement({
         type: "pentagon",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1281,8 +1298,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "star") {
       addElement({
         type: "star",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1290,8 +1307,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "line") {
       addElement({
         type: "line",
-        x: x - 100,
-        y: y - 4,
+        x: rawX - 100,
+        y: rawY - 4,
         width: 200,
         height: 8,
         color: "#cccccc",
@@ -1299,8 +1316,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "text") {
       addElement({
         type: "text",
-        x,
-        y,
+        x: rawX,
+        y: rawY,
         width: 200,
         height: 40,
         text: "Seu texto aqui",
@@ -1308,21 +1325,20 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
         color: "#000000",
       });
     } else if (selectedTool === "image") {
-      // Add image placeholder frame
       addElement({
         type: "image",
-        x: x - 200,
-        y: y - 250,
+        x: rawX - 200,
+        y: rawY - 250,
         width: 400,
         height: 500,
         placeholder: true,
-        color: "#8b5cf6", // Purple color for image placeholder
+        color: "#8b5cf6",
       });
     } else if (selectedTool === "polkaDots") {
       addElement({
         type: "polkaDots",
-        x: x - 100,
-        y: y - 100,
+        x: rawX - 100,
+        y: rawY - 100,
         width: 200,
         height: 200,
         color: "#f59e0b",
@@ -1330,8 +1346,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "dotsGrid") {
       addElement({
         type: "dotsGrid",
-        x: x - 100,
-        y: y - 100,
+        x: rawX - 100,
+        y: rawY - 100,
         width: 200,
         height: 200,
         color: "#3b82f6",
@@ -1339,8 +1355,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "confetti") {
       addElement({
         type: "confetti",
-        x: x - 100,
-        y: y - 100,
+        x: rawX - 100,
+        y: rawY - 100,
         width: 200,
         height: 200,
         color: "#ec4899",
@@ -1348,8 +1364,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "splatter") {
       addElement({
         type: "splatter",
-        x: x - 100,
-        y: y - 100,
+        x: rawX - 100,
+        y: rawY - 100,
         width: 200,
         height: 200,
         color: "#10b981",
@@ -1357,8 +1373,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "zigzag") {
       addElement({
         type: "zigzag",
-        x: x - 100,
-        y: y - 25,
+        x: rawX - 100,
+        y: rawY - 25,
         width: 200,
         height: 50,
         color: "#8b5cf6",
@@ -1366,40 +1382,40 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "spiral") {
       addElement({
         type: "spiral",
-        x: x - 75,
-        y: y - 75,
+        x: rawX - 75,
+        y: rawY - 75,
         width: 150,
         height: 150,
         color: "#f97316",
       });
     } else if (selectedTool === "heart") {
-      addElement({ type: "heart", x: x - 75, y: y - 75, width: 150, height: 150, color: "#ef4444" });
+      addElement({ type: "heart", x: rawX - 75, y: rawY - 75, width: 150, height: 150, color: "#ef4444" });
     } else if (selectedTool === "cross") {
-      addElement({ type: "cross", x: x - 60, y: y - 60, width: 120, height: 120, color: "#6366f1" });
+      addElement({ type: "cross", x: rawX - 60, y: rawY - 60, width: 120, height: 120, color: "#6366f1" });
     } else if (selectedTool === "cloud") {
-      addElement({ type: "cloud", x: x - 100, y: y - 60, width: 200, height: 120, color: "#94a3b8" });
+      addElement({ type: "cloud", x: rawX - 100, y: rawY - 60, width: 200, height: 120, color: "#94a3b8" });
     } else if (selectedTool === "speechBubble") {
-      addElement({ type: "speechBubble", x: x - 100, y: y - 75, width: 200, height: 150, color: "#ffffff" });
+      addElement({ type: "speechBubble", x: rawX - 100, y: rawY - 75, width: 200, height: 150, color: "#ffffff" });
     } else if (selectedTool === "lightning") {
-      addElement({ type: "lightning", x: x - 40, y: y - 75, width: 80, height: 150, color: "#facc15" });
+      addElement({ type: "lightning", x: rawX - 40, y: rawY - 75, width: 80, height: 150, color: "#facc15" });
     } else if (selectedTool === "shield") {
-      addElement({ type: "shield", x: x - 60, y: y - 75, width: 120, height: 150, color: "#3b82f6" });
+      addElement({ type: "shield", x: rawX - 60, y: rawY - 75, width: 120, height: 150, color: "#3b82f6" });
     } else if (selectedTool === "crescent") {
-      addElement({ type: "crescent", x: x - 60, y: y - 60, width: 120, height: 120, color: "#fbbf24" });
+      addElement({ type: "crescent", x: rawX - 60, y: rawY - 60, width: 120, height: 120, color: "#fbbf24" });
     } else if (selectedTool === "chevron") {
-      addElement({ type: "chevron", x: x - 100, y: y - 25, width: 200, height: 50, color: "#ffffff" });
+      addElement({ type: "chevron", x: rawX - 100, y: rawY - 25, width: 200, height: 50, color: "#ffffff" });
     } else if (selectedTool === "wave") {
-      addElement({ type: "wave", x: x - 100, y: y - 50, width: 200, height: 100, color: "#38bdf8" });
+      addElement({ type: "wave", x: rawX - 100, y: rawY - 50, width: 200, height: 100, color: "#38bdf8" });
     } else if (selectedTool === "blob") {
-      addElement({ type: "blob", x: x - 75, y: y - 75, width: 150, height: 150, color: "#a78bfa" });
+      addElement({ type: "blob", x: rawX - 75, y: rawY - 75, width: 150, height: 150, color: "#a78bfa" });
     } else if (selectedTool === "arch") {
-      addElement({ type: "arch", x: x - 75, y: y - 75, width: 150, height: 150, color: "#f97316" });
+      addElement({ type: "arch", x: rawX - 75, y: rawY - 75, width: 150, height: 150, color: "#f97316" });
     } else if (selectedTool === "arrow") {
-      addElement({ type: "arrow", x: x - 75, y: y - 40, width: 150, height: 80, color: "#ffffff" });
+      addElement({ type: "arrow", x: rawX - 75, y: rawY - 40, width: 150, height: 80, color: "#ffffff" });
     } else if (selectedTool === "badge") {
-      addElement({ type: "badge", x: x - 60, y: y - 60, width: 120, height: 120, color: "#eab308" });
+      addElement({ type: "badge", x: rawX - 60, y: rawY - 60, width: 120, height: 120, color: "#eab308" });
     } else if (selectedTool === "ribbon") {
-      addElement({ type: "ribbon", x: x - 100, y: y - 30, width: 200, height: 60, color: "#ef4444" });
+      addElement({ type: "ribbon", x: rawX - 100, y: rawY - 30, width: 200, height: 60, color: "#ef4444" });
     }
   };
 
@@ -1414,8 +1430,17 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
 
     const dblHitPadding = 8;
     const dblHits = [...elements].reverse().filter((el) => {
-      return x >= el.x - dblHitPadding && x <= el.x + el.width + dblHitPadding &&
-             y >= el.y - dblHitPadding && y <= el.y + el.height + dblHitPadding;
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      const rot = -((el.rotation || 0) * Math.PI) / 180;
+      const cos = Math.cos(rot);
+      const sin = Math.sin(rot);
+      const dx = x - cx;
+      const dy = y - cy;
+      const lx = cos * dx - sin * dy + cx;
+      const ly = sin * dx + cos * dy + cy;
+      return lx >= el.x - dblHitPadding && lx <= el.x + el.width + dblHitPadding &&
+             ly >= el.y - dblHitPadding && ly <= el.y + el.height + dblHitPadding;
     });
     const clickedElement = dblHits.length > 1
       ? dblHits.reduce((best, el) => (el.width * el.height < best.width * best.height ? el : best), dblHits[0])
@@ -1506,6 +1531,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     for (const handle of handles) {
       if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
         setIsResizing(true);
+        wasInteractingRef.current = true;
         setResizeHandle(handle.id);
         setResizeStart({ 
           x, 
@@ -1522,6 +1548,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     // Otherwise, start dragging
     if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
       setIsDragging(true);
+      wasInteractingRef.current = true;
       setDragOffset({ x: rawX - element.x, y: rawY - element.y });
     }
   };
@@ -1595,6 +1622,9 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
   };
 
   const handleMouseUp = () => {
+    if (isDragging || isResizing) {
+      wasInteractingRef.current = true;
+    }
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
