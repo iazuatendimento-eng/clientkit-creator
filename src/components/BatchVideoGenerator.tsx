@@ -4027,6 +4027,32 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
       <Dialog
         open={!!selectedVideo}
         onOpenChange={() => {
+          // Flush pending adjustments before closing so the grid reflects the latest state
+          const pendingVideo = selectedVideoRef.current;
+          if (pendingVideo) {
+            // Cancel any pending debounce — we'll handle it now
+            if (applyAdjustmentsDebounceRef.current !== null) {
+              window.clearTimeout(applyAdjustmentsDebounceRef.current);
+              applyAdjustmentsDebounceRef.current = null;
+            }
+            // Sync the latest adjustments + current pages to clientVideos immediately
+            setClientVideos((prev) =>
+              prev.map((v) => (v.cardId === pendingVideo.cardId ? { ...pendingVideo } : v))
+            );
+            // Also trigger a background regeneration to bake zoom into page images
+            const videoToRegen = { ...pendingVideo };
+            setTimeout(() => {
+              regenerateSingleVideo(videoToRegen).then((result) => {
+                setClientVideos((prev) =>
+                  prev.map((v) =>
+                    v.cardId === videoToRegen.cardId
+                      ? { ...v, pages: result.pages, overlayPages: result.overlayPages, frameOverlayPages: result.frameOverlayPages, preImageOverlayPages: result.preImageOverlayPages, logoOverlayPages: result.logoOverlayPages, fullPages: result.fullPages }
+                      : v
+                  )
+                );
+              }).catch(() => {});
+            }, 50);
+          }
           setSelectedVideo(null);
           setIsPlayingPreview(false);
         }}
