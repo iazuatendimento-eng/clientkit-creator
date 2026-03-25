@@ -1507,6 +1507,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     for (const handle of handles) {
       if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
         setIsResizing(true);
+        wasInteractingRef.current = true;
         setResizeHandle(handle.id);
         setResizeStart({ 
           x, 
@@ -1523,6 +1524,7 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     // Otherwise, start dragging
     if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
       setIsDragging(true);
+      wasInteractingRef.current = true;
       setDragOffset({ x: rawX - element.x, y: rawY - element.y });
     }
   };
@@ -1596,6 +1598,9 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
   };
 
   const handleMouseUp = () => {
+    if (isDragging || isResizing) {
+      wasInteractingRef.current = true;
+    }
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
