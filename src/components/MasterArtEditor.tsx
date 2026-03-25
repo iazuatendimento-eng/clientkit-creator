@@ -1244,8 +1244,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "rect") {
       addElement({
         type: "rect",
-        x: x - 75,
-        y: y - 50,
+        x: rawX - 75,
+        y: rawY - 50,
         width: 150,
         height: 100,
         color: "#cccccc",
@@ -1253,8 +1253,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "circle") {
       addElement({
         type: "circle",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1262,8 +1262,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "triangle") {
       addElement({
         type: "triangle",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1271,8 +1271,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "diamond") {
       addElement({
         type: "diamond",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1280,8 +1280,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "hexagon") {
       addElement({
         type: "hexagon",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1289,8 +1289,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "pentagon") {
       addElement({
         type: "pentagon",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1298,8 +1298,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "star") {
       addElement({
         type: "star",
-        x: x - 50,
-        y: y - 50,
+        x: rawX - 50,
+        y: rawY - 50,
         width: 100,
         height: 100,
         color: "#cccccc",
@@ -1307,8 +1307,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "line") {
       addElement({
         type: "line",
-        x: x - 100,
-        y: y - 4,
+        x: rawX - 100,
+        y: rawY - 4,
         width: 200,
         height: 8,
         color: "#cccccc",
@@ -1316,8 +1316,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "text") {
       addElement({
         type: "text",
-        x,
-        y,
+        x: rawX,
+        y: rawY,
         width: 200,
         height: 40,
         text: "Seu texto aqui",
@@ -1325,21 +1325,20 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
         color: "#000000",
       });
     } else if (selectedTool === "image") {
-      // Add image placeholder frame
       addElement({
         type: "image",
-        x: x - 200,
-        y: y - 250,
+        x: rawX - 200,
+        y: rawY - 250,
         width: 400,
         height: 500,
         placeholder: true,
-        color: "#8b5cf6", // Purple color for image placeholder
+        color: "#8b5cf6",
       });
     } else if (selectedTool === "polkaDots") {
       addElement({
         type: "polkaDots",
-        x: x - 100,
-        y: y - 100,
+        x: rawX - 100,
+        y: rawY - 100,
         width: 200,
         height: 200,
         color: "#f59e0b",
@@ -1347,8 +1346,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "dotsGrid") {
       addElement({
         type: "dotsGrid",
-        x: x - 100,
-        y: y - 100,
+        x: rawX - 100,
+        y: rawY - 100,
         width: 200,
         height: 200,
         color: "#3b82f6",
@@ -1356,8 +1355,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "confetti") {
       addElement({
         type: "confetti",
-        x: x - 100,
-        y: y - 100,
+        x: rawX - 100,
+        y: rawY - 100,
         width: 200,
         height: 200,
         color: "#ec4899",
@@ -1365,8 +1364,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "splatter") {
       addElement({
         type: "splatter",
-        x: x - 100,
-        y: y - 100,
+        x: rawX - 100,
+        y: rawY - 100,
         width: 200,
         height: 200,
         color: "#10b981",
@@ -1374,8 +1373,8 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "zigzag") {
       addElement({
         type: "zigzag",
-        x: x - 100,
-        y: y - 25,
+        x: rawX - 100,
+        y: rawY - 25,
         width: 200,
         height: 50,
         color: "#8b5cf6",
@@ -1383,40 +1382,40 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
     } else if (selectedTool === "spiral") {
       addElement({
         type: "spiral",
-        x: x - 75,
-        y: y - 75,
+        x: rawX - 75,
+        y: rawY - 75,
         width: 150,
         height: 150,
         color: "#f97316",
       });
     } else if (selectedTool === "heart") {
-      addElement({ type: "heart", x: x - 75, y: y - 75, width: 150, height: 150, color: "#ef4444" });
+      addElement({ type: "heart", x: rawX - 75, y: rawY - 75, width: 150, height: 150, color: "#ef4444" });
     } else if (selectedTool === "cross") {
-      addElement({ type: "cross", x: x - 60, y: y - 60, width: 120, height: 120, color: "#6366f1" });
+      addElement({ type: "cross", x: rawX - 60, y: rawY - 60, width: 120, height: 120, color: "#6366f1" });
     } else if (selectedTool === "cloud") {
-      addElement({ type: "cloud", x: x - 100, y: y - 60, width: 200, height: 120, color: "#94a3b8" });
+      addElement({ type: "cloud", x: rawX - 100, y: rawY - 60, width: 200, height: 120, color: "#94a3b8" });
     } else if (selectedTool === "speechBubble") {
-      addElement({ type: "speechBubble", x: x - 100, y: y - 75, width: 200, height: 150, color: "#ffffff" });
+      addElement({ type: "speechBubble", x: rawX - 100, y: rawY - 75, width: 200, height: 150, color: "#ffffff" });
     } else if (selectedTool === "lightning") {
-      addElement({ type: "lightning", x: x - 40, y: y - 75, width: 80, height: 150, color: "#facc15" });
+      addElement({ type: "lightning", x: rawX - 40, y: rawY - 75, width: 80, height: 150, color: "#facc15" });
     } else if (selectedTool === "shield") {
-      addElement({ type: "shield", x: x - 60, y: y - 75, width: 120, height: 150, color: "#3b82f6" });
+      addElement({ type: "shield", x: rawX - 60, y: rawY - 75, width: 120, height: 150, color: "#3b82f6" });
     } else if (selectedTool === "crescent") {
-      addElement({ type: "crescent", x: x - 60, y: y - 60, width: 120, height: 120, color: "#fbbf24" });
+      addElement({ type: "crescent", x: rawX - 60, y: rawY - 60, width: 120, height: 120, color: "#fbbf24" });
     } else if (selectedTool === "chevron") {
-      addElement({ type: "chevron", x: x - 100, y: y - 25, width: 200, height: 50, color: "#ffffff" });
+      addElement({ type: "chevron", x: rawX - 100, y: rawY - 25, width: 200, height: 50, color: "#ffffff" });
     } else if (selectedTool === "wave") {
-      addElement({ type: "wave", x: x - 100, y: y - 50, width: 200, height: 100, color: "#38bdf8" });
+      addElement({ type: "wave", x: rawX - 100, y: rawY - 50, width: 200, height: 100, color: "#38bdf8" });
     } else if (selectedTool === "blob") {
-      addElement({ type: "blob", x: x - 75, y: y - 75, width: 150, height: 150, color: "#a78bfa" });
+      addElement({ type: "blob", x: rawX - 75, y: rawY - 75, width: 150, height: 150, color: "#a78bfa" });
     } else if (selectedTool === "arch") {
-      addElement({ type: "arch", x: x - 75, y: y - 75, width: 150, height: 150, color: "#f97316" });
+      addElement({ type: "arch", x: rawX - 75, y: rawY - 75, width: 150, height: 150, color: "#f97316" });
     } else if (selectedTool === "arrow") {
-      addElement({ type: "arrow", x: x - 75, y: y - 40, width: 150, height: 80, color: "#ffffff" });
+      addElement({ type: "arrow", x: rawX - 75, y: rawY - 40, width: 150, height: 80, color: "#ffffff" });
     } else if (selectedTool === "badge") {
-      addElement({ type: "badge", x: x - 60, y: y - 60, width: 120, height: 120, color: "#eab308" });
+      addElement({ type: "badge", x: rawX - 60, y: rawY - 60, width: 120, height: 120, color: "#eab308" });
     } else if (selectedTool === "ribbon") {
-      addElement({ type: "ribbon", x: x - 100, y: y - 30, width: 200, height: 60, color: "#ef4444" });
+      addElement({ type: "ribbon", x: rawX - 100, y: rawY - 30, width: 200, height: 60, color: "#ef4444" });
     }
   };
 
