@@ -1436,20 +1436,36 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
   }, [elements, selectedElement, backgroundColor, currentPage, currentColor, animatingElementId]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Skip click if we just finished dragging/resizing
+    if (wasInteractingRef.current) {
+      wasInteractingRef.current = false;
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / SCALE;
-    const y = (e.clientY - rect.top) / SCALE;
+    const rawX = (e.clientX - rect.left) / SCALE;
+    const rawY = (e.clientY - rect.top) / SCALE;
 
     if (selectedTool === "select") {
-      const clicked = [...elements].reverse().find(
-        (el) => x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height
-      );
+      // Rotation-aware hit testing
+      const clicked = [...elements].reverse().find((el) => {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const rot = -((el.rotation || 0) * Math.PI) / 180;
+        const cos = Math.cos(rot);
+        const sin = Math.sin(rot);
+        const dx = rawX - cx;
+        const dy = rawY - cy;
+        const lx = cos * dx - sin * dy + cx;
+        const ly = sin * dx + cos * dy + cy;
+        return lx >= el.x && lx <= el.x + el.width && ly >= el.y && ly <= el.y + el.height;
+      });
       setSelectedElement(clicked?.id || null);
     } else {
-      addElement(selectedTool, x, y);
+      addElement(selectedTool, rawX, rawY);
     }
   };
 
@@ -1489,6 +1505,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     for (const handle of handles) {
       if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
         setIsResizing(true);
+        wasInteractingRef.current = true;
         setResizeHandle(handle.id);
         setResizeStart({ 
           x, 
@@ -1505,6 +1522,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
     // Otherwise, start dragging
     if (x >= element.x && x <= element.x + element.width && y >= element.y && y <= element.y + element.height) {
       setIsDragging(true);
+      wasInteractingRef.current = true;
       setDragOffset({ x: rawX - element.x, y: rawY - element.y });
     }
   };
@@ -1617,6 +1635,9 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
   };
 
   const handleMouseUp = () => {
+    if (isDragging || isResizing) {
+      wasInteractingRef.current = true;
+    }
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
