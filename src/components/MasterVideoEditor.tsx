@@ -259,6 +259,7 @@ export const MasterVideoEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams,
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, elX: 0, elY: 0 });
+  const wasInteractingRef = useRef(false);
   const [cursorStyle, setCursorStyle] = useState("crosshair");
 
   const getDefaultLayerName = (el: CanvasElement) => {
