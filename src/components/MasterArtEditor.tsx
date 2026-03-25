@@ -1200,21 +1200,37 @@ export const MasterArtEditor = ({ onBack, onGenerateBatch, onGenerateAllTeams, o
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Skip click if we just finished dragging/resizing
+    if (wasInteractingRef.current) {
+      wasInteractingRef.current = false;
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / SCALE;
-    const y = (e.clientY - rect.top) / SCALE;
+    const rawX = (e.clientX - rect.left) / SCALE;
+    const rawY = (e.clientY - rect.top) / SCALE;
 
     if (selectedTool === "move") {
-      // Find clicked element — prefer smaller elements (shapes on top of backgrounds)
-      const hitPadding = 8; // extra pixels tolerance for small elements
+      // Find clicked element — rotation-aware hit testing
+      const hitPadding = 8;
       const hits = [...elements].reverse().filter((el) => {
-        return x >= el.x - hitPadding && x <= el.x + el.width + hitPadding &&
-               y >= el.y - hitPadding && y <= el.y + el.height + hitPadding;
+        // Transform mouse into element's local (un-rotated) space
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const rot = -((el.rotation || 0) * Math.PI) / 180;
+        const cos = Math.cos(rot);
+        const sin = Math.sin(rot);
+        const dx = rawX - cx;
+        const dy = rawY - cy;
+        const lx = cos * dx - sin * dy + cx;
+        const ly = sin * dx + cos * dy + cy;
+        return lx >= el.x - hitPadding && lx <= el.x + el.width + hitPadding &&
+               ly >= el.y - hitPadding && ly <= el.y + el.height + hitPadding;
       });
-      // Prefer the smallest-area element among hits (so small arrows/shapes aren't hidden behind large rects)
+      // Prefer the smallest-area element among hits
       const clickedElement = hits.length > 1
         ? hits.reduce((best, el) => (el.width * el.height < best.width * best.height ? el : best), hits[0])
         : hits[0] || null;
