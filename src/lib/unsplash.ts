@@ -18,7 +18,7 @@ export interface UnsplashImage {
 }
 
 export const searchUnsplashImages = async (query: string, perPage: number = 12): Promise<UnsplashImage[]> => {
-  const accessKey = import.meta.env.VITE_UNSPLASH_ACCESS_KEY as string | undefined;
+  const accessKey = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || '3y6I0ORRuI1m2h3kCHYFvhHQ8NKxzIrfucU69EpH1wA';
   try {
     if (accessKey) {
       const response = await fetch(
