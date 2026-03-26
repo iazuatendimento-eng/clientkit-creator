@@ -34,7 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getTaggedCardsForArtGeneration, createCardUpload, clearArtGenerationTags, updateProjectBrief, autoTagFirstCardsForAllActiveClients } from "@/lib/clientDatabase";
-import { searchImages, searchPexelsImages, searchPixabayImages, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
+import { searchImages, searchPexelsImages, searchPixabayImages, searchUnsplashImagesReal, SearchImage, getConfiguredApis } from "@/lib/imageSearch";
 import { translateToEnglishLocal } from "@/lib/localTranslate";
 import { getSmartSearchTerms } from "@/lib/smartSearch";
 import { supabase } from "@/integrations/supabase/client";
@@ -433,7 +433,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
-  const [imageSourceTab, setImageSourceTab] = useState<"pexels" | "pixabay">("pexels");
+  const [imageSourceTab, setImageSourceTab] = useState<"pexels" | "pixabay" | "unsplash">("pexels");
   const [customImageUrl, setCustomImageUrl] = useState("");
   // Team filter is now fixed based on initial selection - no runtime switching
   const teamFilter = initialTeamFilter;
@@ -1976,7 +1976,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     setIsSearching(true);
     setSearchPage(1);
     try {
-      const searchFn = imageSourceTab === "pixabay" ? searchPixabayImages : searchPexelsImages;
+      const searchFn = imageSourceTab === "pixabay" ? searchPixabayImages : imageSourceTab === "unsplash" ? searchUnsplashImagesReal : searchPexelsImages;
       const images = await searchFn(searchQuery, 12, 1);
       setSearchImagesResults(images);
       
@@ -2001,7 +2001,7 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
     const nextPage = searchPage + 1;
     setIsLoadingMore(true);
     try {
-      const searchFn = imageSourceTab === "pixabay" ? searchPixabayImages : searchPexelsImages;
+      const searchFn = imageSourceTab === "pixabay" ? searchPixabayImages : imageSourceTab === "unsplash" ? searchUnsplashImagesReal : searchPexelsImages;
       const images = await searchFn(searchQuery, 12, nextPage);
       if (images.length > 0) {
         setSearchImagesResults(prev => [...prev, ...images]);
@@ -3094,19 +3094,20 @@ export const BatchArtGenerator = ({ template, initialTeamFilter, initialBatch, o
             <TabsContent value="bank" className="space-y-3">
               {/* Source tabs */}
               <Tabs value={imageSourceTab} onValueChange={(v) => {
-                setImageSourceTab(v as "pexels" | "pixabay");
+                setImageSourceTab(v as "pexels" | "pixabay" | "unsplash");
                 setSearchImagesResults([]);
                 setSearchPage(1);
               }}>
-                <TabsList className="grid w-full grid-cols-2 h-8">
+                <TabsList className="grid w-full grid-cols-3 h-8">
                   <TabsTrigger value="pexels" className="text-xs">Pexels</TabsTrigger>
                   <TabsTrigger value="pixabay" className="text-xs">Pixabay</TabsTrigger>
+                  <TabsTrigger value="unsplash" className="text-xs">Unsplash</TabsTrigger>
                 </TabsList>
               </Tabs>
 
               <div className="flex gap-2">
                 <Input
-                  placeholder={`Buscar no ${imageSourceTab === "pexels" ? "Pexels" : "Pixabay"}...`}
+                  placeholder={`Buscar no ${imageSourceTab === "pexels" ? "Pexels" : imageSourceTab === "pixabay" ? "Pixabay" : "Unsplash"}...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearchImages()}
