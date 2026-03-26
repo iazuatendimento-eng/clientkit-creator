@@ -60,7 +60,7 @@ export const searchPexelsImages = async (query: string, perPage: number = 15, pa
 };
 
 // Unsplash API search
-export const searchUnsplashImagesReal = async (query: string, perPage: number = 15): Promise<SearchImage[]> => {
+export const searchUnsplashImagesReal = async (query: string, perPage: number = 15, page: number = 1): Promise<SearchImage[]> => {
   const accessKey = import.meta.env.VITE_UNSPLASH_ACCESS_KEY as string | undefined;
   
   if (!accessKey) {
@@ -70,7 +70,7 @@ export const searchUnsplashImagesReal = async (query: string, perPage: number = 
 
   try {
     const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=portrait&client_id=${accessKey}`
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${perPage}&page=${page}&orientation=portrait&client_id=${accessKey}`
     );
 
     if (!response.ok) {
