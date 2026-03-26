@@ -61,7 +61,7 @@ export const searchPexelsImages = async (query: string, perPage: number = 15, pa
 
 // Unsplash API search
 export const searchUnsplashImagesReal = async (query: string, perPage: number = 15, page: number = 1): Promise<SearchImage[]> => {
-  const accessKey = import.meta.env.VITE_UNSPLASH_ACCESS_KEY as string | undefined;
+  const accessKey = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || '3y6I0ORRuI1m2h3kCHYFvhHQ8NKxzIrfucU69EpH1wA';
   
   if (!accessKey) {
     console.log('Unsplash API key not configured');
