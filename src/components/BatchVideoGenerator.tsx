@@ -3364,15 +3364,35 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             },
           };
 
+          const hasBackgroundVideo = (video.previewVideoUrls || []).some(
+            (u): u is string => typeof u === "string" && u.trim().length > 0
+          );
+
+          // Timeout adaptativo para vídeos pesados (evita abortar encode válido cedo demais)
+          const estimatedFramesPrimary = Math.max(1, Math.ceil(estimatedDurationSec * emailFps));
+          const estimatedFramesLight = Math.max(1, Math.ceil(estimatedDurationSec * 10));
+          const primaryTimeoutMs = Math.min(
+            420_000,
+            Math.max(150_000, estimatedFramesPrimary * (hasBackgroundVideo ? 180 : 110))
+          );
+          const lightTimeoutMs = Math.min(
+            360_000,
+            Math.max(120_000, estimatedFramesLight * (hasBackgroundVideo ? 160 : 100))
+          );
+
           const encodeAttempts: Array<{
             label: string;
             timeoutMs: number;
             overrides: Partial<typeof baseOptions>;
           }> = [
-            { label: `email (${emailFps}fps ${emailWidth}x${emailHeight})`, timeoutMs: 150_000, overrides: {} },
+            {
+              label: `email (${emailFps}fps ${emailWidth}x${emailHeight})`,
+              timeoutMs: primaryTimeoutMs,
+              overrides: {},
+            },
             {
               label: "modo leve (com vídeo)",
-              timeoutMs: 90_000,
+              timeoutMs: lightTimeoutMs,
               overrides: {
                 fps: 10,
                 requireEmailSafePreview: true,
