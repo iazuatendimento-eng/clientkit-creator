@@ -3621,6 +3621,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             Assinatura
           </Button>
 
+          <Badge variant="outline" className="bg-blue-500/20 text-blue-400 text-xs shrink-0" title="Total de páginas de conteúdo (sem assinatura)">
+            {totalContentPages} pág
+          </Badge>
+
           <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 text-xs shrink-0">
             {pendingCount}P
           </Badge>
