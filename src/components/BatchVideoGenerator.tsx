@@ -3587,6 +3587,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
   const approvedCount = clientVideos.filter((v) => v.status === "approved").length;
   const pendingCount = clientVideos.filter((v) => v.status === "pending").length;
+  const totalContentPages = clientVideos.reduce((sum, v) => {
+    const pgs = v.pages.length;
+    return sum + (pgs > 1 ? pgs - 1 : pgs);
+  }, 0);
 
   if (isLoading) {
     return (
