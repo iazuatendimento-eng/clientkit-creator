@@ -3812,15 +3812,25 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                          return { ...v, previewVideoUrls: urls };
                        })
                      );
-                      // Keep preview on the same page where video was dropped
-                      setCardPageMap((prev) => ({ ...prev, [video.cardId]: pageIdx }));
-                     setClientVideos((prev) => {
-                       const idx = prev.findIndex((v) => v.cardId === video.cardId);
-                       if (idx === -1) return prev;
-                       const item = prev[idx];
-                       const rest = prev.filter((_, ii) => ii !== idx);
-                       return [...rest, item];
-                     });
+                       // For carousels, advance to next content page before sending to end
+                       const allPgs = video.pages.length;
+                       const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
+                       const nextPage = pageIdx + 1;
+                       
+                       if (nextPage < totalPgs) {
+                         // Still has content pages: advance to next page, stay in place
+                         setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
+                       } else {
+                         // All content pages done: reset to page 0 and send to end
+                         setCardPageMap((prev) => ({ ...prev, [video.cardId]: 0 }));
+                         setClientVideos((prev) => {
+                           const idx = prev.findIndex((v) => v.cardId === video.cardId);
+                           if (idx === -1) return prev;
+                           const item = prev[idx];
+                           const rest = prev.filter((_, ii) => ii !== idx);
+                           return [...rest, item];
+                         });
+                       }
                      toast({ title: `Vídeo na pág. ${pageIdx + 1} — enviando...` });
 
                      // Upload to storage for persistence
