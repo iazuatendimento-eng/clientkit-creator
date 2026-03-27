@@ -3587,6 +3587,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
 
   const approvedCount = clientVideos.filter((v) => v.status === "approved").length;
   const pendingCount = clientVideos.filter((v) => v.status === "pending").length;
+  const totalContentPages = clientVideos.reduce((sum, v) => {
+    const pgs = v.pages.length;
+    return sum + (pgs > 1 ? pgs - 1 : pgs);
+  }, 0);
 
   if (isLoading) {
     return (
@@ -3616,6 +3620,10 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
             {hideSignature ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
             Assinatura
           </Button>
+
+          <Badge variant="outline" className="bg-blue-500/20 text-blue-400 text-xs shrink-0" title="Total de páginas de conteúdo (sem assinatura)">
+            {totalContentPages} pág
+          </Badge>
 
           <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 text-xs shrink-0">
             {pendingCount}P
