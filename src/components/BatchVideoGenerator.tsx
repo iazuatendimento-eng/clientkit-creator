@@ -3812,12 +3812,13 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
                          return { ...v, previewVideoUrls: urls };
                        })
                      );
-                       // For carousels, advance to next content page before sending to end
+                       // For carousels, advance through content pages (exclude signature/last page)
                        const allPgs = video.pages.length;
-                       const totalPgs = hideSignature && allPgs > 1 ? allPgs - 1 : allPgs;
+                       // Always skip signature page (last page) for carousels
+                       const contentPgs = allPgs > 1 ? allPgs - 1 : allPgs;
                        const nextPage = pageIdx + 1;
                        
-                       if (nextPage < totalPgs) {
+                       if (nextPage < contentPgs) {
                          // Still has content pages: advance to next page, stay in place
                          setCardPageMap((prev) => ({ ...prev, [video.cardId]: nextPage }));
                        } else {
