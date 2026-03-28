@@ -535,14 +535,17 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
           // Fetch a stock image from Pixabay for "image" placeholders
           const fetchStockImage = async (): Promise<HTMLImageElement | null> => {
             try {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 5000);
               const { data: fnData, error: fnError } = await supabase.functions.invoke("search-pixabay-images", {
                 body: { query: "social media marketing", perPage: 1, page: 1 },
               });
+              clearTimeout(timeout);
               if (!fnError && fnData?.images?.[0]?.urls?.small) {
                 return loadPreviewImage(fnData.images[0].urls.small);
               }
             } catch { /* ignore */ }
-            return loadPreviewImage("https://picsum.photos/seed/template-preview/400/500");
+            return null; // Don't fallback to picsum - just skip stock image
           };
 
           const [bgLoaded, logoLoaded, mascotLoaded, contactLoaded, stockLoaded] = await Promise.all([
