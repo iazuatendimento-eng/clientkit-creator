@@ -1364,9 +1364,9 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // 1) Try fetch-as-blob first (full random access for deterministic seeks)
   // 2) If blob load fails, fallback to direct URL
   const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const vidDirectTimeout = isMob ? 7_000 : 10_000;
-  const vidFetchTimeout = isMob ? 25_000 : 40_000;
-  const vidDecodeTimeout = isMob ? 10_000 : 14_000;
+  const vidDirectTimeout = isMob ? 12_000 : 20_000;
+  const vidFetchTimeout = isMob ? 40_000 : 90_000;
+  const vidDecodeTimeout = isMob ? 15_000 : 25_000;
 
   const loadVid = async (url: string): Promise<HTMLVideoElement | null> => {
     if (!url) return null;
@@ -2125,7 +2125,7 @@ export async function encodeVideoSimple(
 
       try {
         const controller = new AbortController();
-        const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 15_000 : 30_000);
+        const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 40_000 : 90_000);
 
         try {
           const resp = await fetch(videoUrl, { cache: "no-store", signal: controller.signal });
@@ -2136,7 +2136,7 @@ export async function encodeVideoSimple(
           if (!blob.size) throw new Error("empty blob");
 
           const blobUrl = URL.createObjectURL(blob);
-          const blobVideo = await loadVideoElement(blobUrl, 10_000, blobUrl);
+          const blobVideo = await loadVideoElement(blobUrl, isMobileDevice ? 15_000 : 25_000, blobUrl);
           if (blobVideo) {
             console.log(`[VideoEncoder] Video ${idx} loaded via blob: ${blobVideo.videoWidth}x${blobVideo.videoHeight}`);
             return blobVideo;
@@ -2146,7 +2146,7 @@ export async function encodeVideoSimple(
           console.warn(`[VideoEncoder] Video ${idx} blob load failed, trying direct URL:`, blobErr);
         }
 
-        const directVideo = await loadVideoElement(videoUrl, 10_000);
+        const directVideo = await loadVideoElement(videoUrl, isMobileDevice ? 12_000 : 20_000);
         if (directVideo) {
           console.log(`[VideoEncoder] Video ${idx} loaded via direct URL: ${directVideo.videoWidth}x${directVideo.videoHeight}`);
           return directVideo;
