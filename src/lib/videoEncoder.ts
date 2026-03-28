@@ -2146,6 +2146,7 @@ export async function encodeVideoSimple(
         try {
           const controller = new AbortController();
           const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 70_000 : 150_000);
+          // ↑ fallback path uses same generous timeouts as WebCodecs path
 
           try {
             const resp = await fetch(normalizedUrl, { cache: "no-store", signal: controller.signal });
