@@ -3472,7 +3472,22 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           throw new Error(`Erro ao enviar e-mail para ${clientLabel}: ${error.message}`);
         }
 
-        uploadedPaths.push(...clientPaths);
+        // Auto-cleanup: delete temporary files after email is accepted by provider.
+        // The Resend API downloads the file at send-time via the path URL, so once
+        // the API returns success the file is no longer needed in storage.
+        // Wait 30s to give the provider time to fetch the attachment, then delete.
+        const pathsToClean = [...clientPaths];
+        setTimeout(async () => {
+          for (const p of pathsToClean) {
+            try {
+              await supabase.storage.from("card-uploads").remove([p]);
+              console.log(`[Cleanup] Deleted temp file: ${p}`);
+            } catch (e) {
+              console.warn(`[Cleanup] Failed to delete ${p}:`, e);
+            }
+          }
+        }, 30_000);
+
         sentCount++;
       };
 
@@ -3488,11 +3503,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         );
       }
 
-      // IMPORTANT: keep temporary files available for provider-side attachment fetch.
-      // If removed immediately, attachments sent via URL path can fail as "invalid path".
-      if (uploadedPaths.length > 0) {
-        console.info(`Arquivos temporários mantidos para entrega do e-mail: ${uploadedPaths.length}`);
-      }
 
       // Clear tags
       await clearArtGenerationTags();
