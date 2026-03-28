@@ -3503,11 +3503,6 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
         );
       }
 
-      // IMPORTANT: keep temporary files available for provider-side attachment fetch.
-      // If removed immediately, attachments sent via URL path can fail as "invalid path".
-      if (uploadedPaths.length > 0) {
-        console.info(`Arquivos temporários mantidos para entrega do e-mail: ${uploadedPaths.length}`);
-      }
 
       // Clear tags
       await clearArtGenerationTags();
