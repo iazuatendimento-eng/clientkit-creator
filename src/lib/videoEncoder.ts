@@ -47,12 +47,12 @@ let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
 let ffmpegLoadStartedAt = 0;
 let ffmpegUnavailableUntil = 0;
 
-const FFMPEG_MAX_RETRIES = 1;
-const FFMPEG_FETCH_TIMEOUT_MS = 8_000;
-const FFMPEG_LOAD_TIMEOUT_MS = 12_000;
-const FFMPEG_RETRY_DELAY_MS = 250;
+const FFMPEG_MAX_RETRIES = 2;
+const FFMPEG_FETCH_TIMEOUT_MS = 25_000;
+const FFMPEG_LOAD_TIMEOUT_MS = 35_000;
+const FFMPEG_RETRY_DELAY_MS = 700;
 const FFMPEG_COOLDOWN_MS = 90_000;
-const FFMPEG_STALE_PROMISE_MS = 12_000;
+const FFMPEG_STALE_PROMISE_MS = 40_000;
 
 const FFMPEG_SOURCES: FFmpegSource[] = [
   {
@@ -85,7 +85,7 @@ export async function loadFFmpeg(onStatus?: FFmpegLoadStatusHandler): Promise<FF
 
   if (ffmpegLoadPromise) {
     const age = Date.now() - ffmpegLoadStartedAt;
-    const remainingWindowMs = Math.max(8_000, FFMPEG_STALE_PROMISE_MS - age);
+    const remainingWindowMs = Math.max(15_000, FFMPEG_STALE_PROMISE_MS - age);
 
     try {
       return await withTimeout(
