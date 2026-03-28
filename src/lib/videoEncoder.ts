@@ -673,7 +673,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         console.log("[VideoEncoder] WebCodecs attempt:", attempt.label, attempt.opts.width, "x", attempt.opts.height);
         const rawBlob = await withTimeout(
           encodeVideoWithWebCodecs(pages, attempt.opts),
-          600_000,
+          1_200_000,
           "gerar vídeo (WebCodecs)"
         );
 
@@ -1364,9 +1364,9 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // 1) Try fetch-as-blob first (full random access for deterministic seeks)
   // 2) If blob load fails, fallback to direct URL
   const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const vidDirectTimeout = isMob ? 18_000 : 35_000;
-  const vidFetchTimeout = isMob ? 70_000 : 150_000;
-  const vidDecodeTimeout = isMob ? 28_000 : 45_000;
+  const vidDirectTimeout = isMob ? 25_000 : 60_000;
+  const vidFetchTimeout = isMob ? 120_000 : 300_000;
+  const vidDecodeTimeout = isMob ? 40_000 : 90_000;
 
   const loadVid = async (url: string): Promise<HTMLVideoElement | null> => {
     if (!url) return null;
@@ -2145,7 +2145,7 @@ export async function encodeVideoSimple(
 
         try {
           const controller = new AbortController();
-          const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 70_000 : 150_000);
+          const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 120_000 : 300_000);
 
           try {
             const resp = await fetch(normalizedUrl, { cache: "no-store", signal: controller.signal });
@@ -2156,7 +2156,7 @@ export async function encodeVideoSimple(
             if (!blob.size) throw new Error("empty blob");
 
             const blobUrl = URL.createObjectURL(blob);
-            const blobVideo = await loadVideoElement(blobUrl, isMobileDevice ? 28_000 : 45_000, blobUrl);
+            const blobVideo = await loadVideoElement(blobUrl, isMobileDevice ? 40_000 : 90_000, blobUrl);
             if (blobVideo) {
               console.log(`[VideoEncoder] Video ${idx} loaded via blob: ${blobVideo.videoWidth}x${blobVideo.videoHeight}`);
               return blobVideo;
@@ -2166,7 +2166,7 @@ export async function encodeVideoSimple(
             console.warn(`[VideoEncoder] Video ${idx} blob load failed, trying direct URL:`, blobErr);
           }
 
-          const directVideo = await loadVideoElement(normalizedUrl, isMobileDevice ? 18_000 : 35_000);
+          const directVideo = await loadVideoElement(normalizedUrl, isMobileDevice ? 25_000 : 60_000);
           if (directVideo) {
             console.log(`[VideoEncoder] Video ${idx} loaded via direct URL: ${directVideo.videoWidth}x${directVideo.videoHeight}`);
             return directVideo;
