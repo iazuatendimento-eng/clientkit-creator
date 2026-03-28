@@ -1152,7 +1152,14 @@ const Index = () => {
               ))}
               {hasMoreClients && (
                 <div className="text-center py-3">
-                  <p className="text-xs text-muted-foreground">Rolando para carregar mais...</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setVisibleCount(prev => prev + 50)}
+                    className="text-xs text-muted-foreground"
+                  >
+                    Carregar mais ({filteredClients.length - visibleCount} restantes)
+                  </Button>
                 </div>
               )}
               </>
