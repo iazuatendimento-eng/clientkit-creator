@@ -535,14 +535,17 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
           // Fetch a stock image from Pixabay for "image" placeholders
           const fetchStockImage = async (): Promise<HTMLImageElement | null> => {
             try {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 5000);
               const { data: fnData, error: fnError } = await supabase.functions.invoke("search-pixabay-images", {
                 body: { query: "social media marketing", perPage: 1, page: 1 },
               });
+              clearTimeout(timeout);
               if (!fnError && fnData?.images?.[0]?.urls?.small) {
                 return loadPreviewImage(fnData.images[0].urls.small);
               }
             } catch { /* ignore */ }
-            return loadPreviewImage("https://picsum.photos/seed/template-preview/400/500");
+            return null; // Don't fallback to picsum - just skip stock image
           };
 
           const [bgLoaded, logoLoaded, mascotLoaded, contactLoaded, stockLoaded] = await Promise.all([
@@ -572,16 +575,32 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
     const fetchTemplates = async () => {
       setLoading(true);
       const table = type === "art" ? "master_templates" : "master_video_templates";
-      const { data, error } = await supabase
+      // First fetch lightweight list (id, name, dimensions, bg color) for instant display
+      const { data: lightData } = await supabase
         .from(table)
-        .select("*")
+        .select("id,name,width,height,background_color")
         .eq("deleted", false)
         .order("name", { ascending: true });
 
-      if (!error && data) {
-        setTemplates(data as unknown as TemplateRecord[]);
+      if (lightData && lightData.length > 0) {
+        // Show templates immediately with minimal data
+        setTemplates(lightData.map(t => ({ ...t, elements: [], content_elements: [], signature_elements: [] })) as unknown as TemplateRecord[]);
+        setLoading(false);
+
+        // Then fetch full data in background for rich previews
+        const { data: fullData } = await supabase
+          .from(table)
+          .select("*")
+          .eq("deleted", false)
+          .order("name", { ascending: true });
+
+        if (fullData) {
+          setTemplates(fullData as unknown as TemplateRecord[]);
+        }
+      } else {
+        setTemplates([]);
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchTemplates();
   }, [type]);
