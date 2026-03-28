@@ -57,7 +57,7 @@ import { getSmartSearchTerms } from "@/lib/smartSearch";
 import { generateAllVideoPages, generatePageImage as generatePageImageFromRenderer, type VideoPages } from "@/lib/videoRenderer";
 import { supabase } from "@/integrations/supabase/client";
 import { saveBatchGeneration, getBatchById, BatchItem, updateBatchItem, sanitizeBrandKitForStorage, deleteBatch } from "@/lib/batchHistory";
-import { encodeVideoToMP4, loadFFmpeg, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
+import { encodeVideoToMP4, loadFFmpeg, compressVideoIfNeeded, MotionEffect, TransitionEffect, TextAnimation, LogoAnimation } from "@/lib/videoEncoder";
 import { VideoAdjustOverlay, type VideoCustomOverlay } from "./VideoAdjustOverlay";
 import { VideoPreviewPlayer } from "./VideoPreviewPlayer";
 import {
@@ -3434,8 +3434,14 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           }
 
           // Upload immediately
+          // Compress if > 15MB (only heavy Freepik-style videos get compressed)
+          setGenerationStatus(`Verificando tamanho (${clientIdx + 1}/${byClient.size}) • ${clientLabel}`);
+          const finalBlob = await compressVideoIfNeeded(videoBlob, (msg) =>
+            setGenerationStatus(`${msg} (${clientIdx + 1}/${byClient.size}) • ${clientLabel}`)
+          );
+
           setGenerationStatus(`Enviando (${clientIdx + 1}/${byClient.size}) • ${clientLabel}`);
-          const result = await uploadVideoBlob(videoBlob, video.cardId);
+          const result = await uploadVideoBlob(finalBlob, video.cardId);
           clientPaths.push(result.path);
           mediaUrls.push(result.publicUrl);
         }
