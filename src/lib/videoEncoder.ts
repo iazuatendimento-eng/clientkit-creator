@@ -673,7 +673,7 @@ export async function encodeVideoToMP4(pages: string[], options: VideoEncoderOpt
         console.log("[VideoEncoder] WebCodecs attempt:", attempt.label, attempt.opts.width, "x", attempt.opts.height);
         const rawBlob = await withTimeout(
           encodeVideoWithWebCodecs(pages, attempt.opts),
-          600_000,
+          1_200_000,
           "gerar vídeo (WebCodecs)"
         );
 

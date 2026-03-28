@@ -3372,12 +3372,12 @@ export const BatchVideoGenerator = ({ template, initialTeamFilter, initialBatch,
           const estimatedFramesPrimary = Math.max(1, Math.ceil(estimatedDurationSec * emailFps));
           const estimatedFramesLight = Math.max(1, Math.ceil(estimatedDurationSec * 10));
           const primaryTimeoutMs = Math.min(
-            420_000,
-            Math.max(150_000, estimatedFramesPrimary * (hasBackgroundVideo ? 180 : 110))
+            900_000,
+            Math.max(240_000, estimatedFramesPrimary * (hasBackgroundVideo ? 350 : 150))
           );
           const lightTimeoutMs = Math.min(
-            360_000,
-            Math.max(120_000, estimatedFramesLight * (hasBackgroundVideo ? 160 : 100))
+            720_000,
+            Math.max(180_000, estimatedFramesLight * (hasBackgroundVideo ? 300 : 130))
           );
 
           const encodeAttempts: Array<{
