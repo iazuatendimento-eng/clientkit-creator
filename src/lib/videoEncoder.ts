@@ -2812,3 +2812,82 @@ export async function reencodeForWhatsApp(
   onProgress?.(1);
   return await patchMP4Brand(inputBlob);
 }
+
+// ── Auto-compress video if above size threshold ──────────────────────
+const COMPRESS_THRESHOLD_BYTES = 15 * 1024 * 1024; // 15 MB
+
+/**
+ * If the blob exceeds COMPRESS_THRESHOLD_BYTES, re-encode via FFmpeg at a
+ * lower bitrate to bring the file under the limit. Videos smaller than the
+ * threshold are returned unchanged — zero quality loss.
+ */
+export async function compressVideoIfNeeded(
+  blob: Blob,
+  onStatus?: (msg: string) => void,
+): Promise<Blob> {
+  if (blob.size <= COMPRESS_THRESHOLD_BYTES) {
+    console.log(`[Compress] Tamanho OK (${(blob.size / 1024 / 1024).toFixed(1)}MB ≤ 15MB), sem compressão`);
+    return blob;
+  }
+
+  console.log(`[Compress] Vídeo grande (${(blob.size / 1024 / 1024).toFixed(1)}MB > 15MB), comprimindo...`);
+  onStatus?.(`Comprimindo vídeo (${(blob.size / 1024 / 1024).toFixed(1)}MB)...`);
+
+  let ff: FFmpeg;
+  try {
+    ff = await loadFFmpeg();
+  } catch (err) {
+    console.warn("[Compress] FFmpeg indisponível, enviando sem compressão:", err);
+    return blob;
+  }
+
+  const inputName = "compress_input.mp4";
+  const outputName = "compress_output.mp4";
+
+  try {
+    await ff.writeFile(inputName, await fetchFile(blob));
+
+    // Calculate target bitrate to fit ~14MB (leaving margin)
+    // Estimate duration from blob size and current bitrate
+    // Use a conservative target of 13MB to ensure we stay under 15MB
+    const targetBytes = 13 * 1024 * 1024;
+    const ratio = targetBytes / blob.size;
+    // Estimate current video bitrate (~4Mbps default) and scale down
+    const targetVideoBitrate = Math.max(500_000, Math.round(4_000_000 * ratio));
+    const bitrateStr = `${Math.round(targetVideoBitrate / 1000)}k`;
+
+    console.log(`[Compress] Target bitrate: ${bitrateStr} (ratio: ${ratio.toFixed(2)})`);
+
+    const args = [
+      "-i", inputName,
+      "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.1",
+      "-preset", "veryfast", "-pix_fmt", "yuv420p",
+      "-b:v", bitrateStr, "-maxrate", bitrateStr, "-bufsize", `${Math.round(targetVideoBitrate / 500)}k`,
+      "-c:a", "aac", "-b:a", "96k", "-ar", "44100", "-ac", "2",
+      "-movflags", "+faststart", "-brand", "isom",
+      "-f", "mp4", "-y", outputName,
+    ];
+
+    await withTimeout(ff.exec(args), 180_000, "comprimir vídeo");
+
+    const data = await ff.readFile(outputName);
+    const compressed = new Blob([new Uint8Array(data as unknown as ArrayBuffer)], { type: "video/mp4" });
+
+    console.log(`[Compress] Resultado: ${(compressed.size / 1024 / 1024).toFixed(1)}MB (era ${(blob.size / 1024 / 1024).toFixed(1)}MB)`);
+    onStatus?.(`Comprimido: ${(compressed.size / 1024 / 1024).toFixed(1)}MB`);
+
+    if (compressed.size > 0 && compressed.size < blob.size) {
+      return compressed;
+    }
+
+    console.warn("[Compress] Resultado maior ou vazio, usando original");
+    return blob;
+  } catch (err) {
+    console.error("[Compress] Falha na compressão:", err);
+    onStatus?.("Compressão falhou, enviando original");
+    return blob;
+  } finally {
+    await ff.deleteFile(inputName).catch(() => {});
+    await ff.deleteFile(outputName).catch(() => {});
+  }
+}
