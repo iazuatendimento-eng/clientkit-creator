@@ -1364,9 +1364,9 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // 1) Try fetch-as-blob first (full random access for deterministic seeks)
   // 2) If blob load fails, fallback to direct URL
   const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const vidDirectTimeout = isMob ? 12_000 : 20_000;
-  const vidFetchTimeout = isMob ? 40_000 : 90_000;
-  const vidDecodeTimeout = isMob ? 15_000 : 25_000;
+  const vidDirectTimeout = isMob ? 18_000 : 35_000;
+  const vidFetchTimeout = isMob ? 70_000 : 150_000;
+  const vidDecodeTimeout = isMob ? 28_000 : 45_000;
 
   const loadVid = async (url: string): Promise<HTMLVideoElement | null> => {
     if (!url) return null;
@@ -1463,12 +1463,29 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   const normalizedBgVideoUrls = normalizeBackgroundVideoUrls(backgroundVideoUrls, pages.length);
 
   console.log("[WebCodecs] Loading bg videos...");
+  const bgVideoPromiseByUrl = new Map<string, Promise<HTMLVideoElement | null>>();
   const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
-    normalizedBgVideoUrls.map(url => url ? loadVid(url) : Promise.resolve(null))
+    normalizedBgVideoUrls.map((url) => {
+      if (!url) return Promise.resolve(null);
+      const normalizedUrl = url.trim();
+      if (!normalizedUrl) return Promise.resolve(null);
+
+      if (!bgVideoPromiseByUrl.has(normalizedUrl)) {
+        bgVideoPromiseByUrl.set(normalizedUrl, loadVid(normalizedUrl));
+      }
+
+      return bgVideoPromiseByUrl.get(normalizedUrl)!;
+    })
   );
   const expectedBgVideoCount = normalizedBgVideoUrls.filter(Boolean).length;
   const loadedBgVideoCount = bgVideos.filter(Boolean).length;
-  console.log("[WebCodecs] Bg videos:", loadedBgVideoCount, "of", expectedBgVideoCount, "(normalized mapping)");
+  console.log(
+    "[WebCodecs] Bg videos:",
+    loadedBgVideoCount,
+    "of",
+    expectedBgVideoCount,
+    `(URLs únicas: ${bgVideoPromiseByUrl.size})`
+  );
 
   // If videos were expected but none loaded, force fallback path instead of exporting static images.
   if (expectedBgVideoCount > 0 && loadedBgVideoCount === 0) {
@@ -2086,78 +2103,90 @@ export async function encodeVideoSimple(
   // Load background videos for pages that have them (with blob->direct fallback)
   const normalizedBgVideoUrls = normalizeBackgroundVideoUrls(backgroundVideoUrls, pages.length);
 
-  const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
-    normalizedBgVideoUrls.map(async (videoUrl, idx) => {
-      if (!videoUrl) return null;
+  const bgVideoPromiseByUrl = new Map<string, Promise<HTMLVideoElement | null>>();
+  const loadOrReuseBgVideo = (videoUrl: string, idx: number) => {
+    const normalizedUrl = videoUrl.trim();
+    if (!normalizedUrl) return Promise.resolve(null);
+    if (!bgVideoPromiseByUrl.has(normalizedUrl)) {
+      bgVideoPromiseByUrl.set(normalizedUrl, (async () => {
 
-      const loadVideoElement = (src: string, timeoutMs: number, blobUrlToKeep?: string): Promise<HTMLVideoElement | null> => {
-        return new Promise((resolve) => {
-          const video = document.createElement("video");
-          video.muted = true;
-          video.playsInline = true;
-          video.preload = "auto";
-          video.loop = false;
+        const loadVideoElement = (src: string, timeoutMs: number, blobUrlToKeep?: string): Promise<HTMLVideoElement | null> => {
+          return new Promise((resolve) => {
+            const video = document.createElement("video");
+            video.muted = true;
+            video.playsInline = true;
+            video.preload = "auto";
+            video.loop = false;
 
-          const timer = setTimeout(() => resolve(null), timeoutMs);
-          let settled = false;
-          const done = () => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            if (blobUrlToKeep) (video as any).__blobUrl = blobUrlToKeep;
-            resolve(video);
-          };
-          const fail = () => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            if (blobUrlToKeep) URL.revokeObjectURL(blobUrlToKeep);
-            resolve(null);
-          };
+            const timer = setTimeout(() => resolve(null), timeoutMs);
+            let settled = false;
+            const done = () => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              if (blobUrlToKeep) (video as any).__blobUrl = blobUrlToKeep;
+              resolve(video);
+            };
+            const fail = () => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              if (blobUrlToKeep) URL.revokeObjectURL(blobUrlToKeep);
+              resolve(null);
+            };
 
-          video.onloadeddata = done;
-          video.oncanplay = done;
-          video.onerror = fail;
-          video.src = src;
-          try { video.load(); } catch {}
-        });
-      };
-
-      try {
-        const controller = new AbortController();
-        const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 40_000 : 90_000);
+            video.onloadeddata = done;
+            video.oncanplay = done;
+            video.onerror = fail;
+            video.src = src;
+            try { video.load(); } catch {}
+          });
+        };
 
         try {
-          const resp = await fetch(videoUrl, { cache: "no-store", signal: controller.signal });
-          clearTimeout(fetchTimer);
-          if (!resp.ok) throw new Error(`status=${resp.status}`);
+          const controller = new AbortController();
+          const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 70_000 : 150_000);
 
-          const blob = await resp.blob();
-          if (!blob.size) throw new Error("empty blob");
+          try {
+            const resp = await fetch(normalizedUrl, { cache: "no-store", signal: controller.signal });
+            clearTimeout(fetchTimer);
+            if (!resp.ok) throw new Error(`status=${resp.status}`);
 
-          const blobUrl = URL.createObjectURL(blob);
-          const blobVideo = await loadVideoElement(blobUrl, isMobileDevice ? 15_000 : 25_000, blobUrl);
-          if (blobVideo) {
-            console.log(`[VideoEncoder] Video ${idx} loaded via blob: ${blobVideo.videoWidth}x${blobVideo.videoHeight}`);
-            return blobVideo;
+            const blob = await resp.blob();
+            if (!blob.size) throw new Error("empty blob");
+
+            const blobUrl = URL.createObjectURL(blob);
+            const blobVideo = await loadVideoElement(blobUrl, isMobileDevice ? 28_000 : 45_000, blobUrl);
+            if (blobVideo) {
+              console.log(`[VideoEncoder] Video ${idx} loaded via blob: ${blobVideo.videoWidth}x${blobVideo.videoHeight}`);
+              return blobVideo;
+            }
+          } catch (blobErr) {
+            clearTimeout(fetchTimer);
+            console.warn(`[VideoEncoder] Video ${idx} blob load failed, trying direct URL:`, blobErr);
           }
-        } catch (blobErr) {
-          clearTimeout(fetchTimer);
-          console.warn(`[VideoEncoder] Video ${idx} blob load failed, trying direct URL:`, blobErr);
-        }
 
-        const directVideo = await loadVideoElement(videoUrl, isMobileDevice ? 12_000 : 20_000);
-        if (directVideo) {
-          console.log(`[VideoEncoder] Video ${idx} loaded via direct URL: ${directVideo.videoWidth}x${directVideo.videoHeight}`);
-          return directVideo;
-        }
+          const directVideo = await loadVideoElement(normalizedUrl, isMobileDevice ? 18_000 : 35_000);
+          if (directVideo) {
+            console.log(`[VideoEncoder] Video ${idx} loaded via direct URL: ${directVideo.videoWidth}x${directVideo.videoHeight}`);
+            return directVideo;
+          }
 
-        console.warn(`[VideoEncoder] Video ${idx} failed in all load strategies`);
-        return null;
-      } catch (err) {
-        console.error(`[VideoEncoder] Could not load video ${idx}:`, err);
-        return null;
-      }
+          console.warn(`[VideoEncoder] Video ${idx} failed in all load strategies`);
+          return null;
+        } catch (err) {
+          console.error(`[VideoEncoder] Could not load video ${idx}:`, err);
+          return null;
+        }
+      })());
+    }
+    return bgVideoPromiseByUrl.get(normalizedUrl)!;
+  };
+
+  const bgVideos: (HTMLVideoElement | null)[] = await Promise.all(
+    normalizedBgVideoUrls.map((videoUrl, idx) => {
+      if (!videoUrl) return Promise.resolve(null);
+      return loadOrReuseBgVideo(videoUrl, idx);
     })
   );
 
