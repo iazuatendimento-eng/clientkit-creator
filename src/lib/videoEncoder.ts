@@ -1364,9 +1364,9 @@ async function encodeVideoWithWebCodecs(pages: string[], options: VideoEncoderOp
   // 1) Try fetch-as-blob first (full random access for deterministic seeks)
   // 2) If blob load fails, fallback to direct URL
   const isMob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const vidDirectTimeout = isMob ? 18_000 : 35_000;
-  const vidFetchTimeout = isMob ? 70_000 : 150_000;
-  const vidDecodeTimeout = isMob ? 28_000 : 45_000;
+  const vidDirectTimeout = isMob ? 25_000 : 60_000;
+  const vidFetchTimeout = isMob ? 120_000 : 300_000;
+  const vidDecodeTimeout = isMob ? 40_000 : 90_000;
 
   const loadVid = async (url: string): Promise<HTMLVideoElement | null> => {
     if (!url) return null;
