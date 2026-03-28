@@ -2145,8 +2145,7 @@ export async function encodeVideoSimple(
 
         try {
           const controller = new AbortController();
-          const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 70_000 : 150_000);
-          // ↑ fallback path uses same generous timeouts as WebCodecs path
+          const fetchTimer = setTimeout(() => controller.abort(), isMobileDevice ? 120_000 : 300_000);
 
           try {
             const resp = await fetch(normalizedUrl, { cache: "no-store", signal: controller.signal });
@@ -2157,7 +2156,7 @@ export async function encodeVideoSimple(
             if (!blob.size) throw new Error("empty blob");
 
             const blobUrl = URL.createObjectURL(blob);
-            const blobVideo = await loadVideoElement(blobUrl, isMobileDevice ? 28_000 : 45_000, blobUrl);
+            const blobVideo = await loadVideoElement(blobUrl, isMobileDevice ? 40_000 : 90_000, blobUrl);
             if (blobVideo) {
               console.log(`[VideoEncoder] Video ${idx} loaded via blob: ${blobVideo.videoWidth}x${blobVideo.videoHeight}`);
               return blobVideo;
@@ -2167,7 +2166,7 @@ export async function encodeVideoSimple(
             console.warn(`[VideoEncoder] Video ${idx} blob load failed, trying direct URL:`, blobErr);
           }
 
-          const directVideo = await loadVideoElement(normalizedUrl, isMobileDevice ? 18_000 : 35_000);
+          const directVideo = await loadVideoElement(normalizedUrl, isMobileDevice ? 25_000 : 60_000);
           if (directVideo) {
             console.log(`[VideoEncoder] Video ${idx} loaded via direct URL: ${directVideo.videoWidth}x${directVideo.videoHeight}`);
             return directVideo;
