@@ -673,6 +673,22 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   </Button>
                 </div>
               )}
+
+              {/* Material Limit */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-sm font-medium">Limite Mensal de Materiais</Label>
+                <p className="text-xs text-muted-foreground">
+                  Quantidade de artes/vídeos que o cliente pode gerar por mês.
+                </p>
+                <Input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={formData.monthly_material_limit ?? 30}
+                  onChange={(e) => setFormData(prev => ({ ...prev, monthly_material_limit: parseInt(e.target.value) || 30 }))}
+                  className="w-32"
+                />
+              </div>
             </CardContent>
           </Card>
 
