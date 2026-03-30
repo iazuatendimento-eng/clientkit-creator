@@ -694,18 +694,20 @@ const SortableCard = ({ brief, brandKit, columns, onEdit, onDelete, onStatusChan
                   </Button>
                 )
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsDetailModalOpen(true);
-                }}
-                className="text-xs px-2 py-1 h-auto w-full"
-              >
-                <Upload className="h-3 w-3 mr-1" />
-                Arquivos
-              </Button>
+              {!isPublicView && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDetailModalOpen(true);
+                  }}
+                  className="text-xs px-2 py-1 h-auto w-full"
+                >
+                  <Upload className="h-3 w-3 mr-1" />
+                  Arquivos
+                </Button>
+              )}
               {brief.status === "completed" && brief.completionType && onQuickEdit && (
                 <Button
                   variant="outline"
