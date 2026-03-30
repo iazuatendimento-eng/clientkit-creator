@@ -78,6 +78,11 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
   });
   const [clientUploads, setClientUploads] = useState<ClientUpload[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  // Client credentials state
+  const [credUsername, setCredUsername] = useState("");
+  const [credPassword, setCredPassword] = useState("");
+  const [hasCredentials, setHasCredentials] = useState(false);
+  const [savingCredentials, setSavingCredentials] = useState(false);
 
   // Brand kit state
   const [brandColors, setBrandColors] = useState<string[]>(
