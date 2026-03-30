@@ -141,6 +141,68 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     }
   };
 
+  const loadCredentials = async (clientId: string) => {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${supabaseUrl}/functions/v1/manage-client-credentials`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: "get", client_id: clientId }),
+      });
+      if (res.ok) {
+        const { credentials } = await res.json();
+        if (credentials) {
+          setCredUsername(credentials.username);
+          setHasCredentials(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading credentials:", error);
+    }
+  };
+
+  const handleSaveCredentials = async () => {
+    if (!client?.id || !credUsername || !credPassword) {
+      toast.error("Preencha usuário e senha");
+      return;
+    }
+    setSavingCredentials(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Não autenticado");
+      const res = await fetch(`${supabaseUrl}/functions/v1/manage-client-credentials`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: "upsert",
+          client_id: client.id,
+          username: credUsername,
+          password: credPassword,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Erro ao salvar");
+      }
+      setHasCredentials(true);
+      setCredPassword("");
+      toast.success("Credenciais salvas!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao salvar credenciais");
+    } finally {
+      setSavingCredentials(false);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!client?.id) {
       toast.error("Salve o cliente antes de fazer uploads.");
