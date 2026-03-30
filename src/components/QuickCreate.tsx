@@ -289,86 +289,111 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
-          <Sparkles className="h-6 w-6 text-primary" />
-          Criar Rápido
+    <div className="max-w-lg mx-auto space-y-6 px-4">
+      {/* Header */}
+      <div className="text-center space-y-1 pt-2">
+        <h2 className="text-xl font-bold flex items-center justify-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          Criar Conteúdo
         </h2>
-        <p className="text-muted-foreground text-sm">
-          Cole o texto, escolha o tipo e gere em segundos.
-        </p>
       </div>
 
-      {/* Step 1: Has text? */}
+      {/* Step 1: Has text? — big friendly cards */}
       {hasText === null && (
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Você já tem o texto pronto?</Label>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1 h-12"
+          <p className="text-center text-sm text-muted-foreground font-medium">
+            Como você quer começar?
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
               onClick={() => setHasText(true)}
+              className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border bg-card hover:border-primary hover:bg-primary/5 transition-all text-center group"
             >
-              ✅ Sim, já tenho
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1 h-12"
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Palette className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Já tenho o texto</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Colar ou digitar o texto do post
+                </p>
+              </div>
+            </button>
+            <button
               onClick={() => setHasText(false)}
+              className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border bg-card hover:border-primary hover:bg-primary/5 transition-all text-center group"
             >
-              <Wand2 className="h-4 w-4 mr-2" />
-              Não, gerar com IA
-            </Button>
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Wand2 className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">A IA cria pra mim</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Diga o assunto e a IA escreve o texto
+                </p>
+              </div>
+            </button>
           </div>
         </div>
       )}
 
       {/* AI Text Generation */}
       {hasText === false && !text && (
-        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Wand2 className="h-4 w-4 text-primary" />
+        <div className="space-y-5 p-5 rounded-xl border-2 border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-2 font-semibold text-sm">
+            <Wand2 className="h-5 w-5 text-primary" />
             Gerar texto com IA
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs">Qual o assunto/tema?</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Qual o assunto do post?</Label>
             <Input
               value={aiTopic}
               onChange={(e) => setAiTopic(e.target.value)}
-              placeholder="Ex: promoção de limpeza, dica de saúde, agendamento..."
-              className="text-sm"
+              placeholder="Ex: promoção de limpeza, dica de saúde..."
+              className="text-sm h-11"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs">Formato</Label>
-            <RadioGroup
-              value={postFormat}
-              onValueChange={(v) => setPostFormat(v as "single" | "carousel")}
-              className="flex flex-col gap-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="single" id="fmt-single" />
-                <Label htmlFor="fmt-single" className="text-sm cursor-pointer">
-                  Post Único / Vídeo 20s (~6 palavras)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="carousel" id="fmt-carousel" />
-                <Label htmlFor="fmt-carousel" className="text-sm cursor-pointer">
-                  Carrossel / Vídeo 1min (6 páginas separadas por ;)
-                </Label>
-              </div>
-            </RadioGroup>
+            <Label className="text-sm font-medium">Formato</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                onClick={() => setPostFormat("single")}
+                className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left ${
+                  postFormat === "single"
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:border-muted-foreground/30"
+                }`}
+              >
+                <Film className="h-5 w-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Post Único</p>
+                  <p className="text-xs text-muted-foreground">1 página / vídeo 20s</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setPostFormat("carousel")}
+                className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left ${
+                  postFormat === "carousel"
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:border-muted-foreground/30"
+                }`}
+              >
+                <Sparkles className="h-5 w-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Carrossel</p>
+                  <p className="text-xs text-muted-foreground">6 páginas / vídeo 1min</p>
+                </div>
+              </button>
+            </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-1">
             <Button
               onClick={handleGenerateAIText}
               disabled={!aiTopic.trim() || generatingText}
-              className="flex-1 gap-2"
+              className="flex-1 h-11 gap-2 text-sm font-semibold"
             >
               {generatingText ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -378,9 +403,9 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
               {generatingText ? "Gerando..." : "Gerar Texto"}
             </Button>
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
               onClick={() => { setHasText(null); setAiTopic(""); }}
+              className="h-11"
             >
               Voltar
             </Button>
@@ -390,15 +415,17 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
 
       {/* Text Input (shown when user has text OR after AI generated) */}
       {(hasText === true || (hasText === false && text)) && (
-        <>
+        <div className="space-y-5">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Texto do Conteúdo</Label>
+              <Label className="text-sm font-medium">
+                {hasText === false ? "✨ Texto gerado — edite se quiser:" : "Texto do Conteúdo"}
+              </Label>
               {hasText === false && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="text-xs gap-1"
+                  className="text-xs gap-1.5 h-7"
                   onClick={() => { setText(""); setAiTopic(""); }}
                 >
                   <Wand2 className="h-3 w-3" />
@@ -410,80 +437,87 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
               value={text}
               onChange={(e) => {
                 let val = e.target.value;
-                // Limit semicolons to max 5 (= 6 pages)
                 const semicolons = (val.match(/;/g) || []).length;
                 if (semicolons > 5) {
-                  // Remove excess semicolons from the end
                   let count = 0;
                   val = val.replace(/;/g, (match) => {
                     count++;
                     return count <= 5 ? match : "";
                   });
-                  toast.error("Máximo de 6 páginas (5 separadores ;)");
+                  toast.error("Máximo 6 páginas!");
                 }
                 setText(val);
               }}
-              placeholder={`Cole aqui o texto...\n\nDica: use ; para separar páginas (máx. 6 páginas)\nExemplo: Frase 1; Frase 2; Frase 3`}
-              className="min-h-[160px] text-sm resize-y"
+              placeholder={`Cole ou digite o texto aqui...\n\nUse ; para separar páginas do carrossel\nExemplo: Frase 1; Frase 2; Frase 3`}
+              className="min-h-[140px] text-sm resize-y"
             />
-            {text.includes(";") && (
-              <p className="text-xs text-muted-foreground">
-                📄 {(text.match(/;/g) || []).length + 1} página{(text.match(/;/g) || []).length > 0 ? "s" : ""} (máx. 6)
-              </p>
-            )}
-            {hasText === null ? null : !initialText && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={() => { setHasText(null); setText(""); setAiTopic(""); }}
-              >
-                ← Voltar
-              </Button>
-            )}
+            <div className="flex items-center justify-between">
+              {text.includes(";") ? (
+                <p className="text-xs font-medium text-primary">
+                  📄 {(text.match(/;/g) || []).length + 1} de 6 páginas
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Dica: use <span className="font-mono font-bold">;</span> para dividir em páginas
+                </p>
+              )}
+              {!initialText && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => { setHasText(null); setText(""); setAiTopic(""); }}
+                >
+                  ← Voltar
+                </Button>
+              )}
+            </div>
           </div>
 
-          {/* Type Selection */}
+          {/* Type Selection — big visual buttons */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Tipo de Entrega</Label>
-            <RadioGroup
-              value={type}
-              onValueChange={(v) => setType(v as "video" | "art")}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="video" id="type-video" />
-                <Label htmlFor="type-video" className="flex items-center gap-1.5 cursor-pointer">
-                  <Film className="h-4 w-4" />
-                  Vídeo
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="art" id="type-art" />
-                <Label htmlFor="type-art" className="flex items-center gap-1.5 cursor-pointer">
-                  <Palette className="h-4 w-4" />
-                  Arte
-                </Label>
-              </div>
-            </RadioGroup>
+            <Label className="text-sm font-medium">O que você quer gerar?</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setType("video")}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  type === "video"
+                    ? "border-primary bg-primary/10 shadow-sm"
+                    : "border-border bg-card hover:border-muted-foreground/30"
+                }`}
+              >
+                <Film className={`h-8 w-8 ${type === "video" ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="text-sm font-semibold">Vídeo</span>
+              </button>
+              <button
+                onClick={() => setType("art")}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  type === "art"
+                    ? "border-primary bg-primary/10 shadow-sm"
+                    : "border-border bg-card hover:border-muted-foreground/30"
+                }`}
+              >
+                <Palette className={`h-8 w-8 ${type === "art" ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="text-sm font-semibold">Arte</span>
+              </button>
+            </div>
           </div>
 
           {/* Create Button */}
           <Button
             onClick={handleCreate}
             disabled={creating || !text.trim()}
-            className="w-full h-12 text-base font-semibold gap-2"
+            className="w-full h-14 text-base font-bold gap-2 rounded-xl shadow-md"
+            size="lg"
           >
             {creating ? (
               <Loader2 className="h-5 w-5 animate-spin" />
-            ) : type === "video" ? (
-              <Film className="h-5 w-5" />
             ) : (
-              <Palette className="h-5 w-5" />
+              <Sparkles className="h-5 w-5" />
             )}
-            {creating ? "Criando..." : `Gerar ${type === "video" ? "Vídeo" : "Arte"}`}
+            {creating ? "Preparando..." : `Gerar ${type === "video" ? "Vídeo" : "Arte"}`}
           </Button>
-        </>
+        </div>
       )}
 
       {/* Modals */}
