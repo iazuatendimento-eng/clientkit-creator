@@ -127,6 +127,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       });
       if (client.id) {
         loadClientUploads(client.id);
+        loadCredentials(client.id);
       }
     }
   }, [client]);
