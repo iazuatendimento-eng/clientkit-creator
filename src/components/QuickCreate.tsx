@@ -263,6 +263,16 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
 
       setCreatedCardId(cardId);
 
+      // Increment usage
+      try {
+        const newUsed = usageUsed + 1;
+        await supabase
+          .from("client_data")
+          .update({ monthly_material_used: newUsed })
+          .eq("id", clientId);
+        setUsageUsed(newUsed);
+      } catch { /* ignore */ }
+
       if (type === "video") {
         setIsVideoGenOpen(true);
       } else {
