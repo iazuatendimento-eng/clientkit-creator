@@ -114,6 +114,7 @@ interface ArtGeneratorModalProps {
   cardIndex: number;
   clientId?: string;
   onExported?: () => void;
+  hideEmail?: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
