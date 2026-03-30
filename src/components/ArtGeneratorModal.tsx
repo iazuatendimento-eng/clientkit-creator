@@ -114,6 +114,7 @@ interface ArtGeneratorModalProps {
   cardIndex: number;
   clientId?: string;
   onExported?: () => void;
+  hideEmail?: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -888,6 +889,7 @@ export function ArtGeneratorModal({
   cardIndex,
   clientId,
   onExported,
+  hideEmail,
 }: ArtGeneratorModalProps) {
   const rawText = (cardText || cardTitle || clientName || "").trim();
   const textParts = rawText
@@ -1572,7 +1574,7 @@ export function ArtGeneratorModal({
                 </Button>
               </div>
               {/* Send email button */}
-              {clientId && (
+              {clientId && !hideEmail && (
                 <div className="space-y-2">
                   <Input
                     placeholder="Título do e-mail (obrigatório)"

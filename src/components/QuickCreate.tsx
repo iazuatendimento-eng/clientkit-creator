@@ -20,9 +20,10 @@ interface QuickCreateProps {
   initialType?: "video" | "art";
   initialTemplateId?: string;
   existingCardId?: string;
+  isClientPortal?: boolean;
 }
 
-export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId, existingCardId }: QuickCreateProps) => {
+export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId, existingCardId, isClientPortal }: QuickCreateProps) => {
   const [text, setText] = useState(initialText || "");
   const [type, setType] = useState<"video" | "art">(initialType || "video");
   const [uploading, setUploading] = useState(false);
@@ -314,6 +315,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
             cardIndex={selectedTemplateIndex}
             preloadedData={preloadedData}
             clientId={clientId}
+            hideEmail={isClientPortal}
           />
           <ArtGeneratorModal
             isOpen={isArtGenOpen}
@@ -325,6 +327,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
             clientName={clientName}
             cardIndex={selectedTemplateIndex}
             clientId={clientId}
+            hideEmail={isClientPortal}
           />
         </>
       )}

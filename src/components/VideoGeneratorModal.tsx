@@ -204,6 +204,7 @@ interface VideoGeneratorModalProps {
   preloadedData?: PreloadedVideoData | null;
   clientId?: string;
   onExported?: () => void;
+  hideEmail?: boolean;
 }
 
 export function VideoGeneratorModal({
@@ -218,6 +219,7 @@ export function VideoGeneratorModal({
   preloadedData,
   clientId,
   onExported,
+  hideEmail,
 }: VideoGeneratorModalProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "exporting" | "error">("loading");
   const [template, setTemplate] = useState<VideoTemplateData | null>(null);
@@ -918,7 +920,7 @@ export function VideoGeneratorModal({
                       Baixar Sem Áudio
                     </Button>
                   </div>
-                  {clientId && (
+                  {clientId && !hideEmail && (
                     <div className="space-y-2">
                       <Input
                         placeholder="Título do e-mail (obrigatório)"
@@ -955,7 +957,7 @@ export function VideoGeneratorModal({
                     <Download className="h-4 w-4" />
                     Baixar Vídeo
                   </Button>
-                  {clientId && (
+                  {clientId && !hideEmail && (
                     <div className="space-y-2">
                       <Input
                         placeholder="Título do e-mail (obrigatório)"

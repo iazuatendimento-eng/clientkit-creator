@@ -106,6 +106,7 @@ const ClientPortal = () => {
           clientId={clientSession.id}
           clientName={clientSession.company || clientSession.name}
           brandKit={brandKit}
+          isClientPortal
         />
       )}
     </div>
