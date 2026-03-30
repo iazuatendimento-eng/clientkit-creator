@@ -588,6 +588,7 @@ export type Database = {
           narration_type: string
         }[]
       }
+      hash_password: { Args: { p_password: string }; Returns: string }
       verify_client_login: {
         Args: { p_password: string; p_username: string }
         Returns: string
