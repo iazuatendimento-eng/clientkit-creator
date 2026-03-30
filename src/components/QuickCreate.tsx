@@ -327,6 +327,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
             clientName={clientName}
             cardIndex={selectedTemplateIndex}
             clientId={clientId}
+            hideEmail={isClientPortal}
           />
         </>
       )}
