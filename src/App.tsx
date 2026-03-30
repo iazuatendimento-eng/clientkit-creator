@@ -4,10 +4,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ClientAuthProvider } from "@/hooks/useClientAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ClientPublicView from "./pages/ClientPublicView";
+import ClientPortal from "./pages/ClientPortal";
 import MasterArt from "./pages/MasterArt";
 import MasterVideo from "./pages/MasterVideo";
 import Receivables from "./pages/Receivables";
@@ -26,6 +28,7 @@ const KeepAliveProvider = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => (
   <KeepAliveProvider>
+  <ClientAuthProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -40,6 +43,7 @@ const App = () => (
           <Route path="/export-db" element={<ProtectedRoute><ExportDatabase /></ProtectedRoute>} />
           <Route path="/send-media" element={<ProtectedRoute><SendMedia /></ProtectedRoute>} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/portal" element={<ClientPortal />} />
           <Route path="/client/:clientId" element={<ClientPublicView />} />
           <Route path="/:clientSlug" element={<ClientPublicView />} />
           <Route path="*" element={<NotFound />} />
@@ -47,6 +51,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ClientAuthProvider>
   </KeepAliveProvider>
 );
 

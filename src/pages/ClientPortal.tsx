@@ -100,12 +100,12 @@ const ClientPortal = () => {
         </div>
       </div>
 
-      {/* Quick Create Modal */}
+      {/* Quick Create */}
       {isQuickCreateOpen && (
         <QuickCreate
           clientId={clientSession.id}
+          clientName={clientSession.company || clientSession.name}
           brandKit={brandKit}
-          onClose={() => setIsQuickCreateOpen(false)}
         />
       )}
     </div>
