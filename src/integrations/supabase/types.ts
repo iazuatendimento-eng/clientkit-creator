@@ -123,6 +123,41 @@ export type Database = {
           },
         ]
       }
+      client_credentials: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          password_hash: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          password_hash: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          password_hash?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_data"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_data: {
         Row: {
           active: boolean
@@ -552,6 +587,10 @@ export type Database = {
           mascot: string
           narration_type: string
         }[]
+      }
+      verify_client_login: {
+        Args: { p_password: string; p_username: string }
+        Returns: string
       }
     }
     Enums: {
