@@ -225,6 +225,7 @@ export function VideoGeneratorModal({
   clientId,
   onExported,
   hideEmail,
+  skipSave,
 }: VideoGeneratorModalProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "exporting" | "error">("loading");
   const [template, setTemplate] = useState<VideoTemplateData | null>(null);
