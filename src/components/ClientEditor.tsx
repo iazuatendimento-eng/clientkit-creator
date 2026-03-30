@@ -107,6 +107,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
         client.brand_kit.logo || "",
         client.brand_kit.contactInfo || "",
         client.brand_kit.mascot || "",
+        client.brand_kit.extra || "",
       ]);
       setBrandFont(client.brand_kit.font || "");
       setBrandBackgroundPng(client.brand_kit.backgroundPng || "");
