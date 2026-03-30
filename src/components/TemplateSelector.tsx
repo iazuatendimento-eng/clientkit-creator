@@ -546,15 +546,8 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
               }
             } catch { /* ignore */ }
             // Fallback: use a real stock photo from picsum for realistic preview
-            const fallbackUrls = [
-              "https://picsum.photos/seed/tmpl1/400/400",
-              "https://picsum.photos/seed/tmpl2/400/400",
-              "https://picsum.photos/seed/tmpl3/400/400",
-            ];
-            for (const url of fallbackUrls) {
-              const img = await loadPreviewImage(url);
-              if (img) return img;
-            }
+            const img = await loadPreviewImage("https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=400&fit=crop");
+            if (img) return img;
             return null;
           };
 
