@@ -197,6 +197,10 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
       toast.error("Cole o texto primeiro!");
       return;
     }
+    if (usageUsed >= usageLimit) {
+      toast.error(`Limite mensal atingido! (${usageUsed}/${usageLimit} materiais)`);
+      return;
+    }
 
     // If we already know the template (coming from a card), skip the selector
     if (initialTemplateId) {
