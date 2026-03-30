@@ -383,7 +383,9 @@ export function VideoGeneratorModal({
       }
 
       // Send email
-      await handleSendEmail(urlData.publicUrl, videoPages.pages[0]);
+      if (emailVideoUrl) {
+        await handleSendEmail(emailVideoUrl, videoPages.pages[0]);
+      }
       setExportedBlob(finalBlob);
       onExported?.();
     } catch (err: any) {
