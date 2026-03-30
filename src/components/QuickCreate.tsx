@@ -109,6 +109,47 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     }
   };
 
+  const handleGenerateAIText = async () => {
+    if (!aiTopic.trim()) return;
+    setGeneratingText(true);
+    try {
+      // Fetch client context for better generation
+      let briefing = "";
+      let narrationType = "";
+      try {
+        const { data } = await supabase
+          .from("client_data")
+          .select("briefing, narration_type")
+          .eq("name", clientName)
+          .maybeSingle();
+        briefing = data?.briefing || "";
+        narrationType = data?.narration_type || "";
+      } catch { /* ignore */ }
+
+      const { data, error } = await supabase.functions.invoke("generate-post-text", {
+        body: {
+          topic: aiTopic,
+          postType: postFormat,
+          clientName,
+          briefing,
+          narrationType,
+        },
+      });
+
+      if (error) throw error;
+      const generated = data?.text?.trim();
+      if (!generated) throw new Error("Texto vazio");
+
+      setText(generated);
+      toast.success("Texto gerado com sucesso!");
+    } catch (err: any) {
+      console.error("AI text generation error:", err);
+      toast.error("Erro ao gerar texto. Tente novamente.");
+    } finally {
+      setGeneratingText(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!text.trim()) {
       toast.error("Cole o texto primeiro!");
