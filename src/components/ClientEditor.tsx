@@ -621,159 +621,57 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   placeholder="Descreva o briefing do cliente (diretrizes, tom de voz, público-alvo, etc.)"
                 />
               </div>
+
+              {/* Acesso do Cliente */}
+              {client?.id && (
+                <div className="space-y-2 pt-4 border-t border-border">
+                  <Label className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Acesso do Cliente ao Sistema
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {hasCredentials ? "Este cliente já possui acesso. Altere abaixo se necessário." : "Crie um usuário e senha para o cliente acessar o portal."}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="cred-username" className="text-xs">Usuário</Label>
+                      <Input
+                        id="cred-username"
+                        value={credUsername}
+                        onChange={(e) => setCredUsername(e.target.value)}
+                        placeholder="usuario.cliente"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="cred-password" className="text-xs">
+                        {hasCredentials ? "Nova Senha" : "Senha"}
+                      </Label>
+                      <Input
+                        id="cred-password"
+                        type="password"
+                        value={credPassword}
+                        onChange={(e) => setCredPassword(e.target.value)}
+                        placeholder={hasCredentials ? "Deixe vazio para manter" : "••••••••"}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveCredentials}
+                    disabled={savingCredentials || !credUsername || (!credPassword && !hasCredentials)}
+                  >
+                    {savingCredentials ? (
+                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Salvando...</>
+                    ) : (
+                      <><Save className="h-3 w-3 mr-1" /> {hasCredentials ? "Atualizar Acesso" : "Criar Acesso"}</>
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          {/* Kit de Marca */}
-          <Card className="bg-gradient-card border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5" />
-                Kit de Marca
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Cores */}
-              <div className="space-y-2">
-                <Label>Cores da Marca (4 cores)</Label>
-                <div className="flex gap-3">
-                  {brandColors.map((color, index) => (
-                    <div key={index} className="flex flex-col items-center gap-1">
-                      <input
-                        type="color"
-                        value={color}
-                        onChange={(e) => {
-                          const newColors = [...brandColors];
-                          newColors[index] = e.target.value;
-                          setBrandColors(newColors);
-                        }}
-                        className="w-12 h-12 rounded cursor-pointer border border-border"
-                      />
-                      <span className="text-xs text-muted-foreground">Cor {index + 1}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* PNGs */}
-              <div className="space-y-2">
-                <Label>Ativos PNG (Logo, Contato, Mascote)</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {["Logo", "Info de Contato", "Mascote"].map((label, index) => (
-                    <div key={index} className="space-y-2">
-                      <Label className="text-xs">{label}</Label>
-                      <div className="border border-dashed border-border rounded-lg p-3 text-center min-h-[100px] flex flex-col items-center justify-center gap-2">
-                        {brandPngs[index] ? (
-                          <>
-                            <img
-                              src={brandPngs[index]}
-                              alt={label}
-                              className="max-h-16 object-contain"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newPngs = [...brandPngs];
-                                newPngs[index] = "";
-                                setBrandPngs(newPngs);
-                              }}
-                            >
-                              <X className="h-3 w-3 mr-1" />
-                              Remover
-                            </Button>
-                          </>
-                        ) : (
-                          <label className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                            <Upload className="h-6 w-6 mx-auto mb-1" />
-                            Carregar {label}
-                            <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp"
-                              className="hidden"
-                              onChange={(e) => handleBrandPngUpload(e, index)}
-                            />
-                          </label>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Background PNG */}
-              <div className="space-y-2">
-                <Label>PNG de Fundo (opcional)</Label>
-                <p className="text-xs text-muted-foreground">
-                  Imagem usada como fundo no lugar da cor de fundo para este cliente.
-                </p>
-                <div className="border border-dashed border-border rounded-lg p-3 text-center min-h-[100px] flex flex-col items-center justify-center gap-2">
-                  {brandBackgroundPng ? (
-                    <>
-                      <img
-                        src={brandBackgroundPng}
-                        alt="Fundo"
-                        className="max-h-24 object-contain rounded"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setBrandBackgroundPng("")}
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Remover
-                      </Button>
-                    </>
-                  ) : (
-                    <label className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                      <Upload className="h-6 w-6 mx-auto mb-1" />
-                      Carregar PNG de Fundo
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        className="hidden"
-                        onChange={handleBackgroundPngUpload}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              {/* Font */}
-              <div className="space-y-2">
-                <Label htmlFor="brandFont">Fonte Google Fonts</Label>
-                <Select
-                  value={brandFont || ""}
-                  onValueChange={(v) => setBrandFont(v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Escolha uma fonte..." />
-                  </SelectTrigger>
-                   <SelectContent>
-                    <SelectItem value="Impact">Impact</SelectItem>
-                    <SelectItem value="Montserrat">Montserrat</SelectItem>
-                    <SelectItem value="Montserrat Arabic">Montserrat Arabic (ExtraBold)</SelectItem>
-                    <SelectItem value="Roboto">Roboto</SelectItem>
-                    <SelectItem value="Open Sans">Open Sans</SelectItem>
-                    <SelectItem value="Poppins">Poppins</SelectItem>
-                    <SelectItem value="Lato">Lato</SelectItem>
-                    <SelectItem value="Oswald">Oswald</SelectItem>
-                    <SelectItem value="Playfair Display">Playfair Display</SelectItem>
-                    <SelectItem value="Raleway">Raleway</SelectItem>
-                    <SelectItem value="Bebas Neue">Bebas Neue</SelectItem>
-                    <SelectItem value="Inter">Inter</SelectItem>
-                    <SelectItem value="Nunito">Nunito</SelectItem>
-                    <SelectItem value="Quicksand">Quicksand</SelectItem>
-                    <SelectItem value="Barlow">Barlow</SelectItem>
-                    <SelectItem value="Mulish">Mulish</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
 
           {/* Botões */}
           <div className="flex gap-4">
