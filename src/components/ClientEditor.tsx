@@ -91,7 +91,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     client?.brand_kit?.colors || ["#ffffff", "#000000", "#cccccc", "#aaaaaa"]
   );
   const [brandPngs, setBrandPngs] = useState<string[]>(
-    client?.brand_kit?.pngs || ["", "", ""]
+    client?.brand_kit?.pngs || ["", "", "", ""]
   );
   const [brandFont, setBrandFont] = useState<string>(
     client?.brand_kit?.font || ""
