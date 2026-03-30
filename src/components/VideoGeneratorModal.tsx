@@ -204,6 +204,7 @@ interface VideoGeneratorModalProps {
   preloadedData?: PreloadedVideoData | null;
   clientId?: string;
   onExported?: () => void;
+  hideEmail?: boolean;
 }
 
 export function VideoGeneratorModal({
