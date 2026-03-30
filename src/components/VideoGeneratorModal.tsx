@@ -703,22 +703,24 @@ export function VideoGeneratorModal({
         setTimeout(() => URL.revokeObjectURL(url), 30000);
       }
 
-      // Upload to storage for 24h availability
-      try {
-        const storagePath = `${cardId}/${Date.now()}-generated.mp4`;
-        const { error: uploadErr } = await supabase.storage
-          .from("card-uploads")
-          .upload(storagePath, finalBlob, { contentType: "video/mp4" });
-        if (!uploadErr) {
-          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
-          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-          await supabase
-            .from("project_briefs")
-            .update({ generated_video_url: urlData.publicUrl, generated_video_expires_at: expiresAt })
-            .eq("id", cardId);
+      // Upload to storage for 24h availability (skip for quick-create)
+      if (!skipSave) {
+        try {
+          const storagePath = `${cardId}/${Date.now()}-generated.mp4`;
+          const { error: uploadErr } = await supabase.storage
+            .from("card-uploads")
+            .upload(storagePath, finalBlob, { contentType: "video/mp4" });
+          if (!uploadErr) {
+            const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+            await supabase
+              .from("project_briefs")
+              .update({ generated_video_url: urlData.publicUrl, generated_video_expires_at: expiresAt })
+              .eq("id", cardId);
+          }
+        } catch (e) {
+          console.error("Failed to save generated video:", e);
         }
-      } catch (e) {
-        console.error("Failed to save generated video:", e);
       }
 
       toast.success("Vídeo exportado! ✓");
