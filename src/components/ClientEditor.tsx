@@ -91,7 +91,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
     client?.brand_kit?.colors || ["#ffffff", "#000000", "#cccccc", "#aaaaaa"]
   );
   const [brandPngs, setBrandPngs] = useState<string[]>(
-    client?.brand_kit?.pngs || ["", "", ""]
+    client?.brand_kit?.pngs || ["", "", "", ""]
   );
   const [brandFont, setBrandFont] = useState<string>(
     client?.brand_kit?.font || ""
@@ -107,6 +107,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
         client.brand_kit.logo || "",
         client.brand_kit.contactInfo || "",
         client.brand_kit.mascot || "",
+        client.brand_kit.extra || "",
       ]);
       setBrandFont(client.brand_kit.font || "");
       setBrandBackgroundPng(client.brand_kit.backgroundPng || "");
@@ -655,8 +656,8 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {["Logo", "Contato", "Mascote"].map((label, i) => (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {["Logo", "Contato", "Mascote", "Extra"].map((label, i) => (
                     <div key={i} className="space-y-1">
                       <Label className="text-xs">{label}</Label>
                       {brandPngs[i] ? (
