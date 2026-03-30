@@ -957,7 +957,7 @@ export function VideoGeneratorModal({
                     <Download className="h-4 w-4" />
                     Baixar Vídeo
                   </Button>
-                  {clientId && (
+                  {clientId && !hideEmail && (
                     <div className="space-y-2">
                       <Input
                         placeholder="Título do e-mail (obrigatório)"

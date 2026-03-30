@@ -1574,7 +1574,7 @@ export function ArtGeneratorModal({
                 </Button>
               </div>
               {/* Send email button */}
-              {clientId && (
+              {clientId && !hideEmail && (
                 <div className="space-y-2">
                   <Input
                     placeholder="Título do e-mail (obrigatório)"
