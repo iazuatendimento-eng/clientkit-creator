@@ -209,6 +209,7 @@ interface VideoGeneratorModalProps {
   clientId?: string;
   onExported?: () => void;
   hideEmail?: boolean;
+  skipSave?: boolean;
 }
 
 export function VideoGeneratorModal({
