@@ -545,25 +545,16 @@ export function TemplateSelector({ type, onSelect, onBack, initialTemplateId }: 
                 return loadPreviewImage(fnData.images[0].urls.small);
               }
             } catch { /* ignore */ }
-            // Fallback: use a solid colored placeholder image via canvas
-            try {
-              const c = document.createElement("canvas");
-              c.width = 400; c.height = 400;
-              const cx = c.getContext("2d");
-              if (cx) {
-                // Create a nice gradient placeholder
-                const grad = cx.createLinearGradient(0, 0, 400, 400);
-                grad.addColorStop(0, brandData.primary || "#a225ac");
-                grad.addColorStop(1, brandData.secondary || "#f0b128");
-                cx.fillStyle = grad;
-                cx.fillRect(0, 0, 400, 400);
-                cx.fillStyle = "rgba(255,255,255,0.3)";
-                cx.font = "bold 80px sans-serif";
-                cx.textAlign = "center";
-                cx.fillText("📷", 200, 230);
-                return loadPreviewImage(c.toDataURL());
-              }
-            } catch { /* ignore */ }
+            // Fallback: use a real stock photo from picsum for realistic preview
+            const fallbackUrls = [
+              "https://picsum.photos/seed/tmpl1/400/400",
+              "https://picsum.photos/seed/tmpl2/400/400",
+              "https://picsum.photos/seed/tmpl3/400/400",
+            ];
+            for (const url of fallbackUrls) {
+              const img = await loadPreviewImage(url);
+              if (img) return img;
+            }
             return null;
           };
 
