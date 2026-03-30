@@ -337,22 +337,22 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs">Formato do Post</Label>
+            <Label className="text-xs">Formato</Label>
             <RadioGroup
               value={postFormat}
               onValueChange={(v) => setPostFormat(v as "single" | "carousel")}
-              className="flex gap-4"
+              className="flex flex-col gap-2"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="single" id="fmt-single" />
                 <Label htmlFor="fmt-single" className="text-sm cursor-pointer">
-                  Post Único (~6 palavras)
+                  Post Único / Vídeo 20s (~6 palavras)
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="carousel" id="fmt-carousel" />
                 <Label htmlFor="fmt-carousel" className="text-sm cursor-pointer">
-                  Carrossel (6 páginas)
+                  Carrossel / Vídeo 1min (6 páginas separadas por ;)
                 </Label>
               </div>
             </RadioGroup>
