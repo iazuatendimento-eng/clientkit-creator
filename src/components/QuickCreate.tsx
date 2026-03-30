@@ -276,19 +276,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
     }
   };
 
-  const handleModalClose = async (wasGenerated?: boolean) => {
-    // Increment usage if something was generated
-    if (wasGenerated) {
-      try {
-        const newUsed = usageUsed + 1;
-        await supabase
-          .from("client_data")
-          .update({ monthly_material_used: newUsed })
-          .eq("id", clientId);
-        setUsageUsed(newUsed);
-      } catch { /* ignore */ }
-    }
-
+  const handleModalClose = async () => {
     // Only delete temporary cards (not existing ones from "Alterar")
     if (createdCardId && !existingCardId) {
       try {
