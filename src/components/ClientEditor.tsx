@@ -625,6 +625,103 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                 />
               </div>
 
+              {/* Kit de Marca */}
+              <div className="space-y-4 pt-4 border-t">
+                <Label className="flex items-center gap-2 text-base font-semibold">
+                  <Palette className="h-5 w-5" />
+                  Kit de Marca
+                </Label>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Cores (4 cores)</Label>
+                  <div className="flex gap-3">
+                    {brandColors.map((color, i) => (
+                      <div key={i} className="flex flex-col items-center gap-1">
+                        <input
+                          type="color"
+                          value={color}
+                          onChange={(e) => {
+                            const newColors = [...brandColors];
+                            newColors[i] = e.target.value;
+                            setBrandColors(newColors);
+                          }}
+                          className="w-10 h-10 rounded cursor-pointer border border-border"
+                        />
+                        <span className="text-[10px] text-muted-foreground">
+                          {i === 0 ? "Fundo" : i === 1 ? "Texto" : i === 2 ? "Acess.1" : "Acess.2"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {["Logo", "Contato", "Mascote"].map((label, i) => (
+                    <div key={i} className="space-y-1">
+                      <Label className="text-xs">{label}</Label>
+                      {brandPngs[i] ? (
+                        <div className="relative inline-block">
+                          <img src={brandPngs[i]} alt={label} className="h-16 object-contain bg-muted rounded p-1" />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-0 right-0 h-5 w-5"
+                            onClick={() => {
+                              const newPngs = [...brandPngs];
+                              newPngs[i] = "";
+                              setBrandPngs(newPngs);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center gap-1 cursor-pointer text-xs text-primary hover:underline">
+                          <Upload className="h-3 w-3" />
+                          Upload PNG
+                          <input type="file" accept="image/png" className="hidden" onChange={(e) => handleBrandPngUpload(e, i)} />
+                        </label>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">PNG de Fundo</Label>
+                  {brandBackgroundPng ? (
+                    <div className="relative inline-block">
+                      <img src={brandBackgroundPng} alt="Fundo" className="h-16 object-contain bg-muted rounded p-1" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-0 right-0 h-5 w-5"
+                        onClick={() => setBrandBackgroundPng("")}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-1 cursor-pointer text-xs text-primary hover:underline">
+                      <Upload className="h-3 w-3" />
+                      Upload PNG de Fundo
+                      <input type="file" accept="image/png" className="hidden" onChange={handleBackgroundPngUpload} />
+                    </label>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Fonte (Google Fonts)</Label>
+                  <Input
+                    value={brandFont}
+                    onChange={(e) => setBrandFont(e.target.value)}
+                    placeholder="Ex: Montserrat, Roboto, Poppins..."
+                    className="max-w-xs"
+                  />
+                </div>
+              </div>
+
               {/* Acesso do Cliente */}
               {client?.id && (
                 <div className="space-y-2 pt-4 border-t border-border">
