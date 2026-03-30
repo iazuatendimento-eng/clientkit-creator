@@ -30,13 +30,16 @@ ${isCarousel ? `
 - Gere EXATAMENTE 6 frases separadas por ponto e vírgula (;)
 - Cada frase deve ter entre 4 e 8 palavras (idealmente 6)
 - O resultado final deve ser: frase1; frase2; frase3; frase4; frase5; frase6
+- NÃO gere mais que 6 frases. NUNCA mais que 5 separadores (;)
 - NÃO use ponto final dentro das frases, apenas ; como separador
 - A primeira frase deve ser um gancho chamativo
 - A última frase deve ser um CTA (chamada para ação)
+- O texto total deve caber em um vídeo de no máximo 1 minuto
 ` : `
 - Gere UMA frase com entre 4 e 8 palavras (idealmente 6)
 - Deve ser impactante e funcionar como headline de um post
 - NÃO use ponto final
+- O texto deve caber em um vídeo de no máximo 20 segundos
 `}
 - Escreva em português do Brasil
 - Tom: profissional mas acessível

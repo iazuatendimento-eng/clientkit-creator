@@ -402,10 +402,29 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
             </div>
             <Textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Cole aqui o texto do briefing, legenda ou conteúdo..."
+              onChange={(e) => {
+                let val = e.target.value;
+                // Limit semicolons to max 5 (= 6 pages)
+                const semicolons = (val.match(/;/g) || []).length;
+                if (semicolons > 5) {
+                  // Remove excess semicolons from the end
+                  let count = 0;
+                  val = val.replace(/;/g, (match) => {
+                    count++;
+                    return count <= 5 ? match : "";
+                  });
+                  toast.error("Máximo de 6 páginas (5 separadores ;)");
+                }
+                setText(val);
+              }}
+              placeholder={`Cole aqui o texto...\n\nDica: use ; para separar páginas (máx. 6 páginas)\nExemplo: Frase 1; Frase 2; Frase 3`}
               className="min-h-[160px] text-sm resize-y"
             />
+            {text.includes(";") && (
+              <p className="text-xs text-muted-foreground">
+                📄 {(text.match(/;/g) || []).length + 1} página{(text.match(/;/g) || []).length > 0 ? "s" : ""} (máx. 6)
+              </p>
+            )}
             {hasText === null ? null : !initialText && (
               <Button
                 variant="ghost"
