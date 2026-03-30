@@ -137,8 +137,14 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
       });
 
       if (error) throw error;
-      const generated = data?.text?.trim();
+      let generated = data?.text?.trim();
       if (!generated) throw new Error("Texto vazio");
+
+      // Enforce max 6 pages (5 semicolons) even from AI
+      const parts = generated.split(";").map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+      if (parts.length > 6) {
+        generated = parts.slice(0, 6).join("; ");
+      }
 
       setText(generated);
       toast.success("Texto gerado com sucesso!");
