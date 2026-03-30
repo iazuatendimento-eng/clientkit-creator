@@ -610,6 +610,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
             preloadedData={preloadedData}
             clientId={clientId}
             hideEmail={isClientPortal}
+            skipSave
           />
           <ArtGeneratorModal
             isOpen={isArtGenOpen}
@@ -622,6 +623,7 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
             cardIndex={selectedTemplateIndex}
             clientId={clientId}
             hideEmail={isClientPortal}
+            skipSave
           />
         </>
       )}

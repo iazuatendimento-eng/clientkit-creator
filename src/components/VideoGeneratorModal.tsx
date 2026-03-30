@@ -209,6 +209,7 @@ interface VideoGeneratorModalProps {
   clientId?: string;
   onExported?: () => void;
   hideEmail?: boolean;
+  skipSave?: boolean;
 }
 
 export function VideoGeneratorModal({
@@ -224,6 +225,7 @@ export function VideoGeneratorModal({
   clientId,
   onExported,
   hideEmail,
+  skipSave,
 }: VideoGeneratorModalProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "exporting" | "error">("loading");
   const [template, setTemplate] = useState<VideoTemplateData | null>(null);
@@ -362,22 +364,28 @@ export function VideoGeneratorModal({
         } catch { /* use original */ }
       }
 
-      // Upload to storage
-      const storagePath = `${cardId}/${Date.now()}-generated.mp4`;
-      const { error: uploadErr } = await supabase.storage
-        .from("card-uploads")
-        .upload(storagePath, finalBlob, { contentType: "video/mp4" });
-      if (uploadErr) throw uploadErr;
+      // Upload to storage (skip for quick-create)
+      let emailVideoUrl = "";
+      if (!skipSave) {
+        const storagePath = `${cardId}/${Date.now()}-generated.mp4`;
+        const { error: uploadErr } = await supabase.storage
+          .from("card-uploads")
+          .upload(storagePath, finalBlob, { contentType: "video/mp4" });
+        if (uploadErr) throw uploadErr;
 
-      const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      await supabase
-        .from("project_briefs")
-        .update({ generated_video_url: urlData.publicUrl, generated_video_expires_at: expiresAt })
-        .eq("id", cardId);
+        const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
+        emailVideoUrl = urlData.publicUrl;
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        await supabase
+          .from("project_briefs")
+          .update({ generated_video_url: urlData.publicUrl, generated_video_expires_at: expiresAt })
+          .eq("id", cardId);
+      }
 
       // Send email
-      await handleSendEmail(urlData.publicUrl, videoPages.pages[0]);
+      if (emailVideoUrl) {
+        await handleSendEmail(emailVideoUrl, videoPages.pages[0]);
+      }
       setExportedBlob(finalBlob);
       onExported?.();
     } catch (err: any) {
@@ -695,22 +703,24 @@ export function VideoGeneratorModal({
         setTimeout(() => URL.revokeObjectURL(url), 30000);
       }
 
-      // Upload to storage for 24h availability
-      try {
-        const storagePath = `${cardId}/${Date.now()}-generated.mp4`;
-        const { error: uploadErr } = await supabase.storage
-          .from("card-uploads")
-          .upload(storagePath, finalBlob, { contentType: "video/mp4" });
-        if (!uploadErr) {
-          const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
-          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-          await supabase
-            .from("project_briefs")
-            .update({ generated_video_url: urlData.publicUrl, generated_video_expires_at: expiresAt })
-            .eq("id", cardId);
+      // Upload to storage for 24h availability (skip for quick-create)
+      if (!skipSave) {
+        try {
+          const storagePath = `${cardId}/${Date.now()}-generated.mp4`;
+          const { error: uploadErr } = await supabase.storage
+            .from("card-uploads")
+            .upload(storagePath, finalBlob, { contentType: "video/mp4" });
+          if (!uploadErr) {
+            const { data: urlData } = supabase.storage.from("card-uploads").getPublicUrl(storagePath);
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+            await supabase
+              .from("project_briefs")
+              .update({ generated_video_url: urlData.publicUrl, generated_video_expires_at: expiresAt })
+              .eq("id", cardId);
+          }
+        } catch (e) {
+          console.error("Failed to save generated video:", e);
         }
-      } catch (e) {
-        console.error("Failed to save generated video:", e);
       }
 
       toast.success("Vídeo exportado! ✓");
