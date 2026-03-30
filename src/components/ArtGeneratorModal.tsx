@@ -1027,6 +1027,7 @@ export function ArtGeneratorModal({
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [translatedSearchQuery, setTranslatedSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
@@ -1368,7 +1369,15 @@ export function ArtGeneratorModal({
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
-      const images = await searchImages(searchQuery, 15, page);
+      const { translateSearchQuery } = await import("@/lib/translateSearch");
+      let queryToUse: string;
+      if (page === 1) {
+        queryToUse = await translateSearchQuery(searchQuery);
+        setTranslatedSearchQuery(queryToUse);
+      } else {
+        queryToUse = translatedSearchQuery || searchQuery;
+      }
+      const images = await searchImages(queryToUse, 15, page);
       if (page === 1) {
         setSearchResults(images);
       } else {
