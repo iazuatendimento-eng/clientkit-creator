@@ -1370,8 +1370,13 @@ export function ArtGeneratorModal({
     setIsSearching(true);
     try {
       const { translateSearchQuery } = await import("@/lib/translateSearch");
-      const translatedQuery = page === 1 ? await translateSearchQuery(searchQuery) : searchQuery;
-      const queryToUse = page === 1 ? translatedQuery : searchQuery;
+      let queryToUse: string;
+      if (page === 1) {
+        queryToUse = await translateSearchQuery(searchQuery);
+        setTranslatedSearchQuery(queryToUse);
+      } else {
+        queryToUse = translatedSearchQuery || searchQuery;
+      }
       const images = await searchImages(queryToUse, 15, page);
       if (page === 1) {
         setSearchResults(images);
