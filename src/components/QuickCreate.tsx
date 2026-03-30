@@ -36,6 +36,10 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [selectedTemplateIndex, setSelectedTemplateIndex] = useState(0);
   const [modalClosed, setModalClosed] = useState(false);
+  const [hasText, setHasText] = useState<boolean | null>(initialText ? true : null);
+  const [aiTopic, setAiTopic] = useState("");
+  const [postFormat, setPostFormat] = useState<"single" | "carousel">("single");
+  const [generatingText, setGeneratingText] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoTriggeredRef = useRef(false);
 
