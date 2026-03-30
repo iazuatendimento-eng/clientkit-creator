@@ -21,6 +21,9 @@ export interface ClientData {
   image_type?: string;
   particularity_type?: string;
   briefing?: string;
+  monthly_material_limit?: number;
+  monthly_material_used?: number;
+  material_usage_reset_at?: string;
 }
 
 export interface ClientUpload {
