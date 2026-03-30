@@ -253,58 +253,172 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
         </p>
       </div>
 
-      {/* Text Input */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Texto do Conteúdo</Label>
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Cole aqui o texto do briefing, legenda ou conteúdo..."
-          className="min-h-[160px] text-sm resize-y"
-        />
-      </div>
-
-      {/* Type Selection */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Tipo de Entrega</Label>
-        <RadioGroup
-          value={type}
-          onValueChange={(v) => setType(v as "video" | "art")}
-          className="flex gap-4"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="video" id="type-video" />
-            <Label htmlFor="type-video" className="flex items-center gap-1.5 cursor-pointer">
-              <Film className="h-4 w-4" />
-              Vídeo
-            </Label>
+      {/* Step 1: Has text? */}
+      {hasText === null && (
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Você já tem o texto pronto?</Label>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 h-12"
+              onClick={() => setHasText(true)}
+            >
+              ✅ Sim, já tenho
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 h-12"
+              onClick={() => setHasText(false)}
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              Não, gerar com IA
+            </Button>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="art" id="type-art" />
-            <Label htmlFor="type-art" className="flex items-center gap-1.5 cursor-pointer">
-              <Palette className="h-4 w-4" />
-              Arte
-            </Label>
+        </div>
+      )}
+
+      {/* AI Text Generation */}
+      {hasText === false && !text && (
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Wand2 className="h-4 w-4 text-primary" />
+            Gerar texto com IA
           </div>
-        </RadioGroup>
-      </div>
 
+          <div className="space-y-2">
+            <Label className="text-xs">Qual o assunto/tema?</Label>
+            <Input
+              value={aiTopic}
+              onChange={(e) => setAiTopic(e.target.value)}
+              placeholder="Ex: promoção de limpeza, dica de saúde, agendamento..."
+              className="text-sm"
+            />
+          </div>
 
-      {/* Create Button */}
-      <Button
-        onClick={handleCreate}
-        disabled={creating || !text.trim()}
-        className="w-full h-12 text-base font-semibold gap-2"
-      >
-        {creating ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : type === "video" ? (
-          <Film className="h-5 w-5" />
-        ) : (
-          <Palette className="h-5 w-5" />
-        )}
-        {creating ? "Criando..." : `Gerar ${type === "video" ? "Vídeo" : "Arte"}`}
-      </Button>
+          <div className="space-y-2">
+            <Label className="text-xs">Formato do Post</Label>
+            <RadioGroup
+              value={postFormat}
+              onValueChange={(v) => setPostFormat(v as "single" | "carousel")}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="single" id="fmt-single" />
+                <Label htmlFor="fmt-single" className="text-sm cursor-pointer">
+                  Post Único (~6 palavras)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="carousel" id="fmt-carousel" />
+                <Label htmlFor="fmt-carousel" className="text-sm cursor-pointer">
+                  Carrossel (6 páginas)
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handleGenerateAIText}
+              disabled={!aiTopic.trim() || generatingText}
+              className="flex-1 gap-2"
+            >
+              {generatingText ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Wand2 className="h-4 w-4" />
+              )}
+              {generatingText ? "Gerando..." : "Gerar Texto"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setHasText(null); setAiTopic(""); }}
+            >
+              Voltar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Text Input (shown when user has text OR after AI generated) */}
+      {(hasText === true || (hasText === false && text)) && (
+        <>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Texto do Conteúdo</Label>
+              {hasText === false && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs gap-1"
+                  onClick={() => { setText(""); setAiTopic(""); }}
+                >
+                  <Wand2 className="h-3 w-3" />
+                  Gerar outro
+                </Button>
+              )}
+            </div>
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Cole aqui o texto do briefing, legenda ou conteúdo..."
+              className="min-h-[160px] text-sm resize-y"
+            />
+            {hasText === null ? null : !initialText && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+                onClick={() => { setHasText(null); setText(""); setAiTopic(""); }}
+              >
+                ← Voltar
+              </Button>
+            )}
+          </div>
+
+          {/* Type Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Tipo de Entrega</Label>
+            <RadioGroup
+              value={type}
+              onValueChange={(v) => setType(v as "video" | "art")}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="video" id="type-video" />
+                <Label htmlFor="type-video" className="flex items-center gap-1.5 cursor-pointer">
+                  <Film className="h-4 w-4" />
+                  Vídeo
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="art" id="type-art" />
+                <Label htmlFor="type-art" className="flex items-center gap-1.5 cursor-pointer">
+                  <Palette className="h-4 w-4" />
+                  Arte
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Create Button */}
+          <Button
+            onClick={handleCreate}
+            disabled={creating || !text.trim()}
+            className="w-full h-12 text-base font-semibold gap-2"
+          >
+            {creating ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : type === "video" ? (
+              <Film className="h-5 w-5" />
+            ) : (
+              <Palette className="h-5 w-5" />
+            )}
+            {creating ? "Criando..." : `Gerar ${type === "video" ? "Vídeo" : "Arte"}`}
+          </Button>
+        </>
+      )}
 
       {/* Modals */}
       {createdCardId && (
