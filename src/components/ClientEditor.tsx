@@ -359,6 +359,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       image_type: formData.image_type,
       particularity_type: formData.particularity_type,
       briefing: formData.briefing,
+      monthly_material_limit: formData.monthly_material_limit ?? 30,
     };
 
     onSave(clientData);
