@@ -891,6 +891,7 @@ export function ArtGeneratorModal({
   clientId,
   onExported,
   hideEmail,
+  skipSave,
 }: ArtGeneratorModalProps) {
   const rawText = (cardText || cardTitle || clientName || "").trim();
   const textParts = rawText
