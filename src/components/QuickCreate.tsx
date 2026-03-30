@@ -23,7 +23,7 @@ interface QuickCreateProps {
   isClientPortal?: boolean;
 }
 
-export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId, existingCardId }: QuickCreateProps) => {
+export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId, existingCardId, isClientPortal }: QuickCreateProps) => {
   const [text, setText] = useState(initialText || "");
   const [type, setType] = useState<"video" | "art">(initialType || "video");
   const [uploading, setUploading] = useState(false);
