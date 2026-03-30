@@ -52,7 +52,9 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
     setSearching(true);
     setSearchPage(1);
     try {
-      const results = await searchVideos(searchQuery, 12, 1);
+      const { translateSearchQuery } = await import("@/lib/translateSearch");
+      const translatedQuery = await translateSearchQuery(searchQuery);
+      const results = await searchVideos(translatedQuery, 12, 1);
       setSearchResults(results);
       if (results.length === 0) toast.info("Nenhum vídeo encontrado.");
     } catch { toast.error("Erro ao buscar vídeos"); }

@@ -31,7 +31,9 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
     setSearching(true);
     setSearchPage(1);
     try {
-      const results = await searchVideos(searchQuery, 6, 1);
+      const { translateSearchQuery } = await import("@/lib/translateSearch");
+      const translatedQuery = await translateSearchQuery(searchQuery);
+      const results = await searchVideos(translatedQuery, 6, 1);
       setSearchResults(results);
       if (results.length === 0) toast.info("Nenhum vídeo encontrado. Tente outro termo.");
     } catch {
