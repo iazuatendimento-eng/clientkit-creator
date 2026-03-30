@@ -40,8 +40,44 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   const [aiTopic, setAiTopic] = useState("");
   const [postFormat, setPostFormat] = useState<"single" | "carousel">("single");
   const [generatingText, setGeneratingText] = useState(false);
+  const [usageLimit, setUsageLimit] = useState(30);
+  const [usageUsed, setUsageUsed] = useState(0);
+  const [usageLoaded, setUsageLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoTriggeredRef = useRef(false);
+
+  // Load usage data
+  useEffect(() => {
+    const loadUsage = async () => {
+      try {
+        const { data } = await supabase
+          .from("client_data")
+          .select("monthly_material_limit, monthly_material_used, material_usage_reset_at")
+          .eq("id", clientId)
+          .maybeSingle();
+        if (data) {
+          // Check if we need to reset (new month)
+          const resetAt = new Date(data.material_usage_reset_at);
+          const now = new Date();
+          const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          
+          if (resetAt < currentMonthStart) {
+            // Reset usage for new month
+            await supabase
+              .from("client_data")
+              .update({ monthly_material_used: 0, material_usage_reset_at: currentMonthStart.toISOString() })
+              .eq("id", clientId);
+            setUsageUsed(0);
+          } else {
+            setUsageUsed(data.monthly_material_used || 0);
+          }
+          setUsageLimit(data.monthly_material_limit || 30);
+        }
+      } catch { /* ignore */ }
+      setUsageLoaded(true);
+    };
+    loadUsage();
+  }, [clientId]);
 
   // Pregenerate video data when a card is ready
   const { preloadedData } = useVideoPregenerate(
