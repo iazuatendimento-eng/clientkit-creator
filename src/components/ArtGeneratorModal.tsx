@@ -1027,6 +1027,7 @@ export function ArtGeneratorModal({
   // Photo search
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [translatedSearchQuery, setTranslatedSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchImage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState("");
