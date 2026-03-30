@@ -75,6 +75,7 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
       image_type: "",
       particularity_type: "",
       briefing: "",
+      monthly_material_limit: 30,
     };
   });
   const [clientUploads, setClientUploads] = useState<ClientUpload[]>([]);
