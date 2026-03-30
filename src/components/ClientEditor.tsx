@@ -655,8 +655,8 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {["Logo", "Contato", "Mascote"].map((label, i) => (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {["Logo", "Contato", "Mascote", "Extra"].map((label, i) => (
                     <div key={i} className="space-y-1">
                       <Label className="text-xs">{label}</Label>
                       {brandPngs[i] ? (
