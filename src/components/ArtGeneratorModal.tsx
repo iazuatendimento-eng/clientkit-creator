@@ -115,6 +115,7 @@ interface ArtGeneratorModalProps {
   clientId?: string;
   onExported?: () => void;
   hideEmail?: boolean;
+  skipSave?: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
