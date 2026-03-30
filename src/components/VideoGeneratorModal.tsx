@@ -920,7 +920,7 @@ export function VideoGeneratorModal({
                       Baixar Sem Áudio
                     </Button>
                   </div>
-                  {clientId && (
+                  {clientId && !hideEmail && (
                     <div className="space-y-2">
                       <Input
                         placeholder="Título do e-mail (obrigatório)"
