@@ -18,6 +18,7 @@ interface VideoSwapModalProps {
 
 export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwapped }: VideoSwapModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [translatedSearchQuery, setTranslatedSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchVideo[]>([]);
   const [searching, setSearching] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -32,8 +33,9 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
     setSearchPage(1);
     try {
       const { translateSearchQuery } = await import("@/lib/translateSearch");
-      const translatedQuery = await translateSearchQuery(searchQuery);
-      const results = await searchVideos(translatedQuery, 6, 1);
+      const translated = await translateSearchQuery(searchQuery);
+      setTranslatedSearchQuery(translated);
+      const results = await searchVideos(translated, 6, 1);
       setSearchResults(results);
       if (results.length === 0) toast.info("Nenhum vídeo encontrado. Tente outro termo.");
     } catch {
@@ -48,7 +50,7 @@ export function VideoSwapModal({ isOpen, onClose, cardId, cardTitle, onVideoSwap
     const nextPage = searchPage + 1;
     setIsLoadingMore(true);
     try {
-      const results = await searchVideos(searchQuery, 6, nextPage);
+      const results = await searchVideos(translatedSearchQuery || searchQuery, 6, nextPage);
       if (results.length > 0) {
         setSearchResults(prev => [...prev, ...results]);
         setSearchPage(nextPage);

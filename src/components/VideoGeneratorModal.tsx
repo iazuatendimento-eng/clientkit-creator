@@ -41,6 +41,7 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [translatedSearchQuery, setTranslatedSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchVideo[]>([]);
   const [searching, setSearching] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -53,8 +54,9 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
     setSearchPage(1);
     try {
       const { translateSearchQuery } = await import("@/lib/translateSearch");
-      const translatedQuery = await translateSearchQuery(searchQuery);
-      const results = await searchVideos(translatedQuery, 12, 1);
+      const translated = await translateSearchQuery(searchQuery);
+      setTranslatedSearchQuery(translated);
+      const results = await searchVideos(translated, 12, 1);
       setSearchResults(results);
       if (results.length === 0) toast.info("Nenhum vídeo encontrado.");
     } catch { toast.error("Erro ao buscar vídeos"); }
@@ -66,7 +68,7 @@ function VideoSwapSection({ videoUrls, currentEditPage, cardId, materialImages, 
     const nextPage = searchPage + 1;
     setIsLoadingMore(true);
     try {
-      const results = await searchVideos(searchQuery, 12, nextPage);
+      const results = await searchVideos(translatedSearchQuery || searchQuery, 12, nextPage);
       if (results.length > 0) {
         setSearchResults(prev => [...prev, ...results]);
         setSearchPage(nextPage);
