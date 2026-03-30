@@ -20,6 +20,7 @@ interface QuickCreateProps {
   initialType?: "video" | "art";
   initialTemplateId?: string;
   existingCardId?: string;
+  isClientPortal?: boolean;
 }
 
 export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initialType, initialTemplateId, existingCardId }: QuickCreateProps) => {
