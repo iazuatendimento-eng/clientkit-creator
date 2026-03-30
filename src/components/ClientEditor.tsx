@@ -36,6 +36,7 @@ interface Client {
   image_type?: string;
   particularity_type?: string;
   briefing?: string;
+  monthly_material_limit?: number;
 }
 
 interface ClientEditorProps {
