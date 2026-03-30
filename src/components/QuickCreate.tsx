@@ -350,6 +350,31 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
         </h2>
       </div>
 
+      {/* Usage Bar */}
+      {usageLoaded && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Materiais este mês</span>
+            <span className={`font-bold ${usageUsed >= usageLimit ? "text-destructive" : "text-primary"}`}>
+              {usageUsed} de {usageLimit}
+            </span>
+          </div>
+          <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                usageUsed >= usageLimit ? "bg-destructive" : usageUsed >= usageLimit * 0.8 ? "bg-yellow-500" : "bg-primary"
+              }`}
+              style={{ width: `${Math.min((usageUsed / usageLimit) * 100, 100)}%` }}
+            />
+          </div>
+          {usageUsed >= usageLimit && (
+            <p className="text-xs text-destructive font-medium text-center">
+              ⚠️ Limite mensal atingido! Renova no próximo mês.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Step 1: Has text? — big friendly cards */}
       {hasText === null && (
         <div className="space-y-3">
