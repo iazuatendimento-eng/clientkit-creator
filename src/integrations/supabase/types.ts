@@ -171,7 +171,10 @@ export type Database = {
           email_3: string | null
           id: string
           image_type: string | null
+          material_usage_reset_at: string
           monthly_amount: number | null
+          monthly_material_limit: number
+          monthly_material_used: number
           name: string
           narration_type: string | null
           notes: string | null
@@ -194,7 +197,10 @@ export type Database = {
           email_3?: string | null
           id?: string
           image_type?: string | null
+          material_usage_reset_at?: string
           monthly_amount?: number | null
+          monthly_material_limit?: number
+          monthly_material_used?: number
           name: string
           narration_type?: string | null
           notes?: string | null
@@ -217,7 +223,10 @@ export type Database = {
           email_3?: string | null
           id?: string
           image_type?: string | null
+          material_usage_reset_at?: string
           monthly_amount?: number | null
+          monthly_material_limit?: number
+          monthly_material_used?: number
           name?: string
           narration_type?: string | null
           notes?: string | null

@@ -40,8 +40,44 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
   const [aiTopic, setAiTopic] = useState("");
   const [postFormat, setPostFormat] = useState<"single" | "carousel">("single");
   const [generatingText, setGeneratingText] = useState(false);
+  const [usageLimit, setUsageLimit] = useState(30);
+  const [usageUsed, setUsageUsed] = useState(0);
+  const [usageLoaded, setUsageLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoTriggeredRef = useRef(false);
+
+  // Load usage data
+  useEffect(() => {
+    const loadUsage = async () => {
+      try {
+        const { data } = await supabase
+          .from("client_data")
+          .select("monthly_material_limit, monthly_material_used, material_usage_reset_at")
+          .eq("id", clientId)
+          .maybeSingle();
+        if (data) {
+          // Check if we need to reset (new month)
+          const resetAt = new Date(data.material_usage_reset_at);
+          const now = new Date();
+          const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          
+          if (resetAt < currentMonthStart) {
+            // Reset usage for new month
+            await supabase
+              .from("client_data")
+              .update({ monthly_material_used: 0, material_usage_reset_at: currentMonthStart.toISOString() })
+              .eq("id", clientId);
+            setUsageUsed(0);
+          } else {
+            setUsageUsed(data.monthly_material_used || 0);
+          }
+          setUsageLimit(data.monthly_material_limit || 30);
+        }
+      } catch { /* ignore */ }
+      setUsageLoaded(true);
+    };
+    loadUsage();
+  }, [clientId]);
 
   // Pregenerate video data when a card is ready
   const { preloadedData } = useVideoPregenerate(
@@ -161,6 +197,10 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
       toast.error("Cole o texto primeiro!");
       return;
     }
+    if (usageUsed >= usageLimit) {
+      toast.error(`Limite mensal atingido! (${usageUsed}/${usageLimit} materiais)`);
+      return;
+    }
 
     // If we already know the template (coming from a card), skip the selector
     if (initialTemplateId) {
@@ -222,6 +262,16 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
       }
 
       setCreatedCardId(cardId);
+
+      // Increment usage
+      try {
+        const newUsed = usageUsed + 1;
+        await supabase
+          .from("client_data")
+          .update({ monthly_material_used: newUsed })
+          .eq("id", clientId);
+        setUsageUsed(newUsed);
+      } catch { /* ignore */ }
 
       if (type === "video") {
         setIsVideoGenOpen(true);
@@ -297,6 +347,31 @@ export const QuickCreate = ({ clientId, clientName, brandKit, initialText, initi
           Criar Conteúdo
         </h2>
       </div>
+
+      {/* Usage Bar */}
+      {usageLoaded && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Materiais este mês</span>
+            <span className={`font-bold ${usageUsed >= usageLimit ? "text-destructive" : "text-primary"}`}>
+              {usageUsed} de {usageLimit}
+            </span>
+          </div>
+          <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                usageUsed >= usageLimit ? "bg-destructive" : usageUsed >= usageLimit * 0.8 ? "bg-yellow-500" : "bg-primary"
+              }`}
+              style={{ width: `${Math.min((usageUsed / usageLimit) * 100, 100)}%` }}
+            />
+          </div>
+          {usageUsed >= usageLimit && (
+            <p className="text-xs text-destructive font-medium text-center">
+              ⚠️ Limite mensal atingido! Renova no próximo mês.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Step 1: Has text? — big friendly cards */}
       {hasText === null && (
