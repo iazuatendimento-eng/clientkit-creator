@@ -714,12 +714,25 @@ export const ClientEditor = ({ client, onSave, onCancel }: ClientEditorProps) =>
 
                 <div className="space-y-1">
                   <Label className="text-xs">Fonte (Google Fonts)</Label>
-                  <Input
-                    value={brandFont}
-                    onChange={(e) => setBrandFont(e.target.value)}
-                    placeholder="Ex: Montserrat, Roboto, Poppins..."
-                    className="max-w-xs"
-                  />
+                  <Select value={brandFont} onValueChange={setBrandFont}>
+                    <SelectTrigger className="max-w-xs">
+                      <SelectValue placeholder="Selecione a fonte..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        "Impact", "Arial", "Arial Black", "Bebas Neue", "Montserrat", "Roboto",
+                        "Poppins", "Open Sans", "Lato", "Oswald", "Raleway", "Playfair Display",
+                        "Nunito", "Ubuntu", "Merriweather", "PT Sans", "Rubik", "Work Sans",
+                        "Quicksand", "Archivo Black", "Anton", "Lobster", "Pacifico",
+                        "Dancing Script", "Caveat", "Bangers", "Righteous", "Fredoka One",
+                        "Titan One", "Bungee", "Press Start 2P", "Permanent Marker",
+                        "Black Ops One", "Russo One", "Teko", "Barlow Condensed",
+                        "Josefin Sans", "Comfortaa", "Satisfy", "Great Vibes"
+                      ].map((font) => (
+                        <SelectItem key={font} value={font}>{font}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
