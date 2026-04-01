@@ -16,17 +16,10 @@ export default function Auth() {
   const { clientLogin, clientSession } = useClientAuth();
 
   useEffect(() => {
-    // Check if admin is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/");
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) navigate("/");
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (clientSession) {
+      navigate("/portal");
+    }
+  }, [clientSession, navigate]);
 
   useEffect(() => {
     if (clientSession) {
