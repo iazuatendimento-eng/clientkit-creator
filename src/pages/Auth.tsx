@@ -9,9 +9,6 @@ import { toast } from "sonner";
 import { Loader2, User } from "lucide-react";
 
 export default function Auth() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [clientUsername, setClientUsername] = useState("");
   const [clientPassword, setClientPassword] = useState("");
   const [clientLoading, setClientLoading] = useState(false);
