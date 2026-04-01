@@ -118,7 +118,9 @@ export const BatchHistoryEditor = ({
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
-      const images = await searchImages(searchQuery, 12);
+      const { translateSearchQuery } = await import("@/lib/translateSearch");
+      const translated = await translateSearchQuery(searchQuery);
+      const images = await searchImages(translated, 12);
       setSearchResults(images);
     } catch (error) {
       toast({
