@@ -21,84 +21,8 @@ export default function Auth() {
     }
   }, [clientSession, navigate]);
 
-  useEffect(() => {
-    if (clientSession) {
-      navigate("/portal");
-    }
-  }, [clientSession, navigate]);
 
-  const withTimeout = <T,>(promise: Promise<T>, ms: number) => {
-    let t: number | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      t = window.setTimeout(() => reject(new Error("timeout")), ms);
-    });
-    return Promise.race([
-      promise.finally(() => { if (t) window.clearTimeout(t); }),
-      timeout,
-    ]) as Promise<T>;
-  };
 
-  const checkBackendHealth = async (retries = 3) => {
-    if (!navigator.onLine) throw new Error("offline");
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    if (!url || !key) throw new Error("missing_config");
-
-    for (let attempt = 0; attempt < retries; attempt++) {
-      const controller = new AbortController();
-      const abortId = window.setTimeout(() => controller.abort(), 10000);
-      try {
-        const res = await fetch(`${url}/auth/v1/health`, {
-          method: "GET",
-          headers: { apikey: key },
-          signal: controller.signal,
-        });
-        window.clearTimeout(abortId);
-        if (res.ok) return true;
-      } catch {
-        window.clearTimeout(abortId);
-      }
-      if (attempt < retries - 1) {
-        await new Promise(r => window.setTimeout(r, (attempt + 1) * 2000));
-      }
-    }
-    throw new Error("backend_timeout");
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error("Por favor, preencha todos os campos");
-      return;
-    }
-    setLoading(true);
-    try {
-      await checkBackendHealth();
-      const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
-        12000
-      );
-      if (error) {
-        toast.error(error.message.includes("Invalid login credentials")
-          ? "Email ou senha incorretos" : error.message);
-        return;
-      }
-      if (data.session?.user) {
-        toast.success("Login realizado com sucesso!");
-        navigate("/");
-      } else {
-        toast.error("Login não foi concluído. Tente novamente.");
-      }
-    } catch (error: any) {
-      const msg = String(error?.message ?? "");
-      if (msg === "offline") toast.error("Sem internet.");
-      else if (msg === "backend_timeout") toast.error("Servidor indisponível.");
-      else if (msg === "timeout") toast.error("Sem resposta do servidor.");
-      else toast.error("Erro ao fazer login");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleClientLogin = async (e: React.FormEvent) => {
     e.preventDefault();

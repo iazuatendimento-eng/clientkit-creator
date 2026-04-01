@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ClientAuthProvider } from "@/hooks/useClientAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AdminAuth from "./pages/AdminAuth";
 import NotFound from "./pages/NotFound";
 import ClientPublicView from "./pages/ClientPublicView";
 import ClientPortal from "./pages/ClientPortal";
