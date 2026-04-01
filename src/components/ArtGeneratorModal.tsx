@@ -1256,13 +1256,17 @@ export function ArtGeneratorModal({
         .filter((u: any) => u.file_type.startsWith("image"))
         .map((u: any) => u.file_url);
 
+      // Translate search terms to English for better stock photo results
+      const { translateSearchQuery } = await import("@/lib/translateSearch");
+
       // Parallel: search photos for all pages that need them
       const photoPromises = pages.map(async (pageText, i) => {
         if (matImages[i]) return matImages[i];
         try {
           const sq = pageText.substring(0, 80);
+          const translatedQuery = await translateSearchQuery(sq);
           const pexelsResults = await Promise.race([
-            searchPexelsImages(sq, 1),
+            searchPexelsImages(translatedQuery, 1),
             new Promise<SearchImage[]>((resolve) => setTimeout(() => resolve([]), 10000)),
           ]);
           return pexelsResults.length > 0 ? pexelsResults[0].urls.regular : null;
