@@ -527,7 +527,11 @@ export function VideoGeneratorModal({
         void (async () => {
           try {
             const searchContext = fullText.split(" ").slice(0, 12).join(" ");
-            let searchTerms = translateToEnglishLocal(searchContext).trim();
+            const { translateSearchQuery } = await import("@/lib/translateSearch");
+            let searchTerms = await translateSearchQuery(searchContext);
+            if (!searchTerms || !searchTerms.trim()) {
+              searchTerms = translateToEnglishLocal(searchContext).trim();
+            }
             if (!searchTerms) {
               searchTerms = searchContext
                 .replace(/[^\p{L}\p{N}\s]+/gu, " ")
