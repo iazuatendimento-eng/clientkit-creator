@@ -293,7 +293,9 @@ export const AIArtGenerator = ({ brandKit, onBack }: AIArtGeneratorProps) => {
 
     setIsSearching(true);
     try {
-      const results = await searchUnsplashImages(unsplashQuery);
+      const { translateSearchQuery } = await import("@/lib/translateSearch");
+      const translated = await translateSearchQuery(unsplashQuery);
+      const results = await searchUnsplashImages(translated);
       setUnsplashResults(results);
       if (results.length === 0) {
         toast.info("Nenhuma imagem encontrada");
