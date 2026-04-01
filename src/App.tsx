@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ClientAuthProvider } from "@/hooks/useClientAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AdminAuth from "./pages/AdminAuth";
 import NotFound from "./pages/NotFound";
 import ClientPublicView from "./pages/ClientPublicView";
 import ClientPortal from "./pages/ClientPortal";
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/receivables" element={<ProtectedRoute><Receivables /></ProtectedRoute>} />
           <Route path="/export-db" element={<ProtectedRoute><ExportDatabase /></ProtectedRoute>} />
           <Route path="/send-media" element={<ProtectedRoute><SendMedia /></ProtectedRoute>} />
+          <Route path="/admin" element={<AdminAuth />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/portal" element={<ClientPortal />} />
           <Route path="/client/:clientId" element={<ClientPublicView />} />
