@@ -139,83 +139,42 @@ export default function Auth() {
       <Card className="w-full max-w-md bg-gradient-card border-primary/20">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <LogIn className="h-12 w-12 text-primary" />
+            <User className="h-12 w-12 text-primary" />
           </div>
           <CardTitle className="text-2xl text-center gradient-text">
-            Acesso ao Sistema
+            Acesso do Cliente
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="admin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="admin">Admin</TabsTrigger>
-              <TabsTrigger value="client">Cliente</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="admin">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    className="bg-background/50 border-primary/20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    className="bg-background/50 border-primary/20"
-                  />
-                </div>
-                <Button type="submit" className="w-full" variant="gradient" disabled={loading}>
-                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...</> : "Entrar"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="client">
-              <form onSubmit={handleClientLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="client-username">Usuário</Label>
-                  <Input
-                    id="client-username"
-                    type="text"
-                    placeholder="seu.usuario"
-                    value={clientUsername}
-                    onChange={(e) => setClientUsername(e.target.value)}
-                    disabled={clientLoading}
-                    className="bg-background/50 border-primary/20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="client-password">Senha</Label>
-                  <Input
-                    id="client-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={clientPassword}
-                    onChange={(e) => setClientPassword(e.target.value)}
-                    disabled={clientLoading}
-                    className="bg-background/50 border-primary/20"
-                  />
-                </div>
-                <Button type="submit" className="w-full" variant="gradient" disabled={clientLoading}>
-                  {clientLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...</> : <><User className="mr-2 h-4 w-4" /> Entrar como Cliente</>}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          <form onSubmit={handleClientLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="client-username">Usuário</Label>
+              <Input
+                id="client-username"
+                type="text"
+                placeholder="seu.usuario"
+                value={clientUsername}
+                onChange={(e) => setClientUsername(e.target.value)}
+                disabled={clientLoading}
+                className="bg-background/50 border-primary/20"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="client-password">Senha</Label>
+              <Input
+                id="client-password"
+                type="password"
+                placeholder="••••••••"
+                value={clientPassword}
+                onChange={(e) => setClientPassword(e.target.value)}
+                disabled={clientLoading}
+                className="bg-background/50 border-primary/20"
+              />
+            </div>
+            <Button type="submit" className="w-full" variant="gradient" disabled={clientLoading}>
+              {clientLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...</> : <><User className="mr-2 h-4 w-4" /> Entrar</>}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
